@@ -7,7 +7,8 @@ var turns = new TurnService(
     movement,
     new Dictionary<EntityId, IEntityActionPlan>
     {
-        [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
+        [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(),
+        [WorldBuilder.GiantSlimeId] = new WanderingSlimeActionPlan()
     });
 
 var running = true;

@@ -11,6 +11,7 @@ public sealed class FirstSliceTests
 
         Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(WorldBuilder.PlayerId));
         Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Giant Slime@world(3,3)", world.FormatEntityAddress(WorldBuilder.GiantSlimeId));
         Assert.Equal("Rock@world(2,1)", world.FormatEntityAddress(WorldBuilder.RockId));
     }
 
@@ -26,6 +27,12 @@ public sealed class FirstSliceTests
         Assert.Equal(1, world.Entities[WorldBuilder.SlimeId].InventoryWidth);
         Assert.Equal(1, world.Entities[WorldBuilder.SlimeId].InventoryHeight);
         Assert.True(world.Entities[WorldBuilder.SlimeId].HasUsableInventory);
+
+        Assert.Equal(3, world.Entities[WorldBuilder.GiantSlimeId].InventoryWidth);
+        Assert.Equal(3, world.Entities[WorldBuilder.GiantSlimeId].InventoryHeight);
+        Assert.Equal(20, world.Entities[WorldBuilder.GiantSlimeId].Weight);
+        Assert.Equal(20, world.Entities[WorldBuilder.GiantSlimeId].CarryingCapacity);
+        Assert.True(world.Entities[WorldBuilder.GiantSlimeId].HasUsableInventory);
 
         Assert.Equal(0, world.Entities[WorldBuilder.RockId].InventoryWidth);
         Assert.Equal(0, world.Entities[WorldBuilder.RockId].InventoryHeight);
@@ -47,6 +54,41 @@ public sealed class FirstSliceTests
         Assert.NotNull(panel.InventoryGrid);
         Assert.Equal(WorldBuilder.PlayerInventoryPlaneId, panel.InventoryGrid.PlaneId);
         Assert.Equal(6, panel.InventoryGrid.Cells.Count);
+    }
+
+    [Fact]
+    public void GiantSlimeInspectionShowsLargeInventoryAndProperties()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var inspector = new EntityInspectionService();
+
+        var panel = inspector.Inspect(world, WorldBuilder.GiantSlimeId);
+
+        Assert.Equal(WorldBuilder.GiantSlimeId, panel.EntityId);
+        Assert.Equal("Giant Slime", panel.Name);
+        Assert.Contains(panel.Properties, property => property.Name == "Weight" && property.Value == "20");
+        Assert.Contains(panel.Properties, property => property.Name == "Carrying Capacity" && property.Value == "20");
+        Assert.Contains(panel.Properties, property => property.Name == "Inventory Dimensions" && property.Value == "3x3");
+        Assert.NotNull(panel.InventoryGrid);
+        Assert.Equal(WorldBuilder.GiantSlimeInventoryPlaneId, panel.InventoryGrid.PlaneId);
+        Assert.Equal(9, panel.InventoryGrid.Cells.Count);
+    }
+
+    [Fact]
+    public void GiantSlimeCanUseWanderingSlimeActionPlan()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var turns = new TurnService(
+            movement,
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [WorldBuilder.GiantSlimeId] = new WanderingSlimeActionPlan()
+            });
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal("Giant Slime@world(2,3)", world.FormatEntityAddress(WorldBuilder.GiantSlimeId));
     }
 
     [Fact]
