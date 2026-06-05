@@ -135,9 +135,12 @@ void HandlePickupDestinationInput(ConsoleKey key)
 
     var action = new PickupAction(target, new PlaneCoord(inventoryPlaneId, inventoryCursor));
 
-    if (!action.CanExecute(world, WorldBuilder.PlayerId, movement))
+    var evaluation = action.Evaluate(world, WorldBuilder.PlayerId, movement);
+
+    if (!evaluation.CanExecute)
     {
-        message = "That pickup is not legal. Target must be adjacent and destination must be empty.";
+        world.RecordTrace(evaluation.Trace);
+        message = FormatFailure(evaluation.Trace);
         return;
     }
 
@@ -193,9 +196,12 @@ void HandleDropDestinationInput(ConsoleKey key)
 
     var action = new DropAction(target, new PlaneCoord(playerPlaneId, worldCursor));
 
-    if (!action.CanExecute(world, WorldBuilder.PlayerId, movement))
+    var evaluation = action.Evaluate(world, WorldBuilder.PlayerId, movement);
+
+    if (!evaluation.CanExecute)
     {
-        message = "That drop is not legal. Destination must be empty on the player's plane.";
+        world.RecordTrace(evaluation.Trace);
+        message = FormatFailure(evaluation.Trace);
         return;
     }
 
@@ -298,6 +304,71 @@ static void Render(
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.SlimeId).PadRight(Console.WindowWidth - 1));
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.RockId).PadRight(Console.WindowWidth - 1));
     Console.WriteLine(message.PadRight(Console.WindowWidth - 1));
+
+    if (world.LastTrace is { } trace)
+    {
+        Console.WriteLine("Last trace:".PadRight(Console.WindowWidth - 1));
+        var line = 0;
+        WriteTrace(trace, depth: 0, line, maxLines: 8);
+    }
+}
+
+static int WriteTrace(TraceNode trace, int depth, int line, int maxLines)
+{
+    if (line >= maxLines)
+    {
+        return line;
+    }
+
+    var indent = new string(' ', depth * 2);
+    var reason = trace.Reason == FailureReason.None ? string.Empty : $" [{trace.Reason}]";
+    var detail = string.IsNullOrWhiteSpace(trace.Detail) ? string.Empty : $": {trace.Detail}";
+    var text = $"{indent}{trace.Status}: {trace.Label}{reason}{detail}";
+
+    Console.WriteLine(text.PadRight(Console.WindowWidth - 1));
+    line++;
+
+    foreach (var child in trace.Children)
+    {
+        line = WriteTrace(child, depth + 1, line, maxLines);
+
+        if (line >= maxLines)
+        {
+            break;
+        }
+    }
+
+    return line;
+}
+
+static string FormatFailure(TraceNode trace)
+{
+    var failure = FindFailure(trace) ?? trace;
+    var reason = failure.Reason == FailureReason.None ? "failed" : failure.Reason.ToString();
+
+    return string.IsNullOrWhiteSpace(failure.Detail)
+        ? $"Action failed: {reason}."
+        : $"Action failed: {reason}. {failure.Detail}";
+}
+
+static TraceNode? FindFailure(TraceNode trace)
+{
+    if (trace.Status == TraceStatus.Failure)
+    {
+        return trace;
+    }
+
+    foreach (var child in trace.Children)
+    {
+        var failure = FindFailure(child);
+
+        if (failure is not null)
+        {
+            return failure;
+        }
+    }
+
+    return null;
 }
 
 static void DrawPlane(WorldState world, Plane plane, int left, int top, string title, GridCoord? cursor)

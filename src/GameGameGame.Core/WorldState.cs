@@ -6,6 +6,8 @@ public sealed class WorldState
 
     public int TurnNumber { get; private set; }
 
+    public TraceNode? LastTrace { get; private set; }
+
     public Dictionary<EntityId, Entity> Entities { get; } = [];
 
     public Dictionary<PlaneId, Plane> Planes { get; } = [];
@@ -53,4 +55,6 @@ public sealed class WorldState
     }
 
     public void AdvanceTurn() => TurnNumber++;
+
+    public void RecordTrace(TraceNode trace) => LastTrace = trace;
 }

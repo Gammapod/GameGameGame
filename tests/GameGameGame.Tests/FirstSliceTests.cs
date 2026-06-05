@@ -209,6 +209,64 @@ public sealed class FirstSliceTests
     }
 
     [Fact]
+    public void PickupEvaluationExplainsCapacityFailureWithNestedWeightTrace()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var action = new PickupAction(
+            WorldBuilder.SlimeId,
+            new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+
+        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.SlimeInventoryPlaneId, new GridCoord(0, 0)));
+
+        var evaluation = action.Evaluate(world, WorldBuilder.PlayerId, movement);
+
+        Assert.False(evaluation.CanExecute);
+        Assert.Equal(FailureReason.CapacityExceeded, evaluation.Trace.Reason);
+        Assert.Contains("6/5", evaluation.Trace.Detail);
+        Assert.Contains(evaluation.Trace.Children, child => child.Label == "Check carrying capacity");
+        Assert.True(TraceContains(evaluation.Trace, "Total weight of Slime"));
+        Assert.True(TraceContains(evaluation.Trace, "Total weight of Rock"));
+    }
+
+    [Fact]
+    public void PickupEvaluationExplainsInvalidPlacementSeparatelyFromWeight()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var action = new PickupAction(
+            WorldBuilder.SlimeId,
+            new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+
+        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+
+        var evaluation = action.Evaluate(world, WorldBuilder.PlayerId, movement);
+
+        Assert.False(evaluation.CanExecute);
+        Assert.Equal(FailureReason.InvalidPlacement, evaluation.Trace.Reason);
+    }
+
+    [Fact]
+    public void ResolvePlanRecordsFailedOptionThenSuccessfulFallback()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityBehavior>());
+        var plan = new PlannedActionPlan([
+            new MoveAction(Direction.East),
+            new MoveAction(Direction.West)
+        ]);
+
+        var acted = turns.ResolvePlan(world, WorldBuilder.SlimeId, plan);
+
+        Assert.True(acted);
+        Assert.NotNull(world.LastTrace);
+        Assert.Equal(TraceStatus.Success, world.LastTrace.Status);
+        Assert.Contains(world.LastTrace.Children, child => child.Reason == FailureReason.MoveBlocked);
+        Assert.Contains(world.LastTrace.Children, child => child.Status == TraceStatus.Success);
+    }
+
+    [Fact]
     public void RecursiveWeightCountsCarriedInventory()
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
@@ -220,5 +278,10 @@ public sealed class FirstSliceTests
         Assert.Equal(6, weight.GetTotalWeight(world, WorldBuilder.SlimeId));
         Assert.Equal(3, weight.GetCarriedWeight(world, WorldBuilder.SlimeId));
         Assert.False(weight.CanCarry(world, WorldBuilder.PlayerId, WorldBuilder.SlimeId));
+    }
+
+    private static bool TraceContains(TraceNode trace, string label)
+    {
+        return trace.Label == label || trace.Children.Any(child => TraceContains(child, label));
     }
 }
