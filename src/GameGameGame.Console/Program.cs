@@ -4,9 +4,9 @@ var world = WorldBuilder.CreateFirstSliceWorld();
 var movement = new MovementService();
 var turns = new TurnService(
     movement,
-    new Dictionary<EntityId, IEntityBehavior>
+    new Dictionary<EntityId, IEntityActionPlan>
     {
-        [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+        [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
     });
 
 var running = true;

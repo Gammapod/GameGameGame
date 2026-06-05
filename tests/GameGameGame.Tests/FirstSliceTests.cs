@@ -46,21 +46,67 @@ public sealed class FirstSliceTests
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
-            new Dictionary<EntityId, IEntityBehavior>
+            new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
             });
 
         turns.AdvanceAfterPlayerTurn(world);
 
         Assert.Equal(1, world.TurnNumber);
-        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
-        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(WorldBuilder.RockId));
+        Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Rock@world(2,1)", world.FormatEntityAddress(WorldBuilder.RockId));
 
         turns.AdvanceAfterPlayerTurn(world);
 
         Assert.Equal(2, world.TurnNumber);
         Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+    }
+
+    [Fact]
+    public void WanderingSlimePicksUpCarryableObjectBlockingFacingDirection()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var turns = new TurnService(
+            movement,
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
+            });
+
+        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(WorldBuilder.RockId));
+    }
+
+    [Fact]
+    public void WanderingSlimeBumpsUncarryableBlockerAndSetsFacingRight()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var plan = new WanderingSlimeActionPlan();
+        var turns = new TurnService(
+            movement,
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [WorldBuilder.SlimeId] = plan
+            });
+
+        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(4, 4)));
+        movement.TryPlace(world, WorldBuilder.PlayerId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal(Direction.East, plan.Facing);
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal("Slime@world(2,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
     }
 
     [Fact]
@@ -70,9 +116,9 @@ public sealed class FirstSliceTests
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
-            new Dictionary<EntityId, IEntityBehavior>
+            new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
             });
 
         turns.TakePlayerTurn(world, PlannedActionPlan.Single(new MoveAction(Direction.South)));
@@ -80,9 +126,8 @@ public sealed class FirstSliceTests
         Assert.Equal(1, world.TurnNumber);
         Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(WorldBuilder.PlayerId));
 
-        // The slime wanted to move right into the rock, so it picked the rock up instead.
-        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
-        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(WorldBuilder.RockId));
+        Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Rock@world(2,1)", world.FormatEntityAddress(WorldBuilder.RockId));
     }
 
     [Fact]
@@ -90,7 +135,7 @@ public sealed class FirstSliceTests
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
         var movement = new MovementService();
-        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityBehavior>());
+        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         movement.TryMove(world, WorldBuilder.PlayerId, Direction.South);
         var plan = new PlannedActionPlan([
             new MoveAction(Direction.East),
@@ -107,7 +152,7 @@ public sealed class FirstSliceTests
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
         var movement = new MovementService();
-        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityBehavior>());
+        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
         turns.ResolvePlan(world, WorldBuilder.PlayerId, PlannedActionPlan.Single(new PickupAction(WorldBuilder.SlimeId, destination)));
@@ -122,9 +167,9 @@ public sealed class FirstSliceTests
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
-            new Dictionary<EntityId, IEntityBehavior>
+            new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(Direction.East)
             });
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
@@ -139,7 +184,7 @@ public sealed class FirstSliceTests
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
         var movement = new MovementService();
-        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityBehavior>());
+        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var inventoryDestination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
         var worldDestination = new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0));
 
@@ -156,9 +201,9 @@ public sealed class FirstSliceTests
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
-            new Dictionary<EntityId, IEntityBehavior>
+            new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(Direction.East)
             });
 
         movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0)));
@@ -175,7 +220,7 @@ public sealed class FirstSliceTests
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
         var movement = new MovementService();
-        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityBehavior>());
+        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var inventoryDestination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
         var worldDestination = new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0));
 
@@ -194,9 +239,9 @@ public sealed class FirstSliceTests
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
-            new Dictionary<EntityId, IEntityBehavior>
+            new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(Direction.East)
             });
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
@@ -251,7 +296,7 @@ public sealed class FirstSliceTests
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
         var movement = new MovementService();
-        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityBehavior>());
+        var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var plan = new PlannedActionPlan([
             new MoveAction(Direction.East),
             new MoveAction(Direction.West)

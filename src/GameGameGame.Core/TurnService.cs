@@ -1,6 +1,6 @@
 namespace GameGameGame.Core;
 
-public sealed class TurnService(MovementService movement, IReadOnlyDictionary<EntityId, IEntityBehavior> behaviors)
+public sealed class TurnService(MovementService movement, IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans)
 {
     public bool TakePlayerTurn(WorldState world, PlannedActionPlan playerPlan)
     {
@@ -31,11 +31,11 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
     {
         world.AdvanceTurn();
 
-        foreach (var (entityId, behavior) in behaviors)
+        foreach (var (entityId, actionPlan) in actionPlans)
         {
             if (world.Entities.ContainsKey(entityId))
             {
-                var (_, trace) = ResolvePlanTrace(world, entityId, behavior.PlanTurn(world, entityId, movement));
+                var (_, trace) = ResolvePlanTrace(world, entityId, actionPlan.PlanTurn(world, entityId, movement));
                 root.Add(trace);
             }
         }
@@ -56,15 +56,21 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
 
         foreach (var option in plan.Options)
         {
-            var evaluation = option.Evaluate(world, actorId, movement);
-            root.Add(evaluation.Trace);
+            var resolution = option.Resolve(world, actorId, movement);
+            root.Add(resolution.Trace);
 
-            if (evaluation.CanExecute)
+            if (resolution.ConsumesTurn)
             {
-                option.Execute(world, actorId, movement);
-                root.Status = TraceStatus.Success;
-                root.Detail = $"executed {option.GetType().Name}";
-                return (true, root);
+                root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+                root.Detail = $"resolved {option.GetType().Name}";
+                return (resolution.Succeeded, root);
+            }
+
+            if (!resolution.ContinuePlan)
+            {
+                root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+                root.Detail = $"stopped at {option.GetType().Name}";
+                return (resolution.Succeeded, root);
             }
         }
 

@@ -6,7 +6,7 @@ GameGameGame is a recursive entity-space simulation.
 
 Every object that can matter to the rules is an entity. Every contained, equipped, configured, or nested context is represented as a plane or graph space. Inventory, equipment, levels, menus, save files, behaviors, and settings are not separate categories; they are entity-owned spaces with different rules attached.
 
-Rules should operate on spatial relationships, capabilities, and effects rather than hardcoded object classes.
+Rules should operate on spatial relationships, entity properties, action plans, and effects rather than hardcoded object classes.
 
 ## Guiding Principles
 
@@ -14,19 +14,16 @@ Rules should operate on spatial relationships, capabilities, and effects rather 
 
 The player, a sword, a slime, a chest, a dungeon, a save file, a behavior module, a menu, and a settings object should all be represented as entities.
 
-Entities are not divided into fundamentally different base types such as item, monster, level, or menu. Those are roles expressed through components, capabilities, rules, and spatial relationships.
+Entities are not divided into fundamentally different base types such as item, monster, level, or menu. Those are roles expressed through properties, available action plans, rules, and spatial relationships.
 
-Example capabilities include:
+Example emergent roles include:
 
-- Can act
-- Can move
-- Can be picked up
-- Can pick things up
-- Can be equipped
-- Can be used as a weapon
-- Can own or expose a plane
-- Can simulate a contained plane
-- Can modify another entity or action
+- Actor: has a decidable action plan or decision trigger.
+- Mover: has a move action in an available action plan.
+- Carrier: has usable inventory dimensions and enough carrying capacity.
+- Pickup target: passes the checks of some pickup action.
+- Equipment: can be placed into a functional space whose rules care about it.
+- Modifier: changes derived properties or action resolution in context.
 
 ### Spaces Are Real
 
@@ -65,7 +62,7 @@ This does not require every behavior to be visual or spatial immediately, but th
 
 ### No Item Versus Creature Distinction
 
-The same entity may be a creature, an item, a weapon, a container, and an actor depending on its capabilities and context.
+The same entity may be a creature, an item, a weapon, a container, and an actor depending on its properties, action plans, and context.
 
 Examples the architecture should support:
 
@@ -146,14 +143,50 @@ Avoid prematurely splitting the model into unrelated systems like:
 
 Those concepts may exist as rule packages or convenience APIs, but they should be implemented on top of the same entity-space machinery.
 
+### Abilities Are Action Plans
+
+Avoid assigning broad capability flags before they are needed. Prefer deriving what an entity can do from the action plans available to it and the properties those actions check.
+
+For example, an entity is an actor if it has a decidable action plan or decision trigger. It can move autonomously if its plan can produce a move action. It can pick things up if its plan can produce a pickup action and the action checks pass.
+
+Actions are not just commands. They are rule objects that evaluate checks, produce structured traces, and resolve into outcomes. Failed checks may either consume the turn or allow the plan to continue to the next ranked action.
+
+Action resolution should distinguish:
+
+- Failed and continue: the action was not applicable, so the plan should try the next ranked action.
+- Failed and consume: the entity attempted something, failed meaningfully, and spent its turn.
+- Succeeded and continue: the action performed a non-turn-consuming update, such as changing a plan variable.
+- Succeeded and consume: the action performed the entity's turn-consuming resolution.
+
+Action plans may have transient plan variables. A simple wandering slime can be represented as a plan with a `facing` variable and ranked actions such as:
+
+- Walk facing direction; fail and continue if blocked.
+- Pick up the blocking entity; fail and consume if pickup is meaningfully attempted but impossible.
+- Reverse facing; succeed and continue without consuming the turn.
+- Bump facing direction; consume if there is something to bump.
+
+This keeps abilities modular without introducing premature component or capability systems.
+
+### Entity Properties Are Minimal Inputs
+
+Entity properties should be as small and mechanical as possible. Properties exist so actions and derived-property systems can check them.
+
+Current preferred primitive properties include:
+
+- Weight, where absent or zero weight means `0`.
+- Carrying capacity, used against recursively carried total weight.
+- Inventory width and inventory height, where either dimension being `0` means no usable inventory space.
+
+Inventory planes may still be materialized in world state, but their existence should follow from inventory dimensions rather than from a separate conceptual capability.
+
 ## Near-Term Implementation Priorities
 
 Before adding complex gameplay, the next architectural plumbing should likely include:
 
-- Component storage on entities
 - Entity-owned planes with purpose labels
-- Generic pickup and drop actions
+- Richer action outcomes with `ConsumesTurn` and `ContinuePlan`
+- Action plan variables for behavior such as slime facing
+- Generic pickup and drop actions driven by property checks
 - Equipment represented as planes or nodes, not hardcoded fields
-- Capability/rule queries such as `CanPickUp`, `CanEquip`, `CanAct`, and `CanSimulateContainedPlane`
 - Cycle-safe traversal helpers
 - A deterministic turn scheduler with explicit recursion guards

@@ -8,7 +8,22 @@ public interface IActionIntent
         Evaluate(world, actorId, movement).CanExecute;
 
     void Execute(WorldState world, EntityId actorId, MovementService movement);
+
+    ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var evaluation = Evaluate(world, actorId, movement);
+
+        if (!evaluation.CanExecute)
+        {
+            return new ActionResolution(false, ConsumesTurn: false, ContinuePlan: true, evaluation.Trace);
+        }
+
+        Execute(world, actorId, movement);
+        return new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, evaluation.Trace);
+    }
 }
+
+public sealed record ActionResolution(bool Succeeded, bool ConsumesTurn, bool ContinuePlan, TraceNode Trace);
 
 public sealed record PlannedActionPlan(IReadOnlyList<IActionIntent> Options)
 {
