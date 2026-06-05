@@ -4,6 +4,8 @@ public sealed class WorldState
 {
     private readonly Dictionary<PlaneCoord, NodeId> _nodeByCoord = [];
 
+    public int TurnNumber { get; private set; }
+
     public Dictionary<EntityId, Entity> Entities { get; } = [];
 
     public Dictionary<PlaneId, Plane> Planes { get; } = [];
@@ -42,4 +44,6 @@ public sealed class WorldState
 
         return $"{entity.Name}@{location}";
     }
+
+    public void AdvanceTurn() => TurnNumber++;
 }

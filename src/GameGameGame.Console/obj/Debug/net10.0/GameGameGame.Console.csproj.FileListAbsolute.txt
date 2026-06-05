@@ -15,3 +15,4 @@ G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\bin\Debug\net10.0\GameGame
 G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\GameGame.1507F90F.Up2Date
 G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\GameGameGame.Console.genruntimeconfig.cache
 G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\ref\GameGameGame.Console.dll
+G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\GameGameGame.Console.sourcelink.json

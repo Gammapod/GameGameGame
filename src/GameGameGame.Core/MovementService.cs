@@ -2,7 +2,7 @@ namespace GameGameGame.Core;
 
 public sealed class MovementService
 {
-    public bool TryMove(WorldState world, EntityId entityId, Direction direction)
+    public bool CanMove(WorldState world, EntityId entityId, Direction direction)
     {
         var entity = world.Entities[entityId];
         var currentNode = world.Nodes[entity.OccupiedNodeId];
@@ -16,10 +16,21 @@ public sealed class MovementService
 
         var destinationNodeId = world.GetNodeId(new PlaneCoord(currentNode.PlaneId, destinationCoord));
 
-        if (world.Occupancy.ContainsKey(destinationNodeId))
+        return !world.Occupancy.ContainsKey(destinationNodeId);
+    }
+
+    public bool TryMove(WorldState world, EntityId entityId, Direction direction)
+    {
+        var entity = world.Entities[entityId];
+        var currentNode = world.Nodes[entity.OccupiedNodeId];
+        var destinationCoord = currentNode.Coord.Offset(direction);
+
+        if (!CanMove(world, entityId, direction))
         {
             return false;
         }
+
+        var destinationNodeId = world.GetNodeId(new PlaneCoord(currentNode.PlaneId, destinationCoord));
 
         world.Occupancy.Remove(entity.OccupiedNodeId);
         world.Occupancy[destinationNodeId] = entityId;

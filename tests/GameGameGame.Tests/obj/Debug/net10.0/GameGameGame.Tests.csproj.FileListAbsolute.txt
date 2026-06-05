@@ -98,3 +98,4 @@ G:\My Drive\Dev\GameGameGame\tests\GameGameGame.Tests\obj\Debug\net10.0\refint\G
 G:\My Drive\Dev\GameGameGame\tests\GameGameGame.Tests\obj\Debug\net10.0\GameGameGame.Tests.pdb
 G:\My Drive\Dev\GameGameGame\tests\GameGameGame.Tests\obj\Debug\net10.0\GameGameGame.Tests.genruntimeconfig.cache
 G:\My Drive\Dev\GameGameGame\tests\GameGameGame.Tests\obj\Debug\net10.0\ref\GameGameGame.Tests.dll
+G:\My Drive\Dev\GameGameGame\tests\GameGameGame.Tests\obj\Debug\net10.0\GameGameGame.Tests.sourcelink.json

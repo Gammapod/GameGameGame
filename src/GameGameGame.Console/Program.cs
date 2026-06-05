@@ -2,6 +2,12 @@ using GameGameGame.Core;
 
 var world = WorldBuilder.CreateFirstSliceWorld();
 var movement = new MovementService();
+var turns = new TurnService(
+    movement,
+    new Dictionary<EntityId, IEntityBehavior>
+    {
+        [WorldBuilder.SlimeId] = new AlternatingHorizontalBehavior()
+    });
 var running = true;
 
 Console.CursorVisible = false;
@@ -26,7 +32,7 @@ while (running)
     }
     else if (direction is { } moveDirection)
     {
-        movement.TryMove(world, WorldBuilder.PlayerId, moveDirection);
+        turns.TakePlayerTurn(world, PlannedActionPlan.Single(new MoveAction(moveDirection)));
     }
 }
 
@@ -44,6 +50,7 @@ static void Render(WorldState world)
     Console.WriteLine("Arrow keys move. Q or Esc quits.");
     Console.WriteLine();
     Console.WriteLine($"Currently simulated plane: {plane.Name} ({plane.Width}x{plane.Height})");
+    Console.WriteLine($"Turn: {world.TurnNumber}");
     Console.WriteLine();
 
     for (var y = 0; y < plane.Height; y++)
@@ -71,4 +78,5 @@ static void Render(WorldState world)
     Console.ForegroundColor = ConsoleColor.Gray;
     Console.WriteLine();
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.PlayerId).PadRight(Console.WindowWidth - 1));
+    Console.WriteLine(world.FormatEntityAddress(WorldBuilder.SlimeId).PadRight(Console.WindowWidth - 1));
 }

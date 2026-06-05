@@ -4,6 +4,7 @@ public static class WorldBuilder
 {
     public static readonly EntityId GameId = new("game");
     public static readonly EntityId PlayerId = new("player");
+    public static readonly EntityId SlimeId = new("slime");
     public static readonly PlaneId GamePlaneId = new("gamePlane");
     public static readonly PlaneId GameInventoryPlaneId = new("gameInventory");
 
@@ -16,6 +17,7 @@ public static class WorldBuilder
 
         var gameNode = world.GetNodeId(new PlaneCoord(GamePlaneId, new GridCoord(0, 0)));
         var playerNode = world.GetNodeId(new PlaneCoord(GameInventoryPlaneId, new GridCoord(2, 2)));
+        var slimeNode = world.GetNodeId(new PlaneCoord(GameInventoryPlaneId, new GridCoord(1, 1)));
 
         world.Entities.Add(GameId, new Entity(
             GameId,
@@ -33,8 +35,17 @@ public static class WorldBuilder
             playerNode,
             null));
 
+        world.Entities.Add(SlimeId, new Entity(
+            SlimeId,
+            "Slime",
+            's',
+            ConsoleColor.Green,
+            slimeNode,
+            null));
+
         world.Occupancy.Add(gameNode, GameId);
         world.Occupancy.Add(playerNode, PlayerId);
+        world.Occupancy.Add(slimeNode, SlimeId);
 
         return world;
     }
