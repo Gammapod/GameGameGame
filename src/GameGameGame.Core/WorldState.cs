@@ -45,5 +45,12 @@ public sealed class WorldState
         return $"{entity.Name}@{location}";
     }
 
+    public EntityId? GetOccupant(PlaneCoord coord)
+    {
+        return TryGetNodeId(coord, out var nodeId) && Occupancy.TryGetValue(nodeId, out var entityId)
+            ? entityId
+            : null;
+    }
+
     public void AdvanceTurn() => TurnNumber++;
 }

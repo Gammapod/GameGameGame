@@ -6,14 +6,16 @@ public static class WorldBuilder
     public static readonly EntityId PlayerId = new("player");
     public static readonly EntityId SlimeId = new("slime");
     public static readonly PlaneId GamePlaneId = new("gamePlane");
-    public static readonly PlaneId GameInventoryPlaneId = new("gameInventory");
+    public static readonly PlaneId GameInventoryPlaneId = new("world");
+    public static readonly PlaneId PlayerInventoryPlaneId = new("player");
 
     public static WorldState CreateFirstSliceWorld()
     {
         var world = new WorldState();
 
         AddRectangularPlane(world, new Plane(GamePlaneId, "Game Plane", 1, 1));
-        AddRectangularPlane(world, new Plane(GameInventoryPlaneId, "Game Inventory", 5, 5));
+        AddRectangularPlane(world, new Plane(GameInventoryPlaneId, "World", 5, 5));
+        AddRectangularPlane(world, new Plane(PlayerInventoryPlaneId, "Player Inventory", 3, 2));
 
         var gameNode = world.GetNodeId(new PlaneCoord(GamePlaneId, new GridCoord(0, 0)));
         var playerNode = world.GetNodeId(new PlaneCoord(GameInventoryPlaneId, new GridCoord(2, 2)));
@@ -33,7 +35,7 @@ public static class WorldBuilder
             '@',
             ConsoleColor.Cyan,
             playerNode,
-            null));
+            PlayerInventoryPlaneId));
 
         world.Entities.Add(SlimeId, new Entity(
             SlimeId,
