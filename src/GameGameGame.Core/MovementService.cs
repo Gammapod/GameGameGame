@@ -38,12 +38,8 @@ public sealed class MovementService
 
     public bool CanMove(WorldState world, EntityId entityId, Direction direction)
     {
-        var entity = world.Entities[entityId];
-        var currentNode = world.Nodes[entity.OccupiedNodeId];
-        var plane = world.Planes[currentNode.PlaneId];
-        var destinationCoord = currentNode.Coord.Offset(direction);
-
-        return CanPlace(world, new PlaneCoord(currentNode.PlaneId, destinationCoord));
+        return TryGetMoveDestination(world, entityId, direction, out var destination)
+            && CanPlace(world, destination);
     }
 
     public bool TryMove(WorldState world, EntityId entityId, Direction direction)
@@ -58,5 +54,30 @@ public sealed class MovementService
         }
 
         return TryPlace(world, entityId, new PlaneCoord(currentNode.PlaneId, destinationCoord));
+    }
+
+    public bool TryGetMoveDestination(
+        WorldState world,
+        EntityId entityId,
+        Direction direction,
+        out PlaneCoord destination)
+    {
+        var entity = world.Entities[entityId];
+        var currentNode = world.Nodes[entity.OccupiedNodeId];
+        var destinationCoord = currentNode.Coord.Offset(direction);
+        destination = new PlaneCoord(currentNode.PlaneId, destinationCoord);
+
+        return world.Planes[currentNode.PlaneId].Contains(destinationCoord)
+            && world.TryGetNodeId(destination, out _);
+    }
+
+    public EntityId? GetBlockingEntity(WorldState world, EntityId entityId, Direction direction)
+    {
+        if (!TryGetMoveDestination(world, entityId, direction, out var destination))
+        {
+            return null;
+        }
+
+        return world.GetOccupant(destination);
     }
 }

@@ -48,7 +48,9 @@ public sealed record Entity(
     char Glyph,
     ConsoleColor Color,
     NodeId OccupiedNodeId,
-    PlaneId? InventoryPlaneId);
+    PlaneId? InventoryPlaneId,
+    int Weight,
+    int CarryingCapacity);
 
 public sealed record Plane(
     PlaneId Id,

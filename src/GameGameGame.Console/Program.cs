@@ -296,6 +296,7 @@ static void Render(
     Console.ForegroundColor = ConsoleColor.Gray;
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.PlayerId).PadRight(Console.WindowWidth - 1));
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.SlimeId).PadRight(Console.WindowWidth - 1));
+    Console.WriteLine(world.FormatEntityAddress(WorldBuilder.RockId).PadRight(Console.WindowWidth - 1));
     Console.WriteLine(message.PadRight(Console.WindowWidth - 1));
 }
 

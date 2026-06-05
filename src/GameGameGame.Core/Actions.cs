@@ -44,7 +44,8 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
         }
 
         return movement.AreAdjacent(world, actorId, TargetId)
-            && movement.CanPlace(world, Destination);
+            && movement.CanPlace(world, Destination)
+            && new WeightService().CanCarry(world, actorId, TargetId);
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>

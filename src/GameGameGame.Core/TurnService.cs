@@ -19,7 +19,7 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
         {
             if (world.Entities.ContainsKey(entityId))
             {
-                ResolvePlan(world, entityId, behavior.PlanTurn(world, entityId));
+                ResolvePlan(world, entityId, behavior.PlanTurn(world, entityId, movement));
             }
         }
     }
