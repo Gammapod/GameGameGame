@@ -15,6 +15,70 @@ public sealed class FirstSliceTests
     }
 
     [Fact]
+    public void FirstSliceWorldDefinesInventoryDimensionsOnEntities()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+
+        Assert.Equal(3, world.Entities[WorldBuilder.PlayerId].InventoryWidth);
+        Assert.Equal(2, world.Entities[WorldBuilder.PlayerId].InventoryHeight);
+        Assert.True(world.Entities[WorldBuilder.PlayerId].HasUsableInventory);
+
+        Assert.Equal(1, world.Entities[WorldBuilder.SlimeId].InventoryWidth);
+        Assert.Equal(1, world.Entities[WorldBuilder.SlimeId].InventoryHeight);
+        Assert.True(world.Entities[WorldBuilder.SlimeId].HasUsableInventory);
+
+        Assert.Equal(0, world.Entities[WorldBuilder.RockId].InventoryWidth);
+        Assert.Equal(0, world.Entities[WorldBuilder.RockId].InventoryHeight);
+        Assert.False(world.Entities[WorldBuilder.RockId].HasUsableInventory);
+    }
+
+    [Fact]
+    public void InspectionPanelIncludesEntityPropertiesAndInventoryGrid()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var inspector = new EntityInspectionService();
+
+        var panel = inspector.Inspect(world, WorldBuilder.PlayerId);
+
+        Assert.Equal(WorldBuilder.PlayerId, panel.EntityId);
+        Assert.Equal("Player", panel.Name);
+        Assert.Contains(panel.Properties, property => property.Name == "Weight" && property.Value == "10");
+        Assert.Contains(panel.Properties, property => property.Name == "Inventory Dimensions" && property.Value == "3x2");
+        Assert.NotNull(panel.InventoryGrid);
+        Assert.Equal(WorldBuilder.PlayerInventoryPlaneId, panel.InventoryGrid.PlaneId);
+        Assert.Equal(6, panel.InventoryGrid.Cells.Count);
+    }
+
+    [Fact]
+    public void InspectionPanelShowsInventoryOccupants()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var inspector = new EntityInspectionService();
+
+        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+
+        var panel = inspector.Inspect(world, WorldBuilder.PlayerId);
+
+        Assert.NotNull(panel.InventoryGrid);
+        Assert.Contains(panel.InventoryGrid.Cells, cell =>
+            cell.Coord == new GridCoord(0, 0)
+            && cell.EntityId == WorldBuilder.RockId
+            && cell.Glyph == '*');
+    }
+
+    [Fact]
+    public void InspectionServiceFindsEntityContainingPlane()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var inspector = new EntityInspectionService();
+
+        var containerId = inspector.FindEntityContainingPlane(world, WorldBuilder.GameInventoryPlaneId);
+
+        Assert.Equal(WorldBuilder.GameId, containerId);
+    }
+
+    [Fact]
     public void PlayerCanMoveCardinallyInsideGameInventory()
     {
         var world = WorldBuilder.CreateFirstSliceWorld();
@@ -289,6 +353,24 @@ public sealed class FirstSliceTests
 
         Assert.False(evaluation.CanExecute);
         Assert.Equal(FailureReason.InvalidPlacement, evaluation.Trace.Reason);
+    }
+
+    [Fact]
+    public void PickupEvaluationFailsWhenActorInventoryDimensionsAreUnusable()
+    {
+        var world = WorldBuilder.CreateFirstSliceWorld();
+        var movement = new MovementService();
+        var rock = world.Entities[WorldBuilder.RockId];
+        var rockInventoryPlaneId = new PlaneId("rock");
+        world.Entities[WorldBuilder.RockId] = rock with { InventoryPlaneId = rockInventoryPlaneId };
+        var action = new PickupAction(
+            WorldBuilder.SlimeId,
+            new PlaneCoord(rockInventoryPlaneId, new GridCoord(0, 0)));
+
+        var evaluation = action.Evaluate(world, WorldBuilder.RockId, movement);
+
+        Assert.False(evaluation.CanExecute);
+        Assert.Equal(FailureReason.ActorInventoryUnusable, evaluation.Trace.Reason);
     }
 
     [Fact]

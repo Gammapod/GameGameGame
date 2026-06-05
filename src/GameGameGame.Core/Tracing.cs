@@ -14,6 +14,7 @@ public enum FailureReason
     ActorMissing,
     TargetMissing,
     ActorHasNoInventory,
+    ActorInventoryUnusable,
     InvalidInventoryDestination,
     TargetIsActor,
     TargetNotAdjacent,

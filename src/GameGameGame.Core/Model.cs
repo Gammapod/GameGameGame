@@ -49,8 +49,13 @@ public sealed record Entity(
     ConsoleColor Color,
     NodeId OccupiedNodeId,
     PlaneId? InventoryPlaneId,
+    int InventoryWidth,
+    int InventoryHeight,
     int Weight,
-    int CarryingCapacity);
+    int CarryingCapacity)
+{
+    public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
+}
 
 public sealed record Plane(
     PlaneId Id,

@@ -70,7 +70,7 @@ public sealed class WeightService
     {
         var entity = world.Entities[entityId];
 
-        if (entity.InventoryPlaneId is not { } inventoryPlaneId)
+        if (!entity.HasUsableInventory || entity.InventoryPlaneId is not { } inventoryPlaneId)
         {
             return 0;
         }

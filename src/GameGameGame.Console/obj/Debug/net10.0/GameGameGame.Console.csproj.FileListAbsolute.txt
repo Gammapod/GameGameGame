@@ -16,3 +16,7 @@ G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\GameGame
 G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\GameGameGame.Console.genruntimeconfig.cache
 G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\ref\GameGameGame.Console.dll
 G:\My Drive\Dev\GameGameGame\src\GameGameGame.Console\obj\Debug\net10.0\GameGameGame.Console.sourcelink.json
+C:\Users\Scramble\AppData\Local\Temp\opencode\GameGameGame-build\GameGameGame.Console.deps.json
+C:\Users\Scramble\AppData\Local\Temp\opencode\GameGameGame-build\GameGameGame.Console.runtimeconfig.json
+C:\Users\Scramble\AppData\Local\Temp\opencode\GameGameGame-build\GameGameGame.Console.dll
+C:\Users\Scramble\AppData\Local\Temp\opencode\GameGameGame-build\GameGameGame.Console.pdb

@@ -32,6 +32,8 @@ public static class WorldBuilder
             ConsoleColor.Yellow,
             gameNode,
             GameInventoryPlaneId,
+            5,
+            5,
             0,
             0));
 
@@ -42,6 +44,8 @@ public static class WorldBuilder
             ConsoleColor.Cyan,
             playerNode,
             PlayerInventoryPlaneId,
+            3,
+            2,
             10,
             5));
 
@@ -52,6 +56,8 @@ public static class WorldBuilder
             ConsoleColor.Green,
             slimeNode,
             SlimeInventoryPlaneId,
+            1,
+            1,
             3,
             3));
 
@@ -62,6 +68,8 @@ public static class WorldBuilder
             ConsoleColor.DarkYellow,
             rockNode,
             null,
+            0,
+            0,
             3,
             3));
 

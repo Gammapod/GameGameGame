@@ -102,7 +102,13 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
             return ActionTrace.Fail(trace, FailureReason.ActorHasNoInventory, $"{actor.Name} has no inventory plane");
         }
 
+        if (!actor.HasUsableInventory)
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorInventoryUnusable, $"{actor.Name} inventory dimensions are {actor.InventoryWidth}x{actor.InventoryHeight}");
+        }
+
         trace.Add(TraceNode.Success("Actor has inventory", inventoryPlaneId.ToString()));
+        trace.Add(TraceNode.Success("Actor inventory is usable", $"{actor.InventoryWidth}x{actor.InventoryHeight}"));
 
         if (Destination.PlaneId != inventoryPlaneId)
         {
@@ -168,6 +174,11 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
         if (actor.InventoryPlaneId is not { } inventoryPlaneId)
         {
             return ActionTrace.Fail(trace, FailureReason.ActorHasNoInventory, $"{actor.Name} has no inventory plane");
+        }
+
+        if (!actor.HasUsableInventory)
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorInventoryUnusable, $"{actor.Name} inventory dimensions are {actor.InventoryWidth}x{actor.InventoryHeight}");
         }
 
         var actorLocation = world.GetEntityLocation(actorId);

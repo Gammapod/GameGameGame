@@ -2,6 +2,7 @@ using GameGameGame.Core;
 
 var world = WorldBuilder.CreateFirstSliceWorld();
 var movement = new MovementService();
+var inspector = new EntityInspectionService();
 var turns = new TurnService(
     movement,
     new Dictionary<EntityId, IEntityActionPlan>
@@ -14,13 +15,14 @@ var mode = InputMode.Play;
 var worldCursor = new GridCoord(0, 0);
 var inventoryCursor = new GridCoord(0, 0);
 EntityId? selectedEntity = null;
-var message = "Arrow keys move. P picks up. D drops. Q or Esc quits.";
+var inspectedEntity = WorldBuilder.PlayerId;
+var message = "Arrow keys move. I inspect. P picks up. D drops. Q or Esc quits.";
 
 Console.CursorVisible = false;
 
 while (running)
 {
-    Render(world, mode, worldCursor, inventoryCursor, selectedEntity, message);
+    Render(world, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, message);
 
     var key = Console.ReadKey(intercept: true).Key;
 
@@ -46,6 +48,9 @@ while (running)
             break;
         case InputMode.DropDestination:
             HandleDropDestinationInput(key);
+            break;
+        case InputMode.InspectSource:
+            HandleInspectSourceInput(key);
             break;
     }
 }
@@ -83,9 +88,19 @@ void HandlePlayInput(ConsoleKey key)
     if (key is ConsoleKey.D)
     {
         inventoryCursor = new GridCoord(0, 0);
+        inspectedEntity = WorldBuilder.PlayerId;
         selectedEntity = null;
         mode = InputMode.DropSource;
         message = "Pick an entity in the inventory pane. Enter selects. Esc cancels.";
+        return;
+    }
+
+    if (key is ConsoleKey.I)
+    {
+        worldCursor = world.GetEntityLocation(WorldBuilder.PlayerId).Coord;
+        selectedEntity = null;
+        mode = InputMode.InspectSource;
+        message = "Pick an entity in the left panel inventory grid. Enter inspects. Esc cancels.";
     }
 }
 
@@ -114,6 +129,7 @@ void HandlePickupSourceInput(ConsoleKey key)
 
     selectedEntity = target;
     inventoryCursor = new GridCoord(0, 0);
+    inspectedEntity = WorldBuilder.PlayerId;
     mode = InputMode.PickupDestination;
     message = $"Choose an inventory destination for {world.Entities[target.Value].Name}.";
 }
@@ -211,6 +227,43 @@ void HandleDropDestinationInput(ConsoleKey key)
     message = "Dropped entity. Other entities took their turns.";
 }
 
+void HandleInspectSourceInput(ConsoleKey key)
+{
+    if (CancelSelection(key))
+    {
+        return;
+    }
+
+    var containerId = GetPlayerContainerEntityId();
+    var container = world.Entities[containerId];
+
+    if (container.InventoryPlaneId is not { } planeId)
+    {
+        message = "The current container has no inspectable inventory plane.";
+        mode = InputMode.Play;
+        return;
+    }
+
+    worldCursor = MoveCursor(worldCursor, key, world.Planes[planeId]);
+
+    if (key is not ConsoleKey.Enter)
+    {
+        return;
+    }
+
+    var target = world.GetOccupant(new PlaneCoord(planeId, worldCursor));
+
+    if (target is null)
+    {
+        message = "There is no entity at that cell to inspect.";
+        return;
+    }
+
+    inspectedEntity = target.Value;
+    mode = InputMode.Play;
+    message = $"Inspecting {world.Entities[target.Value].Name}.";
+}
+
 bool CancelSelection(ConsoleKey key)
 {
     if (key is not ConsoleKey.Escape)
@@ -227,6 +280,12 @@ bool CancelSelection(ConsoleKey key)
 PlaneId GetPlayerInventoryPlaneId() =>
     world.Entities[WorldBuilder.PlayerId].InventoryPlaneId
     ?? throw new InvalidOperationException("Player does not have an inventory plane.");
+
+EntityId GetPlayerContainerEntityId()
+{
+    var playerPlaneId = world.GetEntityLocation(WorldBuilder.PlayerId).PlaneId;
+    return inspector.FindEntityContainingPlane(world, playerPlaneId) ?? WorldBuilder.PlayerId;
+}
 
 static Direction? KeyToDirection(ConsoleKey key) => key switch
 {
@@ -257,12 +316,13 @@ static void Render(
     GridCoord worldCursor,
     GridCoord inventoryCursor,
     EntityId? selectedEntity,
+    EntityId inspectedEntity,
     string message)
 {
     Console.Clear();
     Console.ForegroundColor = ConsoleColor.Gray;
     Console.WriteLine("GameGameGame prototype");
-    Console.WriteLine("Arrow keys move/select. P pickup. D drop. Enter confirms. Esc cancels/quits. Q quits.");
+    Console.WriteLine("Arrow keys move/select. I inspect. P pickup. D drop. Enter confirms. Esc cancels/quits. Q quits.");
     Console.WriteLine($"Turn: {world.TurnNumber} | Mode: {mode}");
 
     if (selectedEntity is { } entityId)
@@ -276,29 +336,27 @@ static void Render(
 
     Console.WriteLine();
 
+    var inspector = new EntityInspectionService();
     var playerPlaneId = world.GetEntityLocation(WorldBuilder.PlayerId).PlaneId;
-    var inventoryPlaneId = world.Entities[WorldBuilder.PlayerId].InventoryPlaneId;
+    var containerId = inspector.FindEntityContainingPlane(world, playerPlaneId) ?? WorldBuilder.PlayerId;
 
-    DrawPlane(
-        world,
-        world.Planes[playerPlaneId],
+    DrawInspectionPanel(
+        inspector.Inspect(world, containerId),
         left: 0,
         top: 6,
-        title: "Player Plane",
-        cursor: mode is InputMode.PickupSource or InputMode.DropDestination ? worldCursor : null);
+        width: 38,
+        title: "Current Container",
+        cursor: mode is InputMode.PickupSource or InputMode.DropDestination or InputMode.InspectSource ? worldCursor : null);
 
-    if (inventoryPlaneId is { } planeId)
-    {
-        DrawPlane(
-            world,
-            world.Planes[planeId],
-            left: 24,
-            top: 6,
-            title: "Player Inventory",
-            cursor: mode is InputMode.PickupDestination or InputMode.DropSource ? inventoryCursor : null);
-    }
+    DrawInspectionPanel(
+        inspector.Inspect(world, inspectedEntity),
+        left: 40,
+        top: 6,
+        width: 38,
+        title: "Selected Inspection",
+        cursor: mode is InputMode.PickupDestination or InputMode.DropSource ? inventoryCursor : null);
 
-    Console.SetCursorPosition(0, 15);
+    Console.SetCursorPosition(0, 21);
     Console.ForegroundColor = ConsoleColor.Gray;
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.PlayerId).PadRight(Console.WindowWidth - 1));
     Console.WriteLine(world.FormatEntityAddress(WorldBuilder.SlimeId).PadRight(Console.WindowWidth - 1));
@@ -371,40 +429,57 @@ static TraceNode? FindFailure(TraceNode trace)
     return null;
 }
 
-static void DrawPlane(WorldState world, Plane plane, int left, int top, string title, GridCoord? cursor)
+static void DrawInspectionPanel(EntityInspectionPanel panel, int left, int top, int width, string title, GridCoord? cursor)
 {
     Console.SetCursorPosition(left, top);
     Console.ForegroundColor = ConsoleColor.Gray;
-    Console.WriteLine($"{title}: {plane.Id} ({plane.Width}x{plane.Height})");
+    Console.Write(TrimToWidth($"{title}: {panel.Name} {panel.Address}", width));
 
-    for (var y = 0; y < plane.Height; y++)
+    Console.SetCursorPosition(left, top + 1);
+    Console.ForegroundColor = panel.Color;
+    Console.Write(TrimToWidth($"{panel.Glyph} {panel.EntityId}", width));
+
+    var propertyLine = 0;
+    foreach (var property in panel.Properties.Take(6))
     {
-        Console.SetCursorPosition(left, top + y + 1);
+        Console.SetCursorPosition(left, top + 2 + propertyLine);
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.Write(TrimToWidth($"{property.Name}: {property.Value}", width));
+        propertyLine++;
+    }
 
-        for (var x = 0; x < plane.Width; x++)
+    Console.SetCursorPosition(left, top + 9);
+    Console.ForegroundColor = ConsoleColor.Gray;
+
+    if (panel.InventoryGrid is not { } grid)
+    {
+        Console.Write(TrimToWidth("Inventory: none", width));
+        return;
+    }
+
+    Console.Write(TrimToWidth($"Inventory: {grid.PlaneId} ({grid.Width}x{grid.Height})", width));
+
+    for (var y = 0; y < grid.Height; y++)
+    {
+        Console.SetCursorPosition(left, top + y + 10);
+
+        for (var x = 0; x < grid.Width; x++)
         {
             var coord = new GridCoord(x, y);
             var isCursor = cursor == coord;
-            var nodeId = world.GetNodeId(new PlaneCoord(plane.Id, coord));
+            var cell = grid.Cells.Single(cell => cell.Coord == coord);
 
             Console.BackgroundColor = isCursor ? ConsoleColor.DarkYellow : ConsoleColor.Black;
-
-            if (world.Occupancy.TryGetValue(nodeId, out var entityId))
-            {
-                var entity = world.Entities[entityId];
-                Console.ForegroundColor = entity.Color;
-                Console.Write(entity.Glyph);
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write('.');
-            }
+            Console.ForegroundColor = cell.Color;
+            Console.Write(cell.Glyph);
 
             Console.ResetColor();
         }
     }
 }
+
+static string TrimToWidth(string text, int width) =>
+    text.Length <= width ? text.PadRight(width) : text[..Math.Max(0, width - 1)] + " ";
 
 internal enum InputMode
 {
@@ -412,5 +487,6 @@ internal enum InputMode
     PickupSource,
     PickupDestination,
     DropSource,
-    DropDestination
+    DropDestination,
+    InspectSource
 }
