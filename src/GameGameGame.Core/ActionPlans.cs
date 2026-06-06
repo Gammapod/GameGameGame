@@ -18,7 +18,7 @@ public sealed class WanderingSlimeActionPlan(Direction initialFacing = Direction
 
         var blockingEntity = movement.GetBlockingEntity(world, entityId, Facing);
 
-        if (blockingEntity is { } targetId && world.Entities[entityId].InventoryPlaneId is { } inventoryPlaneId)
+        if (blockingEntity is { } targetId && world.GetInventoryPlaneId(entityId) is { } inventoryPlaneId)
         {
             actions.Add(new PickupAction(targetId, new PlaneCoord(inventoryPlaneId, new GridCoord(0, 0))));
             actions.Add(new BumpAndSetFacingAction(targetId, Facing, Reverse(Facing), SetFacing));

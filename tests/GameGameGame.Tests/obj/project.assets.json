@@ -394,6 +394,19 @@
           "build/net8.0/xunit.runner.visualstudio.props": {}
         }
       },
+      "GameGameGame.Content/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "GameGameGame.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/GameGameGame.Content.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/GameGameGame.Content.dll": {}
+        }
+      },
       "GameGameGame.Core/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
@@ -914,6 +927,11 @@
         "xunit.runner.visualstudio.nuspec"
       ]
     },
+    "GameGameGame.Content/1.0.0": {
+      "type": "project",
+      "path": "../../src/GameGameGame.Content/GameGameGame.Content.csproj",
+      "msbuildProject": "../../src/GameGameGame.Content/GameGameGame.Content.csproj"
+    },
     "GameGameGame.Core/1.0.0": {
       "type": "project",
       "path": "../../src/GameGameGame.Core/GameGameGame.Core.csproj",
@@ -922,6 +940,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "GameGameGame.Content >= 1.0.0",
       "GameGameGame.Core >= 1.0.0",
       "Microsoft.NET.Test.Sdk >= 17.14.1",
       "coverlet.collector >= 6.0.4",
@@ -955,6 +974,9 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
+            "G:\\My Drive\\Dev\\GameGameGame\\src\\GameGameGame.Content\\GameGameGame.Content.csproj": {
+              "projectPath": "G:\\My Drive\\Dev\\GameGameGame\\src\\GameGameGame.Content\\GameGameGame.Content.csproj"
+            },
             "G:\\My Drive\\Dev\\GameGameGame\\src\\GameGameGame.Core\\GameGameGame.Core.csproj": {
               "projectPath": "G:\\My Drive\\Dev\\GameGameGame\\src\\GameGameGame.Core\\GameGameGame.Core.csproj"
             }

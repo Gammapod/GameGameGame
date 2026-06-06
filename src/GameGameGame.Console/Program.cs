@@ -1,22 +1,17 @@
 using GameGameGame.Core;
+using GameGameGame.Content;
 
-var world = WorldBuilder.CreateFirstSliceWorld();
+var world = PrototypeContent.CreateFirstSliceWorld();
 var movement = new MovementService();
 var inspector = new EntityInspectionService();
-var turns = new TurnService(
-    movement,
-    new Dictionary<EntityId, IEntityActionPlan>
-    {
-        [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(),
-        [WorldBuilder.GiantSlimeId] = new WanderingSlimeActionPlan()
-    });
+var turns = new TurnService(movement, PrototypeContent.CreatePrototypeActionPlans());
 
 var running = true;
 var mode = InputMode.Play;
 var worldCursor = new GridCoord(0, 0);
 var inventoryCursor = new GridCoord(0, 0);
 EntityId? selectedEntity = null;
-var inspectedEntity = WorldBuilder.PlayerId;
+var inspectedEntity = PrototypeContent.PlayerId;
 var message = "Arrow keys move. I inspect. P picks up. D drops. Q or Esc quits.";
 
 Console.CursorVisible = false;
@@ -72,14 +67,14 @@ void HandlePlayInput(ConsoleKey key)
 
     if (direction is { } moveDirection)
     {
-        turns.TakePlayerTurn(world, PlannedActionPlan.Single(new MoveAction(moveDirection)));
+        turns.TakeActorTurnThenAdvance(world, PrototypeContent.PlayerId, PlannedActionPlan.Single(new MoveAction(moveDirection)));
         message = "Player acted. Other entities took their turns.";
         return;
     }
 
     if (key is ConsoleKey.P)
     {
-        worldCursor = world.GetEntityLocation(WorldBuilder.PlayerId).Coord;
+        worldCursor = world.GetEntityLocation(PrototypeContent.PlayerId).Coord;
         selectedEntity = null;
         mode = InputMode.PickupSource;
         message = "Pick an adjacent entity in the world pane. Enter selects. Esc cancels.";
@@ -89,7 +84,7 @@ void HandlePlayInput(ConsoleKey key)
     if (key is ConsoleKey.D)
     {
         inventoryCursor = new GridCoord(0, 0);
-        inspectedEntity = WorldBuilder.PlayerId;
+        inspectedEntity = PrototypeContent.PlayerId;
         selectedEntity = null;
         mode = InputMode.DropSource;
         message = "Pick an entity in the inventory pane. Enter selects. Esc cancels.";
@@ -98,7 +93,7 @@ void HandlePlayInput(ConsoleKey key)
 
     if (key is ConsoleKey.I)
     {
-        worldCursor = world.GetEntityLocation(WorldBuilder.PlayerId).Coord;
+        worldCursor = world.GetEntityLocation(PrototypeContent.PlayerId).Coord;
         selectedEntity = null;
         mode = InputMode.InspectSource;
         message = "Pick an entity in the left panel inventory grid. Enter inspects. Esc cancels.";
@@ -112,7 +107,7 @@ void HandlePickupSourceInput(ConsoleKey key)
         return;
     }
 
-    var playerPlaneId = world.GetEntityLocation(WorldBuilder.PlayerId).PlaneId;
+    var playerPlaneId = world.GetEntityLocation(PrototypeContent.PlayerId).PlaneId;
     worldCursor = MoveCursor(worldCursor, key, world.Planes[playerPlaneId]);
 
     if (key is not ConsoleKey.Enter)
@@ -122,7 +117,7 @@ void HandlePickupSourceInput(ConsoleKey key)
 
     var target = world.GetOccupant(new PlaneCoord(playerPlaneId, worldCursor));
 
-    if (target is null || target == WorldBuilder.PlayerId)
+    if (target is null || target == PrototypeContent.PlayerId)
     {
         message = "There is no pickup target at that world cell.";
         return;
@@ -130,7 +125,7 @@ void HandlePickupSourceInput(ConsoleKey key)
 
     selectedEntity = target;
     inventoryCursor = new GridCoord(0, 0);
-    inspectedEntity = WorldBuilder.PlayerId;
+    inspectedEntity = PrototypeContent.PlayerId;
     mode = InputMode.PickupDestination;
     message = $"Choose an inventory destination for {world.Entities[target.Value].Name}.";
 }
@@ -152,7 +147,7 @@ void HandlePickupDestinationInput(ConsoleKey key)
 
     var action = new PickupAction(target, new PlaneCoord(inventoryPlaneId, inventoryCursor));
 
-    var evaluation = action.Evaluate(world, WorldBuilder.PlayerId, movement);
+    var evaluation = action.Evaluate(world, PrototypeContent.PlayerId, movement);
 
     if (!evaluation.CanExecute)
     {
@@ -161,7 +156,7 @@ void HandlePickupDestinationInput(ConsoleKey key)
         return;
     }
 
-    turns.TakePlayerTurn(world, PlannedActionPlan.Single(action));
+    turns.TakeActorTurnThenAdvance(world, PrototypeContent.PlayerId, PlannedActionPlan.Single(action));
     mode = InputMode.Play;
     selectedEntity = null;
     message = "Picked up entity. Other entities took their turns.";
@@ -203,7 +198,7 @@ void HandleDropDestinationInput(ConsoleKey key)
         return;
     }
 
-    var playerPlaneId = world.GetEntityLocation(WorldBuilder.PlayerId).PlaneId;
+    var playerPlaneId = world.GetEntityLocation(PrototypeContent.PlayerId).PlaneId;
     worldCursor = MoveCursor(worldCursor, key, world.Planes[playerPlaneId]);
 
     if (key is not ConsoleKey.Enter || selectedEntity is not { } target)
@@ -213,7 +208,7 @@ void HandleDropDestinationInput(ConsoleKey key)
 
     var action = new DropAction(target, new PlaneCoord(playerPlaneId, worldCursor));
 
-    var evaluation = action.Evaluate(world, WorldBuilder.PlayerId, movement);
+    var evaluation = action.Evaluate(world, PrototypeContent.PlayerId, movement);
 
     if (!evaluation.CanExecute)
     {
@@ -222,7 +217,7 @@ void HandleDropDestinationInput(ConsoleKey key)
         return;
     }
 
-    turns.TakePlayerTurn(world, PlannedActionPlan.Single(action));
+    turns.TakeActorTurnThenAdvance(world, PrototypeContent.PlayerId, PlannedActionPlan.Single(action));
     mode = InputMode.Play;
     selectedEntity = null;
     message = "Dropped entity. Other entities took their turns.";
@@ -238,7 +233,7 @@ void HandleInspectSourceInput(ConsoleKey key)
     var containerId = GetPlayerContainerEntityId();
     var container = world.Entities[containerId];
 
-    if (container.InventoryPlaneId is not { } planeId)
+    if (world.GetInventoryPlaneId(containerId) is not { } planeId)
     {
         message = "The current container has no inspectable inventory plane.";
         mode = InputMode.Play;
@@ -279,13 +274,13 @@ bool CancelSelection(ConsoleKey key)
 }
 
 PlaneId GetPlayerInventoryPlaneId() =>
-    world.Entities[WorldBuilder.PlayerId].InventoryPlaneId
+    world.GetInventoryPlaneId(PrototypeContent.PlayerId)
     ?? throw new InvalidOperationException("Player does not have an inventory plane.");
 
 EntityId GetPlayerContainerEntityId()
 {
-    var playerPlaneId = world.GetEntityLocation(WorldBuilder.PlayerId).PlaneId;
-    return inspector.FindEntityContainingPlane(world, playerPlaneId) ?? WorldBuilder.PlayerId;
+    var playerPlaneId = world.GetEntityLocation(PrototypeContent.PlayerId).PlaneId;
+    return inspector.FindEntityContainingPlane(world, playerPlaneId) ?? PrototypeContent.PlayerId;
 }
 
 static Direction? KeyToDirection(ConsoleKey key) => key switch
@@ -338,8 +333,8 @@ static void Render(
     Console.WriteLine();
 
     var inspector = new EntityInspectionService();
-    var playerPlaneId = world.GetEntityLocation(WorldBuilder.PlayerId).PlaneId;
-    var containerId = inspector.FindEntityContainingPlane(world, playerPlaneId) ?? WorldBuilder.PlayerId;
+    var playerPlaneId = world.GetEntityLocation(PrototypeContent.PlayerId).PlaneId;
+    var containerId = inspector.FindEntityContainingPlane(world, playerPlaneId) ?? PrototypeContent.PlayerId;
 
     DrawInspectionPanel(
         inspector.Inspect(world, containerId),
@@ -359,9 +354,9 @@ static void Render(
 
     Console.SetCursorPosition(0, 21);
     Console.ForegroundColor = ConsoleColor.Gray;
-    Console.WriteLine(world.FormatEntityAddress(WorldBuilder.PlayerId).PadRight(Console.WindowWidth - 1));
-    Console.WriteLine(world.FormatEntityAddress(WorldBuilder.SlimeId).PadRight(Console.WindowWidth - 1));
-    Console.WriteLine(world.FormatEntityAddress(WorldBuilder.RockId).PadRight(Console.WindowWidth - 1));
+    Console.WriteLine(world.FormatEntityAddress(PrototypeContent.PlayerId).PadRight(Console.WindowWidth - 1));
+    Console.WriteLine(world.FormatEntityAddress(PrototypeContent.SlimeId).PadRight(Console.WindowWidth - 1));
+    Console.WriteLine(world.FormatEntityAddress(PrototypeContent.RockId).PadRight(Console.WindowWidth - 1));
     Console.WriteLine(message.PadRight(Console.WindowWidth - 1));
 
     if (world.LastTrace is { } trace)

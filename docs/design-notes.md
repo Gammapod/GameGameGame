@@ -179,6 +179,24 @@ Current preferred primitive properties include:
 
 Inventory planes may still be materialized in world state, but their existence should follow from inventory dimensions rather than from a separate conceptual capability.
 
+### Engine And Content Boundary
+
+Engine code owns general mechanics:
+
+- Entity, plane, node, and occupancy data structures.
+- Inventory plane registration and lookup.
+- Movement, pickup, drop, weight, carrying capacity, action resolution, traces, and inspection data shapes.
+- Primitive action and action-plan machinery.
+
+Content code owns specific game definitions:
+
+- Prototype entity IDs, names, glyphs, colors, weights, capacities, and inventory dimensions.
+- Prototype plane IDs and starting placements.
+- Scenario/world construction.
+- Which entities receive which reusable action plans.
+
+An inventory plane may have a content-chosen ID such as `world` or `player`, but it should be materialized by content because the owning entity has nonzero inventory dimensions. The entity itself should not store its inventory plane ID as a property.
+
 ## Near-Term Implementation Priorities
 
 Before adding complex gameplay, the next architectural plumbing should likely include:

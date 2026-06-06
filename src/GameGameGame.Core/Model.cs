@@ -48,7 +48,6 @@ public sealed record Entity(
     char Glyph,
     ConsoleColor Color,
     NodeId OccupiedNodeId,
-    PlaneId? InventoryPlaneId,
     int InventoryWidth,
     int InventoryHeight,
     int Weight,

@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/GameGameGame.Console/GameGameGame.Console.csproj" />
+    <Project Path="src/GameGameGame.Content/GameGameGame.Content.csproj" />
     <Project Path="src/GameGameGame.Core/GameGameGame.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">

@@ -32,7 +32,7 @@ public sealed class WeightService
 
         var carried = 0;
 
-        if (entity.InventoryPlaneId is { } inventoryPlaneId)
+        if (world.GetInventoryPlaneId(entityId) is { } inventoryPlaneId)
         {
             var carriedTrace = TraceNode.Info($"Carried entities in {inventoryPlaneId}");
 
@@ -70,7 +70,7 @@ public sealed class WeightService
     {
         var entity = world.Entities[entityId];
 
-        if (!entity.HasUsableInventory || entity.InventoryPlaneId is not { } inventoryPlaneId)
+        if (world.GetInventoryPlaneId(entityId) is not { } inventoryPlaneId)
         {
             return 0;
         }

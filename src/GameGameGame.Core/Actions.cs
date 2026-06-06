@@ -97,7 +97,7 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
             return ActionTrace.Fail(trace, FailureReason.TargetIsActor, "actor cannot pick up itself");
         }
 
-        if (actor.InventoryPlaneId is not { } inventoryPlaneId)
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId)
         {
             return ActionTrace.Fail(trace, FailureReason.ActorHasNoInventory, $"{actor.Name} has no inventory plane");
         }
@@ -171,7 +171,7 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
             return ActionTrace.Fail(trace, FailureReason.TargetMissing, $"target {TargetId} does not exist");
         }
 
-        if (actor.InventoryPlaneId is not { } inventoryPlaneId)
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId)
         {
             return ActionTrace.Fail(trace, FailureReason.ActorHasNoInventory, $"{actor.Name} has no inventory plane");
         }

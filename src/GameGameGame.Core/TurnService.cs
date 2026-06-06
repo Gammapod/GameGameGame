@@ -2,11 +2,11 @@ namespace GameGameGame.Core;
 
 public sealed class TurnService(MovementService movement, IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans)
 {
-    public bool TakePlayerTurn(WorldState world, PlannedActionPlan playerPlan)
+    public bool TakeActorTurnThenAdvance(WorldState world, EntityId actorId, PlannedActionPlan actorPlan)
     {
         var root = new TraceNode($"Turn {world.TurnNumber + 1}", TraceStatus.Info);
-        var (acted, playerTrace) = ResolvePlanTrace(world, WorldBuilder.PlayerId, playerPlan);
-        root.Add(playerTrace);
+        var (acted, actorTrace) = ResolvePlanTrace(world, actorId, actorPlan);
+        root.Add(actorTrace);
 
         AdvanceAfterPlayerTurn(world, root);
         root.Status = root.Children.Any(child => child.Status == TraceStatus.Failure)

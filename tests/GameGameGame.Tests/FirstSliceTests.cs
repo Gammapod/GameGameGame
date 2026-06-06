@@ -1,4 +1,5 @@
 using GameGameGame.Core;
+using WorldBuilder = GameGameGame.Content.PrototypeContent;
 
 namespace GameGameGame.Tests;
 
@@ -227,7 +228,7 @@ public sealed class FirstSliceTests
                 [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
             });
 
-        turns.TakePlayerTurn(world, PlannedActionPlan.Single(new MoveAction(Direction.South)));
+        turns.TakeActorTurnThenAdvance(world, WorldBuilder.PlayerId, PlannedActionPlan.Single(new MoveAction(Direction.South)));
 
         Assert.Equal(1, world.TurnNumber);
         Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(WorldBuilder.PlayerId));
@@ -279,7 +280,7 @@ public sealed class FirstSliceTests
             });
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
-        turns.TakePlayerTurn(world, PlannedActionPlan.Single(new PickupAction(WorldBuilder.SlimeId, destination)));
+        turns.TakeActorTurnThenAdvance(world, WorldBuilder.PlayerId, PlannedActionPlan.Single(new PickupAction(WorldBuilder.SlimeId, destination)));
 
         Assert.Equal(1, world.TurnNumber);
         Assert.Equal("Slime@player(1,0)", world.FormatEntityAddress(WorldBuilder.SlimeId));
@@ -404,7 +405,7 @@ public sealed class FirstSliceTests
         var movement = new MovementService();
         var rock = world.Entities[WorldBuilder.RockId];
         var rockInventoryPlaneId = new PlaneId("rock");
-        world.Entities[WorldBuilder.RockId] = rock with { InventoryPlaneId = rockInventoryPlaneId };
+        world.RegisterInventoryPlane(WorldBuilder.RockId, rockInventoryPlaneId);
         var action = new PickupAction(
             WorldBuilder.SlimeId,
             new PlaneCoord(rockInventoryPlaneId, new GridCoord(0, 0)));

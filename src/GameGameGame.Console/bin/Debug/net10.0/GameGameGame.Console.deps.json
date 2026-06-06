@@ -8,10 +8,22 @@
     ".NETCoreApp,Version=v10.0": {
       "GameGameGame.Console/1.0.0": {
         "dependencies": {
+          "GameGameGame.Content": "1.0.0",
           "GameGameGame.Core": "1.0.0"
         },
         "runtime": {
           "GameGameGame.Console.dll": {}
+        }
+      },
+      "GameGameGame.Content/1.0.0": {
+        "dependencies": {
+          "GameGameGame.Core": "1.0.0"
+        },
+        "runtime": {
+          "GameGameGame.Content.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       },
       "GameGameGame.Core/1.0.0": {
@@ -26,6 +38,11 @@
   },
   "libraries": {
     "GameGameGame.Console/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "GameGameGame.Content/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

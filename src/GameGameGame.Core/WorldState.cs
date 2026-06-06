@@ -16,6 +16,8 @@ public sealed class WorldState
 
     public Dictionary<NodeId, EntityId> Occupancy { get; } = [];
 
+    public Dictionary<EntityId, PlaneId> InventoryPlanes { get; } = [];
+
     public NodeId AddNode(PlaneId planeId, GridCoord coord)
     {
         var nodeId = new NodeId($"{planeId}:{coord.X},{coord.Y}");
@@ -57,4 +59,19 @@ public sealed class WorldState
     public void AdvanceTurn() => TurnNumber++;
 
     public void RecordTrace(TraceNode trace) => LastTrace = trace;
+
+    public void RegisterInventoryPlane(EntityId entityId, PlaneId planeId) => InventoryPlanes[entityId] = planeId;
+
+    public PlaneId? GetRegisteredInventoryPlaneId(EntityId entityId) =>
+        InventoryPlanes.TryGetValue(entityId, out var planeId) ? planeId : null;
+
+    public PlaneId? GetInventoryPlaneId(EntityId entityId)
+    {
+        if (!Entities.TryGetValue(entityId, out var entity) || !entity.HasUsableInventory)
+        {
+            return null;
+        }
+
+        return InventoryPlanes.TryGetValue(entityId, out var planeId) ? planeId : null;
+    }
 }

@@ -35,7 +35,7 @@ public sealed class EntityInspectionService
             new("Carried Weight", weight.GetCarriedWeight(world, entityId).ToString()),
             new("Carrying Capacity", entity.CarryingCapacity.ToString()),
             new("Inventory Dimensions", $"{entity.InventoryWidth}x{entity.InventoryHeight}"),
-            new("Inventory Plane", entity.InventoryPlaneId?.ToString() ?? "none"),
+            new("Inventory Plane", world.GetInventoryPlaneId(entityId)?.ToString() ?? "none"),
             new("Usable Inventory", entity.HasUsableInventory.ToString())
         };
 
@@ -53,7 +53,7 @@ public sealed class EntityInspectionService
     {
         foreach (var entity in world.Entities.Values)
         {
-            if (entity.InventoryPlaneId == planeId)
+            if (world.GetInventoryPlaneId(entity.Id) == planeId)
             {
                 return entity.Id;
             }
@@ -64,7 +64,7 @@ public sealed class EntityInspectionService
 
     private static InventoryInspectionGrid? BuildInventoryGrid(WorldState world, Entity entity)
     {
-        if (!entity.HasUsableInventory || entity.InventoryPlaneId is not { } inventoryPlaneId)
+        if (world.GetInventoryPlaneId(entity.Id) is not { } inventoryPlaneId)
         {
             return null;
         }
