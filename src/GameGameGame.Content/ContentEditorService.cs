@@ -2,7 +2,7 @@ using GameGameGame.Core;
 
 namespace GameGameGame.Content;
 
-public sealed class ContentEditorService(EditableContentDocument document)
+public sealed class ContentEditorService(EditableContentDocument document, Action? onChanged = null)
 {
     public EditableContentDocument Document { get; } = document;
 
@@ -35,6 +35,7 @@ public sealed class ContentEditorService(EditableContentDocument document)
     {
         Document.EntityTemplates[id.Value] = EditableContentDocument.EntityTemplateDto.From(template);
         Document.Presentations[id.Value] = EditableContentDocument.EntityPresentationDto.From(presentation);
+        onChanged?.Invoke();
     }
 
     public void PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, EntityTemplateId templateId, GridCoord coord)
@@ -47,6 +48,7 @@ public sealed class ContentEditorService(EditableContentDocument document)
             TemplateId = templateId.Value,
             Coord = EditableContentDocument.GridCoordDto.From(coord)
         });
+        onChanged?.Invoke();
     }
 
     public void MoveCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, GridCoord coord)
@@ -56,6 +58,7 @@ public sealed class ContentEditorService(EditableContentDocument document)
             ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
 
         carried.Coord = EditableContentDocument.GridCoordDto.From(coord);
+        onChanged?.Invoke();
     }
 
     public IReadOnlyList<ActionPlanEditorModel> ListActionPlans()
@@ -73,12 +76,14 @@ public sealed class ContentEditorService(EditableContentDocument document)
         var plan = GetActionPlanDto(planId);
         plan.Steps ??= [];
         plan.Steps.Add(EditableContentDocument.ActionPlanStepDescriptorDto.From(step));
+        onChanged?.Invoke();
     }
 
     public void UpdateActionPlanStep(ActionPlanTemplateId planId, int index, ActionPlanStepDescriptor step)
     {
         var steps = GetActionPlanSteps(planId);
         steps[index] = EditableContentDocument.ActionPlanStepDescriptorDto.From(step);
+        onChanged?.Invoke();
     }
 
     public void MoveActionPlanStep(ActionPlanTemplateId planId, int fromIndex, int toIndex)
@@ -87,11 +92,13 @@ public sealed class ContentEditorService(EditableContentDocument document)
         var step = steps[fromIndex];
         steps.RemoveAt(fromIndex);
         steps.Insert(toIndex, step);
+        onChanged?.Invoke();
     }
 
     public void RemoveActionPlanStep(ActionPlanTemplateId planId, int index)
     {
         GetActionPlanSteps(planId).RemoveAt(index);
+        onChanged?.Invoke();
     }
 
     public void SetDefaultPlanVariable(EntityTemplateId templateId, string variableName, PlanValueDescriptor value)
@@ -99,6 +106,7 @@ public sealed class ContentEditorService(EditableContentDocument document)
         var template = GetTemplateDto(templateId);
         template.DefaultPlanVariables ??= [];
         template.DefaultPlanVariables[variableName] = EditableContentDocument.PlanValueDescriptorDto.From(value);
+        onChanged?.Invoke();
     }
 
     private EditableContentDocument.EntityTemplateDto GetTemplateDto(EntityTemplateId id) =>
