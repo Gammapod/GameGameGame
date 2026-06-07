@@ -3,6 +3,7 @@ using GameGameGame.Core;
 
 namespace GameGameGame.Tests;
 
+[Trait(TestSuites.TraitName, TestSuites.Content)]
 public sealed class ContentEditorSessionTests
 {
     [Fact]

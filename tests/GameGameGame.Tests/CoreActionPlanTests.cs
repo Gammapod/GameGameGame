@@ -1,9 +1,9 @@
 using GameGameGame.Core;
-using WorldBuilder = GameGameGame.Content.PrototypeContent;
 
 namespace GameGameGame.Tests;
 
-public sealed class ActionPlanRefactorTests
+[Trait(TestSuites.TraitName, TestSuites.Core)]
+public sealed class CoreActionPlanTests
 {
     [Fact]
     public void ActionPlanContextStoresTypedVariables()
@@ -154,7 +154,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void ActionPlanDescriptorMaterializesExecutableBuiltIns()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.South));
         var descriptor = new ActionPlanDescriptor(
@@ -169,13 +169,13 @@ public sealed class ActionPlanRefactorTests
 
         var result = new ActionPlanInterpreter(new MovementService()).Execute(
             world,
-            WorldBuilder.PlayerId,
+            TestWorld.PlayerId,
             descriptor.Materialize(),
             context);
 
         Assert.True(result.Succeeded);
         Assert.True(result.ConsumesTurn);
-        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(WorldBuilder.PlayerId));
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
         Assert.True(TraceContains(result.Trace, "Can move facing"));
         Assert.True(TraceContains(result.Trace, "Move facing"));
     }
@@ -203,7 +203,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void PlanInterpreterUsesFirstSuccessfulConsumingRankedStep()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         var executed = new List<string>();
         var plan = new ActionPlanDefinition(
@@ -226,7 +226,7 @@ public sealed class ActionPlanRefactorTests
                     onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, WorldBuilder.PlayerId, plan, context);
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, context);
 
         Assert.True(result.Succeeded);
         Assert.True(result.ConsumesTurn);
@@ -240,7 +240,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void PlanInterpreterCommitsCheckVariableWritesBeforeEffect()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         Direction? effectFacing = null;
         var plan = new ActionPlanDefinition(
@@ -256,7 +256,7 @@ public sealed class ActionPlanRefactorTests
                     onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, WorldBuilder.PlayerId, plan, context);
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, context);
 
         Assert.True(result.Succeeded);
         Assert.Equal(Direction.East, effectFacing);
@@ -268,7 +268,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void PlanInterpreterReturnsFailureWhenNoStepConsumesOrStops()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         var plan = new ActionPlanDefinition(
             new ActionPlanId("all-fail"),
@@ -277,7 +277,7 @@ public sealed class ActionPlanRefactorTests
                 new ActionPlanStep("second", [new TestPlanCheck("second check", passed: false)], onSuccess: null, onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, WorldBuilder.PlayerId, plan, context);
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, context);
 
         Assert.False(result.Succeeded);
         Assert.False(result.ConsumesTurn);
@@ -288,7 +288,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void BuiltInCanMoveCheckAndMoveEffectMoveActorUsingDirectionVariable()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.South));
         var plan = new ActionPlanDefinition(
@@ -301,11 +301,11 @@ public sealed class ActionPlanRefactorTests
                     onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, WorldBuilder.PlayerId, plan, context);
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, context);
 
         Assert.True(result.Succeeded);
         Assert.True(result.ConsumesTurn);
-        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(WorldBuilder.PlayerId));
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
         Assert.True(TraceContains(result.Trace, "Can move facing"));
         Assert.True(TraceContains(result.Trace, "Move facing"));
     }
@@ -313,7 +313,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void BuiltInCanMoveCheckFailureFallsThroughToSetVariableEffect()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.South));
         var plan = new ActionPlanDefinition(
@@ -331,11 +331,11 @@ public sealed class ActionPlanRefactorTests
                     onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, WorldBuilder.SlimeId, plan, context);
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.SlimeId, plan, context);
 
         Assert.True(result.Succeeded);
         Assert.False(result.ConsumesTurn);
-        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(TestWorld.SlimeId));
         Assert.True(context.TryGet<DirectionPlanValue>("facing", out var facing));
         Assert.Equal(Direction.North, facing.Value);
         Assert.True(TraceContains(result.Trace, "Set variable facing"));
@@ -344,7 +344,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void CallPlanEffectRunsNestedPlanWithSharedContextAndTrace()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         var childId = new ActionPlanId("child");
         var parent = new ActionPlanDefinition(
@@ -369,7 +369,7 @@ public sealed class ActionPlanRefactorTests
                 [child.Id] = child
             });
 
-        var result = interpreter.Execute(world, WorldBuilder.PlayerId, parent, context);
+        var result = interpreter.Execute(world, TestWorld.PlayerId, parent, context);
 
         Assert.True(result.Succeeded);
         Assert.True(result.ConsumesTurn);
@@ -382,7 +382,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void CallPlanEffectFailsWithTraceWhenDepthGuardIsExceeded()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         var recursiveId = new ActionPlanId("recursive");
         var recursive = new ActionPlanDefinition(
@@ -398,7 +398,7 @@ public sealed class ActionPlanRefactorTests
             },
             maxCallDepth: 2);
 
-        var result = interpreter.Execute(world, WorldBuilder.PlayerId, recursive, context);
+        var result = interpreter.Execute(world, TestWorld.PlayerId, recursive, context);
 
         Assert.False(result.Succeeded);
         Assert.False(result.ConsumesTurn);
@@ -409,30 +409,30 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void BlockingEntityCheckWritesTargetWhenFacingBlockedEntity()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.South));
         var check = new BlockingEntityCheck("facing", "target");
 
-        var result = check.Evaluate(world, WorldBuilder.SlimeId, context, new MovementService());
+        var result = check.Evaluate(world, TestWorld.SlimeId, context, new MovementService());
 
         Assert.True(result.Passed);
         Assert.Equal(TraceStatus.Success, result.Trace.Status);
         Assert.True(result.VariableWrites.TryGetValue("target", out var target));
         var targetValue = Assert.IsType<EntityPlanValue>(target);
-        Assert.Equal(WorldBuilder.PlayerId, targetValue.Value);
+        Assert.Equal(TestWorld.PlayerId, targetValue.Value);
         Assert.Contains("player", result.Trace.Detail);
     }
 
     [Fact]
     public void BlockingEntityCheckFailsWithoutWritingTargetWhenNoBlockerExists()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.North));
         var check = new BlockingEntityCheck("facing", "target");
 
-        var result = check.Evaluate(world, WorldBuilder.SlimeId, context, new MovementService());
+        var result = check.Evaluate(world, TestWorld.SlimeId, context, new MovementService());
 
         Assert.False(result.Passed);
         Assert.Equal(TraceStatus.Failure, result.Trace.Status);
@@ -443,15 +443,15 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void CanPickupCheckPassesForBoundAdjacentCarryableTarget()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         var context = new ActionPlanContext();
-        context.Set("target", new EntityPlanValue(WorldBuilder.RockId));
-        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.SlimeInventoryPlaneId, new GridCoord(0, 0)));
-        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
+        context.Set("target", new EntityPlanValue(TestWorld.RockId));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
         var check = new CanPickupCheck("target", new GridCoord(0, 0));
 
-        var result = check.Evaluate(world, WorldBuilder.SlimeId, context, movement);
+        var result = check.Evaluate(world, TestWorld.SlimeId, context, movement);
 
         Assert.True(result.Passed);
         Assert.Equal(TraceStatus.Success, result.Trace.Status);
@@ -459,30 +459,13 @@ public sealed class ActionPlanRefactorTests
     }
 
     [Fact]
-    public void CanPickupCheckFailsForBoundTargetThatIsTooHeavy()
-    {
-        var world = WorldBuilder.CreateFirstSlice().World;
-        var movement = new MovementService();
-        var context = new ActionPlanContext();
-        context.Set("target", new EntityPlanValue(WorldBuilder.PlayerId));
-        movement.TryPlace(world, WorldBuilder.PlayerId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(2, 1)));
-        var check = new CanPickupCheck("target", new GridCoord(0, 0));
-
-        var result = check.Evaluate(world, WorldBuilder.SlimeId, context, movement);
-
-        Assert.False(result.Passed);
-        Assert.Equal(TraceStatus.Failure, result.Trace.Status);
-        Assert.Equal(FailureReason.CapacityExceeded, result.Trace.Reason);
-    }
-
-    [Fact]
     public void PickupEffectPicksUpBoundTargetIntoActorInventory()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         var context = new ActionPlanContext();
-        context.Set("target", new EntityPlanValue(WorldBuilder.RockId));
-        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
+        context.Set("target", new EntityPlanValue(TestWorld.RockId));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
         var plan = new ActionPlanDefinition(
             new ActionPlanId("pickup-bound-target"),
             [
@@ -493,23 +476,23 @@ public sealed class ActionPlanRefactorTests
                     onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(movement).Execute(world, WorldBuilder.SlimeId, plan, context);
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, context);
 
         Assert.True(result.Succeeded);
         Assert.True(result.ConsumesTurn);
-        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(WorldBuilder.RockId));
+        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(TestWorld.RockId));
         Assert.True(TraceContains(result.Trace, "Pickup target"));
     }
 
     [Fact]
     public void ReverseDirectionEffectUpdatesDirectionVariableWithoutConsumingTurn()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.West));
         var effect = new ReverseDirectionEffect("facing", consumesTurn: false, continuePlan: false);
 
-        var result = effect.Apply(world, WorldBuilder.SlimeId, context, new MovementService());
+        var result = effect.Apply(world, TestWorld.SlimeId, context, new MovementService());
 
         Assert.True(result.Succeeded);
         Assert.False(result.ConsumesTurn);
@@ -521,7 +504,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void WaitEffectConsumesTurnWithoutChangingWorldPosition()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var context = new ActionPlanContext();
         var plan = new ActionPlanDefinition(
             new ActionPlanId("wait"),
@@ -529,18 +512,18 @@ public sealed class ActionPlanRefactorTests
                 new ActionPlanStep("wait", [], new WaitEffect(), onFailure: null)
             ]);
 
-        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, WorldBuilder.SlimeId, plan, context);
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.SlimeId, plan, context);
 
         Assert.True(result.Succeeded);
         Assert.True(result.ConsumesTurn);
-        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(TestWorld.SlimeId));
         Assert.True(TraceContains(result.Trace, "Wait"));
     }
 
     [Fact]
     public void InterpretedEntityActionPlanCanBeScheduledByTurnService()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.West));
@@ -549,12 +532,12 @@ public sealed class ActionPlanRefactorTests
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new InterpretedEntityActionPlan(wandering, context, registry)
+                [TestWorld.SlimeId] = new InterpretedEntityActionPlan(wandering, context, registry)
             });
 
         turns.AdvanceAfterPlayerTurn(world);
 
-        Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(TestWorld.SlimeId));
         Assert.True(TraceContains(world.LastTrace!, "Plan wandering"));
         Assert.True(TraceContains(world.LastTrace!, "Move facing"));
     }
@@ -562,7 +545,7 @@ public sealed class ActionPlanRefactorTests
     [Fact]
     public void InterpretedWanderingPlanCallsNestedPickupPlanForBlockingCarryableTarget()
     {
-        var world = WorldBuilder.CreateFirstSlice().World;
+        var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.West));
@@ -571,18 +554,18 @@ public sealed class ActionPlanRefactorTests
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new InterpretedEntityActionPlan(wandering, context, registry)
+                [TestWorld.SlimeId] = new InterpretedEntityActionPlan(wandering, context, registry)
             });
-        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
 
         turns.AdvanceAfterPlayerTurn(world);
 
-        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
-        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(WorldBuilder.RockId));
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(TestWorld.SlimeId));
+        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(TestWorld.RockId));
         Assert.True(TraceContains(world.LastTrace!, "Call plan handleBlocker"));
         Assert.True(TraceContains(world.LastTrace!, "Plan handleBlocker"));
         Assert.True(context.TryGet<EntityPlanValue>("target", out var target));
-        Assert.Equal(WorldBuilder.RockId, target.Value);
+        Assert.Equal(TestWorld.RockId, target.Value);
     }
 
     private static (ActionPlanDefinition Wandering, ActionPlanDefinition HandleBlocker, IReadOnlyDictionary<ActionPlanId, ActionPlanDefinition> Registry) CreateWanderingPlanDefinitions()

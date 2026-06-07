@@ -18,24 +18,25 @@ Already available:
 - `ContentEditorService` lists and edits action-plan steps.
 - `ContentEditorService` edits template default plan variables.
 - `ContentEditorService.Validate()` returns current registry validation results.
+- `ContentEditorSession` opens files, creates new sessions, saves, saves-as, tracks dirty state, and reports file operation failures.
 - `PlanPrimitiveCatalog` exposes engine-defined check/effect/value metadata for editor dropdowns.
 
 Known limitations:
 
 - Diagnostics are string-only and not mapped to document paths or UI fields.
-- File workflow is not represented as an editor session with dirty state, save path, reload, or error handling.
+- File workflow does not yet expose reload/reset or YAML diff baselines.
 - Inventory editing has place/move operations but no remove/replace/list-specific helpers.
 - Action-plan editing edits whole step descriptors, not field-level primitive inputs.
 - There is no preview/simulation service for validating edited content against runtime behavior.
 - There is no GUI project yet.
 
-## Step 1: Editor Session And File Workflow
+## Step 1: Editor Session And File Workflow - Mostly Complete
 
-Introduce an editor-session service around `EditableContentDocument` and `ContentEditorService` for GUI ownership of file state.
+Use `ContentEditorSession` as the GUI ownership boundary for file state around `EditableContentDocument` and `ContentEditorService`.
 
-Expected complexity: Medium.
+Expected remaining complexity: Low.
 
-Needed service capabilities:
+Implemented service capabilities:
 
 - Open content from a file path.
 - Create a new empty content document.
@@ -45,6 +46,12 @@ Needed service capabilities:
 - Expose current file path and document status.
 - Surface load/save errors without crashing the UI.
 
+Remaining service capabilities:
+
+- Reload/reset current document from disk after confirmation.
+- Track a saved YAML baseline for diff/preview support.
+- Optionally expose recent file metadata or last-opened path outside the session.
+
 Testable outcomes:
 
 - Opening a YAML file creates an editor session with the expected document and file path.
@@ -53,6 +60,8 @@ Testable outcomes:
 - Saving clears dirty state.
 - Save-as changes the session file path.
 - Invalid file load returns a useful failure result instead of throwing into the GUI layer.
+- Reload/reset discards unsaved edits and restores file content.
+- Saving updates the baseline used for YAML diff support.
 
 ## Step 2: Structured Editor Diagnostics
 
@@ -271,15 +280,20 @@ Testable outcomes:
 
 ## Recommended Build Order
 
-1. Editor session and file workflow.
+Completed or mostly complete:
+
+- Editor session and file workflow.
+
+Recommended remaining order:
+
+1. Structured diagnostics.
 2. Complete entity preset editing service.
 3. Complete inventory layout editing service.
 4. YAML preview and diff support.
 5. Standalone GUI skeleton with entity preset editing.
-6. Structured diagnostics.
-7. Action-plan field editing service.
-8. Variable editing and inference helpers.
-9. Runtime preview service.
-10. Full action-plan GUI.
+6. Action-plan field editing service.
+7. Variable editing and inference helpers.
+8. Runtime preview service.
+9. Full action-plan GUI.
 
-This order gets to a usable standalone GUI quickly while avoiding premature complexity in the action-plan editor.
+This order reflects the current test refactor: session/file workflow is already covered, content tests now focus on editor services and validation, and Core behavior is isolated from prototype content details. The remaining order gets to a usable standalone GUI quickly while avoiding premature complexity in the action-plan editor.
