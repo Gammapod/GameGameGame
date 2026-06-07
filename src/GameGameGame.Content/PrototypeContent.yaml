@@ -1,8 +1,8 @@
 entityTemplates:
   game:
     name: Game
-    inventoryWidth: 5
-    inventoryHeight: 5
+    inventoryWidth: 25
+    inventoryHeight: 25
     weight: 0
     carryingCapacity: 0
   player:
@@ -16,7 +16,7 @@ entityTemplates:
     inventoryWidth: 1
     inventoryHeight: 1
     weight: 3
-    carryingCapacity: 3
+    carryingCapacity: 20
     defaultActionPlanId: wandering
     defaultPlanVariables:
       facing:
