@@ -97,6 +97,61 @@ public sealed class ActionPlanRefactorTests
     }
 
     [Fact]
+    public void PlanPrimitiveCatalogExposesAllCheckEffectAndValueKinds()
+    {
+        Assert.Equal(Enum.GetValues<PlanCheckKind>().Order(), PlanPrimitiveCatalog.Checks.Select(check => check.Kind).Order());
+        Assert.Equal(Enum.GetValues<PlanEffectKind>().Order(), PlanPrimitiveCatalog.Effects.Select(effect => effect.Kind).Order());
+        Assert.Equal(Enum.GetValues<PlanValueKind>().Order(), PlanPrimitiveCatalog.ValueKinds.Select(value => value.Kind).Order());
+    }
+
+    [Fact]
+    public void PlanPrimitiveCatalogDescribesCheckFieldsAndVariableContracts()
+    {
+        var canMove = PlanPrimitiveCatalog.GetCheck(PlanCheckKind.CanMove);
+        var blockingEntity = PlanPrimitiveCatalog.GetCheck(PlanCheckKind.BlockingEntity);
+
+        var canMoveField = Assert.Single(canMove.Fields);
+        Assert.Equal("directionVariable", canMoveField.Name);
+        Assert.Equal(PlanPrimitiveFieldKind.VariableRead, canMoveField.Kind);
+        Assert.Equal(PlanValueKind.Direction, canMoveField.ValueKind);
+        Assert.True(canMoveField.IsRequired);
+
+        Assert.Contains(blockingEntity.Fields, field =>
+            field.Name == "directionVariable"
+            && field.Kind == PlanPrimitiveFieldKind.VariableRead
+            && field.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(blockingEntity.Fields, field =>
+            field.Name == "targetVariable"
+            && field.Kind == PlanPrimitiveFieldKind.VariableWrite
+            && field.ValueKind == PlanValueKind.Entity);
+    }
+
+    [Fact]
+    public void PlanPrimitiveCatalogDescribesEffectFieldsAndReferences()
+    {
+        var pickup = PlanPrimitiveCatalog.GetEffect(PlanEffectKind.Pickup);
+        var callPlan = PlanPrimitiveCatalog.GetEffect(PlanEffectKind.CallPlan);
+        var setVariable = PlanPrimitiveCatalog.GetEffect(PlanEffectKind.SetVariable);
+
+        Assert.Contains(pickup.Fields, field =>
+            field.Name == "targetVariable"
+            && field.Kind == PlanPrimitiveFieldKind.VariableRead
+            && field.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(pickup.Fields, field =>
+            field.Name == "inventoryCoord"
+            && field.Kind == PlanPrimitiveFieldKind.CoordLiteral);
+        Assert.Contains(callPlan.Fields, field =>
+            field.Name == "planId"
+            && field.Kind == PlanPrimitiveFieldKind.ActionPlanReference);
+        Assert.Contains(setVariable.Fields, field =>
+            field.Name == "variableName"
+            && field.Kind == PlanPrimitiveFieldKind.VariableWrite);
+        Assert.Contains(setVariable.Fields, field =>
+            field.Name == "value"
+            && field.Kind == PlanPrimitiveFieldKind.PlanValueLiteral);
+    }
+
+    [Fact]
     public void ActionPlanDescriptorMaterializesExecutableBuiltIns()
     {
         var world = WorldBuilder.CreateFirstSlice().World;

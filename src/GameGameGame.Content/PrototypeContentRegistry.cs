@@ -9,6 +9,12 @@ public sealed class PrototypeContentRegistry(
 {
     private readonly Dictionary<EntityId, EntityTemplateId> _entityTemplateAssignments = [];
 
+    public IReadOnlyDictionary<EntityTemplateId, EntityTemplate> EntityTemplates => entityTemplates;
+
+    public IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> ActionPlanDescriptors => actionPlanTemplates;
+
+    public IReadOnlyDictionary<EntityTemplateId, EntityPresentation> Presentations => presentations;
+
     public EntityTemplate GetEntityTemplate(EntityTemplateId id) => entityTemplates[id];
 
     public EntityPresentation GetPresentation(EntityTemplateId id) => presentations[id];
@@ -174,6 +180,8 @@ public sealed class PrototypeContentRegistry(
                 continue;
             }
 
+            ValidateCarriedEntityLayout(errors, templateId, template);
+
             foreach (var carried in template.CarriedEntities)
             {
                 if (carried.TemplateId is { } carriedTemplateId && !entityTemplates.ContainsKey(carriedTemplateId))
@@ -181,6 +189,49 @@ public sealed class PrototypeContentRegistry(
                     errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} with missing template {carriedTemplateId}.");
                 }
             }
+        }
+    }
+
+    private static void ValidateCarriedEntityLayout(List<string> errors, EntityTemplateId templateId, EntityTemplate template)
+    {
+        if (template.CarriedEntities is null || template.CarriedEntities.Count == 0)
+        {
+            return;
+        }
+
+        var entityIds = new HashSet<EntityId>();
+        var occupiedCoords = new Dictionary<GridCoord, EntityId>();
+        var hasUsableInventory = template.InventoryWidth > 0 && template.InventoryHeight > 0;
+
+        foreach (var carried in template.CarriedEntities)
+        {
+            if (!entityIds.Add(carried.EntityId))
+            {
+                errors.Add($"Entity template {templateId} ({template.Name}) has duplicate carried entity ID {carried.EntityId}.");
+            }
+
+            if (!hasUsableInventory)
+            {
+                errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} but has no usable inventory.");
+                continue;
+            }
+
+            if (carried.Coord.X < 0
+                || carried.Coord.Y < 0
+                || carried.Coord.X >= template.InventoryWidth
+                || carried.Coord.Y >= template.InventoryHeight)
+            {
+                errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} at {carried.Coord}, outside inventory bounds {template.InventoryWidth}x{template.InventoryHeight}.");
+                continue;
+            }
+
+            if (occupiedCoords.TryGetValue(carried.Coord, out var existingEntityId))
+            {
+                errors.Add($"Entity template {templateId} ({template.Name}) carried entities {existingEntityId} and {carried.EntityId} overlap at {carried.Coord}.");
+                continue;
+            }
+
+            occupiedCoords[carried.Coord] = carried.EntityId;
         }
     }
 
@@ -223,7 +274,201 @@ public sealed class PrototypeContentRegistry(
                 validationErrors.Add($"Action plan {descriptor.Id} step {step.Label} calls missing plan {planId}.");
             }
         }
+
+        ValidateTemplateActionPlanVariables(errors);
     }
+
+    private void ValidateTemplateActionPlanVariables(List<string> errors)
+    {
+        var plansById = actionPlanTemplates.Values.ToDictionary(plan => plan.Id);
+
+        foreach (var (templateId, template) in entityTemplates)
+        {
+            if (template.DefaultActionPlanId is not { } actionPlanTemplateId
+                || !actionPlanTemplates.TryGetValue(actionPlanTemplateId, out var plan))
+            {
+                continue;
+            }
+
+            var variables = template.DefaultPlanVariables is null
+                ? new Dictionary<string, PlanValueKind>()
+                : template.DefaultPlanVariables.ToDictionary(entry => entry.Key, entry => entry.Value.Kind);
+
+            ValidatePlanVariables(
+                errors,
+                $"Entity template {templateId} ({template.Name}) action plan {plan.Id}",
+                plan,
+                variables,
+                plansById,
+                []);
+        }
+    }
+
+    private static void ValidatePlanVariables(
+        List<string> errors,
+        string subject,
+        ActionPlanDescriptor plan,
+        Dictionary<string, PlanValueKind> variables,
+        IReadOnlyDictionary<ActionPlanId, ActionPlanDescriptor> plansById,
+        HashSet<ActionPlanId> callStack)
+    {
+        if (!callStack.Add(plan.Id))
+        {
+            return;
+        }
+
+        foreach (var step in plan.Steps)
+        {
+            foreach (var check in step.Checks)
+            {
+                ValidatePrimitiveFields(errors, subject, step, PlanPrimitiveCatalog.GetCheck(check.Kind).Fields, check);
+                ApplyPrimitiveWrites(PlanPrimitiveCatalog.GetCheck(check.Kind).Fields, check, variables);
+            }
+
+            ValidateEffectVariables(errors, subject, step, step.OnSuccess, variables, plansById, callStack);
+            ValidateEffectVariables(errors, subject, step, step.OnFailure, variables, plansById, callStack);
+        }
+
+        callStack.Remove(plan.Id);
+
+        void ValidatePrimitiveFields(
+            List<string> validationErrors,
+            string validationSubject,
+            ActionPlanStepDescriptor step,
+            IReadOnlyList<PlanPrimitiveFieldDescriptor> fields,
+            object descriptor)
+        {
+            foreach (var field in fields.Where(field => field.Kind == PlanPrimitiveFieldKind.VariableRead))
+            {
+                var variableName = GetVariableName(descriptor, field.Name);
+
+                if (string.IsNullOrWhiteSpace(variableName) || field.ValueKind is not { } expectedKind)
+                {
+                    continue;
+                }
+
+                if (!variables.TryGetValue(variableName, out var actualKind))
+                {
+                    validationErrors.Add($"{validationSubject} step {step.Label} reads missing required variable {variableName}.");
+                    continue;
+                }
+
+                if (actualKind != expectedKind)
+                {
+                    validationErrors.Add($"{validationSubject} step {step.Label} variable {variableName} expected {expectedKind} but found {actualKind}.");
+                }
+            }
+        }
+
+        void ApplyPrimitiveWrites(
+            IReadOnlyList<PlanPrimitiveFieldDescriptor> fields,
+            object descriptor,
+            Dictionary<string, PlanValueKind> knownVariables)
+        {
+            foreach (var field in fields.Where(field => field.Kind == PlanPrimitiveFieldKind.VariableWrite))
+            {
+                var variableName = GetVariableName(descriptor, field.Name);
+
+                if (!string.IsNullOrWhiteSpace(variableName) && field.ValueKind is { } valueKind)
+                {
+                    knownVariables[variableName] = valueKind;
+                }
+            }
+        }
+    }
+
+    private static void ValidateEffectVariables(
+        List<string> errors,
+        string subject,
+        ActionPlanStepDescriptor step,
+        PlanEffectDescriptor? effect,
+        Dictionary<string, PlanValueKind> variables,
+        IReadOnlyDictionary<ActionPlanId, ActionPlanDescriptor> plansById,
+        HashSet<ActionPlanId> callStack)
+    {
+        if (effect is null)
+        {
+            return;
+        }
+
+        var fields = PlanPrimitiveCatalog.GetEffect(effect.Kind).Fields;
+
+        foreach (var field in fields.Where(field => field.Kind == PlanPrimitiveFieldKind.VariableRead))
+        {
+            var variableName = GetVariableName(effect, field.Name);
+
+            if (string.IsNullOrWhiteSpace(variableName) || field.ValueKind is not { } expectedKind)
+            {
+                continue;
+            }
+
+            if (!variables.TryGetValue(variableName, out var actualKind))
+            {
+                errors.Add($"{subject} step {step.Label} reads missing required variable {variableName}.");
+                continue;
+            }
+
+            if (actualKind != expectedKind)
+            {
+                errors.Add($"{subject} step {step.Label} variable {variableName} expected {expectedKind} but found {actualKind}.");
+            }
+        }
+
+        foreach (var field in fields.Where(field => field.Kind == PlanPrimitiveFieldKind.VariableWrite))
+        {
+            var variableName = GetVariableName(effect, field.Name);
+
+            if (string.IsNullOrWhiteSpace(variableName))
+            {
+                continue;
+            }
+
+            if (field.ValueKind is { } valueKind)
+            {
+                variables[variableName] = valueKind;
+            }
+            else if (effect.Kind == PlanEffectKind.SetVariable && effect.Value is not null)
+            {
+                variables[variableName] = GetPlanValueKind(effect.Value);
+            }
+        }
+
+        if (effect.Kind == PlanEffectKind.CallPlan
+            && effect.PlanId is { } planId
+            && plansById.TryGetValue(planId, out var calledPlan))
+        {
+            ValidatePlanVariables(errors, subject, calledPlan, variables, plansById, callStack);
+        }
+    }
+
+    private static string? GetVariableName(object descriptor, string fieldName) =>
+        descriptor switch
+        {
+            PlanCheckDescriptor check => fieldName switch
+            {
+                "directionVariable" => check.DirectionVariable,
+                "targetVariable" => check.TargetVariable,
+                _ => null
+            },
+            PlanEffectDescriptor effect => fieldName switch
+            {
+                "directionVariable" => effect.DirectionVariable,
+                "targetVariable" => effect.TargetVariable,
+                "variableName" => effect.VariableName,
+                _ => null
+            },
+            _ => null
+        };
+
+    private static PlanValueKind GetPlanValueKind(PlanValue value) =>
+        value switch
+        {
+            DirectionPlanValue => PlanValueKind.Direction,
+            EntityPlanValue => PlanValueKind.Entity,
+            CoordPlanValue => PlanValueKind.Coord,
+            IntPlanValue => PlanValueKind.Int,
+            _ => throw new InvalidOperationException($"Unsupported plan value type {value.GetType().Name}.")
+        };
 
     private static void TryValidate(List<string> errors, string subject, Action materialize)
     {
