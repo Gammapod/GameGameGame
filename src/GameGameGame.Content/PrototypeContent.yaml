@@ -1,0 +1,110 @@
+entityTemplates:
+  game:
+    name: Game
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 0
+  player:
+    name: Player
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 10
+    carryingCapacity: 5
+  slime:
+    name: Slime
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 3
+    defaultActionPlanId: wandering
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: West
+  giantSlime:
+    name: Giant Slime
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 20
+    carryingCapacity: 20
+    defaultActionPlanId: wandering
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: West
+  rock:
+    name: Rock
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 3
+    carryingCapacity: 3
+
+presentations:
+  game:
+    glyph: G
+    color: Yellow
+  player:
+    glyph: '@'
+    color: Cyan
+  slime:
+    glyph: s
+    color: Green
+  giantSlime:
+    glyph: S
+    color: DarkGreen
+  rock:
+    glyph: '*'
+    color: Earth
+
+actionPlans:
+  wandering:
+    id: wandering
+    steps:
+      - label: move facing
+        checks:
+          - kind: CanMove
+            directionVariable: facing
+        onSuccess:
+          kind: Move
+          directionVariable: facing
+      - label: handle blocker
+        checks:
+          - kind: BlockingEntity
+            directionVariable: facing
+            targetVariable: target
+        onSuccess:
+          kind: CallPlan
+          planId: handleBlocker
+        onFailure:
+          kind: ReverseDirection
+          directionVariable: facing
+          consumesTurn: false
+          continuePlan: true
+      - label: wait
+        checks: []
+        onSuccess:
+          kind: Wait
+  handleBlocker:
+    id: handleBlocker
+    steps:
+      - label: pickup blocker
+        checks:
+          - kind: CanPickup
+            targetVariable: target
+            inventoryCoord:
+              x: 0
+              y: 0
+        onSuccess:
+          kind: Pickup
+          targetVariable: target
+          inventoryCoord:
+            x: 0
+            y: 0
+      - label: reverse after bump
+        checks: []
+        onSuccess:
+          kind: ReverseDirection
+          directionVariable: facing
+          consumesTurn: true
+          continuePlan: false

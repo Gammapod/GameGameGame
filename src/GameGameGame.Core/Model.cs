@@ -45,8 +45,6 @@ public enum Direction
 public sealed record Entity(
     EntityId Id,
     string Name,
-    char Glyph,
-    ConsoleColor Color,
     NodeId OccupiedNodeId,
     int InventoryWidth,
     int InventoryHeight,

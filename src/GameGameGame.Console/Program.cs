@@ -1,10 +1,12 @@
 using GameGameGame.Core;
 using GameGameGame.Content;
 
-var world = PrototypeContent.CreateFirstSliceWorld();
+var slice = PrototypeContent.CreateFirstSlice();
+var world = slice.World;
+var registry = slice.Registry;
 var movement = new MovementService();
-var inspector = new EntityInspectionService();
-var turns = new TurnService(movement, PrototypeContent.CreatePrototypeActionPlans());
+var inspector = new EntityInspectionService(entityId => registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
+var turns = new TurnService(movement, slice.ActionPlans);
 
 var running = true;
 var mode = InputMode.Play;
@@ -18,7 +20,7 @@ Console.CursorVisible = false;
 
 while (running)
 {
-    Render(world, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, message);
+    Render(world, inspector, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, message);
 
     var key = Console.ReadKey(intercept: true).Key;
 
@@ -308,6 +310,7 @@ static GridCoord MoveCursor(GridCoord cursor, ConsoleKey key, Plane plane)
 
 static void Render(
     WorldState world,
+    EntityInspectionService inspector,
     InputMode mode,
     GridCoord worldCursor,
     GridCoord inventoryCursor,
@@ -332,7 +335,6 @@ static void Render(
 
     Console.WriteLine();
 
-    var inspector = new EntityInspectionService();
     var playerPlaneId = world.GetEntityLocation(PrototypeContent.PlayerId).PlaneId;
     var containerId = inspector.FindEntityContainingPlane(world, playerPlaneId) ?? PrototypeContent.PlayerId;
 
@@ -432,7 +434,7 @@ static void DrawInspectionPanel(EntityInspectionPanel panel, int left, int top, 
     Console.Write(TrimToWidth($"{title}: {panel.Name} {panel.Address}", width));
 
     Console.SetCursorPosition(left, top + 1);
-    Console.ForegroundColor = panel.Color;
+    Console.ForegroundColor = ToConsoleColor(panel.Color);
     Console.Write(TrimToWidth($"{panel.Glyph} {panel.EntityId}", width));
 
     var propertyLine = 0;
@@ -466,7 +468,7 @@ static void DrawInspectionPanel(EntityInspectionPanel panel, int left, int top, 
             var cell = grid.Cells.Single(cell => cell.Coord == coord);
 
             Console.BackgroundColor = isCursor ? ConsoleColor.DarkYellow : ConsoleColor.Black;
-            Console.ForegroundColor = cell.Color;
+            Console.ForegroundColor = ToConsoleColor(cell.Color);
             Console.Write(cell.Glyph);
 
             Console.ResetColor();
@@ -476,6 +478,18 @@ static void DrawInspectionPanel(EntityInspectionPanel panel, int left, int top, 
 
 static string TrimToWidth(string text, int width) =>
     text.Length <= width ? text.PadRight(width) : text[..Math.Max(0, width - 1)] + " ";
+
+static ConsoleColor ToConsoleColor(PresentationColor color) => color switch
+{
+    PresentationColor.White => ConsoleColor.White,
+    PresentationColor.Yellow => ConsoleColor.Yellow,
+    PresentationColor.Cyan => ConsoleColor.Cyan,
+    PresentationColor.Green => ConsoleColor.Green,
+    PresentationColor.DarkGreen => ConsoleColor.DarkGreen,
+    PresentationColor.Earth => ConsoleColor.DarkYellow,
+    PresentationColor.Gray => ConsoleColor.DarkGray,
+    _ => ConsoleColor.Gray
+};
 
 internal enum InputMode
 {

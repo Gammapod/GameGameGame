@@ -1,0 +1,78 @@
+using GameGameGame.Core;
+
+namespace GameGameGame.Content;
+
+public readonly record struct EntityTemplateId(string Value)
+{
+    public override string ToString() => Value;
+}
+
+public readonly record struct ActionPlanTemplateId(string Value)
+{
+    public override string ToString() => Value;
+}
+
+public sealed record EntityTemplate(
+    string Name,
+    int InventoryWidth,
+    int InventoryHeight,
+    int Weight,
+    int CarryingCapacity,
+    IReadOnlyList<CarriedEntityTemplate>? CarriedEntities = null,
+    ActionPlanTemplateId? DefaultActionPlanId = null,
+    IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null);
+
+public sealed record EntityPresentation(char Glyph, PresentationColor Color)
+{
+    public EntityInspectionAppearance ToInspectionAppearance() => new(Glyph, Color);
+}
+
+public sealed record CarriedEntityTemplate
+{
+    public CarriedEntityTemplate(
+        EntityId EntityId,
+        EntityTemplate Template,
+        GridCoord Coord)
+    {
+        this.EntityId = EntityId;
+        this.Template = Template;
+        this.Coord = Coord;
+    }
+
+    public CarriedEntityTemplate(
+        EntityId EntityId,
+        EntityTemplateId TemplateId,
+        GridCoord Coord)
+    {
+        this.EntityId = EntityId;
+        this.TemplateId = TemplateId;
+        this.Coord = Coord;
+    }
+
+    public EntityId EntityId { get; }
+
+    public EntityTemplate? Template { get; }
+
+    public EntityTemplateId? TemplateId { get; }
+
+    public GridCoord Coord { get; }
+}
+
+public sealed record EntitySpawnOptions(
+    EntityId EntityId,
+    PlaneCoord Location,
+    Func<EntityTemplate, EntityTemplate>? ModifyTemplate = null,
+    PlaneId? InventoryPlaneId = null,
+    string? InventoryPlaneName = null,
+    ActionPlanTemplateId? ActionPlanOverrideId = null,
+    IReadOnlyDictionary<string, PlanValueDescriptor>? PlanVariableOverrides = null);
+
+public sealed record EntitySpawnResult(
+    EntityId EntityId,
+    IEntityActionPlan? ActionPlan,
+    IReadOnlyDictionary<EntityId, IEntityActionPlan> ActionPlans);
+
+public sealed record FirstSliceBuildResult(
+    WorldState World,
+    IReadOnlyDictionary<EntityId, IEntityActionPlan> ActionPlans,
+    PrototypeContentRegistry Registry);

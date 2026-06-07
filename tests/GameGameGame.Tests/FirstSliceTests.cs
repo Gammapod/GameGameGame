@@ -1,4 +1,5 @@
 using GameGameGame.Core;
+using GameGameGame.Content;
 using WorldBuilder = GameGameGame.Content.PrototypeContent;
 
 namespace GameGameGame.Tests;
@@ -8,7 +9,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void FirstSliceWorldPlacesPlayerInGameInventoryCenter()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
 
         Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(WorldBuilder.PlayerId));
         Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
@@ -19,7 +20,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void FirstSliceWorldDefinesInventoryDimensionsOnEntities()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
 
         Assert.Equal(3, world.Entities[WorldBuilder.PlayerId].InventoryWidth);
         Assert.Equal(2, world.Entities[WorldBuilder.PlayerId].InventoryHeight);
@@ -43,7 +44,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void InspectionPanelIncludesEntityPropertiesAndInventoryGrid()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var inspector = new EntityInspectionService();
 
         var panel = inspector.Inspect(world, WorldBuilder.PlayerId);
@@ -60,7 +61,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void GiantSlimeInspectionShowsLargeInventoryAndProperties()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var inspector = new EntityInspectionService();
 
         var panel = inspector.Inspect(world, WorldBuilder.GiantSlimeId);
@@ -76,15 +77,15 @@ public sealed class FirstSliceTests
     }
 
     [Fact]
-    public void GiantSlimeCanUseWanderingSlimeActionPlan()
+    public void GiantSlimeCanUseContentDefinedWanderingPlan()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.GiantSlimeId] = new WanderingSlimeActionPlan()
+                [WorldBuilder.GiantSlimeId] = CreateWanderingActionPlan()
             });
 
         turns.AdvanceAfterPlayerTurn(world);
@@ -93,11 +94,238 @@ public sealed class FirstSliceTests
     }
 
     [Fact]
+    public void PrototypeActionPlansUseInterpretedPlansForSlimes()
+    {
+        var plans = CreatePrototypeActionPlans();
+
+        Assert.IsType<InterpretedEntityActionPlan>(plans[WorldBuilder.SlimeId]);
+        Assert.IsType<InterpretedEntityActionPlan>(plans[WorldBuilder.GiantSlimeId]);
+    }
+
+    [Fact]
+    public void PrototypeInterpretedPlansPreserveSlimeAndGiantSlimeMovement()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var movement = new MovementService();
+        var turns = new TurnService(movement, CreatePrototypeActionPlans());
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Giant Slime@world(2,3)", world.FormatEntityAddress(WorldBuilder.GiantSlimeId));
+        Assert.True(TraceContains(world.LastTrace!, "Plan wandering"));
+    }
+
+    [Fact]
+    public void CreateFirstSliceReturnsWorldAndPrototypeActionPlansTogether()
+    {
+        var slice = WorldBuilder.CreateFirstSlice();
+        var turns = new TurnService(new MovementService(), slice.ActionPlans);
+
+        turns.AdvanceAfterPlayerTurn(slice.World);
+
+        Assert.Equal("Slime@world(0,1)", slice.World.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Giant Slime@world(2,3)", slice.World.FormatEntityAddress(WorldBuilder.GiantSlimeId));
+        Assert.IsType<InterpretedEntityActionPlan>(slice.ActionPlans[WorldBuilder.SlimeId]);
+        Assert.IsType<InterpretedEntityActionPlan>(slice.ActionPlans[WorldBuilder.GiantSlimeId]);
+    }
+
+    [Fact]
+    public void PrototypeInterpretedSlimePlanPicksUpBlockingCarryableTarget()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var movement = new MovementService();
+        var turns = new TurnService(movement, CreatePrototypeActionPlans());
+
+        movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
+        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(WorldBuilder.RockId));
+        Assert.True(TraceContains(world.LastTrace!, "Call plan handleBlocker"));
+    }
+
+    [Fact]
+    public void SpawnEntityFromRockTemplateCreatesRockInstanceAtRequestedLocation()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var registry = WorldBuilder.CreateRegistry();
+        var spawnId = new EntityId("spawnedRock");
+
+        var result = registry.SpawnEntity(
+            world,
+            WorldBuilder.RockTemplateId,
+            new EntitySpawnOptions(spawnId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0))));
+
+        Assert.Equal(spawnId, result.EntityId);
+        Assert.Null(result.ActionPlan);
+        Assert.Equal("Rock@world(0,0)", world.FormatEntityAddress(spawnId));
+        Assert.Equal(0, world.Entities[spawnId].InventoryWidth);
+        Assert.Equal(0, world.Entities[spawnId].InventoryHeight);
+        Assert.Equal(3, world.Entities[spawnId].Weight);
+        Assert.Equal(3, world.Entities[spawnId].CarryingCapacity);
+    }
+
+    [Fact]
+    public void PrototypeContentExposesTemplatesForFirstSliceEntityTypes()
+    {
+        Assert.Equal("Game", WorldBuilder.CreateGameTemplate().Name);
+        Assert.Equal("Player", WorldBuilder.CreatePlayerTemplate().Name);
+        Assert.Equal("Slime", WorldBuilder.CreateSlimeTemplate().Name);
+        Assert.Equal("Giant Slime", WorldBuilder.CreateGiantSlimeTemplate().Name);
+        Assert.Equal("Rock", WorldBuilder.CreateRockTemplate().Name);
+
+        Assert.Equal(5, WorldBuilder.CreateGameTemplate().InventoryWidth);
+        Assert.Equal(3, WorldBuilder.CreatePlayerTemplate().InventoryWidth);
+        Assert.Equal(1, WorldBuilder.CreateSlimeTemplate().InventoryWidth);
+        Assert.Equal(3, WorldBuilder.CreateGiantSlimeTemplate().InventoryWidth);
+        Assert.Equal(0, WorldBuilder.CreateRockTemplate().InventoryWidth);
+    }
+
+    [Fact]
+    public void SpawnEntityCanOverrideTemplateProperties()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var registry = WorldBuilder.CreateRegistry();
+        var spawnId = new EntityId("heavyRock");
+
+        registry.SpawnEntity(
+            world,
+            WorldBuilder.RockTemplateId,
+            new EntitySpawnOptions(
+                spawnId,
+                new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0)),
+                ModifyTemplate: template => template with
+                {
+                    Name = "Heavy Rock",
+                    Weight = 9,
+                    CarryingCapacity = 0
+                }));
+
+        Assert.Equal("Heavy Rock@world(0,0)", world.FormatEntityAddress(spawnId));
+        Assert.Equal(9, world.Entities[spawnId].Weight);
+        Assert.Equal(0, world.Entities[spawnId].CarryingCapacity);
+    }
+
+    [Fact]
+    public void SpawnEntityCanOverrideInventoryPlaneIdentity()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var registry = WorldBuilder.CreateRegistry();
+        var spawnId = new EntityId("customInventoryCarrier");
+        var inventoryPlaneId = new PlaneId("customInventory");
+
+        registry.SpawnEntity(
+            world,
+            WorldBuilder.SlimeTemplateId,
+            new EntitySpawnOptions(
+                spawnId,
+                new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0)),
+                InventoryPlaneId: inventoryPlaneId,
+                InventoryPlaneName: "Custom Inventory"));
+
+        Assert.Equal(inventoryPlaneId, world.GetInventoryPlaneId(spawnId));
+        Assert.Equal("Custom Inventory", world.Planes[inventoryPlaneId].Name);
+    }
+
+    [Fact]
+    public void SpawnEntityCanOverrideRockTemplateWithWanderingActionPlan()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var registry = WorldBuilder.CreateRegistry();
+        var movement = new MovementService();
+        var spawnId = new EntityId("wanderingRock");
+        var result = registry.SpawnEntity(
+            world,
+            WorldBuilder.RockTemplateId,
+            new EntitySpawnOptions(
+                spawnId,
+                new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(4, 4)),
+                ActionPlanOverrideId: WorldBuilder.WanderingActionPlanTemplateId,
+                PlanVariableOverrides: new Dictionary<string, PlanValueDescriptor>
+                {
+                    ["facing"] = PlanValueDescriptor.Direction(Direction.West)
+                }));
+        var turns = new TurnService(
+            movement,
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [spawnId] = result.ActionPlan!
+            });
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.NotNull(result.ActionPlan);
+        Assert.Equal("Rock@world(3,4)", world.FormatEntityAddress(spawnId));
+        Assert.True(TraceContains(world.LastTrace!, "Plan wandering"));
+    }
+
+    [Fact]
+    public void SpawnEntityFromInventoryTemplateMaterializesOwnedInventoryPlane()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var registry = WorldBuilder.CreateRegistry();
+        var bagId = new EntityId("bag");
+        var template = new EntityTemplate(
+            "Bag",
+            InventoryWidth: 2,
+            InventoryHeight: 1,
+            Weight: 1,
+            CarryingCapacity: 10);
+        var templateId = new EntityTemplateId("bag");
+        registry = registry.WithEntityTemplate(templateId, template);
+
+        registry.SpawnEntity(
+            world,
+            templateId,
+            new EntitySpawnOptions(bagId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0))));
+
+        var inventoryPlaneId = world.GetInventoryPlaneId(bagId);
+
+        Assert.NotNull(inventoryPlaneId);
+        Assert.Equal(new PlaneId("bag"), inventoryPlaneId);
+        Assert.Equal(2, world.Planes[inventoryPlaneId.Value].Width);
+        Assert.Equal(1, world.Planes[inventoryPlaneId.Value].Height);
+    }
+
+    [Fact]
+    public void SpawnEntityPlacesTemplateCarriedEntitiesIntoInventoryLayout()
+    {
+        var world = WorldBuilder.CreateFirstSlice().World;
+        var registry = WorldBuilder.CreateRegistry();
+        var bagId = new EntityId("loadedBag");
+        var carriedRockId = new EntityId("carriedRock");
+        var template = new EntityTemplate(
+            "Loaded Bag",
+            InventoryWidth: 2,
+            InventoryHeight: 1,
+            Weight: 1,
+            CarryingCapacity: 10,
+            CarriedEntities:
+            [
+                new CarriedEntityTemplate(carriedRockId, WorldBuilder.RockTemplateId, new GridCoord(1, 0))
+            ]);
+        var templateId = new EntityTemplateId("loadedBag");
+        registry = registry.WithEntityTemplate(templateId, template);
+
+        registry.SpawnEntity(
+            world,
+            templateId,
+            new EntitySpawnOptions(bagId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0))));
+
+        Assert.Equal("Loaded Bag@world(0,0)", world.FormatEntityAddress(bagId));
+        Assert.Equal("Rock@loadedBag(1,0)", world.FormatEntityAddress(carriedRockId));
+    }
+
+    [Fact]
     public void InspectionPanelShowsInventoryOccupants()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var slice = WorldBuilder.CreateFirstSlice();
+        var world = slice.World;
         var movement = new MovementService();
-        var inspector = new EntityInspectionService();
+        var registry = slice.Registry;
+        var inspector = new EntityInspectionService(entityId => registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
 
         movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0)));
 
@@ -113,7 +341,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void InspectionServiceFindsEntityContainingPlane()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var inspector = new EntityInspectionService();
 
         var containerId = inspector.FindEntityContainingPlane(world, WorldBuilder.GameInventoryPlaneId);
@@ -124,7 +352,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlayerCanMoveCardinallyInsideGameInventory()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
 
         var moved = movement.TryMove(world, WorldBuilder.PlayerId, Direction.South);
@@ -136,7 +364,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlayerCannotMoveOutsideGameInventory()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
 
         movement.TryMove(world, WorldBuilder.PlayerId, Direction.West);
@@ -149,13 +377,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void SlimePicksUpBlockingRockThenContinuesMoving()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan()
             });
 
         turns.AdvanceAfterPlayerTurn(world);
@@ -173,13 +401,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void WanderingSlimePicksUpCarryableObjectBlockingFacingDirection()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan()
             });
 
         movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 1)));
@@ -193,14 +421,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void WanderingSlimeBumpsUncarryableBlockerAndSetsFacingRight()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
-        var plan = new WanderingSlimeActionPlan();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = plan
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan()
             });
 
         movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(4, 4)));
@@ -209,7 +436,7 @@ public sealed class FirstSliceTests
         turns.AdvanceAfterPlayerTurn(world);
 
         Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(WorldBuilder.SlimeId));
-        Assert.Equal(Direction.East, plan.Facing);
+        Assert.True(TraceContains(world.LastTrace!, "Set variable facing"));
 
         turns.AdvanceAfterPlayerTurn(world);
 
@@ -219,13 +446,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void TurnServiceResolvesPlayerPlannedActionBeforeSlimeAction()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan()
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan()
             });
 
         turns.TakeActorTurnThenAdvance(world, WorldBuilder.PlayerId, PlannedActionPlan.Single(new MoveAction(Direction.South)));
@@ -240,7 +467,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlannedActionUsesFirstExecutableOption()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         movement.TryMove(world, WorldBuilder.PlayerId, Direction.South);
@@ -257,7 +484,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlayerCanPickUpSlimeIntoInventory()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
@@ -270,13 +497,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void SlimeContinuesMovingInsidePlayerInventoryAfterPickup()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(Direction.East)
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan(Direction.East)
             });
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
@@ -289,7 +516,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlayerCanDropSlimeFromInventoryOntoWorldPlane()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var inventoryDestination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
@@ -304,13 +531,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void SlimeCannotPickUpPlayerBecausePlayerIsTooHeavy()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(Direction.East)
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan(Direction.East)
             });
 
         movement.TryPlace(world, WorldBuilder.RockId, new PlaneCoord(WorldBuilder.GameInventoryPlaneId, new GridCoord(0, 0)));
@@ -325,7 +552,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlayerCanPickUpAndDropRock()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var inventoryDestination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
@@ -342,13 +569,13 @@ public sealed class FirstSliceTests
     [Fact]
     public void PlayerCannotPickUpSlimeWhileSlimeCarriesRock()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(
             movement,
             new Dictionary<EntityId, IEntityActionPlan>
             {
-                [WorldBuilder.SlimeId] = new WanderingSlimeActionPlan(Direction.East)
+                [WorldBuilder.SlimeId] = CreateWanderingActionPlan(Direction.East)
             });
         var destination = new PlaneCoord(WorldBuilder.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
@@ -363,7 +590,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PickupEvaluationExplainsCapacityFailureWithNestedWeightTrace()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var action = new PickupAction(
             WorldBuilder.SlimeId,
@@ -384,7 +611,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PickupEvaluationExplainsInvalidPlacementSeparatelyFromWeight()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var action = new PickupAction(
             WorldBuilder.SlimeId,
@@ -401,7 +628,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void PickupEvaluationFailsWhenActorInventoryDimensionsAreUnusable()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var rock = world.Entities[WorldBuilder.RockId];
         var rockInventoryPlaneId = new PlaneId("rock");
@@ -419,7 +646,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void ResolvePlanRecordsFailedOptionThenSuccessfulFallback()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var turns = new TurnService(movement, new Dictionary<EntityId, IEntityActionPlan>());
         var plan = new PlannedActionPlan([
@@ -439,7 +666,7 @@ public sealed class FirstSliceTests
     [Fact]
     public void RecursiveWeightCountsCarriedInventory()
     {
-        var world = WorldBuilder.CreateFirstSliceWorld();
+        var world = WorldBuilder.CreateFirstSlice().World;
         var movement = new MovementService();
         var weight = new WeightService();
 
@@ -454,4 +681,19 @@ public sealed class FirstSliceTests
     {
         return trace.Label == label || trace.Children.Any(child => TraceContains(child, label));
     }
+
+    private static IReadOnlyDictionary<EntityId, IEntityActionPlan> CreatePrototypeActionPlans() =>
+        new Dictionary<EntityId, IEntityActionPlan>
+        {
+            [WorldBuilder.SlimeId] = CreateWanderingActionPlan(),
+            [WorldBuilder.GiantSlimeId] = CreateWanderingActionPlan()
+        };
+
+    private static IEntityActionPlan CreateWanderingActionPlan(Direction initialFacing = Direction.West) =>
+        WorldBuilder.CreateRegistry().CreateActionPlan(
+            WorldBuilder.WanderingActionPlanTemplateId,
+            new Dictionary<string, PlanValueDescriptor>
+            {
+                ["facing"] = PlanValueDescriptor.Direction(initialFacing)
+            });
 }
