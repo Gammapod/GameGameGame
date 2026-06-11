@@ -2,13 +2,18 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Layout;
+using Avalonia.Platform.Storage;
 using GameGameGame.Content;
+using System.Collections.Specialized;
+using System.ComponentModel;
 
 namespace GameGameGame.Editor;
 
 public sealed class MainWindow : Window
 {
     private readonly TextBox _pathTextBox = new() { Watermark = "Path to content YAML" };
+    private readonly StackPanel _inventoryGridRows = new() { Spacing = 4 };
+    private MainEditorViewModel? _boundViewModel;
 
     public MainWindow()
     {
@@ -16,6 +21,7 @@ public sealed class MainWindow : Window
         Width = 1200;
         Height = 800;
         Content = BuildContent();
+        DataContextChanged += (_, _) => BindInventoryGridViewModel();
     }
 
     private Control BuildContent()
@@ -35,7 +41,7 @@ public sealed class MainWindow : Window
         var presetList = new ListBox();
         presetList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.EntityPresets)));
         presetList.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedPreset)) { Mode = BindingMode.TwoWay });
-        var presetListPanel = Wrap("Entity Presets", presetList);
+        var presetListPanel = Wrap("Entity Presets", BuildEntityPresetListPanel(presetList));
         Grid.SetColumn(presetListPanel, 0);
         Grid.SetRowSpan(presetListPanel, 2);
         grid.Children.Add(presetListPanel);
@@ -87,14 +93,89 @@ public sealed class MainWindow : Window
         panel.Children.Add(status);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var createNew = new Button { Content = "New" };
+        createNew.Click += (_, _) => ViewModel?.CreateNewDocument();
         var open = new Button { Content = "Open" };
-        open.Click += (_, _) => ViewModel?.OpenFile(_pathTextBox.Text ?? string.Empty);
+        open.Click += async (_, _) => await OpenContentFileAsync();
         var save = new Button { Content = "Save" };
         save.Click += (_, _) => ViewModel?.Save();
+        var saveAs = new Button { Content = "Save As" };
+        saveAs.Click += (_, _) => ViewModel?.SaveAs(_pathTextBox.Text ?? string.Empty);
+        var reload = new Button { Content = "Reload" };
+        reload.Click += (_, _) => ViewModel?.Reload();
         buttons.Children.Add(_pathTextBox);
+        buttons.Children.Add(createNew);
         buttons.Children.Add(open);
         buttons.Children.Add(save);
+        buttons.Children.Add(saveAs);
+        buttons.Children.Add(reload);
         panel.Children.Add(buttons);
+
+        return panel;
+    }
+
+    private async Task OpenContentFileAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open Content YAML",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("YAML content files")
+                {
+                    Patterns = ["*.yaml", "*.yml"]
+                },
+                FilePickerFileTypes.All
+            ]
+        });
+
+        var path = files.Count > 0 ? files[0].Path.LocalPath : null;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        _pathTextBox.Text = path;
+        ViewModel?.OpenFile(path);
+    }
+
+    private Control BuildEntityPresetListPanel(ListBox presetList)
+    {
+        var panel = new StackPanel { Spacing = 8 };
+        panel.Children.Add(presetList);
+
+        var nameInput = new TextBox { Watermark = "New or duplicate name" };
+        nameInput.Bind(TextBox.TextProperty, new Binding(nameof(MainEditorViewModel.EntityPresetNameInput))
+        {
+            Mode = BindingMode.TwoWay,
+            UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+        });
+        panel.Children.Add(nameInput);
+
+        var create = new Button
+        {
+            Content = "Create Preset",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        create.Click += (_, _) => ViewModel?.CreateEntityPreset();
+        panel.Children.Add(create);
+
+        var duplicate = new Button
+        {
+            Content = "Duplicate Selected",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        duplicate.Click += (_, _) => ViewModel?.DuplicateSelectedEntityPreset();
+        panel.Children.Add(duplicate);
+
+        var delete = new Button
+        {
+            Content = "Delete Selected",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        delete.Click += (_, _) => ViewModel?.DeleteSelectedEntityPreset();
+        panel.Children.Add(delete);
 
         return panel;
     }
@@ -132,6 +213,14 @@ public sealed class MainWindow : Window
     private Control BuildInventoryEditor()
     {
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 16, 0, 0) };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Click an occupied cell to select it. Click an empty cell to move the selected carried entity, or place the selected template.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+        });
+
+        panel.Children.Add(Wrap("Inventory Grid", _inventoryGridRows));
 
         var carriedList = new ListBox { MinHeight = 120 };
         carriedList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.CarriedEntities)));
@@ -201,6 +290,67 @@ public sealed class MainWindow : Window
                 content
             }
         };
+
+    private void BindInventoryGridViewModel()
+    {
+        if (_boundViewModel is not null)
+        {
+            _boundViewModel.InventoryGridCells.CollectionChanged -= InventoryGridCellsChanged;
+            _boundViewModel.PropertyChanged -= ViewModelPropertyChanged;
+        }
+
+        _boundViewModel = ViewModel;
+        if (_boundViewModel is not null)
+        {
+            _boundViewModel.InventoryGridCells.CollectionChanged += InventoryGridCellsChanged;
+            _boundViewModel.PropertyChanged += ViewModelPropertyChanged;
+        }
+
+        RebuildInventoryGrid();
+    }
+
+    private void InventoryGridCellsChanged(object? sender, NotifyCollectionChangedEventArgs args) =>
+        RebuildInventoryGrid();
+
+    private void ViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(MainEditorViewModel.SelectedInventoryWidth)
+            || args.PropertyName == nameof(MainEditorViewModel.SelectedInventoryHeight))
+        {
+            RebuildInventoryGrid();
+        }
+    }
+
+    private void RebuildInventoryGrid()
+    {
+        _inventoryGridRows.Children.Clear();
+
+        if (ViewModel is not { } viewModel || viewModel.InventoryGridCells.Count == 0)
+        {
+            _inventoryGridRows.Children.Add(new TextBlock { Text = "No usable inventory grid." });
+            return;
+        }
+
+        foreach (var row in viewModel.InventoryGridCells.GroupBy(cell => cell.Coord.Y).OrderBy(group => group.Key))
+        {
+            var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+            foreach (var cell in row.OrderBy(cell => cell.Coord.X))
+            {
+                var button = new Button
+                {
+                    Content = cell.DisplayText,
+                    MinWidth = 72,
+                    MinHeight = 44,
+                    HorizontalContentAlignment = HorizontalAlignment.Center,
+                    VerticalContentAlignment = VerticalAlignment.Center
+                };
+                button.Click += (_, _) => ViewModel?.ClickInventoryGridCell(cell);
+                rowPanel.Children.Add(button);
+            }
+
+            _inventoryGridRows.Children.Add(rowPanel);
+        }
+    }
 
     private MainEditorViewModel? ViewModel => DataContext as MainEditorViewModel;
 }

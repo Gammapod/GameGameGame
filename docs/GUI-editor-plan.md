@@ -30,7 +30,7 @@ Known limitations:
 - There is no preview/simulation service for validating edited content against runtime behavior.
 - There is no GUI project yet.
 
-## Step 1: Editor Session And File Workflow - Mostly Complete
+## Step 1: Editor Session And File Workflow - Done
 
 Use `ContentEditorSession` as the GUI ownership boundary for file state around `EditableContentDocument` and `ContentEditorService`.
 
@@ -63,7 +63,7 @@ Testable outcomes:
 - Reload/reset discards unsaved edits and restores file content.
 - Saving updates the baseline used for YAML diff support.
 
-## Step 2: Structured Editor Diagnostics
+## Step 2: Structured Editor Diagnostics - Done
 
 Move beyond string-only validation by adding diagnostics that can be mapped to UI panels, fields, rows, and grid cells.
 
@@ -86,7 +86,7 @@ Testable outcomes:
 - Missing variable and type mismatch diagnostics identify template, action plan, step, variable name, expected type, and actual type when known.
 - GUI callers can filter diagnostics by selected entity preset, selected inventory layout, or selected action plan.
 
-## Step 3: Complete Entity Preset Editing Service
+## Step 3: Complete Entity Preset Editing Service - Ongoing
 
 Round out preset operations so the GUI can implement normal create/edit/delete workflows without directly mutating document DTOs.
 
@@ -111,7 +111,7 @@ Testable outcomes:
 - Duplicating a template copies mechanical fields, presentation, default variables, and carried layout with safe IDs where needed.
 - Assigning a default action plan updates YAML and validation catches missing variables.
 
-## Step 4: Complete Inventory Layout Editing Service
+## Step 4: Complete Inventory Layout Editing Service - Done
 
 Make inventory editing grid-friendly and safe enough for a desktop GUI.
 
@@ -137,7 +137,7 @@ Testable outcomes:
 - First-open-cell helper returns expected coordinates or no result when full.
 - Proposed invalid placement reports out-of-bounds or overlap diagnostics without requiring runtime spawn.
 
-## Step 5: Action-Plan Field Editing Service
+## Step 5: Action-Plan Field Editing Service - Not Ready
 
 Provide field-level action-plan operations so a GUI can bind primitive forms directly to service calls.
 
@@ -164,7 +164,7 @@ Testable outcomes:
 - Reordering checks preserves descriptor content.
 - Invalid primitive field combinations are reported by validation.
 
-## Step 6: Variable Editing And Inference Helpers
+## Step 6: Variable Editing And Inference Helpers - Not Ready
 
 Action-plan UI needs strong support for variables, because this is where editor users are most likely to make mistakes.
 
@@ -188,7 +188,7 @@ Testable outcomes:
 - Check-written variables, such as `BlockingEntity.target`, appear as available for later effects in the same step or later rows.
 - Type mismatch diagnostics can be resolved through variable editor operations.
 
-## Step 7: YAML Preview And Document Diff Support
+## Step 7: YAML Preview And Document Diff Support - Done
 
 Early GUI users should be able to trust the generated YAML and understand what changed.
 
@@ -208,7 +208,7 @@ Testable outcomes:
 - Saving updates the baseline used for diffs.
 - Reload discards unsaved edits and restores file content.
 
-## Step 8: Runtime Preview And Smoke-Test Service
+## Step 8: Runtime Preview And Smoke-Test Service - Not Ready
 
 A useful standalone GUI should eventually prove that edited content can be used by the game, not just validated structurally.
 
@@ -230,7 +230,7 @@ Testable outcomes:
 - A template with an action plan can execute one preview turn and return trace output.
 - Runtime preview failures are reported as editor diagnostics or preview errors.
 
-## Step 9: Standalone Desktop GUI Skeleton
+## Step 9: Standalone Desktop GUI Skeleton - Done
 
 Create the GUI app once the service layer can support a meaningful first vertical slice.
 
@@ -253,7 +253,7 @@ Testable outcomes:
 - GUI can show current validation errors.
 - GUI can save YAML and reload it through existing services.
 
-## Step 10: First End-To-End GUI Editing Experiment
+## Step 10: First End-To-End GUI Editing Experiment - Ongoing
 
 Build the smallest usable desktop editor workflow.
 
@@ -280,20 +280,32 @@ Testable outcomes:
 
 ## Recommended Build Order
 
-Completed or mostly complete:
+Done:
 
 - Editor session and file workflow.
+- Structured diagnostics.
+- Complete inventory layout editing service.
+- YAML preview and document diff support.
+- Standalone desktop GUI skeleton.
+
+Ongoing:
+
+- Complete entity preset editing service.
+- First end-to-end GUI editing experiment.
+
+Not ready:
+
+- Action-plan field editing service.
+- Variable editing and inference helpers.
+- Runtime preview service.
 
 Recommended remaining order:
 
-1. Structured diagnostics.
-2. Complete entity preset editing service.
-3. Complete inventory layout editing service.
-4. YAML preview and diff support.
-5. Standalone GUI skeleton with entity preset editing.
-6. Action-plan field editing service.
-7. Variable editing and inference helpers.
-8. Runtime preview service.
-9. Full action-plan GUI.
+1. Complete entity preset editing service.
+2. Finish first end-to-end GUI editing experiment.
+3. Action-plan field editing service.
+4. Variable editing and inference helpers.
+5. Runtime preview service.
+6. Full action-plan GUI.
 
 This order reflects the current test refactor: session/file workflow is already covered, content tests now focus on editor services and validation, and Core behavior is isolated from prototype content details. The remaining order gets to a usable standalone GUI quickly while avoiding premature complexity in the action-plan editor.

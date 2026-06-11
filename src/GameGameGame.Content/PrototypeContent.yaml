@@ -1,16 +1,33 @@
 entityTemplates:
   game:
     name: Game
-    inventoryWidth: 25
-    inventoryHeight: 25
+    inventoryWidth: 8
+    inventoryHeight: 5
     weight: 0
     carryingCapacity: 0
+    carriedEntities:
+    - entityId: gameRock2
+      templateId: rock
+      coord:
+        x: 4
+        y: 3
+    - entityId: gameRock3
+      templateId: rock
+      coord:
+        x: 4
+        y: 2
   player:
     name: Player
     inventoryWidth: 3
     inventoryHeight: 2
     weight: 10
     carryingCapacity: 5
+    carriedEntities:
+    - entityId: playerSword
+      templateId: sword
+      coord:
+        x: 1
+        y: 0
   slime:
     name: Slime
     inventoryWidth: 1
@@ -22,10 +39,16 @@ entityTemplates:
       facing:
         kind: Direction
         directionValue: West
+    carriedEntities:
+    - entityId: slimeSword
+      templateId: sword
+      coord:
+        x: 0
+        y: 0
   giantSlime:
     name: Giant Slime
-    inventoryWidth: 2
-    inventoryHeight: 4
+    inventoryWidth: 4
+    inventoryHeight: 3
     weight: 15
     carryingCapacity: 20
     defaultActionPlanId: wandering
@@ -33,12 +56,24 @@ entityTemplates:
       facing:
         kind: Direction
         directionValue: West
+    carriedEntities:
+    - entityId: giantSlimeRock
+      templateId: rock
+      coord:
+        x: 2
+        y: 1
   rock:
     name: Rock
     inventoryWidth: 0
     inventoryHeight: 0
     weight: 3
     carryingCapacity: 3
+  sword:
+    name: Sword
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 0
 presentations:
   game:
     glyph: G
@@ -55,6 +90,9 @@ presentations:
   rock:
     glyph: '*'
     color: Earth
+  sword:
+    glyph: t
+    color: Gray
 actionPlans:
   wandering:
     id: wandering

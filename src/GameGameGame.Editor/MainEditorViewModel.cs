@@ -16,6 +16,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private int _selectedWeight;
     private int _selectedCarryingCapacity;
     private string _selectedGlyph = string.Empty;
+    private string _entityPresetNameInput = string.Empty;
     private PresentationColor _selectedColor = PresentationColor.Gray;
     private CarriedEntityListItem? _selectedCarriedEntity;
     private EntityPresetListItem? _selectedTemplateToPlace;
@@ -27,6 +28,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     public ObservableCollection<EntityPresetListItem> EntityPresets { get; } = [];
 
     public ObservableCollection<CarriedEntityListItem> CarriedEntities { get; } = [];
+
+    public ObservableCollection<InventoryGridCell> InventoryGridCells { get; } = [];
 
     public ObservableCollection<string> ValidationMessages { get; } = [];
 
@@ -98,6 +101,12 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         set => SetField(ref _selectedColor, value);
     }
 
+    public string EntityPresetNameInput
+    {
+        get => _entityPresetNameInput;
+        set => SetField(ref _entityPresetNameInput, value);
+    }
+
     public CarriedEntityListItem? SelectedCarriedEntity
     {
         get => _selectedCarriedEntity;
@@ -147,6 +156,52 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         return result;
     }
 
+    public ContentEditorFileOperationResult SaveAs(string path)
+    {
+        if (_session is null)
+        {
+            return ContentEditorFileOperationResult.Failure("No content file is open.");
+        }
+
+        var result = _session.SaveAs(path);
+        RefreshFromSession();
+        StatusMessage = result.IsSuccess ? "Saved as." : result.ErrorMessage;
+
+        return result;
+    }
+
+    public ContentEditorFileOperationResult Reload()
+    {
+        if (_session is null)
+        {
+            return ContentEditorFileOperationResult.Failure("No content file is open.");
+        }
+
+        var selectedPresetId = SelectedPreset?.Id;
+        var result = _session.Reload();
+        RefreshFromSession();
+        if (result.IsSuccess && selectedPresetId is not null && EntityPresets.Any(item => item.Id == selectedPresetId.Value))
+        {
+            SelectEntityPreset(selectedPresetId.Value);
+        }
+        else if (result.IsSuccess)
+        {
+            ClearSelectedEntityPreset();
+        }
+
+        StatusMessage = result.IsSuccess ? "Reloaded." : result.ErrorMessage;
+
+        return result;
+    }
+
+    public void CreateNewDocument()
+    {
+        _session = ContentEditorSession.CreateNew();
+        RefreshFromSession();
+        ClearSelectedEntityPreset();
+        StatusMessage = "Created new content document.";
+    }
+
     public void SelectEntityPreset(EntityTemplateId id)
     {
         if (_session is null)
@@ -194,6 +249,70 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         StatusMessage = $"Applied edits to {SelectedName}.";
     }
 
+    public void CreateEntityPreset()
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var name = EntityPresetNameInput.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            StatusMessage = "Enter a name before creating an entity preset.";
+            return;
+        }
+
+        var id = _session.Editor.CreateEntityPreset(name);
+        RefreshFromSession();
+        SelectEntityPreset(id);
+        StatusMessage = $"Created {name}.";
+    }
+
+    public void DuplicateSelectedEntityPreset()
+    {
+        if (_session is null || SelectedPreset is null)
+        {
+            return;
+        }
+
+        var sourceName = SelectedPreset.Name;
+        var sourceId = SelectedPreset.Id;
+        var name = EntityPresetNameInput.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            StatusMessage = "Enter a name before duplicating an entity preset.";
+            return;
+        }
+
+        var duplicateId = _session.Editor.DuplicateEntityPreset(sourceId, name);
+        RefreshFromSession();
+        SelectEntityPreset(duplicateId);
+        StatusMessage = $"Duplicated {sourceName} as {name}.";
+    }
+
+    public void DeleteSelectedEntityPreset()
+    {
+        if (_session is null || SelectedPreset is null)
+        {
+            return;
+        }
+
+        var selectedId = SelectedPreset.Id;
+        var selectedName = SelectedPreset.Name;
+        var result = _session.Editor.DeleteEntityPreset(selectedId);
+        if (!result.IsSuccess)
+        {
+            StatusMessage = result.ErrorMessage;
+            SelectEntityPreset(selectedId);
+            return;
+        }
+
+        RefreshFromSession();
+        ClearSelectedEntityPreset();
+        StatusMessage = $"Deleted {selectedName}.";
+    }
+
     public void PlaceSelectedTemplateInInventory()
     {
         if (_session is null || SelectedPreset is null || SelectedTemplateToPlace is null)
@@ -202,14 +321,68 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         }
 
         var parentId = SelectedPreset.Id;
+        var templateToPlace = SelectedTemplateToPlace;
 
         try
         {
-            var placedEntityId = _session.Editor.PlaceCarriedEntity(parentId, SelectedTemplateToPlace.Id);
+            var placedEntityId = _session.Editor.PlaceCarriedEntity(parentId, templateToPlace.Id);
             RefreshFromSession();
             SelectEntityPreset(parentId);
             SelectedCarriedEntity = CarriedEntities.SingleOrDefault(item => item.EntityId == placedEntityId);
-            StatusMessage = $"Placed {SelectedTemplateToPlace.Name}.";
+            StatusMessage = $"Placed {templateToPlace.Name}.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusMessage = ex.Message;
+        }
+    }
+
+    public void ClickInventoryGridCell(InventoryGridCell cell)
+    {
+        if (_session is null || SelectedPreset is null)
+        {
+            return;
+        }
+
+        if (cell.CarriedEntityId is { } carriedEntityId)
+        {
+            SelectedCarriedEntity = CarriedEntities.SingleOrDefault(item => item.EntityId == carriedEntityId);
+            if (SelectedCarriedEntity is not null)
+            {
+                StatusMessage = $"Selected {SelectedCarriedEntity.TemplateName} at {cell.Coord.X},{cell.Coord.Y}.";
+            }
+
+            return;
+        }
+
+        var parentId = SelectedPreset.Id;
+
+        try
+        {
+            if (SelectedCarriedEntity is not null)
+            {
+                var movedEntityId = SelectedCarriedEntity.EntityId;
+                var movedName = SelectedCarriedEntity.TemplateName;
+                _session.Editor.MoveCarriedEntity(parentId, movedEntityId, cell.Coord);
+                RefreshFromSession();
+                SelectEntityPreset(parentId);
+                SelectedCarriedEntity = CarriedEntities.SingleOrDefault(item => item.EntityId == movedEntityId);
+                StatusMessage = $"Moved {movedName} to {cell.Coord.X},{cell.Coord.Y}.";
+                return;
+            }
+
+            if (SelectedTemplateToPlace is not null)
+            {
+                var templateToPlace = SelectedTemplateToPlace;
+                var placedEntityId = _session.Editor.PlaceCarriedEntity(parentId, templateToPlace.Id, cell.Coord);
+                RefreshFromSession();
+                SelectEntityPreset(parentId);
+                SelectedCarriedEntity = CarriedEntities.SingleOrDefault(item => item.EntityId == placedEntityId);
+                StatusMessage = $"Placed {templateToPlace.Name} at {cell.Coord.X},{cell.Coord.Y}.";
+                return;
+            }
+
+            StatusMessage = "Select a template to place, or select a carried entity to move.";
         }
         catch (InvalidOperationException ex)
         {
@@ -249,14 +422,15 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
         var parentId = SelectedPreset.Id;
         var carriedEntityId = SelectedCarriedEntity.EntityId;
+        var replacementTemplate = SelectedReplacementTemplate;
 
         try
         {
-            _session.Editor.ReplaceCarriedEntityTemplate(parentId, carriedEntityId, SelectedReplacementTemplate.Id);
+            _session.Editor.ReplaceCarriedEntityTemplate(parentId, carriedEntityId, replacementTemplate.Id);
             RefreshFromSession();
             SelectEntityPreset(parentId);
             SelectedCarriedEntity = CarriedEntities.SingleOrDefault(item => item.EntityId == carriedEntityId);
-            StatusMessage = $"Replaced carried entity with {SelectedReplacementTemplate.Name}.";
+            StatusMessage = $"Replaced carried entity with {replacementTemplate.Name}.";
         }
         catch (InvalidOperationException ex)
         {
@@ -268,6 +442,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     {
         EntityPresets.Clear();
         CarriedEntities.Clear();
+        InventoryGridCells.Clear();
         ValidationMessages.Clear();
         YamlDiffLines.Clear();
         SelectedCarriedEntity = null;
@@ -304,6 +479,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private void RefreshCarriedEntities(EntityTemplateId parentTemplateId)
     {
         CarriedEntities.Clear();
+        InventoryGridCells.Clear();
         SelectedCarriedEntity = null;
 
         if (_session is null)
@@ -321,6 +497,51 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 carried.Presentation.Glyph,
                 carried.Presentation.Color));
         }
+
+        var occupiedCells = CarriedEntities.ToDictionary(carried => carried.Coord);
+        for (var y = 0; y < SelectedInventoryHeight; y++)
+        {
+            for (var x = 0; x < SelectedInventoryWidth; x++)
+            {
+                var coord = new GridCoord(x, y);
+                if (occupiedCells.TryGetValue(coord, out var carried))
+                {
+                    InventoryGridCells.Add(new InventoryGridCell(
+                        coord,
+                        carried.EntityId,
+                        carried.TemplateId,
+                        carried.TemplateName,
+                        carried.Glyph,
+                        $"{carried.Glyph} {carried.TemplateName}"));
+                }
+                else
+                {
+                    InventoryGridCells.Add(new InventoryGridCell(
+                        coord,
+                        CarriedEntityId: null,
+                        TemplateId: null,
+                        TemplateName: null,
+                        Glyph: null,
+                        DisplayText: "."));
+                }
+            }
+        }
+    }
+
+    private void ClearSelectedEntityPreset()
+    {
+        _selectedPreset = null;
+        OnPropertyChanged(nameof(SelectedPreset));
+        SelectedName = string.Empty;
+        SelectedInventoryWidth = 0;
+        SelectedInventoryHeight = 0;
+        SelectedWeight = 0;
+        SelectedCarryingCapacity = 0;
+        SelectedGlyph = string.Empty;
+        SelectedColor = PresentationColor.Gray;
+        CarriedEntities.Clear();
+        InventoryGridCells.Clear();
+        SelectedCarriedEntity = null;
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
@@ -357,4 +578,17 @@ public sealed record CarriedEntityListItem(
     PresentationColor Color)
 {
     public override string ToString() => $"{EntityId}: {TemplateName} at {Coord}";
+}
+
+public sealed record InventoryGridCell(
+    GridCoord Coord,
+    EntityId? CarriedEntityId,
+    EntityTemplateId? TemplateId,
+    string? TemplateName,
+    char? Glyph,
+    string DisplayText)
+{
+    public bool IsOccupied => CarriedEntityId is not null;
+
+    public override string ToString() => $"{Coord.X},{Coord.Y}: {DisplayText}";
 }

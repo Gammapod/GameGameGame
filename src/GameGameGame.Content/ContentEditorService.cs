@@ -110,6 +110,12 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public void PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, EntityTemplateId templateId, GridCoord coord)
     {
+        var placement = ValidateCarriedEntityPlacement(parentTemplateId, coord);
+        if (!placement.IsSuccess)
+        {
+            throw new InvalidOperationException(placement.ErrorMessage);
+        }
+
         var template = GetTemplateDto(parentTemplateId);
         template.CarriedEntities ??= [];
         template.CarriedEntities.Add(new EditableContentDocument.CarriedEntityTemplateDto
@@ -125,6 +131,12 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     {
         var coord = FindFirstOpenInventoryCell(parentTemplateId)
             ?? throw new InvalidOperationException($"Entity template {parentTemplateId} has no open inventory cell.");
+
+        return PlaceCarriedEntity(parentTemplateId, templateId, coord);
+    }
+
+    public EntityId PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityTemplateId templateId, GridCoord coord)
+    {
         var entityId = GenerateCarriedEntityId(parentTemplateId, templateId);
 
         PlaceCarriedEntity(parentTemplateId, entityId, templateId, coord);
@@ -175,11 +187,55 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         return null;
     }
 
+    public ContentEditorOperationResult ValidateCarriedEntityPlacement(
+        EntityTemplateId parentTemplateId,
+        GridCoord coord,
+        EntityId? movingEntityId = null)
+    {
+        var template = GetTemplateDto(parentTemplateId);
+        if (template.InventoryWidth <= 0 || template.InventoryHeight <= 0)
+        {
+            return ContentEditorOperationResult.Failure(
+                $"Cannot place carried entity; {parentTemplateId} has no usable inventory.");
+        }
+
+        if (coord.X < 0 || coord.Y < 0 || coord.X >= template.InventoryWidth || coord.Y >= template.InventoryHeight)
+        {
+            return ContentEditorOperationResult.Failure(
+                $"Cannot place carried entity at {coord.X},{coord.Y}; it is outside inventory bounds {template.InventoryWidth}x{template.InventoryHeight} for {parentTemplateId}.");
+        }
+
+        var carriedEntities = template.CarriedEntities ?? [];
+        if (movingEntityId is not null && carriedEntities.All(carried => carried.EntityId != movingEntityId.Value.Value))
+        {
+            return ContentEditorOperationResult.Failure(
+                $"Entity template {parentTemplateId} does not carry entity {movingEntityId.Value}.");
+        }
+
+        var occupant = carriedEntities.FirstOrDefault(carried =>
+            carried.Coord is not null
+            && carried.Coord.X == coord.X
+            && carried.Coord.Y == coord.Y
+            && (movingEntityId is null || carried.EntityId != movingEntityId.Value.Value));
+        if (occupant is not null)
+        {
+            return ContentEditorOperationResult.Failure(
+                $"Cannot place carried entity at {coord.X},{coord.Y}; cell is already occupied by {occupant.EntityId}.");
+        }
+
+        return ContentEditorOperationResult.Success();
+    }
+
     public void MoveCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, GridCoord coord)
     {
         var template = GetTemplateDto(parentTemplateId);
         var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
             ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
+        var placement = ValidateCarriedEntityPlacement(parentTemplateId, coord, entityId);
+        if (!placement.IsSuccess)
+        {
+            throw new InvalidOperationException(placement.ErrorMessage);
+        }
 
         carried.Coord = EditableContentDocument.GridCoordDto.From(coord);
         onChanged?.Invoke();

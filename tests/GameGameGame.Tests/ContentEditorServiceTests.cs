@@ -111,6 +111,49 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceRejectsCarriedPlacementOutsideInventoryBounds()
+    {
+        var editor = CreateInventoryEditor();
+
+        var result = editor.ValidateCarriedEntityPlacement(new EntityTemplateId("bag"), new GridCoord(2, 0));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Cannot place carried entity at 2,0; it is outside inventory bounds 2x1 for bag.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void ContentEditorServiceRejectsCarriedPlacementInOccupiedCellWithoutMutatingDocument()
+    {
+        var editor = CreateInventoryEditor();
+        var bagId = new EntityTemplateId("bag");
+        editor.PlaceCarriedEntity(bagId, new EntityId("carriedRock"), new EntityTemplateId("rock"), new GridCoord(0, 0));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            editor.PlaceCarriedEntity(bagId, new EntityId("secondRock"), new EntityTemplateId("rock"), new GridCoord(0, 0)));
+
+        Assert.Equal("Cannot place carried entity at 0,0; cell is already occupied by carriedRock.", exception.Message);
+        var carried = Assert.Single(EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry().EntityTemplates[bagId].CarriedEntities!);
+        Assert.Equal(new EntityId("carriedRock"), carried.EntityId);
+    }
+
+    [Fact]
+    public void ContentEditorServiceRejectsMoveToOccupiedCellWithoutMutatingDocument()
+    {
+        var editor = CreateInventoryEditor(width: 2, height: 1);
+        var bagId = new EntityTemplateId("bag");
+        editor.PlaceCarriedEntity(bagId, new EntityId("firstRock"), new EntityTemplateId("rock"), new GridCoord(0, 0));
+        editor.PlaceCarriedEntity(bagId, new EntityId("secondRock"), new EntityTemplateId("rock"), new GridCoord(1, 0));
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            editor.MoveCarriedEntity(bagId, new EntityId("firstRock"), new GridCoord(1, 0)));
+
+        Assert.Equal("Cannot place carried entity at 1,0; cell is already occupied by secondRock.", exception.Message);
+        var carried = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry().EntityTemplates[bagId].CarriedEntities!;
+        Assert.Equal(new GridCoord(0, 0), carried.Single(item => item.EntityId == new EntityId("firstRock")).Coord);
+        Assert.Equal(new GridCoord(1, 0), carried.Single(item => item.EntityId == new EntityId("secondRock")).Coord);
+    }
+
+    [Fact]
     public void ContentEditorServiceListsActionPlans()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
@@ -286,6 +329,12 @@ public sealed class ContentEditorServiceTests
                 inventoryHeight: 1
                 weight: 1
                 carryingCapacity: 10
+                carriedEntities:
+                  - entityId: outsideRock
+                    templateId: rock
+                    coord:
+                      x: 2
+                      y: 0
               rock:
                 name: Rock
                 inventoryWidth: 0
@@ -302,7 +351,6 @@ public sealed class ContentEditorServiceTests
             actionPlans: {}
             """));
 
-        editor.PlaceCarriedEntity(new EntityTemplateId("bag"), new EntityId("outsideRock"), new EntityTemplateId("rock"), new GridCoord(2, 0));
         var result = editor.Validate();
 
         Assert.False(result.IsValid);
@@ -689,4 +737,30 @@ public sealed class ContentEditorServiceTests
 
         Assert.Equal(new EntityTemplateId("gem"), carried.TemplateId);
     }
+
+    private static ContentEditorService CreateInventoryEditor(int width = 2, int height = 1) =>
+        new(EditableContentDocument.LoadYaml(
+            $$"""
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: {{width}}
+                inventoryHeight: {{height}}
+                weight: 1
+                carryingCapacity: 10
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
 }
