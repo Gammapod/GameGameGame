@@ -1,0 +1,130 @@
+entityTemplates:
+  game:
+    name: Game
+    inventoryWidth: 25
+    inventoryHeight: 25
+    weight: 0
+    carryingCapacity: 0
+  player:
+    name: Player
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 10
+    carryingCapacity: 15
+  weightToken0:
+    name: Weightless
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+  weightToken1:
+    name: Units
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+  weightToken2:
+    name: Tens
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 10
+    carryingCapacity: 0
+  weightToken3:
+    name: Hundreds
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+  weightToken4:
+    name: Thousands
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1000
+    carryingCapacity: 0
+  weightToken5:
+    name: Enormous
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 10000
+    carryingCapacity: 0
+  sizeToken0:
+    name: Socket
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+  sizeToken1:
+    name: Small
+    inventoryWidth: 3
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+  sizeToken2:
+    name: Medium
+    inventoryWidth: 5
+    inventoryHeight: 2
+    weight: 0
+    carryingCapacity: 0
+  sizeToken3:
+    name: Large
+    inventoryWidth: 8
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 0
+  sizeToken4:
+    name: Expansive
+    inventoryWidth: 12
+    inventoryHeight: 12
+    weight: 0
+    carryingCapacity: 0
+  sizeToken5:
+    name: World-Sized
+    inventoryWidth: 100
+    inventoryHeight: 100
+    weight: 0
+    carryingCapacity: 0
+   
+
+presentations:
+  game:
+    glyph: G
+    color: Yellow
+  player:
+    glyph: '@'
+    color: Cyan
+  weightToken0:
+    glyph: '0'
+    color: Earth
+  weightToken1:
+    glyph: '1'
+    color: Earth
+  weightToken2:
+    glyph: '2'
+    color: Earth
+  weightToken3:
+    glyph: '3'
+    color: Earth
+  weightToken4:
+    glyph: '4'
+    color: Earth
+  weightToken5:
+    glyph: '5'
+    color: Earth
+  sizeToken0:
+    glyph: '0'
+    color: Grey
+  sizeToken1:
+    glyph: '1'
+    color: Grey
+  sizeToken2:
+    glyph: '2'
+    color: Grey
+  sizeToken3:
+    glyph: '3'
+    color: Grey
+  sizeToken4:
+    glyph: '4'
+    color: Grey
+  sizeToken5:
+    glyph: '5'
+    color: Grey

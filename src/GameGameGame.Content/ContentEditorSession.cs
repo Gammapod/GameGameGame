@@ -7,7 +7,10 @@ public sealed class ContentEditorSession
         Document = document;
         FilePath = filePath;
         Editor = new ContentEditorService(document, MarkDirty);
+        _savedYamlBaseline = document.SaveYaml();
     }
+
+    private string _savedYamlBaseline;
 
     public EditableContentDocument Document { get; }
 
@@ -47,9 +50,11 @@ public sealed class ContentEditorSession
     {
         try
         {
-            File.WriteAllText(path, Document.SaveYaml());
+            var yaml = Document.SaveYaml();
+            File.WriteAllText(path, yaml);
             FilePath = path;
             IsDirty = false;
+            _savedYamlBaseline = yaml;
 
             return ContentEditorFileOperationResult.Success();
         }
@@ -59,7 +64,81 @@ public sealed class ContentEditorSession
         }
     }
 
+    public string GetYamlPreview() => Document.SaveYaml();
+
+    public ContentEditorYamlDiff GetYamlDiff()
+    {
+        var current = GetYamlPreview();
+        if (current == _savedYamlBaseline)
+        {
+            return new ContentEditorYamlDiff([]);
+        }
+
+        var baselineLines = SplitLines(_savedYamlBaseline);
+        var currentLines = SplitLines(current);
+        var lines = baselineLines
+            .Where(line => !currentLines.Contains(line))
+            .Select(line => $"- {line}")
+            .Concat(currentLines
+                .Where(line => !baselineLines.Contains(line))
+                .Select(line => $"+ {line}"))
+            .ToList();
+
+        return new ContentEditorYamlDiff(lines);
+    }
+
+    public ContentEditorFileOperationResult Reload()
+    {
+        if (FilePath is null)
+        {
+            return ContentEditorFileOperationResult.Failure("Cannot reload content document before choosing a file path.");
+        }
+
+        try
+        {
+            var reloaded = EditableContentDocument.LoadYaml(File.ReadAllText(FilePath));
+            ReplaceDocumentContents(reloaded);
+            _savedYamlBaseline = Document.SaveYaml();
+            IsDirty = false;
+
+            return ContentEditorFileOperationResult.Success();
+        }
+        catch (Exception ex)
+        {
+            return ContentEditorFileOperationResult.Failure($"Could not reload content file {FilePath}: {ex.Message}");
+        }
+    }
+
     private void MarkDirty() => IsDirty = true;
+
+    private void ReplaceDocumentContents(EditableContentDocument reloaded)
+    {
+        Document.EntityTemplates.Clear();
+        foreach (var (id, template) in reloaded.EntityTemplates)
+        {
+            Document.EntityTemplates[id] = template;
+        }
+
+        Document.Presentations.Clear();
+        foreach (var (id, presentation) in reloaded.Presentations)
+        {
+            Document.Presentations[id] = presentation;
+        }
+
+        Document.ActionPlans.Clear();
+        foreach (var (id, plan) in reloaded.ActionPlans)
+        {
+            Document.ActionPlans[id] = plan;
+        }
+    }
+
+    private static IReadOnlyList<string> SplitLines(string yaml) =>
+        yaml.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+}
+
+public sealed record ContentEditorYamlDiff(IReadOnlyList<string> Lines)
+{
+    public bool IsEmpty => Lines.Count == 0;
 }
 
 public sealed record ContentEditorSessionOpenResult(ContentEditorSession? Session, string? ErrorMessage)

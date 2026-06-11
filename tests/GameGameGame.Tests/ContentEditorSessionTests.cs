@@ -162,6 +162,168 @@ public sealed class ContentEditorSessionTests
         }
     }
 
+    [Fact]
+    public void YamlPreviewReflectsCurrentInMemoryEdits()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var session = ContentEditorSession.OpenFile(path).Session!;
+            var id = new EntityTemplateId("rock");
+
+            session.Editor.UpdateEntityPreset(
+                id,
+                session.Editor.GetEntityPreset(id).Template with { Name = "Preview Rock" },
+                new EntityPresentation('R', PresentationColor.White));
+
+            Assert.Contains("Preview Rock", session.GetYamlPreview());
+            Assert.Contains("glyph: R", session.GetYamlPreview());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void YamlDiffReportsChangesFromLastSavedBaseline()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var session = ContentEditorSession.OpenFile(path).Session!;
+            var id = new EntityTemplateId("rock");
+
+            Assert.Empty(session.GetYamlDiff().Lines);
+            session.Editor.UpdateEntityPreset(
+                id,
+                session.Editor.GetEntityPreset(id).Template with { Name = "Diff Rock" },
+                new EntityPresentation('R', PresentationColor.White));
+
+            var diff = session.GetYamlDiff();
+
+            Assert.False(diff.IsEmpty);
+            Assert.Contains(diff.Lines, line => line.StartsWith("-") && line.Contains("Rock"));
+            Assert.Contains(diff.Lines, line => line.StartsWith("+") && line.Contains("Diff Rock"));
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SaveUpdatesYamlDiffBaseline()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var session = ContentEditorSession.OpenFile(path).Session!;
+            var id = new EntityTemplateId("rock");
+            session.Editor.UpdateEntityPreset(
+                id,
+                session.Editor.GetEntityPreset(id).Template with { Name = "Saved Baseline Rock" },
+                new EntityPresentation('R', PresentationColor.White));
+
+            Assert.False(session.GetYamlDiff().IsEmpty);
+            var save = session.Save();
+
+            Assert.True(save.IsSuccess, save.ErrorMessage);
+            Assert.True(session.GetYamlDiff().IsEmpty);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void ReloadDiscardsUnsavedEditsAndRestoresFileContent()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var session = ContentEditorSession.OpenFile(path).Session!;
+            var id = new EntityTemplateId("rock");
+            session.Editor.UpdateEntityPreset(
+                id,
+                session.Editor.GetEntityPreset(id).Template with { Name = "Unsaved Rock" },
+                new EntityPresentation('R', PresentationColor.White));
+
+            var reload = session.Reload();
+
+            Assert.True(reload.IsSuccess, reload.ErrorMessage);
+            Assert.False(session.IsDirty);
+            Assert.True(session.GetYamlDiff().IsEmpty);
+            Assert.Equal("Rock", session.Editor.GetEntityPreset(id).Template.Name);
+            Assert.Equal('*', session.Editor.GetEntityPreset(id).Presentation.Glyph);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
     private static string WriteTempContentFile(string yaml)
     {
         var path = Path.Combine(Path.GetTempPath(), $"game-content-session-{Guid.NewGuid():N}.yaml");

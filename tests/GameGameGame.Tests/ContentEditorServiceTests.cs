@@ -308,4 +308,385 @@ public sealed class ContentEditorServiceTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("outsideRock") && error.Contains("outside inventory bounds"));
     }
+
+    [Fact]
+    public void ContentEditorServiceCreatesEntityPresetWithGeneratedIdAndDefaultPresentation()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans: {}
+            """));
+
+        var id = editor.CreateEntityPreset("New Rock");
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(new EntityTemplateId("newRock"), id);
+        Assert.Equal("New Rock", registry.EntityTemplates[id].Name);
+        Assert.Equal('?', registry.Presentations[id].Glyph);
+        Assert.Equal(PresentationColor.Gray, registry.Presentations[id].Color);
+        Assert.True(registry.Validate().IsValid);
+    }
+
+    [Fact]
+    public void ContentEditorServiceDuplicatesEntityPresetWithSafeIds()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 2
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: carriedRock
+                    templateId: rock
+                    coord:
+                      x: 0
+                      y: 0
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+
+        var duplicateId = editor.DuplicateEntityPreset(new EntityTemplateId("bag"), "Bag Copy");
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(new EntityTemplateId("bagCopy"), duplicateId);
+        Assert.Equal("Bag Copy", registry.EntityTemplates[duplicateId].Name);
+        Assert.Equal('b', registry.Presentations[duplicateId].Glyph);
+        var carried = Assert.Single(registry.EntityTemplates[duplicateId].CarriedEntities!);
+        Assert.Equal(new EntityId("bagCopyCarriedRock"), carried.EntityId);
+        Assert.Equal(new EntityTemplateId("rock"), carried.TemplateId);
+    }
+
+    [Fact]
+    public void ContentEditorServiceReportsTemplateReferencesBeforeDeletion()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: carriedRock
+                    templateId: rock
+                    coord:
+                      x: 0
+                      y: 0
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+
+        var references = editor.ListEntityTemplateReferences(new EntityTemplateId("rock"));
+        var deleteResult = editor.DeleteEntityPreset(new EntityTemplateId("rock"));
+
+        var reference = Assert.Single(references);
+        Assert.Equal(new EntityTemplateId("bag"), reference.SourceTemplateId);
+        Assert.Equal(new EntityId("carriedRock"), reference.CarriedEntityId);
+        Assert.False(deleteResult.IsSuccess);
+        Assert.Contains("carriedRock", deleteResult.ErrorMessage);
+    }
+
+    [Fact]
+    public void ContentEditorServiceDeletesUnreferencedEntityPreset()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+        var id = new EntityTemplateId("rock");
+
+        var result = editor.DeleteEntityPreset(id);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.DoesNotContain(id.Value, editor.Document.EntityTemplates.Keys);
+        Assert.DoesNotContain(id.Value, editor.Document.Presentations.Keys);
+    }
+
+    [Fact]
+    public void ContentEditorServiceAssignsAndClearsDefaultActionPlan()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              wait:
+                id: wait
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var slimeId = new EntityTemplateId("slime");
+
+        editor.SetDefaultActionPlan(slimeId, new ActionPlanTemplateId("wait"));
+        var assigned = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        editor.ClearDefaultActionPlan(slimeId);
+        var cleared = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(new ActionPlanTemplateId("wait"), assigned.EntityTemplates[slimeId].DefaultActionPlanId);
+        Assert.Null(cleared.EntityTemplates[slimeId].DefaultActionPlanId);
+    }
+
+    [Fact]
+    public void ContentEditorServiceListsCarriedEntitiesWithPresentationData()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 2
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: carriedRock
+                    templateId: rock
+                    coord:
+                      x: 1
+                      y: 0
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+
+        var carried = Assert.Single(editor.ListCarriedEntities(new EntityTemplateId("bag")));
+
+        Assert.Equal(new EntityId("carriedRock"), carried.EntityId);
+        Assert.Equal(new EntityTemplateId("rock"), carried.TemplateId);
+        Assert.Equal(new GridCoord(1, 0), carried.Coord);
+        Assert.Equal("Rock", carried.Template.Name);
+        Assert.Equal('*', carried.Presentation.Glyph);
+    }
+
+    [Fact]
+    public void ContentEditorServicePlacesCarriedEntityWithGeneratedIdInFirstOpenCell()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 2
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+        var bagId = new EntityTemplateId("bag");
+
+        var carriedId = editor.PlaceCarriedEntity(bagId, new EntityTemplateId("rock"));
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(new EntityId("bagRock"), carriedId);
+        var carried = Assert.Single(registry.EntityTemplates[bagId].CarriedEntities!);
+        Assert.Equal(carriedId, carried.EntityId);
+        Assert.Equal(new GridCoord(0, 0), carried.Coord);
+    }
+
+    [Fact]
+    public void ContentEditorServiceFindsFirstOpenInventoryCell()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 2
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: carriedRock
+                    templateId: rock
+                    coord:
+                      x: 0
+                      y: 0
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+
+        Assert.Equal(new GridCoord(1, 0), editor.FindFirstOpenInventoryCell(new EntityTemplateId("bag")));
+    }
+
+    [Fact]
+    public void ContentEditorServiceRemovesCarriedEntity()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: carriedRock
+                    templateId: rock
+                    coord:
+                      x: 0
+                      y: 0
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """));
+        var bagId = new EntityTemplateId("bag");
+
+        editor.RemoveCarriedEntity(bagId, new EntityId("carriedRock"));
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Null(registry.EntityTemplates[bagId].CarriedEntities);
+    }
+
+    [Fact]
+    public void ContentEditorServiceReplacesCarriedEntityTemplateReference()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              bag:
+                name: Bag
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: carriedRock
+                    templateId: rock
+                    coord:
+                      x: 0
+                      y: 0
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 3
+              gem:
+                name: Gem
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+            presentations:
+              bag:
+                glyph: b
+                color: Gray
+              rock:
+                glyph: '*'
+                color: Earth
+              gem:
+                glyph: g
+                color: Green
+            actionPlans: {}
+            """));
+        var bagId = new EntityTemplateId("bag");
+
+        editor.ReplaceCarriedEntityTemplate(bagId, new EntityId("carriedRock"), new EntityTemplateId("gem"));
+        var carried = Assert.Single(EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry().EntityTemplates[bagId].CarriedEntities!);
+
+        Assert.Equal(new EntityTemplateId("gem"), carried.TemplateId);
+    }
 }

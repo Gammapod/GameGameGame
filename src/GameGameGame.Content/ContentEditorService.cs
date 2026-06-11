@@ -21,6 +21,76 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public ContentValidationResult Validate() => Document.ToRegistry().Validate();
 
+    public EntityTemplateId CreateEntityPreset(string name)
+    {
+        var id = Document.AddEntityTemplate(
+            name,
+            new EntityTemplate(
+                name,
+                InventoryWidth: 0,
+                InventoryHeight: 0,
+                Weight: 0,
+                CarryingCapacity: 0),
+            new EntityPresentation('?', PresentationColor.Gray));
+        onChanged?.Invoke();
+
+        return id;
+    }
+
+    public EntityTemplateId DuplicateEntityPreset(EntityTemplateId sourceId, string name)
+    {
+        var preset = GetEntityPreset(sourceId);
+        var duplicateId = Document.AddEntityTemplate(
+            name,
+            preset.Template with
+            {
+                Name = name,
+                CarriedEntities = DuplicateCarriedEntities(preset.Template.CarriedEntities, name)
+            },
+            preset.Presentation);
+        onChanged?.Invoke();
+
+        return duplicateId;
+    }
+
+    public IReadOnlyList<EntityTemplateReference> ListEntityTemplateReferences(EntityTemplateId id) =>
+        Document.EntityTemplates
+            .SelectMany(source => (source.Value.CarriedEntities ?? [])
+                .Where(carried => carried.TemplateId == id.Value)
+                .Select(carried => new EntityTemplateReference(
+                    new EntityTemplateId(source.Key),
+                    carried.EntityId is null ? null : new EntityId(carried.EntityId))))
+            .ToList();
+
+    public ContentEditorOperationResult DeleteEntityPreset(EntityTemplateId id)
+    {
+        var references = ListEntityTemplateReferences(id);
+
+        if (references.Count > 0)
+        {
+            return ContentEditorOperationResult.Failure(
+                $"Cannot delete entity template {id}; it is referenced by {string.Join(", ", references.Select(reference => reference.ToString()))}.");
+        }
+
+        Document.EntityTemplates.Remove(id.Value);
+        Document.Presentations.Remove(id.Value);
+        onChanged?.Invoke();
+
+        return ContentEditorOperationResult.Success();
+    }
+
+    public void SetDefaultActionPlan(EntityTemplateId templateId, ActionPlanTemplateId actionPlanId)
+    {
+        GetTemplateDto(templateId).DefaultActionPlanId = actionPlanId.Value;
+        onChanged?.Invoke();
+    }
+
+    public void ClearDefaultActionPlan(EntityTemplateId templateId)
+    {
+        GetTemplateDto(templateId).DefaultActionPlanId = null;
+        onChanged?.Invoke();
+    }
+
     public EntityPresetEditorModel GetEntityPreset(EntityTemplateId id)
     {
         var registry = Document.ToRegistry();
@@ -51,6 +121,60 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         onChanged?.Invoke();
     }
 
+    public EntityId PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityTemplateId templateId)
+    {
+        var coord = FindFirstOpenInventoryCell(parentTemplateId)
+            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} has no open inventory cell.");
+        var entityId = GenerateCarriedEntityId(parentTemplateId, templateId);
+
+        PlaceCarriedEntity(parentTemplateId, entityId, templateId, coord);
+
+        return entityId;
+    }
+
+    public IReadOnlyList<CarriedEntityEditorModel> ListCarriedEntities(EntityTemplateId parentTemplateId)
+    {
+        var registry = Document.ToRegistry();
+        var parent = registry.EntityTemplates[parentTemplateId];
+
+        return (parent.CarriedEntities ?? [])
+            .Where(carried => carried.TemplateId is not null)
+            .Select(carried =>
+            {
+                var templateId = carried.TemplateId!.Value;
+                return new CarriedEntityEditorModel(
+                    carried.EntityId,
+                    templateId,
+                    carried.Coord,
+                    registry.EntityTemplates[templateId],
+                    registry.Presentations[templateId]);
+            })
+            .ToList();
+    }
+
+    public GridCoord? FindFirstOpenInventoryCell(EntityTemplateId parentTemplateId)
+    {
+        var template = GetTemplateDto(parentTemplateId);
+        var occupied = (template.CarriedEntities ?? [])
+            .Where(carried => carried.Coord is not null)
+            .Select(carried => new GridCoord(carried.Coord!.X, carried.Coord.Y))
+            .ToHashSet();
+
+        for (var y = 0; y < template.InventoryHeight; y++)
+        {
+            for (var x = 0; x < template.InventoryWidth; x++)
+            {
+                var coord = new GridCoord(x, y);
+                if (!occupied.Contains(coord))
+                {
+                    return coord;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public void MoveCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, GridCoord coord)
     {
         var template = GetTemplateDto(parentTemplateId);
@@ -58,6 +182,31 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
 
         carried.Coord = EditableContentDocument.GridCoordDto.From(coord);
+        onChanged?.Invoke();
+    }
+
+    public void RemoveCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId)
+    {
+        var template = GetTemplateDto(parentTemplateId);
+        var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
+            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
+
+        template.CarriedEntities!.Remove(carried);
+        if (template.CarriedEntities.Count == 0)
+        {
+            template.CarriedEntities = null;
+        }
+
+        onChanged?.Invoke();
+    }
+
+    public void ReplaceCarriedEntityTemplate(EntityTemplateId parentTemplateId, EntityId entityId, EntityTemplateId templateId)
+    {
+        var template = GetTemplateDto(parentTemplateId);
+        var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
+            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
+
+        carried.TemplateId = templateId.Value;
         onChanged?.Invoke();
     }
 
@@ -126,6 +275,59 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
         return plan.Steps;
     }
+
+    private static IReadOnlyList<CarriedEntityTemplate>? DuplicateCarriedEntities(
+        IReadOnlyList<CarriedEntityTemplate>? carriedEntities,
+        string duplicateName)
+    {
+        if (carriedEntities is null || carriedEntities.Count == 0)
+        {
+            return null;
+        }
+
+        var idPrefix = ToCamelCaseId(duplicateName);
+        return carriedEntities
+            .Select(carried => new CarriedEntityTemplate(
+                new EntityId($"{idPrefix}{UppercaseFirst(carried.EntityId.Value)}"),
+                carried.TemplateId ?? throw new InvalidOperationException($"Carried entity {carried.EntityId} has no template ID."),
+                carried.Coord))
+            .ToList();
+    }
+
+    private static string ToCamelCaseId(string name)
+    {
+        var result = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select((part, index) => index == 0
+                ? char.ToLowerInvariant(part[0]) + part[1..]
+                : char.ToUpperInvariant(part[0]) + part[1..]));
+
+        return string.IsNullOrWhiteSpace(result) ? "entity" : result;
+    }
+
+    private static string UppercaseFirst(string value) =>
+        string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
+
+    private EntityId GenerateCarriedEntityId(EntityTemplateId parentTemplateId, EntityTemplateId templateId)
+    {
+        var parentPrefix = ToCamelCaseId(GetTemplateDto(parentTemplateId).Name ?? parentTemplateId.Value);
+        var templateName = Document.EntityTemplates.TryGetValue(templateId.Value, out var template)
+            ? template.Name ?? templateId.Value
+            : templateId.Value;
+        var baseId = $"{parentPrefix}{UppercaseFirst(ToCamelCaseId(templateName))}";
+        var candidate = baseId;
+        var suffix = 2;
+        var existingIds = (GetTemplateDto(parentTemplateId).CarriedEntities ?? [])
+            .Select(carried => carried.EntityId)
+            .ToHashSet();
+
+        while (existingIds.Contains(candidate))
+        {
+            candidate = $"{baseId}{suffix}";
+            suffix++;
+        }
+
+        return new EntityId(candidate);
+    }
 }
 
 public sealed record EntityPresetEditorModel(
@@ -136,3 +338,21 @@ public sealed record EntityPresetEditorModel(
 public sealed record ActionPlanEditorModel(
     ActionPlanTemplateId TemplateId,
     ActionPlanDescriptor Descriptor);
+
+public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
+
+public sealed record CarriedEntityEditorModel(
+    EntityId EntityId,
+    EntityTemplateId TemplateId,
+    GridCoord Coord,
+    EntityTemplate Template,
+    EntityPresentation Presentation);
+
+public sealed record ContentEditorOperationResult(string? ErrorMessage)
+{
+    public bool IsSuccess => ErrorMessage is null;
+
+    public static ContentEditorOperationResult Success() => new(ErrorMessage: null);
+
+    public static ContentEditorOperationResult Failure(string errorMessage) => new(errorMessage);
+}

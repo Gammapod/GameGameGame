@@ -30,6 +30,9 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("missingPlan") && error.Contains("Rock"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingActionPlanReference);
+        Assert.Equal(new EntityTemplateId("rock"), diagnostic.EntityTemplateId);
+        Assert.Equal(missingPlanId, diagnostic.ActionPlanTemplateId);
     }
 
     [Fact]
@@ -53,6 +56,33 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("missingNestedPlan") && error.Contains("invalidWandering"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingCalledPlan);
+        Assert.Equal(PrototypeContent.WanderingActionPlanTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("invalidWandering"), diagnostic.ActionPlanId);
+        Assert.Equal(missingPlanId, diagnostic.ReferencedActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsMissingPresentationAsStructuredDiagnostic()
+    {
+        var templateId = new EntityTemplateId("invisibleRock");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                templateId,
+                new EntityTemplate(
+                    "Invisible Rock",
+                    InventoryWidth: 0,
+                    InventoryHeight: 0,
+                    Weight: 3,
+                    CarryingCapacity: 3));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Contains("invisibleRock") && error.Contains("no presentation"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPresentation);
+        Assert.Equal(templateId, diagnostic.EntityTemplateId);
     }
 
     [Fact]
@@ -76,6 +106,11 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("badBag") && error.Contains("outsideRock") && error.Contains("outside inventory bounds"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InventoryOutOfBounds);
+        Assert.Equal(ContentDiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Equal(new EntityTemplateId("badBag"), diagnostic.EntityTemplateId);
+        Assert.Equal(new EntityId("outsideRock"), diagnostic.CarriedEntityId);
+        Assert.Equal(new GridCoord(1, 0), diagnostic.Coord);
     }
 
     [Fact]
@@ -100,6 +135,11 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("crowdedBag") && error.Contains("firstRock") && error.Contains("secondRock") && error.Contains("overlap"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InventoryOverlap);
+        Assert.Equal(new EntityTemplateId("crowdedBag"), diagnostic.EntityTemplateId);
+        Assert.Equal(new EntityId("secondRock"), diagnostic.CarriedEntityId);
+        Assert.Equal(new EntityId("firstRock"), diagnostic.RelatedEntityId);
+        Assert.Equal(new GridCoord(0, 0), diagnostic.Coord);
     }
 
     [Fact]
@@ -125,6 +165,9 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("duplicateBag") && error.Contains("duplicateRock") && error.Contains("duplicate carried entity ID"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.DuplicateCarriedEntityId);
+        Assert.Equal(new EntityTemplateId("duplicateBag"), diagnostic.EntityTemplateId);
+        Assert.Equal(new EntityId("duplicateRock"), diagnostic.CarriedEntityId);
     }
 
     [Fact]
@@ -148,6 +191,9 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("pocketlessBag") && error.Contains("trappedRock") && error.Contains("no usable inventory"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.CarriedEntityWithoutUsableInventory);
+        Assert.Equal(new EntityTemplateId("pocketlessBag"), diagnostic.EntityTemplateId);
+        Assert.Equal(new EntityId("trappedRock"), diagnostic.CarriedEntityId);
     }
 
     [Fact]
@@ -174,6 +220,13 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("Rock") && error.Contains("facing") && error.Contains("missing required variable"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanVariable);
+        Assert.Equal(PrototypeContent.RockTemplateId, diagnostic.EntityTemplateId);
+        Assert.Equal(planTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("needsDirection"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Equal("facing", diagnostic.VariableName);
+        Assert.Equal(PlanValueKind.Direction, diagnostic.ExpectedValueKind);
     }
 
     [Fact]
@@ -207,6 +260,112 @@ public sealed class ContentRegistryValidationTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.Contains("Rock") && error.Contains("facing") && error.Contains("expected Direction") && error.Contains("found Int"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.PlanVariableTypeMismatch);
+        Assert.Equal(PrototypeContent.RockTemplateId, diagnostic.EntityTemplateId);
+        Assert.Equal(planTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("wrongDirectionType"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Equal("facing", diagnostic.VariableName);
+        Assert.Equal(PlanValueKind.Direction, diagnostic.ExpectedValueKind);
+        Assert.Equal(PlanValueKind.Int, diagnostic.ActualValueKind);
+    }
+
+    [Fact]
+    public void ContentValidationResultCanFilterDiagnosticsByEntityTemplate()
+    {
+        var badBagId = new EntityTemplateId("badBag");
+        var otherBagId = new EntityTemplateId("otherBag");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                badBagId,
+                new EntityTemplate(
+                    "Bad Bag",
+                    InventoryWidth: 1,
+                    InventoryHeight: 1,
+                    Weight: 1,
+                    CarryingCapacity: 10,
+                    CarriedEntities:
+                    [
+                        new CarriedEntityTemplate(new EntityId("outsideRock"), PrototypeContent.RockTemplateId, new GridCoord(2, 0))
+                    ]))
+            .WithEntityTemplate(
+                otherBagId,
+                new EntityTemplate(
+                    "Other Bag",
+                    InventoryWidth: 0,
+                    InventoryHeight: 0,
+                    Weight: 1,
+                    CarryingCapacity: 10,
+                    CarriedEntities:
+                    [
+                        new CarriedEntityTemplate(new EntityId("trappedRock"), PrototypeContent.RockTemplateId, new GridCoord(0, 0))
+                    ]));
+
+        var result = registry.Validate();
+
+        var badBagDiagnostics = result.ForEntityTemplate(badBagId);
+        Assert.Contains(badBagDiagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InventoryOutOfBounds);
+        Assert.DoesNotContain(badBagDiagnostics, diagnostic => diagnostic.EntityTemplateId == otherBagId);
+    }
+
+    [Fact]
+    public void ContentValidationResultCanFilterDiagnosticsByActionPlanAndStep()
+    {
+        var planTemplateId = new ActionPlanTemplateId("needsDirection");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with { DefaultActionPlanId = planTemplateId })
+            .WithActionPlanDescriptor(
+                planTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("needsDirection"),
+                    [
+                        new ActionPlanStepDescriptor(
+                            "wait first",
+                            [],
+                            PlanEffectDescriptor.Wait(),
+                            OnFailure: null),
+                        new ActionPlanStepDescriptor(
+                            "move missing variable",
+                            [PlanCheckDescriptor.CanMove("facing")],
+                            PlanEffectDescriptor.Move("facing"),
+                            OnFailure: null)
+                    ]));
+
+        var result = registry.Validate();
+
+        var planDiagnostics = result.ForActionPlan(planTemplateId);
+        var stepDiagnostics = result.ForActionPlanStep(planTemplateId, stepIndex: 1);
+        Assert.Contains(planDiagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanVariable);
+        var diagnostic = Assert.Single(stepDiagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanVariable);
+        Assert.Equal(1, diagnostic.StepIndex);
+    }
+
+    [Fact]
+    public void ContentValidationResultCanFilterDiagnosticsByCarriedEntity()
+    {
+        var bagId = new EntityTemplateId("badBag");
+        var carriedId = new EntityId("outsideRock");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                bagId,
+                new EntityTemplate(
+                    "Bad Bag",
+                    InventoryWidth: 1,
+                    InventoryHeight: 1,
+                    Weight: 1,
+                    CarryingCapacity: 10,
+                    CarriedEntities:
+                    [
+                        new CarriedEntityTemplate(carriedId, PrototypeContent.RockTemplateId, new GridCoord(2, 0))
+                    ]));
+
+        var result = registry.Validate();
+
+        var diagnostics = result.ForCarriedEntity(bagId, carriedId);
+        var diagnostic = Assert.Single(diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InventoryOutOfBounds);
+        Assert.Equal(new GridCoord(2, 0), diagnostic.Coord);
     }
 
     [Fact]

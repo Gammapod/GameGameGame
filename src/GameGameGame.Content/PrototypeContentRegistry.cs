@@ -80,10 +80,12 @@ public sealed class PrototypeContentRegistry(
     public ContentValidationResult Validate()
     {
         var errors = new List<string>();
-        ValidateEntityTemplates(errors);
-        ValidateActionPlans(errors);
+        var diagnostics = new List<ContentDiagnostic>();
+        ValidateEntityTemplates(errors, diagnostics);
+        ValidateActionPlans(errors, diagnostics);
 
-        return new ContentValidationResult(errors);
+        diagnostics.AddRange(errors.Select(error => ContentDiagnostic.Error(ContentDiagnosticCode.General, error)));
+        return new ContentValidationResult(diagnostics);
     }
 
     public EntitySpawnResult SpawnEntity(WorldState world, EntityTemplateId templateId, EntitySpawnOptions options)
@@ -156,16 +158,19 @@ public sealed class PrototypeContentRegistry(
     private IReadOnlyDictionary<ActionPlanId, ActionPlanDefinition> BuildPlanRegistry() =>
         actionPlanTemplates.Values.ToDictionary(plan => plan.Id, plan => plan.Materialize());
 
-    private void ValidateEntityTemplates(List<string> errors)
+    private void ValidateEntityTemplates(List<string> errors, List<ContentDiagnostic> diagnostics)
     {
         foreach (var (templateId, template) in entityTemplates)
         {
             if (!presentations.ContainsKey(templateId))
             {
-                errors.Add($"Entity template {templateId} ({template.Name}) has no presentation.");
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingPresentation,
+                    $"Entity template {templateId} ({template.Name}) has no presentation.",
+                    entityTemplateId: templateId));
             }
 
-            ValidateActionPlanTemplateReference(errors, templateId, template, template.DefaultActionPlanId, nameof(template.DefaultActionPlanId));
+            ValidateActionPlanTemplateReference(errors, diagnostics, templateId, template, template.DefaultActionPlanId, nameof(template.DefaultActionPlanId));
 
             if (template.DefaultPlanVariables is not null)
             {
@@ -180,7 +185,7 @@ public sealed class PrototypeContentRegistry(
                 continue;
             }
 
-            ValidateCarriedEntityLayout(errors, templateId, template);
+            ValidateCarriedEntityLayout(errors, diagnostics, templateId, template);
 
             foreach (var carried in template.CarriedEntities)
             {
@@ -192,7 +197,11 @@ public sealed class PrototypeContentRegistry(
         }
     }
 
-    private static void ValidateCarriedEntityLayout(List<string> errors, EntityTemplateId templateId, EntityTemplate template)
+    private static void ValidateCarriedEntityLayout(
+        List<string> errors,
+        List<ContentDiagnostic> diagnostics,
+        EntityTemplateId templateId,
+        EntityTemplate template)
     {
         if (template.CarriedEntities is null || template.CarriedEntities.Count == 0)
         {
@@ -207,12 +216,22 @@ public sealed class PrototypeContentRegistry(
         {
             if (!entityIds.Add(carried.EntityId))
             {
-                errors.Add($"Entity template {templateId} ({template.Name}) has duplicate carried entity ID {carried.EntityId}.");
+                var message = $"Entity template {templateId} ({template.Name}) has duplicate carried entity ID {carried.EntityId}.";
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.DuplicateCarriedEntityId,
+                    message,
+                    entityTemplateId: templateId,
+                    carriedEntityId: carried.EntityId));
             }
 
             if (!hasUsableInventory)
             {
-                errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} but has no usable inventory.");
+                var message = $"Entity template {templateId} ({template.Name}) carries {carried.EntityId} but has no usable inventory.";
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.CarriedEntityWithoutUsableInventory,
+                    message,
+                    entityTemplateId: templateId,
+                    carriedEntityId: carried.EntityId));
                 continue;
             }
 
@@ -221,13 +240,26 @@ public sealed class PrototypeContentRegistry(
                 || carried.Coord.X >= template.InventoryWidth
                 || carried.Coord.Y >= template.InventoryHeight)
             {
-                errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} at {carried.Coord}, outside inventory bounds {template.InventoryWidth}x{template.InventoryHeight}.");
+                var message = $"Entity template {templateId} ({template.Name}) carries {carried.EntityId} at {carried.Coord}, outside inventory bounds {template.InventoryWidth}x{template.InventoryHeight}.";
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InventoryOutOfBounds,
+                    message,
+                    entityTemplateId: templateId,
+                    carriedEntityId: carried.EntityId,
+                    coord: carried.Coord));
                 continue;
             }
 
             if (occupiedCoords.TryGetValue(carried.Coord, out var existingEntityId))
             {
-                errors.Add($"Entity template {templateId} ({template.Name}) carried entities {existingEntityId} and {carried.EntityId} overlap at {carried.Coord}.");
+                var message = $"Entity template {templateId} ({template.Name}) carried entities {existingEntityId} and {carried.EntityId} overlap at {carried.Coord}.";
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InventoryOverlap,
+                    message,
+                    entityTemplateId: templateId,
+                    carriedEntityId: carried.EntityId,
+                    relatedEntityId: existingEntityId,
+                    coord: carried.Coord));
                 continue;
             }
 
@@ -237,6 +269,7 @@ public sealed class PrototypeContentRegistry(
 
     private void ValidateActionPlanTemplateReference(
         List<string> errors,
+        List<ContentDiagnostic> diagnostics,
         EntityTemplateId templateId,
         EntityTemplate template,
         ActionPlanTemplateId? actionPlanTemplateId,
@@ -244,11 +277,15 @@ public sealed class PrototypeContentRegistry(
     {
         if (actionPlanTemplateId is { } id && !actionPlanTemplates.ContainsKey(id))
         {
-            errors.Add($"Entity template {templateId} ({template.Name}) references missing {fieldName} {id}.");
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.MissingActionPlanReference,
+                $"Entity template {templateId} ({template.Name}) references missing {fieldName} {id}.",
+                entityTemplateId: templateId,
+                actionPlanTemplateId: id));
         }
     }
 
-    private void ValidateActionPlans(List<string> errors)
+    private void ValidateActionPlans(List<string> errors, List<ContentDiagnostic> diagnostics)
     {
         var planIds = actionPlanTemplates.Values.Select(plan => plan.Id).ToHashSet();
 
@@ -258,27 +295,34 @@ public sealed class PrototypeContentRegistry(
 
             foreach (var step in descriptor.Steps)
             {
-                ValidateCalledPlan(errors, descriptor, step, step.OnSuccess);
-                ValidateCalledPlan(errors, descriptor, step, step.OnFailure);
+                ValidateCalledPlan(errors, templateId, descriptor, step, step.OnSuccess);
+                ValidateCalledPlan(errors, templateId, descriptor, step, step.OnFailure);
             }
         }
 
         void ValidateCalledPlan(
             List<string> validationErrors,
+            ActionPlanTemplateId actionPlanTemplateId,
             ActionPlanDescriptor descriptor,
             ActionPlanStepDescriptor step,
             PlanEffectDescriptor? effect)
         {
             if (effect?.Kind == PlanEffectKind.CallPlan && effect.PlanId is { } planId && !planIds.Contains(planId))
             {
-                validationErrors.Add($"Action plan {descriptor.Id} step {step.Label} calls missing plan {planId}.");
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingCalledPlan,
+                    $"Action plan {descriptor.Id} step {step.Label} calls missing plan {planId}.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    referencedActionPlanId: planId,
+                    stepIndex: StepIndex(descriptor, step)));
             }
         }
 
-        ValidateTemplateActionPlanVariables(errors);
+        ValidateTemplateActionPlanVariables(errors, diagnostics);
     }
 
-    private void ValidateTemplateActionPlanVariables(List<string> errors)
+    private void ValidateTemplateActionPlanVariables(List<string> errors, List<ContentDiagnostic> diagnostics)
     {
         var plansById = actionPlanTemplates.Values.ToDictionary(plan => plan.Id);
 
@@ -296,7 +340,10 @@ public sealed class PrototypeContentRegistry(
 
             ValidatePlanVariables(
                 errors,
+                diagnostics,
                 $"Entity template {templateId} ({template.Name}) action plan {plan.Id}",
+                templateId,
+                actionPlanTemplateId,
                 plan,
                 variables,
                 plansById,
@@ -306,7 +353,10 @@ public sealed class PrototypeContentRegistry(
 
     private static void ValidatePlanVariables(
         List<string> errors,
+        List<ContentDiagnostic> diagnostics,
         string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
         ActionPlanDescriptor plan,
         Dictionary<string, PlanValueKind> variables,
         IReadOnlyDictionary<ActionPlanId, ActionPlanDescriptor> plansById,
@@ -321,19 +371,23 @@ public sealed class PrototypeContentRegistry(
         {
             foreach (var check in step.Checks)
             {
-                ValidatePrimitiveFields(errors, subject, step, PlanPrimitiveCatalog.GetCheck(check.Kind).Fields, check);
+                ValidatePrimitiveFields(errors, diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, PlanPrimitiveCatalog.GetCheck(check.Kind).Fields, check);
                 ApplyPrimitiveWrites(PlanPrimitiveCatalog.GetCheck(check.Kind).Fields, check, variables);
             }
 
-            ValidateEffectVariables(errors, subject, step, step.OnSuccess, variables, plansById, callStack);
-            ValidateEffectVariables(errors, subject, step, step.OnFailure, variables, plansById, callStack);
+            ValidateEffectVariables(errors, diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, step.OnSuccess, variables, plansById, callStack);
+            ValidateEffectVariables(errors, diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, step.OnFailure, variables, plansById, callStack);
         }
 
         callStack.Remove(plan.Id);
 
         void ValidatePrimitiveFields(
             List<string> validationErrors,
+            List<ContentDiagnostic> validationDiagnostics,
             string validationSubject,
+            EntityTemplateId? validationEntityTemplateId,
+            ActionPlanTemplateId? validationActionPlanTemplateId,
+            ActionPlanDescriptor validationPlan,
             ActionPlanStepDescriptor step,
             IReadOnlyList<PlanPrimitiveFieldDescriptor> fields,
             object descriptor)
@@ -349,13 +403,30 @@ public sealed class PrototypeContentRegistry(
 
                 if (!variables.TryGetValue(variableName, out var actualKind))
                 {
-                    validationErrors.Add($"{validationSubject} step {step.Label} reads missing required variable {variableName}.");
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingPlanVariable,
+                        $"{validationSubject} step {step.Label} reads missing required variable {variableName}.",
+                        entityTemplateId: validationEntityTemplateId,
+                        actionPlanTemplateId: validationActionPlanTemplateId,
+                        actionPlanId: validationPlan.Id,
+                        stepIndex: StepIndex(validationPlan, step),
+                        variableName: variableName,
+                        expectedValueKind: expectedKind));
                     continue;
                 }
 
                 if (actualKind != expectedKind)
                 {
-                    validationErrors.Add($"{validationSubject} step {step.Label} variable {variableName} expected {expectedKind} but found {actualKind}.");
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.PlanVariableTypeMismatch,
+                        $"{validationSubject} step {step.Label} variable {variableName} expected {expectedKind} but found {actualKind}.",
+                        entityTemplateId: validationEntityTemplateId,
+                        actionPlanTemplateId: validationActionPlanTemplateId,
+                        actionPlanId: validationPlan.Id,
+                        stepIndex: StepIndex(validationPlan, step),
+                        variableName: variableName,
+                        expectedValueKind: expectedKind,
+                        actualValueKind: actualKind));
                 }
             }
         }
@@ -379,7 +450,11 @@ public sealed class PrototypeContentRegistry(
 
     private static void ValidateEffectVariables(
         List<string> errors,
+        List<ContentDiagnostic> diagnostics,
         string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
+        ActionPlanDescriptor plan,
         ActionPlanStepDescriptor step,
         PlanEffectDescriptor? effect,
         Dictionary<string, PlanValueKind> variables,
@@ -404,13 +479,30 @@ public sealed class PrototypeContentRegistry(
 
             if (!variables.TryGetValue(variableName, out var actualKind))
             {
-                errors.Add($"{subject} step {step.Label} reads missing required variable {variableName}.");
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingPlanVariable,
+                    $"{subject} step {step.Label} reads missing required variable {variableName}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    stepIndex: StepIndex(plan, step),
+                    variableName: variableName,
+                    expectedValueKind: expectedKind));
                 continue;
             }
 
             if (actualKind != expectedKind)
             {
-                errors.Add($"{subject} step {step.Label} variable {variableName} expected {expectedKind} but found {actualKind}.");
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.PlanVariableTypeMismatch,
+                    $"{subject} step {step.Label} variable {variableName} expected {expectedKind} but found {actualKind}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    stepIndex: StepIndex(plan, step),
+                    variableName: variableName,
+                    expectedValueKind: expectedKind,
+                    actualValueKind: actualKind));
             }
         }
 
@@ -437,7 +529,28 @@ public sealed class PrototypeContentRegistry(
             && effect.PlanId is { } planId
             && plansById.TryGetValue(planId, out var calledPlan))
         {
-            ValidatePlanVariables(errors, subject, calledPlan, variables, plansById, callStack);
+            ValidatePlanVariables(errors, diagnostics, subject, entityTemplateId, actionPlanTemplateId, calledPlan, variables, plansById, callStack);
+        }
+    }
+
+    private static int StepIndex(ActionPlanDescriptor plan, ActionPlanStepDescriptor step)
+    {
+        for (var index = 0; index < plan.Steps.Count; index++)
+        {
+            if (ReferenceEquals(plan.Steps[index], step) || plan.Steps[index] == step)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static void AddDiagnostic(List<ContentDiagnostic> diagnostics, ContentDiagnostic diagnostic)
+    {
+        if (!diagnostics.Contains(diagnostic))
+        {
+            diagnostics.Add(diagnostic);
         }
     }
 

@@ -3,6 +3,7 @@
     <Project Path="src/GameGameGame.Console/GameGameGame.Console.csproj" />
     <Project Path="src/GameGameGame.Content/GameGameGame.Content.csproj" />
     <Project Path="src/GameGameGame.Core/GameGameGame.Core.csproj" />
+    <Project Path="src/GameGameGame.Editor/GameGameGame.Editor.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GameGameGame.Tests/GameGameGame.Tests.csproj" />

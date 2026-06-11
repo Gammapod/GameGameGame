@@ -24,9 +24,9 @@ entityTemplates:
         directionValue: West
   giantSlime:
     name: Giant Slime
-    inventoryWidth: 3
-    inventoryHeight: 3
-    weight: 20
+    inventoryWidth: 2
+    inventoryHeight: 4
+    weight: 15
     carryingCapacity: 20
     defaultActionPlanId: wandering
     defaultPlanVariables:
@@ -39,7 +39,6 @@ entityTemplates:
     inventoryHeight: 0
     weight: 3
     carryingCapacity: 3
-
 presentations:
   game:
     glyph: G
@@ -51,60 +50,67 @@ presentations:
     glyph: s
     color: Green
   giantSlime:
-    glyph: S
-    color: DarkGreen
+    glyph: h
+    color: Earth
   rock:
     glyph: '*'
     color: Earth
-
 actionPlans:
   wandering:
     id: wandering
     steps:
-      - label: move facing
-        checks:
-          - kind: CanMove
-            directionVariable: facing
-        onSuccess:
-          kind: Move
-          directionVariable: facing
-      - label: handle blocker
-        checks:
-          - kind: BlockingEntity
-            directionVariable: facing
-            targetVariable: target
-        onSuccess:
-          kind: CallPlan
-          planId: handleBlocker
-        onFailure:
-          kind: ReverseDirection
-          directionVariable: facing
-          consumesTurn: false
-          continuePlan: true
-      - label: wait
-        checks: []
-        onSuccess:
-          kind: Wait
+    - label: move facing
+      checks:
+      - kind: CanMove
+        directionVariable: facing
+      onSuccess:
+        kind: Move
+        directionVariable: facing
+        consumesTurn: false
+        continuePlan: false
+    - label: handle blocker
+      checks:
+      - kind: BlockingEntity
+        directionVariable: facing
+        targetVariable: target
+      onSuccess:
+        kind: CallPlan
+        planId: handleBlocker
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: ReverseDirection
+        directionVariable: facing
+        consumesTurn: false
+        continuePlan: true
+    - label: wait
+      checks: []
+      onSuccess:
+        kind: Wait
+        consumesTurn: false
+        continuePlan: false
   handleBlocker:
     id: handleBlocker
     steps:
-      - label: pickup blocker
-        checks:
-          - kind: CanPickup
-            targetVariable: target
-            inventoryCoord:
-              x: 0
-              y: 0
-        onSuccess:
-          kind: Pickup
-          targetVariable: target
-          inventoryCoord:
-            x: 0
-            y: 0
-      - label: reverse after bump
-        checks: []
-        onSuccess:
-          kind: ReverseDirection
-          directionVariable: facing
-          consumesTurn: true
-          continuePlan: false
+    - label: pickup blocker
+      checks:
+      - kind: CanPickup
+        targetVariable: target
+        inventoryCoord:
+          x: 0
+          y: 0
+      onSuccess:
+        kind: Pickup
+        targetVariable: target
+        inventoryCoord:
+          x: 0
+          y: 0
+        consumesTurn: false
+        continuePlan: false
+    - label: reverse after bump
+      checks: []
+      onSuccess:
+        kind: ReverseDirection
+        directionVariable: facing
+        consumesTurn: true
+        continuePlan: false
