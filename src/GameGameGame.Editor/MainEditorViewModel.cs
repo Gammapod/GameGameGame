@@ -30,10 +30,36 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private PlanCheckKind _selectedCheckKind = PlanCheckKind.CanMove;
     private string _checkDirectionVariableInput = string.Empty;
     private string _checkTargetVariableInput = string.Empty;
+    private int _checkInventoryCoordX;
+    private int _checkInventoryCoordY;
     private PlanEffectKind _selectedSuccessEffectKind = PlanEffectKind.Wait;
     private PlanEffectKind _selectedFailureEffectKind = PlanEffectKind.Wait;
     private string _successDirectionVariableInput = string.Empty;
     private string _failureDirectionVariableInput = string.Empty;
+    private string _successTargetVariableInput = string.Empty;
+    private string _failureTargetVariableInput = string.Empty;
+    private int _successInventoryCoordX;
+    private int _successInventoryCoordY;
+    private int _failureInventoryCoordX;
+    private int _failureInventoryCoordY;
+    private bool _successConsumesTurnInput;
+    private bool _successContinuePlanInput;
+    private bool _failureConsumesTurnInput;
+    private bool _failureContinuePlanInput;
+    private string _successSetVariableNameInput = string.Empty;
+    private string _failureSetVariableNameInput = string.Empty;
+    private PlanValueKind _selectedSuccessSetVariableValueKind = PlanValueKind.Direction;
+    private PlanValueKind _selectedFailureSetVariableValueKind = PlanValueKind.Direction;
+    private Direction _successSetVariableDirectionValue = Direction.West;
+    private Direction _failureSetVariableDirectionValue = Direction.West;
+    private string _successSetVariableEntityValueInput = string.Empty;
+    private string _failureSetVariableEntityValueInput = string.Empty;
+    private int _successSetVariableCoordX;
+    private int _successSetVariableCoordY;
+    private int _failureSetVariableCoordX;
+    private int _failureSetVariableCoordY;
+    private int _successSetVariableIntValue;
+    private int _failureSetVariableIntValue;
     private ActionPlanListItem? _selectedSuccessCallPlan;
     private ActionPlanListItem? _selectedFailureCallPlan;
     private DefaultPlanVariableListItem? _selectedDefaultPlanVariable;
@@ -64,7 +90,21 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
     public ObservableCollection<string> ValidationMessages { get; } = [];
 
+    public ObservableCollection<string> SelectedPresetDiagnostics { get; } = [];
+
+    public ObservableCollection<string> SelectedActionPlanDiagnostics { get; } = [];
+
+    public ObservableCollection<string> SelectedActionPlanStepDiagnostics { get; } = [];
+
     public ObservableCollection<string> YamlDiffLines { get; } = [];
+
+    public ObservableCollection<string> DirectionVariableSuggestions { get; } = [];
+
+    public ObservableCollection<string> EntityVariableSuggestions { get; } = [];
+
+    public ObservableCollection<string> MissingDirectionVariableSuggestions { get; } = [];
+
+    public ObservableCollection<string> MissingEntityVariableSuggestions { get; } = [];
 
     public IReadOnlyList<PlanValueKind> DefaultVariableKinds { get; } = Enum.GetValues<PlanValueKind>();
 
@@ -73,13 +113,17 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     public IReadOnlyList<PlanCheckKind> CheckKinds { get; } =
     [
         PlanCheckKind.CanMove,
-        PlanCheckKind.BlockingEntity
+        PlanCheckKind.BlockingEntity,
+        PlanCheckKind.CanPickup
     ];
 
     public IReadOnlyList<PlanEffectKind> EffectKinds { get; } =
     [
         PlanEffectKind.Wait,
         PlanEffectKind.Move,
+        PlanEffectKind.Pickup,
+        PlanEffectKind.ReverseDirection,
+        PlanEffectKind.SetVariable,
         PlanEffectKind.CallPlan
     ];
 
@@ -193,6 +237,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             if (SetField(ref _selectedActionPlan, value))
             {
                 RefreshActionPlanSteps();
+                RefreshVariableSuggestions();
+                RefreshSelectedDiagnostics();
             }
         }
     }
@@ -207,6 +253,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 ActionPlanStepLabelInput = value.Label;
                 RefreshSelectedStepChecks(value.Index);
                 PopulateEffectInputs(value.Index);
+                RefreshVariableSuggestions();
+                RefreshSelectedDiagnostics();
             }
         }
     }
@@ -224,6 +272,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             SelectedCheckKind = value.Kind;
             CheckDirectionVariableInput = value.DirectionVariable ?? string.Empty;
             CheckTargetVariableInput = value.TargetVariable ?? string.Empty;
+            CheckInventoryCoordX = value.InventoryCoord?.X ?? 0;
+            CheckInventoryCoordY = value.InventoryCoord?.Y ?? 0;
         }
     }
 
@@ -245,12 +295,15 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
             OnPropertyChanged(nameof(IsCheckDirectionVariableVisible));
             OnPropertyChanged(nameof(IsCheckTargetVariableVisible));
+            OnPropertyChanged(nameof(IsCheckInventoryCoordVisible));
         }
     }
 
     public bool IsCheckDirectionVariableVisible => SelectedCheckKind is PlanCheckKind.CanMove or PlanCheckKind.BlockingEntity;
 
-    public bool IsCheckTargetVariableVisible => SelectedCheckKind == PlanCheckKind.BlockingEntity;
+    public bool IsCheckTargetVariableVisible => SelectedCheckKind is PlanCheckKind.BlockingEntity or PlanCheckKind.CanPickup;
+
+    public bool IsCheckInventoryCoordVisible => SelectedCheckKind == PlanCheckKind.CanPickup;
 
     public string CheckDirectionVariableInput
     {
@@ -264,6 +317,18 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         set => SetField(ref _checkTargetVariableInput, value);
     }
 
+    public int CheckInventoryCoordX
+    {
+        get => _checkInventoryCoordX;
+        set => SetField(ref _checkInventoryCoordX, value);
+    }
+
+    public int CheckInventoryCoordY
+    {
+        get => _checkInventoryCoordY;
+        set => SetField(ref _checkInventoryCoordY, value);
+    }
+
     public PlanEffectKind SelectedSuccessEffectKind
     {
         get => _selectedSuccessEffectKind;
@@ -275,6 +340,10 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged(nameof(IsSuccessDirectionVariableVisible));
+            OnPropertyChanged(nameof(IsSuccessTargetVariableVisible));
+            OnPropertyChanged(nameof(IsSuccessInventoryCoordVisible));
+            OnPropertyChanged(nameof(IsSuccessTurnFlagsVisible));
+            OnPropertyChanged(nameof(IsSuccessSetVariableVisible));
             OnPropertyChanged(nameof(IsSuccessCallPlanVisible));
         }
     }
@@ -290,15 +359,35 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged(nameof(IsFailureDirectionVariableVisible));
+            OnPropertyChanged(nameof(IsFailureTargetVariableVisible));
+            OnPropertyChanged(nameof(IsFailureInventoryCoordVisible));
+            OnPropertyChanged(nameof(IsFailureTurnFlagsVisible));
+            OnPropertyChanged(nameof(IsFailureSetVariableVisible));
             OnPropertyChanged(nameof(IsFailureCallPlanVisible));
         }
     }
 
-    public bool IsSuccessDirectionVariableVisible => SelectedSuccessEffectKind == PlanEffectKind.Move;
+    public bool IsSuccessDirectionVariableVisible => SelectedSuccessEffectKind is PlanEffectKind.Move or PlanEffectKind.ReverseDirection;
+
+    public bool IsSuccessTargetVariableVisible => SelectedSuccessEffectKind == PlanEffectKind.Pickup;
+
+    public bool IsSuccessInventoryCoordVisible => SelectedSuccessEffectKind == PlanEffectKind.Pickup;
+
+    public bool IsSuccessTurnFlagsVisible => SelectedSuccessEffectKind is PlanEffectKind.ReverseDirection or PlanEffectKind.SetVariable;
+
+    public bool IsSuccessSetVariableVisible => SelectedSuccessEffectKind == PlanEffectKind.SetVariable;
 
     public bool IsSuccessCallPlanVisible => SelectedSuccessEffectKind == PlanEffectKind.CallPlan;
 
-    public bool IsFailureDirectionVariableVisible => SelectedFailureEffectKind == PlanEffectKind.Move;
+    public bool IsFailureDirectionVariableVisible => SelectedFailureEffectKind is PlanEffectKind.Move or PlanEffectKind.ReverseDirection;
+
+    public bool IsFailureTargetVariableVisible => SelectedFailureEffectKind == PlanEffectKind.Pickup;
+
+    public bool IsFailureInventoryCoordVisible => SelectedFailureEffectKind == PlanEffectKind.Pickup;
+
+    public bool IsFailureTurnFlagsVisible => SelectedFailureEffectKind is PlanEffectKind.ReverseDirection or PlanEffectKind.SetVariable;
+
+    public bool IsFailureSetVariableVisible => SelectedFailureEffectKind == PlanEffectKind.SetVariable;
 
     public bool IsFailureCallPlanVisible => SelectedFailureEffectKind == PlanEffectKind.CallPlan;
 
@@ -312,6 +401,150 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     {
         get => _failureDirectionVariableInput;
         set => SetField(ref _failureDirectionVariableInput, value);
+    }
+
+    public string SuccessTargetVariableInput
+    {
+        get => _successTargetVariableInput;
+        set => SetField(ref _successTargetVariableInput, value);
+    }
+
+    public string FailureTargetVariableInput
+    {
+        get => _failureTargetVariableInput;
+        set => SetField(ref _failureTargetVariableInput, value);
+    }
+
+    public int SuccessInventoryCoordX
+    {
+        get => _successInventoryCoordX;
+        set => SetField(ref _successInventoryCoordX, value);
+    }
+
+    public int SuccessInventoryCoordY
+    {
+        get => _successInventoryCoordY;
+        set => SetField(ref _successInventoryCoordY, value);
+    }
+
+    public int FailureInventoryCoordX
+    {
+        get => _failureInventoryCoordX;
+        set => SetField(ref _failureInventoryCoordX, value);
+    }
+
+    public int FailureInventoryCoordY
+    {
+        get => _failureInventoryCoordY;
+        set => SetField(ref _failureInventoryCoordY, value);
+    }
+
+    public bool SuccessConsumesTurnInput
+    {
+        get => _successConsumesTurnInput;
+        set => SetField(ref _successConsumesTurnInput, value);
+    }
+
+    public bool SuccessContinuePlanInput
+    {
+        get => _successContinuePlanInput;
+        set => SetField(ref _successContinuePlanInput, value);
+    }
+
+    public bool FailureConsumesTurnInput
+    {
+        get => _failureConsumesTurnInput;
+        set => SetField(ref _failureConsumesTurnInput, value);
+    }
+
+    public bool FailureContinuePlanInput
+    {
+        get => _failureContinuePlanInput;
+        set => SetField(ref _failureContinuePlanInput, value);
+    }
+
+    public string SuccessSetVariableNameInput
+    {
+        get => _successSetVariableNameInput;
+        set => SetField(ref _successSetVariableNameInput, value);
+    }
+
+    public string FailureSetVariableNameInput
+    {
+        get => _failureSetVariableNameInput;
+        set => SetField(ref _failureSetVariableNameInput, value);
+    }
+
+    public PlanValueKind SelectedSuccessSetVariableValueKind
+    {
+        get => _selectedSuccessSetVariableValueKind;
+        set => SetField(ref _selectedSuccessSetVariableValueKind, value);
+    }
+
+    public PlanValueKind SelectedFailureSetVariableValueKind
+    {
+        get => _selectedFailureSetVariableValueKind;
+        set => SetField(ref _selectedFailureSetVariableValueKind, value);
+    }
+
+    public Direction SuccessSetVariableDirectionValue
+    {
+        get => _successSetVariableDirectionValue;
+        set => SetField(ref _successSetVariableDirectionValue, value);
+    }
+
+    public Direction FailureSetVariableDirectionValue
+    {
+        get => _failureSetVariableDirectionValue;
+        set => SetField(ref _failureSetVariableDirectionValue, value);
+    }
+
+    public string SuccessSetVariableEntityValueInput
+    {
+        get => _successSetVariableEntityValueInput;
+        set => SetField(ref _successSetVariableEntityValueInput, value);
+    }
+
+    public string FailureSetVariableEntityValueInput
+    {
+        get => _failureSetVariableEntityValueInput;
+        set => SetField(ref _failureSetVariableEntityValueInput, value);
+    }
+
+    public int SuccessSetVariableCoordX
+    {
+        get => _successSetVariableCoordX;
+        set => SetField(ref _successSetVariableCoordX, value);
+    }
+
+    public int SuccessSetVariableCoordY
+    {
+        get => _successSetVariableCoordY;
+        set => SetField(ref _successSetVariableCoordY, value);
+    }
+
+    public int FailureSetVariableCoordX
+    {
+        get => _failureSetVariableCoordX;
+        set => SetField(ref _failureSetVariableCoordX, value);
+    }
+
+    public int FailureSetVariableCoordY
+    {
+        get => _failureSetVariableCoordY;
+        set => SetField(ref _failureSetVariableCoordY, value);
+    }
+
+    public int SuccessSetVariableIntValue
+    {
+        get => _successSetVariableIntValue;
+        set => SetField(ref _successSetVariableIntValue, value);
+    }
+
+    public int FailureSetVariableIntValue
+    {
+        get => _failureSetVariableIntValue;
+        set => SetField(ref _failureSetVariableIntValue, value);
     }
 
     public ActionPlanListItem? SelectedSuccessCallPlan
@@ -487,6 +720,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             : null;
         RefreshDefaultPlanVariables(id);
         RefreshCarriedEntities(id);
+        RefreshVariableSuggestions();
+        RefreshSelectedDiagnostics();
     }
 
     public void ApplySelectedEntityPresetEdits()
@@ -935,6 +1170,38 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         }
     }
 
+    public void AddFirstMissingDirectionVariableDefault()
+    {
+        if (_session is null || SelectedPreset is null || MissingDirectionVariableSuggestions.Count == 0)
+        {
+            return;
+        }
+
+        var presetId = SelectedPreset.Id;
+        var variableName = MissingDirectionVariableSuggestions[0];
+        _session.Editor.SetDefaultPlanVariable(presetId, variableName, PlanValueDescriptor.Direction(Direction.West));
+        RefreshFromSession();
+        SelectEntityPreset(presetId);
+        SelectedDefaultPlanVariable = DefaultPlanVariables.SingleOrDefault(item => item.Name == variableName);
+        StatusMessage = $"Added missing direction variable {variableName}.";
+    }
+
+    public void AddFirstMissingEntityVariableDefault()
+    {
+        if (_session is null || SelectedPreset is null || MissingEntityVariableSuggestions.Count == 0)
+        {
+            return;
+        }
+
+        var presetId = SelectedPreset.Id;
+        var variableName = MissingEntityVariableSuggestions[0];
+        _session.Editor.SetDefaultPlanVariable(presetId, variableName, PlanValueDescriptor.Entity(new EntityId(variableName)));
+        RefreshFromSession();
+        SelectEntityPreset(presetId);
+        SelectedDefaultPlanVariable = DefaultPlanVariables.SingleOrDefault(item => item.Name == variableName);
+        StatusMessage = $"Added missing entity variable {variableName}.";
+    }
+
     public void PlaceSelectedTemplateInInventory()
     {
         if (_session is null || SelectedPreset is null || SelectedTemplateToPlace is null)
@@ -1071,7 +1338,14 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         CarriedEntities.Clear();
         InventoryGridCells.Clear();
         ValidationMessages.Clear();
+        SelectedPresetDiagnostics.Clear();
+        SelectedActionPlanDiagnostics.Clear();
+        SelectedActionPlanStepDiagnostics.Clear();
         YamlDiffLines.Clear();
+        DirectionVariableSuggestions.Clear();
+        EntityVariableSuggestions.Clear();
+        MissingDirectionVariableSuggestions.Clear();
+        MissingEntityVariableSuggestions.Clear();
         SelectedCarriedEntity = null;
         SelectedDefaultPlanVariable = null;
 
@@ -1113,6 +1387,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(FilePath));
         OnPropertyChanged(nameof(IsDirty));
         OnPropertyChanged(nameof(YamlPreview));
+        RefreshVariableSuggestions();
+        RefreshSelectedDiagnostics();
     }
 
     private void RefreshDefaultPlanVariables(EntityTemplateId templateId)
@@ -1135,6 +1411,154 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         }
     }
 
+    private void RefreshVariableSuggestions()
+    {
+        DirectionVariableSuggestions.Clear();
+        EntityVariableSuggestions.Clear();
+        MissingDirectionVariableSuggestions.Clear();
+        MissingEntityVariableSuggestions.Clear();
+
+        if (_session is null)
+        {
+            return;
+        }
+
+        var directionVariables = new SortedSet<string>(StringComparer.Ordinal);
+        var entityVariables = new SortedSet<string>(StringComparer.Ordinal);
+        if (SelectedPreset is not null && EntityPresets.Any(item => item.Id == SelectedPreset.Id))
+        {
+            foreach (var variable in _session.Editor.ListDefaultPlanVariables(SelectedPreset.Id))
+            {
+                if (variable.Value.Kind == PlanValueKind.Direction)
+                {
+                    directionVariables.Add(variable.Name);
+                }
+
+                if (variable.Value.Kind == PlanValueKind.Entity)
+                {
+                    entityVariables.Add(variable.Name);
+                }
+            }
+
+            foreach (var diagnostic in _session.Editor.Validate().Diagnostics)
+            {
+                if (diagnostic.EntityTemplateId == SelectedPreset.Id &&
+                    diagnostic.Code == ContentDiagnosticCode.MissingPlanVariable &&
+                    diagnostic.ExpectedValueKind == PlanValueKind.Direction &&
+                    !string.IsNullOrWhiteSpace(diagnostic.VariableName))
+                {
+                    MissingDirectionVariableSuggestions.Add(diagnostic.VariableName);
+                    directionVariables.Add(diagnostic.VariableName);
+                }
+
+                if (diagnostic.EntityTemplateId == SelectedPreset.Id &&
+                    diagnostic.Code == ContentDiagnosticCode.MissingPlanVariable &&
+                    diagnostic.ExpectedValueKind == PlanValueKind.Entity &&
+                    !string.IsNullOrWhiteSpace(diagnostic.VariableName))
+                {
+                    MissingEntityVariableSuggestions.Add(diagnostic.VariableName);
+                    entityVariables.Add(diagnostic.VariableName);
+                }
+            }
+        }
+
+        if (SelectedActionPlan is not null)
+        {
+            var steps = GetSelectedActionPlanDescriptor().Steps;
+            foreach (var step in SelectedActionPlanStep is null ? steps : [steps[SelectedActionPlanStep.Index]])
+            {
+                AddDirectionVariable(directionVariables, step.OnSuccess);
+                AddDirectionVariable(directionVariables, step.OnFailure);
+                AddEntityVariable(entityVariables, step.OnSuccess);
+                AddEntityVariable(entityVariables, step.OnFailure);
+                foreach (var check in step.Checks)
+                {
+                    AddDirectionVariable(directionVariables, check);
+                    AddEntityVariable(entityVariables, check);
+                }
+            }
+        }
+
+        foreach (var variable in directionVariables)
+        {
+            DirectionVariableSuggestions.Add(variable);
+        }
+
+        foreach (var variable in entityVariables)
+        {
+            EntityVariableSuggestions.Add(variable);
+        }
+    }
+
+    private void RefreshSelectedDiagnostics()
+    {
+        SelectedPresetDiagnostics.Clear();
+        SelectedActionPlanDiagnostics.Clear();
+        SelectedActionPlanStepDiagnostics.Clear();
+
+        if (_session is null)
+        {
+            return;
+        }
+
+        var validation = _session.Editor.Validate();
+        if (SelectedPreset is not null && EntityPresets.Any(item => item.Id == SelectedPreset.Id))
+        {
+            foreach (var diagnostic in validation.ForEntityTemplate(SelectedPreset.Id))
+            {
+                SelectedPresetDiagnostics.Add(diagnostic.Message);
+            }
+        }
+
+        if (SelectedActionPlan is not null)
+        {
+            foreach (var diagnostic in validation.ForActionPlan(SelectedActionPlan.Id))
+            {
+                SelectedActionPlanDiagnostics.Add(diagnostic.Message);
+            }
+        }
+
+        if (SelectedActionPlan is not null && SelectedActionPlanStep is not null)
+        {
+            foreach (var diagnostic in validation.ForActionPlanStep(SelectedActionPlan.Id, SelectedActionPlanStep.Index))
+            {
+                SelectedActionPlanStepDiagnostics.Add(diagnostic.Message);
+            }
+        }
+    }
+
+    private static void AddDirectionVariable(ISet<string> variables, PlanCheckDescriptor check)
+    {
+        if (check.Kind is PlanCheckKind.CanMove or PlanCheckKind.BlockingEntity && !string.IsNullOrWhiteSpace(check.DirectionVariable))
+        {
+            variables.Add(check.DirectionVariable);
+        }
+    }
+
+    private static void AddDirectionVariable(ISet<string> variables, PlanEffectDescriptor? effect)
+    {
+        if (effect?.Kind is PlanEffectKind.Move or PlanEffectKind.ReverseDirection && !string.IsNullOrWhiteSpace(effect.DirectionVariable))
+        {
+            variables.Add(effect.DirectionVariable);
+        }
+    }
+
+    private static void AddEntityVariable(ISet<string> variables, PlanCheckDescriptor check)
+    {
+        if (check.Kind is PlanCheckKind.BlockingEntity or PlanCheckKind.CanPickup && !string.IsNullOrWhiteSpace(check.TargetVariable))
+        {
+            variables.Add(check.TargetVariable);
+        }
+    }
+
+    private static void AddEntityVariable(ISet<string> variables, PlanEffectDescriptor? effect)
+    {
+        if (effect?.Kind == PlanEffectKind.Pickup && !string.IsNullOrWhiteSpace(effect.TargetVariable))
+        {
+            variables.Add(effect.TargetVariable);
+        }
+    }
+
     private void RefreshActionPlanSteps()
     {
         ActionPlanSteps.Clear();
@@ -1143,6 +1567,9 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         SelectedActionPlanStepCheck = null;
         ActionPlanStepLabelInput = string.Empty;
         CheckDirectionVariableInput = string.Empty;
+        CheckTargetVariableInput = string.Empty;
+        CheckInventoryCoordX = 0;
+        CheckInventoryCoordY = 0;
 
         if (_session is null || SelectedActionPlan is null)
         {
@@ -1183,6 +1610,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         SelectedActionPlanStepCheck = null;
         CheckDirectionVariableInput = string.Empty;
         CheckTargetVariableInput = string.Empty;
+        CheckInventoryCoordX = 0;
+        CheckInventoryCoordY = 0;
 
         if (_session is null || SelectedActionPlan is null)
         {
@@ -1198,6 +1627,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 check.Kind,
                 check.DirectionVariable,
                 check.TargetVariable,
+                check.InventoryCoord,
                 FormatCheck(check)));
         }
     }
@@ -1253,7 +1683,17 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         kind switch
         {
             PlanEffectKind.Move => PlanEffectDescriptor.Move(GetDirectionVariable(success)),
+            PlanEffectKind.Pickup => PlanEffectDescriptor.Pickup(GetTargetVariable(success), GetInventoryCoord(success)),
+            PlanEffectKind.ReverseDirection => PlanEffectDescriptor.ReverseDirection(
+                GetDirectionVariable(success),
+                success ? SuccessConsumesTurnInput : FailureConsumesTurnInput,
+                success ? SuccessContinuePlanInput : FailureContinuePlanInput),
             PlanEffectKind.Wait => PlanEffectDescriptor.Wait(),
+            PlanEffectKind.SetVariable => PlanEffectDescriptor.SetVariable(
+                GetSetVariableName(success),
+                CreateSetVariableValue(success),
+                success ? SuccessConsumesTurnInput : FailureConsumesTurnInput,
+                success ? SuccessContinuePlanInput : FailureContinuePlanInput),
             PlanEffectKind.CallPlan => PlanEffectDescriptor.CallPlan(GetCallPlan(success)),
             _ => throw new InvalidOperationException($"Unsupported effect kind {kind}.")
         };
@@ -1265,11 +1705,38 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             PlanCheckKind.BlockingEntity => PlanCheckDescriptor.BlockingEntity(
                 NormalizeVariable(CheckDirectionVariableInput, "facing"),
                 NormalizeVariable(CheckTargetVariableInput, "target")),
+            PlanCheckKind.CanPickup => PlanCheckDescriptor.CanPickup(
+                NormalizeVariable(CheckTargetVariableInput, "target"),
+                new GridCoord(CheckInventoryCoordX, CheckInventoryCoordY)),
             _ => throw new InvalidOperationException($"Unsupported check kind {SelectedCheckKind}.")
         };
 
     private string GetDirectionVariable(bool success) =>
         NormalizeVariable(success ? SuccessDirectionVariableInput : FailureDirectionVariableInput, "facing");
+
+    private string GetTargetVariable(bool success) =>
+        NormalizeVariable(success ? SuccessTargetVariableInput : FailureTargetVariableInput, "target");
+
+    private GridCoord GetInventoryCoord(bool success) =>
+        success ? new GridCoord(SuccessInventoryCoordX, SuccessInventoryCoordY) : new GridCoord(FailureInventoryCoordX, FailureInventoryCoordY);
+
+    private string GetSetVariableName(bool success) =>
+        NormalizeVariable(success ? SuccessSetVariableNameInput : FailureSetVariableNameInput, "variable");
+
+    private PlanValue CreateSetVariableValue(bool success)
+    {
+        var kind = success ? SelectedSuccessSetVariableValueKind : SelectedFailureSetVariableValueKind;
+        return kind switch
+        {
+            PlanValueKind.Direction => new DirectionPlanValue(success ? SuccessSetVariableDirectionValue : FailureSetVariableDirectionValue),
+            PlanValueKind.Entity => new EntityPlanValue(new EntityId(NormalizeVariable(success ? SuccessSetVariableEntityValueInput : FailureSetVariableEntityValueInput, "target"))),
+            PlanValueKind.Coord => new CoordPlanValue(success
+                ? new GridCoord(SuccessSetVariableCoordX, SuccessSetVariableCoordY)
+                : new GridCoord(FailureSetVariableCoordX, FailureSetVariableCoordY)),
+            PlanValueKind.Int => new IntPlanValue(success ? SuccessSetVariableIntValue : FailureSetVariableIntValue),
+            _ => throw new InvalidOperationException($"Unsupported set-variable value kind {kind}.")
+        };
+    }
 
     private ActionPlanId GetCallPlan(bool success)
     {
@@ -1312,13 +1779,96 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         {
             SelectedSuccessEffectKind = effect.Kind;
             SuccessDirectionVariableInput = effect.DirectionVariable ?? string.Empty;
+            SuccessTargetVariableInput = effect.TargetVariable ?? string.Empty;
+            SuccessInventoryCoordX = effect.InventoryCoord?.X ?? 0;
+            SuccessInventoryCoordY = effect.InventoryCoord?.Y ?? 0;
+            SuccessConsumesTurnInput = effect.ConsumesTurn;
+            SuccessContinuePlanInput = effect.ContinuePlan;
+            PopulateSetVariableInputs(effect, success: true);
             SelectedSuccessCallPlan = effect.PlanId is { } planId ? ActionPlans.SingleOrDefault(item => item.Id.Value == planId.Value) : null;
         }
         else
         {
             SelectedFailureEffectKind = effect.Kind;
             FailureDirectionVariableInput = effect.DirectionVariable ?? string.Empty;
+            FailureTargetVariableInput = effect.TargetVariable ?? string.Empty;
+            FailureInventoryCoordX = effect.InventoryCoord?.X ?? 0;
+            FailureInventoryCoordY = effect.InventoryCoord?.Y ?? 0;
+            FailureConsumesTurnInput = effect.ConsumesTurn;
+            FailureContinuePlanInput = effect.ContinuePlan;
+            PopulateSetVariableInputs(effect, success: false);
             SelectedFailureCallPlan = effect.PlanId is { } planId ? ActionPlans.SingleOrDefault(item => item.Id.Value == planId.Value) : null;
+        }
+    }
+
+    private void PopulateSetVariableInputs(PlanEffectDescriptor effect, bool success)
+    {
+        if (success)
+        {
+            SuccessSetVariableNameInput = effect.VariableName ?? string.Empty;
+            PopulateSetVariableValue(effect.Value, success: true);
+        }
+        else
+        {
+            FailureSetVariableNameInput = effect.VariableName ?? string.Empty;
+            PopulateSetVariableValue(effect.Value, success: false);
+        }
+    }
+
+    private void PopulateSetVariableValue(PlanValue? value, bool success)
+    {
+        switch (value)
+        {
+            case DirectionPlanValue direction:
+                if (success)
+                {
+                    SelectedSuccessSetVariableValueKind = PlanValueKind.Direction;
+                    SuccessSetVariableDirectionValue = direction.Value;
+                }
+                else
+                {
+                    SelectedFailureSetVariableValueKind = PlanValueKind.Direction;
+                    FailureSetVariableDirectionValue = direction.Value;
+                }
+                break;
+            case EntityPlanValue entity:
+                if (success)
+                {
+                    SelectedSuccessSetVariableValueKind = PlanValueKind.Entity;
+                    SuccessSetVariableEntityValueInput = entity.Value.Value;
+                }
+                else
+                {
+                    SelectedFailureSetVariableValueKind = PlanValueKind.Entity;
+                    FailureSetVariableEntityValueInput = entity.Value.Value;
+                }
+                break;
+            case CoordPlanValue coord:
+                if (success)
+                {
+                    SelectedSuccessSetVariableValueKind = PlanValueKind.Coord;
+                    SuccessSetVariableCoordX = coord.Value.X;
+                    SuccessSetVariableCoordY = coord.Value.Y;
+                }
+                else
+                {
+                    SelectedFailureSetVariableValueKind = PlanValueKind.Coord;
+                    FailureSetVariableCoordX = coord.Value.X;
+                    FailureSetVariableCoordY = coord.Value.Y;
+                }
+                break;
+            case IntPlanValue integer:
+                if (success)
+                {
+                    SelectedSuccessSetVariableValueKind = PlanValueKind.Int;
+                    SuccessSetVariableIntValue = integer.Value;
+                }
+                else
+                {
+                    SelectedFailureSetVariableValueKind = PlanValueKind.Int;
+                    FailureSetVariableIntValue = integer.Value;
+                }
+                break;
         }
     }
 
@@ -1536,6 +2086,7 @@ public sealed record ActionPlanStepCheckListItem(
     PlanCheckKind Kind,
     string? DirectionVariable,
     string? TargetVariable,
+    GridCoord? InventoryCoord,
     string Summary)
 {
     public override string ToString() => $"{Index + 1}: {Summary}";

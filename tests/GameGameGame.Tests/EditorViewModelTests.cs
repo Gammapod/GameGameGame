@@ -688,6 +688,171 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
+    public void EditorViewModelSelectingPickupEffectPopulatesInputs()
+    {
+        var path = WriteTempContentFile(PickupActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("pickupPlan"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Equal(PlanEffectKind.Pickup, editor.SelectedSuccessEffectKind);
+            Assert.Equal("target", editor.SuccessTargetVariableInput);
+            Assert.Equal(1, editor.SuccessInventoryCoordX);
+            Assert.Equal(2, editor.SuccessInventoryCoordY);
+            Assert.True(editor.IsSuccessTargetVariableVisible);
+            Assert.True(editor.IsSuccessInventoryCoordVisible);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSetsSelectedStepPickupSuccessEffect()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
+            editor.SuccessTargetVariableInput = "target";
+            editor.SuccessInventoryCoordX = 1;
+            editor.SuccessInventoryCoordY = 2;
+
+            editor.SetSelectedStepSuccessEffect();
+
+            Assert.Equal("Success: Pickup(targetVariable=target, inventoryCoord=1,2)", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.Contains("kind: Pickup", editor.YamlPreview);
+            Assert.Contains("targetVariable: target", editor.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingReverseDirectionEffectPopulatesInputs()
+    {
+        var path = WriteTempContentFile(ReverseDirectionActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Equal(PlanEffectKind.ReverseDirection, editor.SelectedSuccessEffectKind);
+            Assert.Equal("facing", editor.SuccessDirectionVariableInput);
+            Assert.True(editor.SuccessConsumesTurnInput);
+            Assert.False(editor.SuccessContinuePlanInput);
+            Assert.True(editor.IsSuccessDirectionVariableVisible);
+            Assert.True(editor.IsSuccessTurnFlagsVisible);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSetsSelectedStepReverseDirectionFailureEffect()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedFailureEffectKind = PlanEffectKind.ReverseDirection;
+            editor.FailureDirectionVariableInput = "facing";
+            editor.FailureConsumesTurnInput = false;
+            editor.FailureContinuePlanInput = true;
+
+            editor.SetSelectedStepFailureEffect();
+
+            Assert.Equal("Failure: ReverseDirection(directionVariable=facing, consumesTurn=False, continuePlan=True)", editor.ActionPlanSteps[1].FailureSummary);
+            Assert.Contains("kind: ReverseDirection", editor.YamlPreview);
+            Assert.Contains("continuePlan: true", editor.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingSetVariableEffectPopulatesInputs()
+    {
+        var path = WriteTempContentFile(SetVariableActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("setPlan"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Equal(PlanEffectKind.SetVariable, editor.SelectedSuccessEffectKind);
+            Assert.Equal("facing", editor.SuccessSetVariableNameInput);
+            Assert.Equal(PlanValueKind.Direction, editor.SelectedSuccessSetVariableValueKind);
+            Assert.Equal(Direction.East, editor.SuccessSetVariableDirectionValue);
+            Assert.True(editor.SuccessConsumesTurnInput);
+            Assert.False(editor.SuccessContinuePlanInput);
+            Assert.True(editor.IsSuccessSetVariableVisible);
+            Assert.True(editor.IsSuccessTurnFlagsVisible);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSetsSelectedStepSetVariableSuccessEffect()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedSuccessEffectKind = PlanEffectKind.SetVariable;
+            editor.SuccessSetVariableNameInput = "facing";
+            editor.SelectedSuccessSetVariableValueKind = PlanValueKind.Direction;
+            editor.SuccessSetVariableDirectionValue = Direction.South;
+            editor.SuccessConsumesTurnInput = false;
+            editor.SuccessContinuePlanInput = true;
+
+            editor.SetSelectedStepSuccessEffect();
+
+            Assert.Equal("Success: SetVariable(variableName=facing, value=South, consumesTurn=False, continuePlan=True)", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.Contains("kind: SetVariable", editor.YamlPreview);
+            Assert.Contains("variableName: facing", editor.YamlPreview);
+            Assert.Contains("directionValue: South", editor.YamlPreview);
+            Assert.Contains("continuePlan: true", editor.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void EditorViewModelExposesRelevantEffectFieldsForSelectedKinds()
     {
         var editor = new MainEditorViewModel();
@@ -707,6 +872,21 @@ public sealed class EditorViewModelTests
         Assert.False(editor.IsSuccessCallPlanVisible);
         Assert.False(editor.IsFailureDirectionVariableVisible);
         Assert.False(editor.IsFailureCallPlanVisible);
+
+        editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
+
+        Assert.True(editor.IsSuccessTargetVariableVisible);
+        Assert.True(editor.IsSuccessInventoryCoordVisible);
+
+        editor.SelectedSuccessEffectKind = PlanEffectKind.ReverseDirection;
+
+        Assert.True(editor.IsSuccessDirectionVariableVisible);
+        Assert.True(editor.IsSuccessTurnFlagsVisible);
+
+        editor.SelectedSuccessEffectKind = PlanEffectKind.SetVariable;
+
+        Assert.True(editor.IsSuccessSetVariableVisible);
+        Assert.True(editor.IsSuccessTurnFlagsVisible);
     }
 
     [Fact]
@@ -900,6 +1080,209 @@ public sealed class EditorViewModelTests
             Assert.Equal("BlockingEntity(directionVariable=facing, targetVariable=target)", editor.ActionPlanStepChecks.Single().Summary);
             Assert.Contains("targetVariable: target", editor.YamlPreview);
             Assert.Equal("Updated check 1 for step wait.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingCanPickupCheckPopulatesInputs()
+    {
+        var path = WriteTempContentFile(PickupActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("pickupPlan"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+            editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
+
+            Assert.Equal(PlanCheckKind.CanPickup, editor.SelectedCheckKind);
+            Assert.Equal("target", editor.CheckTargetVariableInput);
+            Assert.Equal(1, editor.CheckInventoryCoordX);
+            Assert.Equal(2, editor.CheckInventoryCoordY);
+            Assert.False(editor.IsCheckDirectionVariableVisible);
+            Assert.True(editor.IsCheckTargetVariableVisible);
+            Assert.True(editor.IsCheckInventoryCoordVisible);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAddsAndUpdatesCanPickupCheck()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedCheckKind = PlanCheckKind.CanPickup;
+            editor.CheckTargetVariableInput = "target";
+            editor.CheckInventoryCoordX = 1;
+            editor.CheckInventoryCoordY = 2;
+
+            editor.AddSelectedCheckToSelectedStep();
+
+            var check = Assert.Single(editor.ActionPlanStepChecks);
+            Assert.Equal("CanPickup(targetVariable=target, inventoryCoord=1,2)", check.Summary);
+
+            editor.CheckInventoryCoordX = 0;
+            editor.CheckInventoryCoordY = 1;
+            editor.UpdateSelectedStepCheck();
+
+            Assert.Equal("CanPickup(targetVariable=target, inventoryCoord=0,1)", editor.ActionPlanStepChecks.Single().Summary);
+            Assert.Contains("kind: CanPickup", editor.YamlPreview);
+            Assert.Contains("x: 0", editor.YamlPreview);
+            Assert.Contains("y: 1", editor.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSuggestsDirectionVariablesForSelectedPresetAndStep()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Contains("facing", editor.DirectionVariableSuggestions);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSuggestsAndRepairsMissingDirectionVariableForSelectedPreset()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlMissingDefaultVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            Assert.Contains("facing", editor.MissingDirectionVariableSuggestions);
+
+            editor.AddFirstMissingDirectionVariableDefault();
+
+            var variable = Assert.Single(editor.DefaultPlanVariables);
+            Assert.Equal("facing", variable.Name);
+            Assert.Equal(PlanValueKind.Direction, variable.Kind);
+            Assert.Empty(editor.MissingDirectionVariableSuggestions);
+            Assert.DoesNotContain(editor.ValidationMessages, message => message.Contains("missing required variable"));
+            Assert.Equal("Added missing direction variable facing.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSuggestsAndRepairsMissingEntityVariableForSelectedPreset()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlMissingEntityVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            Assert.Contains("target", editor.MissingEntityVariableSuggestions);
+
+            editor.AddFirstMissingEntityVariableDefault();
+
+            var variable = Assert.Single(editor.DefaultPlanVariables);
+            Assert.Equal("target", variable.Name);
+            Assert.Equal(PlanValueKind.Entity, variable.Kind);
+            Assert.Equal("target", variable.DisplayValue);
+            Assert.Empty(editor.MissingEntityVariableSuggestions);
+            Assert.DoesNotContain(editor.ValidationMessages, message => message.Contains("missing required variable"));
+            Assert.Equal("Added missing entity variable target.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelFiltersDiagnosticsForSelectedPresetActionPlanAndStep()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlMissingEntityVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("pickupPlan"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Contains(editor.SelectedPresetDiagnostics, message => message.Contains("target") && message.Contains("missing required variable"));
+            Assert.Contains(editor.SelectedActionPlanDiagnostics, message => message.Contains("pickupPlan") && message.Contains("target"));
+            Assert.Contains(editor.SelectedActionPlanStepDiagnostics, message => message.Contains("step pickup target") && message.Contains("target"));
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSuggestsEntityVariablesForSelectedPresetDefaults()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithEntityDefaultVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            Assert.Contains("target", editor.EntityVariableSuggestions);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSuggestsEntityVariablesWrittenBySelectedStepChecks()
+    {
+        var path = WriteTempContentFile(BlockingEntityCheckActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Contains("target", editor.EntityVariableSuggestions);
         }
         finally
         {
@@ -1515,6 +1898,86 @@ public sealed class EditorViewModelTests
                   kind: Wait
         """;
 
+    private const string ActionPlanContentYamlMissingDefaultVariable =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultActionPlanId: wander
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: move
+                checks:
+                  - kind: CanMove
+                    directionVariable: facing
+                onSuccess:
+                  kind: Move
+                  directionVariable: facing
+        """;
+
+    private const string ActionPlanContentYamlWithEntityDefaultVariable =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultPlanVariables:
+              target:
+                kind: Entity
+                entityValue: blocker
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans: {}
+        """;
+
+    private const string ActionPlanContentYamlMissingEntityVariable =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultActionPlanId: pickupPlan
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          pickupPlan:
+            id: pickupPlan
+            steps:
+              - label: pickup target
+                checks:
+                  - kind: CanPickup
+                    targetVariable: target
+                    inventoryCoord:
+                      x: 0
+                      y: 0
+                onSuccess:
+                  kind: Pickup
+                  targetVariable: target
+                  inventoryCoord:
+                    x: 0
+                    y: 0
+        """;
+
     private const string MultiStepActionPlanContentYaml =
         """
         entityTemplates:
@@ -1606,6 +2069,93 @@ public sealed class EditorViewModelTests
                     targetVariable: target
                 onSuccess:
                   kind: Wait
+        """;
+
+    private const string PickupActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 2
+            inventoryHeight: 3
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          pickupPlan:
+            id: pickupPlan
+            steps:
+              - label: pickup target
+                checks:
+                  - kind: CanPickup
+                    targetVariable: target
+                    inventoryCoord:
+                      x: 1
+                      y: 2
+                onSuccess:
+                  kind: Pickup
+                  targetVariable: target
+                  inventoryCoord:
+                    x: 1
+                    y: 2
+        """;
+
+    private const string ReverseDirectionActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: reverse
+                checks: []
+                onSuccess:
+                  kind: ReverseDirection
+                  directionVariable: facing
+                  consumesTurn: true
+                  continuePlan: false
+        """;
+
+    private const string SetVariableActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          setPlan:
+            id: setPlan
+            steps:
+              - label: set facing
+                checks: []
+                onSuccess:
+                  kind: SetVariable
+                  variableName: facing
+                  value:
+                    kind: Direction
+                    directionValue: East
+                  consumesTurn: true
+                  continuePlan: false
         """;
 
     private static string WriteTempContentFile(string yaml)

@@ -47,9 +47,9 @@ public sealed class MainWindow : Window
         Grid.SetRowSpan(presetListPanel, 2);
         grid.Children.Add(presetListPanel);
 
-        var form = new ScrollViewer { Content = BuildPresetForm() };
-        Grid.SetColumn(form, 2);
-        grid.Children.Add(form);
+        var editorTabs = BuildEditorTabs();
+        Grid.SetColumn(editorTabs, 2);
+        grid.Children.Add(editorTabs);
 
         var yamlPreview = new TextBox
         {
@@ -208,14 +208,40 @@ public sealed class MainWindow : Window
 
         panel.Children.Add(BuildDefaultActionPlanEditor());
 
-        panel.Children.Add(BuildActionPlanBrowser());
-
-        panel.Children.Add(BuildDefaultVariableEditor());
-
-        panel.Children.Add(BuildInventoryEditor());
+        var diagnostics = new ListBox { MinHeight = 80 };
+        diagnostics.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.SelectedPresetDiagnostics)));
+        panel.Children.Add(Wrap("Selected Preset Diagnostics", diagnostics));
 
         return Wrap("Selected Preset", panel);
     }
+
+    private Control BuildEditorTabs() =>
+        new TabControl
+        {
+            ItemsSource = new[]
+            {
+                new TabItem
+                {
+                    Header = "Entity",
+                    Content = new ScrollViewer { Content = BuildPresetForm() }
+                },
+                new TabItem
+                {
+                    Header = "Inventory",
+                    Content = new ScrollViewer { Content = BuildInventoryEditor() }
+                },
+                new TabItem
+                {
+                    Header = "Action Plans",
+                    Content = new ScrollViewer { Content = BuildActionPlanBrowser() }
+                },
+                new TabItem
+                {
+                    Header = "Variables",
+                    Content = new ScrollViewer { Content = BuildDefaultVariableEditor() }
+                }
+            }
+        };
 
     private Control BuildDefaultActionPlanEditor()
     {
@@ -267,10 +293,18 @@ public sealed class MainWindow : Window
         actionPlans.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlan)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Action Plan", actionPlans));
 
+        var planDiagnostics = new ListBox { MinHeight = 80 };
+        planDiagnostics.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanDiagnostics)));
+        panel.Children.Add(Wrap("Selected Plan Diagnostics", planDiagnostics));
+
         var steps = new ListBox { MinHeight = 140 };
         steps.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlanSteps)));
         steps.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanStep)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Steps", steps));
+
+        var stepDiagnostics = new ListBox { MinHeight = 80 };
+        stepDiagnostics.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanStepDiagnostics)));
+        panel.Children.Add(Wrap("Selected Step Diagnostics", stepDiagnostics));
 
         panel.Children.Add(BoundTextBox("Step Label", nameof(MainEditorViewModel.ActionPlanStepLabelInput)));
 
@@ -321,6 +355,14 @@ public sealed class MainWindow : Window
         targetVariable.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckTargetVariableVisible)));
         panel.Children.Add(targetVariable);
 
+        var checkCoordX = BoundNumeric("Inventory X", nameof(MainEditorViewModel.CheckInventoryCoordX));
+        checkCoordX.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckInventoryCoordVisible)));
+        panel.Children.Add(checkCoordX);
+
+        var checkCoordY = BoundNumeric("Inventory Y", nameof(MainEditorViewModel.CheckInventoryCoordY));
+        checkCoordY.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckInventoryCoordVisible)));
+        panel.Children.Add(checkCoordY);
+
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var add = new Button { Content = "Add Check" };
         add.Click += (_, _) => ViewModel?.AddSelectedCheckToSelectedStep();
@@ -350,8 +392,24 @@ public sealed class MainWindow : Window
             "Success Effect",
             nameof(MainEditorViewModel.SelectedSuccessEffectKind),
             nameof(MainEditorViewModel.SuccessDirectionVariableInput),
+            nameof(MainEditorViewModel.SuccessTargetVariableInput),
+            nameof(MainEditorViewModel.SuccessInventoryCoordX),
+            nameof(MainEditorViewModel.SuccessInventoryCoordY),
+            nameof(MainEditorViewModel.SuccessConsumesTurnInput),
+            nameof(MainEditorViewModel.SuccessContinuePlanInput),
+            nameof(MainEditorViewModel.SuccessSetVariableNameInput),
+            nameof(MainEditorViewModel.SelectedSuccessSetVariableValueKind),
+            nameof(MainEditorViewModel.SuccessSetVariableDirectionValue),
+            nameof(MainEditorViewModel.SuccessSetVariableEntityValueInput),
+            nameof(MainEditorViewModel.SuccessSetVariableCoordX),
+            nameof(MainEditorViewModel.SuccessSetVariableCoordY),
+            nameof(MainEditorViewModel.SuccessSetVariableIntValue),
             nameof(MainEditorViewModel.SelectedSuccessCallPlan),
             nameof(MainEditorViewModel.IsSuccessDirectionVariableVisible),
+            nameof(MainEditorViewModel.IsSuccessTargetVariableVisible),
+            nameof(MainEditorViewModel.IsSuccessInventoryCoordVisible),
+            nameof(MainEditorViewModel.IsSuccessTurnFlagsVisible),
+            nameof(MainEditorViewModel.IsSuccessSetVariableVisible),
             nameof(MainEditorViewModel.IsSuccessCallPlanVisible)));
 
         var setSuccess = new Button { Content = "Set Success Effect", HorizontalAlignment = HorizontalAlignment.Left };
@@ -362,8 +420,24 @@ public sealed class MainWindow : Window
             "Failure Effect",
             nameof(MainEditorViewModel.SelectedFailureEffectKind),
             nameof(MainEditorViewModel.FailureDirectionVariableInput),
+            nameof(MainEditorViewModel.FailureTargetVariableInput),
+            nameof(MainEditorViewModel.FailureInventoryCoordX),
+            nameof(MainEditorViewModel.FailureInventoryCoordY),
+            nameof(MainEditorViewModel.FailureConsumesTurnInput),
+            nameof(MainEditorViewModel.FailureContinuePlanInput),
+            nameof(MainEditorViewModel.FailureSetVariableNameInput),
+            nameof(MainEditorViewModel.SelectedFailureSetVariableValueKind),
+            nameof(MainEditorViewModel.FailureSetVariableDirectionValue),
+            nameof(MainEditorViewModel.FailureSetVariableEntityValueInput),
+            nameof(MainEditorViewModel.FailureSetVariableCoordX),
+            nameof(MainEditorViewModel.FailureSetVariableCoordY),
+            nameof(MainEditorViewModel.FailureSetVariableIntValue),
             nameof(MainEditorViewModel.SelectedFailureCallPlan),
             nameof(MainEditorViewModel.IsFailureDirectionVariableVisible),
+            nameof(MainEditorViewModel.IsFailureTargetVariableVisible),
+            nameof(MainEditorViewModel.IsFailureInventoryCoordVisible),
+            nameof(MainEditorViewModel.IsFailureTurnFlagsVisible),
+            nameof(MainEditorViewModel.IsFailureSetVariableVisible),
             nameof(MainEditorViewModel.IsFailureCallPlanVisible)));
 
         var failureButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -382,8 +456,24 @@ public sealed class MainWindow : Window
         string header,
         string kindProperty,
         string directionVariableProperty,
+        string targetVariableProperty,
+        string coordXProperty,
+        string coordYProperty,
+        string consumesTurnProperty,
+        string continuePlanProperty,
+        string setVariableNameProperty,
+        string setVariableKindProperty,
+        string setVariableDirectionProperty,
+        string setVariableEntityProperty,
+        string setVariableCoordXProperty,
+        string setVariableCoordYProperty,
+        string setVariableIntProperty,
         string callPlanProperty,
         string directionVariableVisibleProperty,
+        string targetVariableVisibleProperty,
+        string coordVisibleProperty,
+        string turnFlagsVisibleProperty,
+        string setVariableVisibleProperty,
         string callPlanVisibleProperty)
     {
         var panel = new StackPanel { Spacing = 8 };
@@ -397,6 +487,37 @@ public sealed class MainWindow : Window
         directionVariable.Bind(IsVisibleProperty, new Binding(directionVariableVisibleProperty));
         panel.Children.Add(directionVariable);
 
+        var targetVariable = BoundTextBox("Target Variable", targetVariableProperty);
+        targetVariable.Bind(IsVisibleProperty, new Binding(targetVariableVisibleProperty));
+        panel.Children.Add(targetVariable);
+
+        var coordX = BoundNumeric("Inventory X", coordXProperty);
+        coordX.Bind(IsVisibleProperty, new Binding(coordVisibleProperty));
+        panel.Children.Add(coordX);
+
+        var coordY = BoundNumeric("Inventory Y", coordYProperty);
+        coordY.Bind(IsVisibleProperty, new Binding(coordVisibleProperty));
+        panel.Children.Add(coordY);
+
+        var consumesTurn = BoundCheckBox("Consumes Turn", consumesTurnProperty);
+        consumesTurn.Bind(IsVisibleProperty, new Binding(turnFlagsVisibleProperty));
+        panel.Children.Add(consumesTurn);
+
+        var continuePlan = BoundCheckBox("Continue Plan", continuePlanProperty);
+        continuePlan.Bind(IsVisibleProperty, new Binding(turnFlagsVisibleProperty));
+        panel.Children.Add(continuePlan);
+
+        var setVariablePanel = BuildSetVariableInputs(
+            setVariableNameProperty,
+            setVariableKindProperty,
+            setVariableDirectionProperty,
+            setVariableEntityProperty,
+            setVariableCoordXProperty,
+            setVariableCoordYProperty,
+            setVariableIntProperty);
+        setVariablePanel.Bind(IsVisibleProperty, new Binding(setVariableVisibleProperty));
+        panel.Children.Add(setVariablePanel);
+
         var callPlan = new ComboBox();
         callPlan.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlans)));
         callPlan.Bind(ComboBox.SelectedItemProperty, new Binding(callPlanProperty) { Mode = BindingMode.TwoWay });
@@ -407,6 +528,37 @@ public sealed class MainWindow : Window
         return Wrap(header, panel);
     }
 
+    private Control BuildSetVariableInputs(
+        string nameProperty,
+        string kindProperty,
+        string directionProperty,
+        string entityProperty,
+        string coordXProperty,
+        string coordYProperty,
+        string intProperty)
+    {
+        var panel = new StackPanel { Spacing = 8 };
+
+        panel.Children.Add(BoundTextBox("Variable Name", nameProperty));
+
+        var kind = new ComboBox();
+        kind.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultVariableKinds)));
+        kind.Bind(ComboBox.SelectedItemProperty, new Binding(kindProperty) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Value Kind", kind));
+
+        var direction = new ComboBox();
+        direction.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.Directions)));
+        direction.Bind(ComboBox.SelectedItemProperty, new Binding(directionProperty) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Direction Value", direction));
+
+        panel.Children.Add(BoundTextBox("Entity Value", entityProperty));
+        panel.Children.Add(BoundNumeric("Coord X", coordXProperty));
+        panel.Children.Add(BoundNumeric("Coord Y", coordYProperty));
+        panel.Children.Add(BoundNumeric("Int Value", intProperty));
+
+        return Wrap("Set Variable", panel);
+    }
+
     private Control BuildDefaultVariableEditor()
     {
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 16, 0, 0) };
@@ -415,6 +567,38 @@ public sealed class MainWindow : Window
         variableList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultPlanVariables)));
         variableList.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultPlanVariable)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Default Variables", variableList));
+
+        var directionSuggestions = new ListBox { MinHeight = 60 };
+        directionSuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DirectionVariableSuggestions)));
+        panel.Children.Add(Wrap("Direction Variable Suggestions", directionSuggestions));
+
+        var entitySuggestions = new ListBox { MinHeight = 60 };
+        entitySuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.EntityVariableSuggestions)));
+        panel.Children.Add(Wrap("Entity Variable Suggestions", entitySuggestions));
+
+        var missingDirectionSuggestions = new ListBox { MinHeight = 60 };
+        missingDirectionSuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MissingDirectionVariableSuggestions)));
+        panel.Children.Add(Wrap("Missing Direction Variables", missingDirectionSuggestions));
+
+        var missingEntitySuggestions = new ListBox { MinHeight = 60 };
+        missingEntitySuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MissingEntityVariableSuggestions)));
+        panel.Children.Add(Wrap("Missing Entity Variables", missingEntitySuggestions));
+
+        var repairMissingDirection = new Button
+        {
+            Content = "Add First Missing Direction Variable",
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        repairMissingDirection.Click += (_, _) => ViewModel?.AddFirstMissingDirectionVariableDefault();
+        panel.Children.Add(repairMissingDirection);
+
+        var repairMissingEntity = new Button
+        {
+            Content = "Add First Missing Entity Variable",
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        repairMissingEntity.Click += (_, _) => ViewModel?.AddFirstMissingEntityVariableDefault();
+        panel.Children.Add(repairMissingEntity);
 
         panel.Children.Add(BoundTextBox("Variable Name", nameof(MainEditorViewModel.DefaultVariableNameInput)));
 
@@ -512,6 +696,13 @@ public sealed class MainWindow : Window
         };
         numeric.Bind(NumericUpDown.ValueProperty, new Binding(propertyName) { Mode = BindingMode.TwoWay });
         return Wrap(label, numeric);
+    }
+
+    private static Control BoundCheckBox(string label, string propertyName)
+    {
+        var checkBox = new CheckBox { Content = label };
+        checkBox.Bind(CheckBox.IsCheckedProperty, new Binding(propertyName) { Mode = BindingMode.TwoWay });
+        return checkBox;
     }
 
     private static Control Wrap(string header, Control content) =>
