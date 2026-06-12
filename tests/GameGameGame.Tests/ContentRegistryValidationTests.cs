@@ -64,6 +64,208 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsMissingCanonicalFacingSlot()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: moveFacing
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              moveFacing:
+                id: moveFacing
+                steps:
+                  - label: move facing
+                    checks:
+                      - kind: CanMove
+                    onSuccess:
+                      kind: Move
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+        Assert.Equal(new EntityTemplateId("slime"), diagnostic.EntityTemplateId);
+        Assert.Equal(new ActionPlanTemplateId("moveFacing"), diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("moveFacing"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Equal(ActionPlanSlot.Facing, diagnostic.ActionPlanSlot);
+        Assert.Equal(PlanValueKind.Direction, diagnostic.ExpectedValueKind);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsCanonicalFacingDefault()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: moveFacing
+                actionStateDefaults:
+                  facing: West
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              moveFacing:
+                id: moveFacing
+                steps:
+                  - label: move facing
+                    checks:
+                      - kind: CanMove
+                    onSuccess:
+                      kind: Move
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsCanonicalTargetWrittenBeforePickup()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: handleBlocker
+                actionStateDefaults:
+                  facing: South
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              handleBlocker:
+                id: handleBlocker
+                steps:
+                  - label: bind target
+                    checks:
+                      - kind: BlockingEntity
+                    onSuccess:
+                      kind: Pickup
+                      inventoryCoord:
+                        x: 0
+                        y: 0
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsCanonicalTargetReadBeforeWrite()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: pickupTarget
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              pickupTarget:
+                id: pickupTarget
+                steps:
+                  - label: pickup target
+                    checks:
+                      - kind: CanPickup
+                        inventoryCoord:
+                          x: 0
+                          y: 0
+                    onSuccess:
+                      kind: Pickup
+                      inventoryCoord:
+                        x: 0
+                        y: 0
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+        Assert.Equal(ActionPlanSlot.Target, diagnostic.ActionPlanSlot);
+        Assert.Equal(PlanValueKind.Entity, diagnostic.ExpectedValueKind);
+        Assert.Equal(0, diagnostic.StepIndex);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationIncludesCalledPlanCanonicalSlotRequirements()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: parent
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              parent:
+                id: parent
+                steps:
+                  - label: call child
+                    checks: []
+                    onSuccess:
+                      kind: CallPlan
+                      planId: child
+              child:
+                id: child
+                steps:
+                  - label: move facing
+                    checks:
+                      - kind: CanMove
+                    onSuccess:
+                      kind: Move
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+        Assert.Equal(new ActionPlanId("child"), diagnostic.ActionPlanId);
+        Assert.Equal(ActionPlanSlot.Facing, diagnostic.ActionPlanSlot);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingPresentationAsStructuredDiagnostic()
     {
         var templateId = new EntityTemplateId("invisibleRock");

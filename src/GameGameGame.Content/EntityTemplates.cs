@@ -20,7 +20,12 @@ public sealed record EntityTemplate(
     int CarryingCapacity,
     IReadOnlyList<CarriedEntityTemplate>? CarriedEntities = null,
     ActionPlanTemplateId? DefaultActionPlanId = null,
-    IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null);
+    IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null,
+    ActorActionStateDefaults? ActionStateDefaults = null);
+
+public sealed record ActorActionStateDefaults(
+    Direction? Facing = null,
+    EntityId? Target = null);
 
 public sealed record EntityPresentation(char Glyph, PresentationColor Color)
 {
@@ -65,7 +70,8 @@ public sealed record EntitySpawnOptions(
     PlaneId? InventoryPlaneId = null,
     string? InventoryPlaneName = null,
     ActionPlanTemplateId? ActionPlanOverrideId = null,
-    IReadOnlyDictionary<string, PlanValueDescriptor>? PlanVariableOverrides = null);
+    IReadOnlyDictionary<string, PlanValueDescriptor>? PlanVariableOverrides = null,
+    ActorActionStateDefaults? ActionStateOverrides = null);
 
 public sealed record EntitySpawnResult(
     EntityId EntityId,

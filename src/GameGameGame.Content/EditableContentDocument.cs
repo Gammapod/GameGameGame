@@ -25,6 +25,14 @@ public sealed class EditableContentDocument
 
     public string SaveYaml()
     {
+        var canonical = LoadYaml(SerializeYaml());
+        canonical.CanonicalizeLegacyActionPlanVariableFields();
+
+        return canonical.SerializeYaml();
+    }
+
+    private string SerializeYaml()
+    {
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
@@ -33,7 +41,186 @@ public sealed class EditableContentDocument
         return serializer.Serialize(this);
     }
 
-    public PrototypeContentRegistry ToRegistry() => YamlContentLoader.LoadRegistry(SaveYaml());
+    private void CanonicalizeLegacyActionPlanVariableFields()
+    {
+        CanonicalizeLegacyActionStateDefaults();
+
+        foreach (var plan in ActionPlans.Values)
+        {
+            foreach (var step in plan.Steps ?? [])
+            {
+                foreach (var check in step.Checks ?? [])
+                {
+                    CanonicalizeLegacyCheckVariableFields(check);
+                }
+
+                if (step.OnSuccess is not null)
+                {
+                    CanonicalizeLegacyEffectVariableFields(step.OnSuccess);
+                }
+
+                if (step.OnFailure is not null)
+                {
+                    CanonicalizeLegacyEffectVariableFields(step.OnFailure);
+                }
+            }
+        }
+    }
+
+    private void CanonicalizeLegacyActionStateDefaults()
+    {
+        foreach (var template in EntityTemplates.Values)
+        {
+            if (template.DefaultPlanVariables is null)
+            {
+                continue;
+            }
+
+            if (template.DefaultPlanVariables.TryGetValue("facing", out var facing)
+                && facing.Kind == PlanValueKind.Direction
+                && facing.DirectionValue is { } direction)
+            {
+                template.ActionStateDefaults ??= new ActorActionStateDefaultsDto();
+                template.ActionStateDefaults.Facing ??= direction;
+                template.DefaultPlanVariables.Remove("facing");
+            }
+
+            if (template.DefaultPlanVariables.Count == 0)
+            {
+                template.DefaultPlanVariables = null;
+            }
+        }
+    }
+
+    private static void CanonicalizeLegacyCheckVariableFields(PlanCheckDescriptorDto check)
+    {
+        switch (check.Kind)
+        {
+            case PlanCheckKind.CanMove:
+                check.DirectionVariable = ClearIfCanonicalFacing(check.DirectionVariable);
+                break;
+            case PlanCheckKind.BlockingEntity:
+                if (IsCanonicalFacing(check.DirectionVariable) && IsCanonicalTarget(check.TargetVariable))
+                {
+                    check.DirectionVariable = null;
+                    check.TargetVariable = null;
+                }
+                break;
+            case PlanCheckKind.CanPickup:
+                check.TargetVariable = ClearIfCanonicalTarget(check.TargetVariable);
+                break;
+        }
+    }
+
+    private static void CanonicalizeLegacyEffectVariableFields(PlanEffectDescriptorDto effect)
+    {
+        switch (effect.Kind)
+        {
+            case PlanEffectKind.Move:
+                effect.DirectionVariable = ClearIfCanonicalFacing(effect.DirectionVariable);
+                break;
+            case PlanEffectKind.Pickup:
+                effect.TargetVariable = ClearIfCanonicalTarget(effect.TargetVariable);
+                break;
+            case PlanEffectKind.ReverseDirection:
+                effect.DirectionVariable = ClearIfCanonicalFacing(effect.DirectionVariable);
+                break;
+        }
+    }
+
+    private static string? ClearIfCanonicalFacing(string? value) =>
+        IsCanonicalFacing(value) ? null : value;
+
+    private static string? ClearIfCanonicalTarget(string? value) =>
+        IsCanonicalTarget(value) ? null : value;
+
+    private static bool IsCanonicalFacing(string? value) =>
+        string.Equals(value, "facing", StringComparison.Ordinal);
+
+    private static bool IsCanonicalTarget(string? value) =>
+        string.Equals(value, "target", StringComparison.Ordinal);
+
+    public PrototypeContentRegistry ToRegistry() => YamlContentLoader.LoadRegistry(SerializeYaml());
+
+    public ContentValidationResult ValidateCanonicalAuthoring()
+    {
+        var diagnostics = new List<ContentDiagnostic>();
+
+        foreach (var (templateId, template) in EntityTemplates)
+        {
+            if (template.DefaultPlanVariables is null)
+            {
+                continue;
+            }
+
+            foreach (var variableName in template.DefaultPlanVariables.Keys)
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.ArbitraryPlanVariableField,
+                    $"Entity template {templateId} declares arbitrary default plan variable {variableName}.",
+                    entityTemplateId: new EntityTemplateId(templateId),
+                    variableName: variableName));
+            }
+        }
+
+        foreach (var (planId, plan) in ActionPlans)
+        {
+            var steps = plan.Steps ?? [];
+            for (var stepIndex = 0; stepIndex < steps.Count; stepIndex++)
+            {
+                var step = steps[stepIndex];
+                foreach (var check in step.Checks ?? [])
+                {
+                    AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, check.DirectionVariable, "directionVariable");
+                    AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, check.TargetVariable, "targetVariable");
+                }
+
+                if (step.OnSuccess is not null)
+                {
+                    AddEffectVariableFieldDiagnostics(diagnostics, planId, stepIndex, step.OnSuccess);
+                }
+
+                if (step.OnFailure is not null)
+                {
+                    AddEffectVariableFieldDiagnostics(diagnostics, planId, stepIndex, step.OnFailure);
+                }
+            }
+        }
+
+        return new ContentValidationResult(diagnostics);
+    }
+
+    private static void AddEffectVariableFieldDiagnostics(
+        List<ContentDiagnostic> diagnostics,
+        string planId,
+        int stepIndex,
+        PlanEffectDescriptorDto effect)
+    {
+        AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, effect.DirectionVariable, "directionVariable");
+        AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, effect.TargetVariable, "targetVariable");
+        AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, effect.VariableName, "variableName");
+    }
+
+    private static void AddVariableFieldDiagnostics(
+        List<ContentDiagnostic> diagnostics,
+        string planId,
+        int stepIndex,
+        string? variableName,
+        string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(variableName))
+        {
+            return;
+        }
+
+        diagnostics.Add(ContentDiagnostic.Error(
+            ContentDiagnosticCode.ArbitraryPlanVariableField,
+            $"Action plan {planId} step {stepIndex} declares arbitrary {fieldName} {variableName}.",
+            actionPlanTemplateId: new ActionPlanTemplateId(planId),
+            actionPlanId: new ActionPlanId(planId),
+            stepIndex: stepIndex,
+            variableName: variableName));
+    }
 
     public EntityTemplateId AddEntityTemplate(string name, EntityTemplate template, EntityPresentation presentation)
     {
@@ -101,6 +288,8 @@ public sealed class EditableContentDocument
 
         public Dictionary<string, PlanValueDescriptorDto>? DefaultPlanVariables { get; set; }
 
+        public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
+
         public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
 
         public static EntityTemplateDto From(EntityTemplate template) => new()
@@ -112,7 +301,21 @@ public sealed class EditableContentDocument
             CarryingCapacity = template.CarryingCapacity,
             DefaultActionPlanId = template.DefaultActionPlanId?.Value,
             DefaultPlanVariables = template.DefaultPlanVariables?.ToDictionary(entry => entry.Key, entry => PlanValueDescriptorDto.From(entry.Value)),
+            ActionStateDefaults = template.ActionStateDefaults is null ? null : ActorActionStateDefaultsDto.From(template.ActionStateDefaults),
             CarriedEntities = template.CarriedEntities?.Select(CarriedEntityTemplateDto.From).ToList()
+        };
+    }
+
+    public sealed class ActorActionStateDefaultsDto
+    {
+        public Direction? Facing { get; set; }
+
+        public string? Target { get; set; }
+
+        public static ActorActionStateDefaultsDto From(ActorActionStateDefaults defaults) => new()
+        {
+            Facing = defaults.Facing,
+            Target = defaults.Target?.Value
         };
     }
 
@@ -175,6 +378,13 @@ public sealed class EditableContentDocument
             OnSuccess = descriptor.OnSuccess is null ? null : PlanEffectDescriptorDto.From(descriptor.OnSuccess),
             OnFailure = descriptor.OnFailure is null ? null : PlanEffectDescriptorDto.From(descriptor.OnFailure)
         };
+
+        public ActionPlanStepDescriptor ToDescriptor() =>
+            new(
+                Label ?? string.Empty,
+                (Checks ?? []).Select(check => check.ToDescriptor()).ToList(),
+                OnSuccess?.ToDescriptor(),
+                OnFailure?.ToDescriptor());
     }
 
     public sealed class PlanCheckDescriptorDto
@@ -194,6 +404,21 @@ public sealed class EditableContentDocument
             TargetVariable = descriptor.TargetVariable,
             InventoryCoord = descriptor.InventoryCoord is { } coord ? GridCoordDto.From(coord) : null
         };
+
+        public PlanCheckDescriptor ToDescriptor() =>
+            Kind switch
+            {
+                PlanCheckKind.CanMove => DirectionVariable is null
+                    ? PlanCheckDescriptor.CanMove()
+                    : PlanCheckDescriptor.CanMove(DirectionVariable),
+                PlanCheckKind.BlockingEntity => DirectionVariable is null && TargetVariable is null
+                    ? PlanCheckDescriptor.BlockingEntity()
+                    : PlanCheckDescriptor.BlockingEntity(DirectionVariable ?? string.Empty, TargetVariable ?? string.Empty),
+                PlanCheckKind.CanPickup => TargetVariable is null
+                    ? PlanCheckDescriptor.CanPickup(ToCoord(InventoryCoord))
+                    : PlanCheckDescriptor.CanPickup(TargetVariable, ToCoord(InventoryCoord)),
+                _ => throw new InvalidOperationException($"Unsupported plan check kind {Kind}.")
+            };
     }
 
     public sealed class PlanEffectDescriptorDto
@@ -228,6 +453,24 @@ public sealed class EditableContentDocument
             ConsumesTurn = descriptor.ConsumesTurn,
             ContinuePlan = descriptor.ContinuePlan
         };
+
+        public PlanEffectDescriptor ToDescriptor() =>
+            Kind switch
+            {
+                PlanEffectKind.Move => DirectionVariable is null
+                    ? PlanEffectDescriptor.Move()
+                    : PlanEffectDescriptor.Move(DirectionVariable),
+                PlanEffectKind.Pickup => TargetVariable is null
+                    ? PlanEffectDescriptor.Pickup(ToCoord(InventoryCoord))
+                    : PlanEffectDescriptor.Pickup(TargetVariable, ToCoord(InventoryCoord)),
+                PlanEffectKind.ReverseDirection => DirectionVariable is null
+                    ? PlanEffectDescriptor.ReverseDirection(ConsumesTurn, ContinuePlan)
+                    : PlanEffectDescriptor.ReverseDirection(DirectionVariable, ConsumesTurn, ContinuePlan),
+                PlanEffectKind.Wait => PlanEffectDescriptor.Wait(),
+                PlanEffectKind.SetVariable => PlanEffectDescriptor.SetVariable(VariableName ?? string.Empty, Value?.ToDescriptor().Materialize() ?? new DirectionPlanValue(Direction.West), ConsumesTurn, ContinuePlan),
+                PlanEffectKind.CallPlan => PlanEffectDescriptor.CallPlan(new ActionPlanId(PlanId ?? string.Empty)),
+                _ => throw new InvalidOperationException($"Unsupported plan effect kind {Kind}.")
+            };
     }
 
     public sealed class PlanValueDescriptorDto
@@ -260,6 +503,16 @@ public sealed class EditableContentDocument
                 IntPlanValue integer => new PlanValueDescriptorDto { Kind = PlanValueKind.Int, IntValue = integer.Value },
                 _ => throw new InvalidOperationException($"Unsupported plan value type {value.GetType().Name}.")
             };
+
+        public PlanValueDescriptor ToDescriptor() =>
+            Kind switch
+            {
+                PlanValueKind.Direction => PlanValueDescriptor.Direction(DirectionValue ?? Direction.West),
+                PlanValueKind.Entity => PlanValueDescriptor.Entity(new EntityId(EntityValue ?? string.Empty)),
+                PlanValueKind.Coord => PlanValueDescriptor.Coord(ToCoord(CoordValue)),
+                PlanValueKind.Int => PlanValueDescriptor.Int(IntValue ?? 0),
+                _ => throw new InvalidOperationException($"Unsupported plan value kind {Kind}.")
+            };
     }
 
     public sealed class GridCoordDto
@@ -270,4 +523,7 @@ public sealed class EditableContentDocument
 
         public static GridCoordDto From(GridCoord coord) => new() { X = coord.X, Y = coord.Y };
     }
+
+    private static GridCoord ToCoord(GridCoordDto? coord) =>
+        coord is null ? new GridCoord(0, 0) : new GridCoord(coord.X, coord.Y);
 }

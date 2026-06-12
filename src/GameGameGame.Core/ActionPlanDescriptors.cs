@@ -37,11 +37,20 @@ public sealed record PlanCheckDescriptor(
     string? TargetVariable = null,
     GridCoord? InventoryCoord = null)
 {
+    public static PlanCheckDescriptor CanMove() =>
+        new(PlanCheckKind.CanMove);
+
     public static PlanCheckDescriptor CanMove(string directionVariable) =>
         new(PlanCheckKind.CanMove, DirectionVariable: directionVariable);
 
+    public static PlanCheckDescriptor BlockingEntity() =>
+        new(PlanCheckKind.BlockingEntity);
+
     public static PlanCheckDescriptor BlockingEntity(string directionVariable, string targetVariable) =>
         new(PlanCheckKind.BlockingEntity, DirectionVariable: directionVariable, TargetVariable: targetVariable);
+
+    public static PlanCheckDescriptor CanPickup(GridCoord inventoryCoord) =>
+        new(PlanCheckKind.CanPickup, InventoryCoord: inventoryCoord);
 
     public static PlanCheckDescriptor CanPickup(string targetVariable, GridCoord inventoryCoord) =>
         new(PlanCheckKind.CanPickup, TargetVariable: targetVariable, InventoryCoord: inventoryCoord);
@@ -49,13 +58,19 @@ public sealed record PlanCheckDescriptor(
     public IPlanCheck Materialize() =>
         Kind switch
         {
-            PlanCheckKind.CanMove => new CanMoveCheck(Required(DirectionVariable, nameof(DirectionVariable))),
-            PlanCheckKind.BlockingEntity => new BlockingEntityCheck(
-                Required(DirectionVariable, nameof(DirectionVariable)),
-                Required(TargetVariable, nameof(TargetVariable))),
-            PlanCheckKind.CanPickup => new CanPickupCheck(
-                Required(TargetVariable, nameof(TargetVariable)),
-                Required(InventoryCoord, nameof(InventoryCoord))),
+            PlanCheckKind.CanMove => DirectionVariable is null
+                ? new CanMoveCheck()
+                : new CanMoveCheck(Required(DirectionVariable, nameof(DirectionVariable))),
+            PlanCheckKind.BlockingEntity => DirectionVariable is null && TargetVariable is null
+                ? new BlockingEntityCheck()
+                : new BlockingEntityCheck(
+                    Required(DirectionVariable, nameof(DirectionVariable)),
+                    Required(TargetVariable, nameof(TargetVariable))),
+            PlanCheckKind.CanPickup => TargetVariable is null
+                ? new CanPickupCheck(Required(InventoryCoord, nameof(InventoryCoord)))
+                : new CanPickupCheck(
+                    Required(TargetVariable, nameof(TargetVariable)),
+                    Required(InventoryCoord, nameof(InventoryCoord))),
             _ => throw new InvalidOperationException($"Unsupported plan check kind {Kind}.")
         };
 
@@ -87,11 +102,20 @@ public sealed record PlanEffectDescriptor(
     bool ConsumesTurn = false,
     bool ContinuePlan = false)
 {
+    public static PlanEffectDescriptor Move() =>
+        new(PlanEffectKind.Move);
+
     public static PlanEffectDescriptor Move(string directionVariable) =>
         new(PlanEffectKind.Move, DirectionVariable: directionVariable);
 
+    public static PlanEffectDescriptor Pickup(GridCoord inventoryCoord) =>
+        new(PlanEffectKind.Pickup, InventoryCoord: inventoryCoord);
+
     public static PlanEffectDescriptor Pickup(string targetVariable, GridCoord inventoryCoord) =>
         new(PlanEffectKind.Pickup, TargetVariable: targetVariable, InventoryCoord: inventoryCoord);
+
+    public static PlanEffectDescriptor ReverseDirection(bool consumesTurn, bool continuePlan) =>
+        new(PlanEffectKind.ReverseDirection, ConsumesTurn: consumesTurn, ContinuePlan: continuePlan);
 
     public static PlanEffectDescriptor ReverseDirection(string directionVariable, bool consumesTurn, bool continuePlan) =>
         new(PlanEffectKind.ReverseDirection, DirectionVariable: directionVariable, ConsumesTurn: consumesTurn, ContinuePlan: continuePlan);
@@ -108,14 +132,20 @@ public sealed record PlanEffectDescriptor(
     public IPlanEffect Materialize() =>
         Kind switch
         {
-            PlanEffectKind.Move => new MoveEffect(Required(DirectionVariable, nameof(DirectionVariable))),
-            PlanEffectKind.Pickup => new PickupEffect(
-                Required(TargetVariable, nameof(TargetVariable)),
-                Required(InventoryCoord, nameof(InventoryCoord))),
-            PlanEffectKind.ReverseDirection => new ReverseDirectionEffect(
-                Required(DirectionVariable, nameof(DirectionVariable)),
-                ConsumesTurn,
-                ContinuePlan),
+            PlanEffectKind.Move => DirectionVariable is null
+                ? new MoveEffect()
+                : new MoveEffect(Required(DirectionVariable, nameof(DirectionVariable))),
+            PlanEffectKind.Pickup => TargetVariable is null
+                ? new PickupEffect(Required(InventoryCoord, nameof(InventoryCoord)))
+                : new PickupEffect(
+                    Required(TargetVariable, nameof(TargetVariable)),
+                    Required(InventoryCoord, nameof(InventoryCoord))),
+            PlanEffectKind.ReverseDirection => DirectionVariable is null
+                ? new ReverseDirectionEffect(ConsumesTurn, ContinuePlan)
+                : new ReverseDirectionEffect(
+                    Required(DirectionVariable, nameof(DirectionVariable)),
+                    ConsumesTurn,
+                    ContinuePlan),
             PlanEffectKind.Wait => new WaitEffect(),
             PlanEffectKind.SetVariable => new SetVariableEffect(
                 Required(VariableName, nameof(VariableName)),

@@ -48,7 +48,8 @@ public static class YamlContentLoader
                 template.CarryingCapacity,
                 CarriedEntities: MaterializeCarriedEntities(template.CarriedEntities),
                 DefaultActionPlanId: template.DefaultActionPlanId is null ? null : new ActionPlanTemplateId(template.DefaultActionPlanId),
-                DefaultPlanVariables: MaterializePlanVariables(template.DefaultPlanVariables));
+                DefaultPlanVariables: MaterializePlanVariables(template.DefaultPlanVariables),
+                ActionStateDefaults: MaterializeActionStateDefaults(template.ActionStateDefaults));
         }
 
         return result;
@@ -78,6 +79,18 @@ public static class YamlContentLoader
         }
 
         return variables.ToDictionary(entry => entry.Key, entry => MaterializePlanValue(entry.Value));
+    }
+
+    private static ActorActionStateDefaults? MaterializeActionStateDefaults(ActorActionStateDefaultsDto? defaults)
+    {
+        if (defaults is null)
+        {
+            return null;
+        }
+
+        return new ActorActionStateDefaults(
+            defaults.Facing,
+            string.IsNullOrWhiteSpace(defaults.Target) ? null : new EntityId(defaults.Target));
     }
 
     private static PlanValueDescriptor MaterializePlanValue(PlanValueDescriptorDto dto) =>
@@ -130,27 +143,39 @@ public static class YamlContentLoader
     private static PlanCheckDescriptor MaterializeCheck(PlanCheckDescriptorDto check) =>
         check.Kind switch
         {
-            PlanCheckKind.CanMove => PlanCheckDescriptor.CanMove(Required(check.DirectionVariable, nameof(check.DirectionVariable))),
-            PlanCheckKind.BlockingEntity => PlanCheckDescriptor.BlockingEntity(
-                Required(check.DirectionVariable, nameof(check.DirectionVariable)),
-                Required(check.TargetVariable, nameof(check.TargetVariable))),
-            PlanCheckKind.CanPickup => PlanCheckDescriptor.CanPickup(
-                Required(check.TargetVariable, nameof(check.TargetVariable)),
-                MaterializeCoord(check.InventoryCoord)),
+            PlanCheckKind.CanMove => check.DirectionVariable is null
+                ? PlanCheckDescriptor.CanMove()
+                : PlanCheckDescriptor.CanMove(Required(check.DirectionVariable, nameof(check.DirectionVariable))),
+            PlanCheckKind.BlockingEntity => check.DirectionVariable is null && check.TargetVariable is null
+                ? PlanCheckDescriptor.BlockingEntity()
+                : PlanCheckDescriptor.BlockingEntity(
+                    Required(check.DirectionVariable, nameof(check.DirectionVariable)),
+                    Required(check.TargetVariable, nameof(check.TargetVariable))),
+            PlanCheckKind.CanPickup => check.TargetVariable is null
+                ? PlanCheckDescriptor.CanPickup(MaterializeCoord(check.InventoryCoord))
+                : PlanCheckDescriptor.CanPickup(
+                    Required(check.TargetVariable, nameof(check.TargetVariable)),
+                    MaterializeCoord(check.InventoryCoord)),
             _ => throw new InvalidOperationException($"Unsupported plan check kind {check.Kind}.")
         };
 
     private static PlanEffectDescriptor MaterializeEffect(PlanEffectDescriptorDto effect) =>
         effect.Kind switch
         {
-            PlanEffectKind.Move => PlanEffectDescriptor.Move(Required(effect.DirectionVariable, nameof(effect.DirectionVariable))),
-            PlanEffectKind.Pickup => PlanEffectDescriptor.Pickup(
-                Required(effect.TargetVariable, nameof(effect.TargetVariable)),
-                MaterializeCoord(effect.InventoryCoord)),
-            PlanEffectKind.ReverseDirection => PlanEffectDescriptor.ReverseDirection(
-                Required(effect.DirectionVariable, nameof(effect.DirectionVariable)),
-                effect.ConsumesTurn,
-                effect.ContinuePlan),
+            PlanEffectKind.Move => effect.DirectionVariable is null
+                ? PlanEffectDescriptor.Move()
+                : PlanEffectDescriptor.Move(Required(effect.DirectionVariable, nameof(effect.DirectionVariable))),
+            PlanEffectKind.Pickup => effect.TargetVariable is null
+                ? PlanEffectDescriptor.Pickup(MaterializeCoord(effect.InventoryCoord))
+                : PlanEffectDescriptor.Pickup(
+                    Required(effect.TargetVariable, nameof(effect.TargetVariable)),
+                    MaterializeCoord(effect.InventoryCoord)),
+            PlanEffectKind.ReverseDirection => effect.DirectionVariable is null
+                ? PlanEffectDescriptor.ReverseDirection(effect.ConsumesTurn, effect.ContinuePlan)
+                : PlanEffectDescriptor.ReverseDirection(
+                    Required(effect.DirectionVariable, nameof(effect.DirectionVariable)),
+                    effect.ConsumesTurn,
+                    effect.ContinuePlan),
             PlanEffectKind.Wait => PlanEffectDescriptor.Wait(),
             PlanEffectKind.SetVariable => PlanEffectDescriptor.SetVariable(
                 Required(effect.VariableName, nameof(effect.VariableName)),
@@ -195,7 +220,16 @@ public static class YamlContentLoader
 
         public Dictionary<string, PlanValueDescriptorDto>? DefaultPlanVariables { get; set; }
 
+        public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
+
         public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
+    }
+
+    private sealed class ActorActionStateDefaultsDto
+    {
+        public Direction? Facing { get; set; }
+
+        public string? Target { get; set; }
     }
 
     private sealed class CarriedEntityTemplateDto

@@ -645,9 +645,9 @@ public sealed class EditorViewModelTests
 
             editor.SetSelectedStepSuccessEffect();
 
-            Assert.Equal("Success: Move(directionVariable=facing)", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.Equal("Success: Move", editor.ActionPlanSteps[1].SuccessSummary);
             Assert.Contains("kind: Move", editor.YamlPreview);
-            Assert.Contains("directionVariable: facing", editor.YamlPreview);
+            Assert.DoesNotContain("directionVariable: facing", editor.YamlPreview);
             Assert.Equal("Updated success effect for step wait.", editor.StatusMessage);
         }
         finally
@@ -703,7 +703,7 @@ public sealed class EditorViewModelTests
             Assert.Equal("target", editor.SuccessTargetVariableInput);
             Assert.Equal(1, editor.SuccessInventoryCoordX);
             Assert.Equal(2, editor.SuccessInventoryCoordY);
-            Assert.True(editor.IsSuccessTargetVariableVisible);
+            Assert.False(editor.IsSuccessTargetVariableVisible);
             Assert.True(editor.IsSuccessInventoryCoordVisible);
         }
         finally
@@ -730,9 +730,9 @@ public sealed class EditorViewModelTests
 
             editor.SetSelectedStepSuccessEffect();
 
-            Assert.Equal("Success: Pickup(targetVariable=target, inventoryCoord=1,2)", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.Equal("Success: Pickup(inventoryCoord=1,2)", editor.ActionPlanSteps[1].SuccessSummary);
             Assert.Contains("kind: Pickup", editor.YamlPreview);
-            Assert.Contains("targetVariable: target", editor.YamlPreview);
+            Assert.DoesNotContain("targetVariable: target", editor.YamlPreview);
         }
         finally
         {
@@ -756,7 +756,7 @@ public sealed class EditorViewModelTests
             Assert.Equal("facing", editor.SuccessDirectionVariableInput);
             Assert.True(editor.SuccessConsumesTurnInput);
             Assert.False(editor.SuccessContinuePlanInput);
-            Assert.True(editor.IsSuccessDirectionVariableVisible);
+            Assert.False(editor.IsSuccessDirectionVariableVisible);
             Assert.True(editor.IsSuccessTurnFlagsVisible);
         }
         finally
@@ -783,7 +783,7 @@ public sealed class EditorViewModelTests
 
             editor.SetSelectedStepFailureEffect();
 
-            Assert.Equal("Failure: ReverseDirection(directionVariable=facing, consumesTurn=False, continuePlan=True)", editor.ActionPlanSteps[1].FailureSummary);
+            Assert.Equal("Failure: ReverseDirection(consumesTurn=False, continuePlan=True)", editor.ActionPlanSteps[1].FailureSummary);
             Assert.Contains("kind: ReverseDirection", editor.YamlPreview);
             Assert.Contains("continuePlan: true", editor.YamlPreview);
         }
@@ -794,7 +794,7 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
-    public void EditorViewModelSelectingSetVariableEffectPopulatesInputs()
+    public void EditorViewModelDisplaysLegacySetVariableEffectWithoutEditableInputs()
     {
         var path = WriteTempContentFile(SetVariableActionPlanContentYaml);
 
@@ -806,13 +806,8 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
 
             Assert.Equal(PlanEffectKind.SetVariable, editor.SelectedSuccessEffectKind);
-            Assert.Equal("facing", editor.SuccessSetVariableNameInput);
-            Assert.Equal(PlanValueKind.Direction, editor.SelectedSuccessSetVariableValueKind);
-            Assert.Equal(Direction.East, editor.SuccessSetVariableDirectionValue);
-            Assert.True(editor.SuccessConsumesTurnInput);
-            Assert.False(editor.SuccessContinuePlanInput);
-            Assert.True(editor.IsSuccessSetVariableVisible);
-            Assert.True(editor.IsSuccessTurnFlagsVisible);
+            Assert.Equal("Success: SetVariable(variableName=facing, value=East, consumesTurn=True, continuePlan=False)", editor.ActionPlanSteps[0].SuccessSummary);
+            Assert.False(editor.IsSuccessTurnFlagsVisible);
         }
         finally
         {
@@ -821,7 +816,7 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
-    public void EditorViewModelSetsSelectedStepSetVariableSuccessEffect()
+    public void EditorViewModelDoesNotAuthorLegacySetVariableEffect()
     {
         var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
 
@@ -832,19 +827,12 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
             editor.SelectedSuccessEffectKind = PlanEffectKind.SetVariable;
-            editor.SuccessSetVariableNameInput = "facing";
-            editor.SelectedSuccessSetVariableValueKind = PlanValueKind.Direction;
-            editor.SuccessSetVariableDirectionValue = Direction.South;
-            editor.SuccessConsumesTurnInput = false;
-            editor.SuccessContinuePlanInput = true;
 
             editor.SetSelectedStepSuccessEffect();
 
-            Assert.Equal("Success: SetVariable(variableName=facing, value=South, consumesTurn=False, continuePlan=True)", editor.ActionPlanSteps[1].SuccessSummary);
-            Assert.Contains("kind: SetVariable", editor.YamlPreview);
-            Assert.Contains("variableName: facing", editor.YamlPreview);
-            Assert.Contains("directionValue: South", editor.YamlPreview);
-            Assert.Contains("continuePlan: true", editor.YamlPreview);
+            Assert.Equal("Success: Wait", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.DoesNotContain("kind: SetVariable", editor.YamlPreview);
+            Assert.Equal("SetVariable is legacy-only and cannot be authored from the editor.", editor.StatusMessage);
         }
         finally
         {
@@ -868,25 +856,55 @@ public sealed class EditorViewModelTests
         editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
         editor.SelectedFailureEffectKind = PlanEffectKind.Wait;
 
-        Assert.True(editor.IsSuccessDirectionVariableVisible);
+        Assert.False(editor.IsSuccessDirectionVariableVisible);
         Assert.False(editor.IsSuccessCallPlanVisible);
         Assert.False(editor.IsFailureDirectionVariableVisible);
         Assert.False(editor.IsFailureCallPlanVisible);
 
         editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
 
-        Assert.True(editor.IsSuccessTargetVariableVisible);
+        Assert.False(editor.IsSuccessTargetVariableVisible);
         Assert.True(editor.IsSuccessInventoryCoordVisible);
 
         editor.SelectedSuccessEffectKind = PlanEffectKind.ReverseDirection;
 
-        Assert.True(editor.IsSuccessDirectionVariableVisible);
+        Assert.False(editor.IsSuccessDirectionVariableVisible);
         Assert.True(editor.IsSuccessTurnFlagsVisible);
 
         editor.SelectedSuccessEffectKind = PlanEffectKind.SetVariable;
 
-        Assert.True(editor.IsSuccessSetVariableVisible);
-        Assert.True(editor.IsSuccessTurnFlagsVisible);
+        Assert.False(editor.IsSuccessTurnFlagsVisible);
+    }
+
+    [Fact]
+    public void EditorViewModelHidesCanonicalVariableInputsForActionPlanPrimitives()
+    {
+        var editor = new MainEditorViewModel();
+
+        editor.SelectedCheckKind = PlanCheckKind.CanMove;
+        Assert.False(editor.IsCheckDirectionVariableVisible);
+        editor.SelectedCheckKind = PlanCheckKind.BlockingEntity;
+        Assert.False(editor.IsCheckDirectionVariableVisible);
+        Assert.False(editor.IsCheckTargetVariableVisible);
+        editor.SelectedCheckKind = PlanCheckKind.CanPickup;
+        Assert.False(editor.IsCheckTargetVariableVisible);
+        Assert.True(editor.IsCheckInventoryCoordVisible);
+
+        editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
+        Assert.False(editor.IsSuccessDirectionVariableVisible);
+        editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
+        Assert.False(editor.IsSuccessTargetVariableVisible);
+        Assert.True(editor.IsSuccessInventoryCoordVisible);
+        editor.SelectedFailureEffectKind = PlanEffectKind.ReverseDirection;
+        Assert.False(editor.IsFailureDirectionVariableVisible);
+    }
+
+    [Fact]
+    public void EditorViewModelDoesNotOfferSetVariableForNewCanonicalEffects()
+    {
+        var editor = new MainEditorViewModel();
+
+        Assert.DoesNotContain(PlanEffectKind.SetVariable, editor.EffectKinds);
     }
 
     [Fact]
@@ -932,10 +950,10 @@ public sealed class EditorViewModelTests
             editor.AddCanMoveCheckToSelectedStep();
 
             var check = Assert.Single(editor.ActionPlanStepChecks);
-            Assert.Equal("CanMove(directionVariable=facing)", check.Summary);
-            Assert.Equal("Checks: CanMove(directionVariable=facing)", editor.ActionPlanSteps[1].ChecksSummary);
+            Assert.Equal("CanMove", check.Summary);
+            Assert.Equal("Checks: CanMove", editor.ActionPlanSteps[1].ChecksSummary);
             Assert.Contains("kind: CanMove", editor.YamlPreview);
-            Assert.Contains("directionVariable: facing", editor.YamlPreview);
+            Assert.DoesNotContain("directionVariable: facing", editor.YamlPreview);
             Assert.Equal("Added CanMove check to step wait.", editor.StatusMessage);
         }
         finally
@@ -961,8 +979,8 @@ public sealed class EditorViewModelTests
             editor.UpdateSelectedStepCheck();
 
             var check = Assert.Single(editor.ActionPlanStepChecks);
-            Assert.Equal("CanMove(directionVariable=turnDirection)", check.Summary);
-            Assert.Contains("directionVariable: turnDirection", editor.YamlPreview);
+            Assert.Equal("CanMove", check.Summary);
+            Assert.DoesNotContain("directionVariable: turnDirection", editor.YamlPreview);
             Assert.Equal("Updated check 1 for step move.", editor.StatusMessage);
         }
         finally
@@ -1045,8 +1063,8 @@ public sealed class EditorViewModelTests
             Assert.Equal(PlanCheckKind.BlockingEntity, editor.SelectedCheckKind);
             Assert.Equal("facing", editor.CheckDirectionVariableInput);
             Assert.Equal("target", editor.CheckTargetVariableInput);
-            Assert.True(editor.IsCheckDirectionVariableVisible);
-            Assert.True(editor.IsCheckTargetVariableVisible);
+            Assert.False(editor.IsCheckDirectionVariableVisible);
+            Assert.False(editor.IsCheckTargetVariableVisible);
         }
         finally
         {
@@ -1072,13 +1090,13 @@ public sealed class EditorViewModelTests
             editor.AddSelectedCheckToSelectedStep();
 
             var check = Assert.Single(editor.ActionPlanStepChecks);
-            Assert.Equal("BlockingEntity(directionVariable=facing, targetVariable=blocker)", check.Summary);
+            Assert.Equal("BlockingEntity", check.Summary);
 
             editor.CheckTargetVariableInput = "target";
             editor.UpdateSelectedStepCheck();
 
-            Assert.Equal("BlockingEntity(directionVariable=facing, targetVariable=target)", editor.ActionPlanStepChecks.Single().Summary);
-            Assert.Contains("targetVariable: target", editor.YamlPreview);
+            Assert.Equal("BlockingEntity", editor.ActionPlanStepChecks.Single().Summary);
+            Assert.DoesNotContain("targetVariable: target", editor.YamlPreview);
             Assert.Equal("Updated check 1 for step wait.", editor.StatusMessage);
         }
         finally
@@ -1105,7 +1123,7 @@ public sealed class EditorViewModelTests
             Assert.Equal(1, editor.CheckInventoryCoordX);
             Assert.Equal(2, editor.CheckInventoryCoordY);
             Assert.False(editor.IsCheckDirectionVariableVisible);
-            Assert.True(editor.IsCheckTargetVariableVisible);
+            Assert.False(editor.IsCheckTargetVariableVisible);
             Assert.True(editor.IsCheckInventoryCoordVisible);
         }
         finally
@@ -1133,94 +1151,16 @@ public sealed class EditorViewModelTests
             editor.AddSelectedCheckToSelectedStep();
 
             var check = Assert.Single(editor.ActionPlanStepChecks);
-            Assert.Equal("CanPickup(targetVariable=target, inventoryCoord=1,2)", check.Summary);
+            Assert.Equal("CanPickup(inventoryCoord=1,2)", check.Summary);
 
             editor.CheckInventoryCoordX = 0;
             editor.CheckInventoryCoordY = 1;
             editor.UpdateSelectedStepCheck();
 
-            Assert.Equal("CanPickup(targetVariable=target, inventoryCoord=0,1)", editor.ActionPlanStepChecks.Single().Summary);
+            Assert.Equal("CanPickup(inventoryCoord=0,1)", editor.ActionPlanStepChecks.Single().Summary);
             Assert.Contains("kind: CanPickup", editor.YamlPreview);
             Assert.Contains("x: 0", editor.YamlPreview);
             Assert.Contains("y: 1", editor.YamlPreview);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelSuggestsDirectionVariablesForSelectedPresetAndStep()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
-            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
-
-            Assert.Contains("facing", editor.DirectionVariableSuggestions);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelSuggestsAndRepairsMissingDirectionVariableForSelectedPreset()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlMissingDefaultVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-
-            Assert.Contains("facing", editor.MissingDirectionVariableSuggestions);
-
-            editor.AddFirstMissingDirectionVariableDefault();
-
-            var variable = Assert.Single(editor.DefaultPlanVariables);
-            Assert.Equal("facing", variable.Name);
-            Assert.Equal(PlanValueKind.Direction, variable.Kind);
-            Assert.Empty(editor.MissingDirectionVariableSuggestions);
-            Assert.DoesNotContain(editor.ValidationMessages, message => message.Contains("missing required variable"));
-            Assert.Equal("Added missing direction variable facing.", editor.StatusMessage);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelSuggestsAndRepairsMissingEntityVariableForSelectedPreset()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlMissingEntityVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-
-            Assert.Contains("target", editor.MissingEntityVariableSuggestions);
-
-            editor.AddFirstMissingEntityVariableDefault();
-
-            var variable = Assert.Single(editor.DefaultPlanVariables);
-            Assert.Equal("target", variable.Name);
-            Assert.Equal(PlanValueKind.Entity, variable.Kind);
-            Assert.Equal("target", variable.DisplayValue);
-            Assert.Empty(editor.MissingEntityVariableSuggestions);
-            Assert.DoesNotContain(editor.ValidationMessages, message => message.Contains("missing required variable"));
-            Assert.Equal("Added missing entity variable target.", editor.StatusMessage);
         }
         finally
         {
@@ -1244,86 +1184,6 @@ public sealed class EditorViewModelTests
             Assert.Contains(editor.SelectedPresetDiagnostics, message => message.Contains("target") && message.Contains("missing required variable"));
             Assert.Contains(editor.SelectedActionPlanDiagnostics, message => message.Contains("pickupPlan") && message.Contains("target"));
             Assert.Contains(editor.SelectedActionPlanStepDiagnostics, message => message.Contains("step pickup target") && message.Contains("target"));
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelAppliesSelectedVariableSuggestionsToCheckAndEffects()
-    {
-        var path = WriteTempContentFile(BlockingEntityCheckActionPlanContentYaml);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
-            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
-            editor.SelectedDirectionVariableSuggestion = "facing";
-            editor.SelectedEntityVariableSuggestion = "target";
-
-            editor.CheckDirectionVariableInput = string.Empty;
-            editor.CheckTargetVariableInput = string.Empty;
-            editor.SuccessDirectionVariableInput = string.Empty;
-            editor.SuccessTargetVariableInput = string.Empty;
-            editor.FailureDirectionVariableInput = string.Empty;
-            editor.FailureTargetVariableInput = string.Empty;
-
-            editor.ApplySelectedDirectionSuggestionToCheck();
-            editor.ApplySelectedEntitySuggestionToCheck();
-            editor.ApplySelectedDirectionSuggestionToSuccessEffect();
-            editor.ApplySelectedEntitySuggestionToSuccessEffect();
-            editor.ApplySelectedDirectionSuggestionToFailureEffect();
-            editor.ApplySelectedEntitySuggestionToFailureEffect();
-
-            Assert.Equal("facing", editor.CheckDirectionVariableInput);
-            Assert.Equal("target", editor.CheckTargetVariableInput);
-            Assert.Equal("facing", editor.SuccessDirectionVariableInput);
-            Assert.Equal("target", editor.SuccessTargetVariableInput);
-            Assert.Equal("facing", editor.FailureDirectionVariableInput);
-            Assert.Equal("target", editor.FailureTargetVariableInput);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelSuggestsEntityVariablesForSelectedPresetDefaults()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlWithEntityDefaultVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-
-            Assert.Contains("target", editor.EntityVariableSuggestions);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelSuggestsEntityVariablesWrittenBySelectedStepChecks()
-    {
-        var path = WriteTempContentFile(BlockingEntityCheckActionPlanContentYaml);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
-            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
-
-            Assert.Contains("target", editor.EntityVariableSuggestions);
         }
         finally
         {
@@ -1381,29 +1241,7 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
-    public void EditorViewModelListsDefaultPlanVariablesForSelectedPreset()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-
-            var variable = Assert.Single(editor.DefaultPlanVariables);
-            Assert.Equal("facing", variable.Name);
-            Assert.Equal(PlanValueKind.Direction, variable.Kind);
-            Assert.Equal("West", variable.DisplayValue);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelAddsOrUpdatesDefaultPlanVariableAndRefreshesPreviewDiffAndValidation()
+    public void EditorViewModelEditsInitialFacingAsActorState()
     {
         var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
 
@@ -1412,68 +1250,24 @@ public sealed class EditorViewModelTests
             var editor = new MainEditorViewModel();
             editor.OpenFile(path);
             editor.SelectEntityPreset(new EntityTemplateId("slime"));
-            editor.DefaultVariableNameInput = "facing";
-            editor.SelectedDefaultVariableKind = PlanValueKind.Direction;
-            editor.SelectedDefaultVariableDirection = Direction.East;
 
-            editor.SetDefaultPlanVariable();
+            Assert.False(editor.HasInitialFacing);
 
-            var variable = Assert.Single(editor.DefaultPlanVariables);
-            Assert.Equal("facing", variable.Name);
-            Assert.Equal(PlanValueKind.Direction, variable.Kind);
-            Assert.Equal("East", variable.DisplayValue);
-            Assert.Contains("defaultPlanVariables", editor.YamlPreview);
-            Assert.Contains("directionValue: East", editor.YamlPreview);
-            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("+") && line.Contains("facing"));
-            Assert.Equal("Set default variable facing.", editor.StatusMessage);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
+            editor.SelectedInitialFacing = Direction.East;
+            editor.SetInitialFacing();
 
-    [Fact]
-    public void EditorViewModelSelectsDefaultPlanVariableForEditing()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-
-            editor.SelectedDefaultPlanVariable = editor.DefaultPlanVariables.Single();
-
-            Assert.Equal("facing", editor.DefaultVariableNameInput);
-            Assert.Equal(PlanValueKind.Direction, editor.SelectedDefaultVariableKind);
-            Assert.Equal(Direction.West, editor.SelectedDefaultVariableDirection);
-        }
-        finally
-        {
-            DeleteIfExists(path);
-        }
-    }
-
-    [Fact]
-    public void EditorViewModelRemovesSelectedDefaultPlanVariableAndRefreshesPreviewDiffAndValidation()
-    {
-        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
-
-        try
-        {
-            var editor = new MainEditorViewModel();
-            editor.OpenFile(path);
-            editor.SelectEntityPreset(new EntityTemplateId("slime"));
-            editor.SelectedDefaultPlanVariable = editor.DefaultPlanVariables.Single();
-
-            editor.RemoveSelectedDefaultPlanVariable();
-
-            Assert.Empty(editor.DefaultPlanVariables);
+            Assert.True(editor.HasInitialFacing);
+            Assert.Equal(Direction.East, editor.SelectedInitialFacing);
+            Assert.Contains("actionStateDefaults", editor.YamlPreview);
+            Assert.Contains("facing: East", editor.YamlPreview);
             Assert.DoesNotContain("defaultPlanVariables", editor.YamlPreview);
-            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("-") && line.Contains("facing"));
-            Assert.Equal("Removed default variable facing.", editor.StatusMessage);
+            Assert.Equal("Set initial facing to East.", editor.StatusMessage);
+
+            editor.ClearInitialFacing();
+
+            Assert.False(editor.HasInitialFacing);
+            Assert.DoesNotContain("actionStateDefaults", editor.YamlPreview);
+            Assert.Equal("Cleared initial facing.", editor.StatusMessage);
         }
         finally
         {

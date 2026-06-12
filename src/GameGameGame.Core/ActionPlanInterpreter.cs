@@ -40,7 +40,8 @@ public interface IPlanCheck
 public sealed record PlanCheckResult(
     bool Passed,
     IReadOnlyDictionary<string, PlanValue> VariableWrites,
-    TraceNode Trace);
+    TraceNode Trace,
+    IReadOnlyDictionary<ActionPlanSlot, PlanValue>? SlotWrites = null);
 
 public interface IPlanEffect
 {
@@ -199,6 +200,11 @@ public sealed class ActionPlanInterpreter
             foreach (var (name, value) in result.VariableWrites)
             {
                 stepTrace.Add(context.Set(name, value));
+            }
+
+            foreach (var (slot, value) in result.SlotWrites ?? new Dictionary<ActionPlanSlot, PlanValue>())
+            {
+                stepTrace.Add(context.Set(slot, value));
             }
         }
 

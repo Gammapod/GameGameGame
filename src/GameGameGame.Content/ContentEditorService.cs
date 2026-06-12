@@ -374,6 +374,43 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         onChanged?.Invoke();
     }
 
+    public void AddActionPlanCheck(ActionPlanTemplateId planId, int stepIndex, PlanCheckKind kind)
+    {
+        var steps = GetActionPlanSteps(planId);
+        var step = steps[stepIndex].ToDescriptor();
+        var checks = step.Checks.ToList();
+        checks.Add(PlanPrimitiveCatalog.CreateDefaultCheck(kind));
+        steps[stepIndex] = EditableContentDocument.ActionPlanStepDescriptorDto.From(step with { Checks = checks });
+        onChanged?.Invoke();
+    }
+
+    public void UpdateActionPlanCheck(ActionPlanTemplateId planId, int stepIndex, int checkIndex, PlanCheckKind kind)
+    {
+        var steps = GetActionPlanSteps(planId);
+        var step = steps[stepIndex].ToDescriptor();
+        var checks = step.Checks.ToList();
+        checks[checkIndex] = PlanPrimitiveCatalog.CreateDefaultCheck(kind);
+        steps[stepIndex] = EditableContentDocument.ActionPlanStepDescriptorDto.From(step with { Checks = checks });
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanStepSuccessEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectKind kind) =>
+        SetActionPlanStepEffect(planId, stepIndex, kind, updateSuccess: true);
+
+    public void SetActionPlanStepFailureEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectKind kind) =>
+        SetActionPlanStepEffect(planId, stepIndex, kind, updateSuccess: false);
+
+    private void SetActionPlanStepEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectKind kind, bool updateSuccess)
+    {
+        var steps = GetActionPlanSteps(planId);
+        var step = steps[stepIndex].ToDescriptor();
+        var effect = PlanPrimitiveCatalog.CreateDefaultEffect(kind);
+        steps[stepIndex] = EditableContentDocument.ActionPlanStepDescriptorDto.From(updateSuccess
+            ? step with { OnSuccess = effect }
+            : step with { OnFailure = effect });
+        onChanged?.Invoke();
+    }
+
     public void SetDefaultPlanVariable(EntityTemplateId templateId, string variableName, PlanValueDescriptor value)
     {
         var template = GetTemplateDto(templateId);
@@ -402,6 +439,40 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         if (template.DefaultPlanVariables.Count == 0)
         {
             template.DefaultPlanVariables = null;
+        }
+
+        onChanged?.Invoke();
+    }
+
+    public ActorActionStateDefaults GetActionStateDefaults(EntityTemplateId templateId)
+    {
+        var template = GetTemplateDto(templateId);
+
+        return new ActorActionStateDefaults(
+            template.ActionStateDefaults?.Facing,
+            string.IsNullOrWhiteSpace(template.ActionStateDefaults?.Target) ? null : new EntityId(template.ActionStateDefaults.Target));
+    }
+
+    public void SetInitialFacing(EntityTemplateId templateId, Direction facing)
+    {
+        var template = GetTemplateDto(templateId);
+        template.ActionStateDefaults ??= new EditableContentDocument.ActorActionStateDefaultsDto();
+        template.ActionStateDefaults.Facing = facing;
+        onChanged?.Invoke();
+    }
+
+    public void ClearInitialFacing(EntityTemplateId templateId)
+    {
+        var template = GetTemplateDto(templateId);
+        if (template.ActionStateDefaults is null)
+        {
+            return;
+        }
+
+        template.ActionStateDefaults.Facing = null;
+        if (template.ActionStateDefaults.Target is null)
+        {
+            template.ActionStateDefaults = null;
         }
 
         onChanged?.Invoke();

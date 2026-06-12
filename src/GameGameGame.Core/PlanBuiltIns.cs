@@ -2,6 +2,12 @@ namespace GameGameGame.Core;
 
 public sealed class CanMoveCheck : IPlanCheck
 {
+    public CanMoveCheck()
+    {
+        DirectionSlot = ActionPlanSlot.Facing;
+        Direction = new PlanVariableRef<DirectionPlanValue>("facing");
+    }
+
     public CanMoveCheck(string directionVariableName)
         : this(new PlanVariableRef<DirectionPlanValue>(directionVariableName))
     {
@@ -14,11 +20,14 @@ public sealed class CanMoveCheck : IPlanCheck
 
     public PlanVariableRef<DirectionPlanValue> Direction { get; }
 
+    public ActionPlanSlot? DirectionSlot { get; }
+
     public PlanCheckResult Evaluate(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
     {
-        var trace = new TraceNode($"Can move {Direction.Name}", TraceStatus.Info);
+        var label = DirectionSlot?.ToString() ?? Direction.Name;
+        var trace = new TraceNode($"Can move {label}", TraceStatus.Info);
 
-        if (!TryReadDirection(context, Direction, trace, out var direction))
+        if (!TryReadDirection(context, DirectionSlot, Direction, trace, out var direction))
         {
             return new PlanCheckResult(false, new Dictionary<string, PlanValue>(), trace);
         }
@@ -38,6 +47,40 @@ public sealed class CanMoveCheck : IPlanCheck
         TraceNode trace,
         out Direction direction)
     {
+        return TryReadDirection(context, directionSlot: null, variable, trace, out direction);
+    }
+
+    internal static bool TryReadDirection(
+        ActionPlanContext context,
+        ActionPlanSlot? directionSlot,
+        PlanVariableRef<DirectionPlanValue>? variable,
+        TraceNode trace,
+        out Direction direction)
+    {
+        if (directionSlot is { } slot)
+        {
+            if (!context.TryRead<DirectionPlanValue>(slot, out var slotValue, out var readTrace))
+            {
+                direction = default;
+                trace.Add(readTrace);
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = readTrace.Detail;
+                return false;
+            }
+
+            direction = slotValue.Value;
+            trace.Add(readTrace);
+            return true;
+        }
+
+        if (variable is null)
+        {
+            direction = default;
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = "missing direction source";
+            return false;
+        }
+
         if (!variable.TryRead(context, out var value))
         {
             direction = default;
@@ -54,6 +97,14 @@ public sealed class CanMoveCheck : IPlanCheck
 
 public sealed class BlockingEntityCheck : IPlanCheck
 {
+    public BlockingEntityCheck()
+    {
+        DirectionSlot = ActionPlanSlot.Facing;
+        TargetSlot = ActionPlanSlot.Target;
+        Direction = new PlanVariableRef<DirectionPlanValue>("facing");
+        Target = new PlanVariableRef<EntityPlanValue>("target");
+    }
+
     public BlockingEntityCheck(string directionVariableName, string targetVariableName)
         : this(new PlanVariableRef<DirectionPlanValue>(directionVariableName), new PlanVariableRef<EntityPlanValue>(targetVariableName))
     {
@@ -69,11 +120,16 @@ public sealed class BlockingEntityCheck : IPlanCheck
 
     public PlanVariableRef<EntityPlanValue> Target { get; }
 
+    public ActionPlanSlot? DirectionSlot { get; }
+
+    public ActionPlanSlot? TargetSlot { get; }
+
     public PlanCheckResult Evaluate(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
     {
-        var trace = new TraceNode($"Blocking entity {Direction.Name}", TraceStatus.Info);
+        var directionLabel = DirectionSlot?.ToString() ?? Direction.Name;
+        var trace = new TraceNode($"Blocking entity {directionLabel}", TraceStatus.Info);
 
-        if (!CanMoveCheck.TryReadDirection(context, Direction, trace, out var direction))
+        if (!CanMoveCheck.TryReadDirection(context, DirectionSlot, Direction, trace, out var direction))
         {
             return new PlanCheckResult(false, new Dictionary<string, PlanValue>(), trace);
         }
@@ -88,6 +144,19 @@ public sealed class BlockingEntityCheck : IPlanCheck
         }
 
         trace.Status = TraceStatus.Success;
+        if (TargetSlot is { } slot)
+        {
+            trace.Detail = $"{slot}={targetId}";
+            return new PlanCheckResult(
+                true,
+                new Dictionary<string, PlanValue>(),
+                trace,
+                new Dictionary<ActionPlanSlot, PlanValue>
+                {
+                    [slot] = new EntityPlanValue(targetId)
+                });
+        }
+
         trace.Detail = $"{Target.Name}={targetId}";
         return new PlanCheckResult(
             true,
@@ -101,6 +170,18 @@ public sealed class BlockingEntityCheck : IPlanCheck
 
 public sealed class CanPickupCheck : IPlanCheck
 {
+    public CanPickupCheck(GridCoord inventoryCoord)
+        : this(new LiteralCoordValueSource(inventoryCoord))
+    {
+    }
+
+    public CanPickupCheck(LiteralCoordValueSource inventoryCoord)
+    {
+        TargetSlot = ActionPlanSlot.Target;
+        Target = new PlanVariableRef<EntityPlanValue>("target");
+        InventoryCoord = inventoryCoord;
+    }
+
     public CanPickupCheck(string targetVariableName, GridCoord inventoryCoord)
         : this(new PlanVariableRef<EntityPlanValue>(targetVariableName), new LiteralCoordValueSource(inventoryCoord))
     {
@@ -114,13 +195,16 @@ public sealed class CanPickupCheck : IPlanCheck
 
     public PlanVariableRef<EntityPlanValue> Target { get; }
 
+    public ActionPlanSlot? TargetSlot { get; }
+
     public LiteralCoordValueSource InventoryCoord { get; }
 
     public PlanCheckResult Evaluate(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
     {
-        var trace = new TraceNode($"Can pickup {Target.Name}", TraceStatus.Info);
+        var label = TargetSlot?.ToString() ?? Target.Name;
+        var trace = new TraceNode($"Can pickup {label}", TraceStatus.Info);
 
-        if (!TryBuildPickupAction(world, actorId, context, Target, InventoryCoord, trace, out var action))
+        if (!TryBuildPickupAction(world, actorId, context, TargetSlot, Target, InventoryCoord, trace, out var action))
         {
             return new PlanCheckResult(false, new Dictionary<string, PlanValue>(), trace);
         }
@@ -143,13 +227,52 @@ public sealed class CanPickupCheck : IPlanCheck
         TraceNode trace,
         out PickupAction action)
     {
+        return TryBuildPickupAction(world, actorId, context, targetSlot: null, targetVariable, inventoryCoord, trace, out action);
+    }
+
+    internal static bool TryBuildPickupAction(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        ActionPlanSlot? targetSlot,
+        PlanVariableRef<EntityPlanValue>? targetVariable,
+        LiteralCoordValueSource inventoryCoord,
+        TraceNode trace,
+        out PickupAction action)
+    {
         action = default!;
 
-        if (!targetVariable.TryRead(context, out var target))
+        EntityPlanValue target;
+
+        if (targetSlot is { } slot)
         {
-            trace.Status = TraceStatus.Failure;
-            trace.Detail = $"missing entity variable {targetVariable.Name}";
-            return false;
+            if (!context.TryRead<EntityPlanValue>(slot, out target, out var readTrace))
+            {
+                trace.Add(readTrace);
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = readTrace.Detail;
+                return false;
+            }
+
+            trace.Add(readTrace);
+        }
+        else
+        {
+            if (targetVariable is null)
+            {
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = "missing target source";
+                return false;
+            }
+
+            if (!targetVariable.TryRead(context, out target))
+            {
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = $"missing entity variable {targetVariable.Name}";
+                return false;
+            }
+
+            trace.Add(TraceNode.Success($"Read variable {targetVariable.Name}", target.Value.ToString()));
         }
 
         if (world.GetInventoryPlaneId(actorId) is not { } inventoryPlaneId)
@@ -160,7 +283,6 @@ public sealed class CanPickupCheck : IPlanCheck
             return false;
         }
 
-        trace.Add(TraceNode.Success($"Read variable {targetVariable.Name}", target.Value.ToString()));
         trace.Add(TraceNode.Success("Resolve inventory destination", new PlaneCoord(inventoryPlaneId, inventoryCoord.Value).ToString()));
         action = new PickupAction(target.Value, new PlaneCoord(inventoryPlaneId, inventoryCoord.Value));
         return true;
@@ -169,6 +291,12 @@ public sealed class CanPickupCheck : IPlanCheck
 
 public sealed class MoveEffect : IPlanEffect
 {
+    public MoveEffect()
+    {
+        DirectionSlot = ActionPlanSlot.Facing;
+        Direction = new PlanVariableRef<DirectionPlanValue>("facing");
+    }
+
     public MoveEffect(string directionVariableName)
         : this(new PlanVariableRef<DirectionPlanValue>(directionVariableName))
     {
@@ -181,11 +309,14 @@ public sealed class MoveEffect : IPlanEffect
 
     public PlanVariableRef<DirectionPlanValue> Direction { get; }
 
+    public ActionPlanSlot? DirectionSlot { get; }
+
     public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
     {
-        var trace = new TraceNode($"Move {Direction.Name}", TraceStatus.Info);
+        var label = DirectionSlot?.ToString() ?? Direction.Name;
+        var trace = new TraceNode($"Move {label}", TraceStatus.Info);
 
-        if (!CanMoveCheck.TryReadDirection(context, Direction, trace, out var direction))
+        if (!CanMoveCheck.TryReadDirection(context, DirectionSlot, Direction, trace, out var direction))
         {
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
@@ -203,6 +334,18 @@ public sealed class MoveEffect : IPlanEffect
 
 public sealed class PickupEffect : IPlanEffect
 {
+    public PickupEffect(GridCoord inventoryCoord)
+        : this(new LiteralCoordValueSource(inventoryCoord))
+    {
+    }
+
+    public PickupEffect(LiteralCoordValueSource inventoryCoord)
+    {
+        TargetSlot = ActionPlanSlot.Target;
+        Target = new PlanVariableRef<EntityPlanValue>("target");
+        InventoryCoord = inventoryCoord;
+    }
+
     public PickupEffect(string targetVariableName, GridCoord inventoryCoord)
         : this(new PlanVariableRef<EntityPlanValue>(targetVariableName), new LiteralCoordValueSource(inventoryCoord))
     {
@@ -216,13 +359,16 @@ public sealed class PickupEffect : IPlanEffect
 
     public PlanVariableRef<EntityPlanValue> Target { get; }
 
+    public ActionPlanSlot? TargetSlot { get; }
+
     public LiteralCoordValueSource InventoryCoord { get; }
 
     public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
     {
-        var trace = new TraceNode($"Pickup {Target.Name}", TraceStatus.Info);
+        var label = TargetSlot?.ToString() ?? Target.Name;
+        var trace = new TraceNode($"Pickup {label}", TraceStatus.Info);
 
-        if (!CanPickupCheck.TryBuildPickupAction(world, actorId, context, Target, InventoryCoord, trace, out var action))
+        if (!CanPickupCheck.TryBuildPickupAction(world, actorId, context, TargetSlot, Target, InventoryCoord, trace, out var action))
         {
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
@@ -240,6 +386,14 @@ public sealed class PickupEffect : IPlanEffect
 
 public sealed class ReverseDirectionEffect : IPlanEffect
 {
+    public ReverseDirectionEffect(bool consumesTurn, bool continuePlan)
+    {
+        DirectionSlot = ActionPlanSlot.Facing;
+        Direction = new PlanVariableRef<DirectionPlanValue>("facing");
+        _consumesTurn = consumesTurn;
+        _continuePlan = continuePlan;
+    }
+
     public ReverseDirectionEffect(string directionVariableName, bool consumesTurn, bool continuePlan)
         : this(new PlanVariableRef<DirectionPlanValue>(directionVariableName), consumesTurn, continuePlan)
     {
@@ -258,11 +412,14 @@ public sealed class ReverseDirectionEffect : IPlanEffect
 
     public PlanVariableRef<DirectionPlanValue> Direction { get; }
 
+    public ActionPlanSlot? DirectionSlot { get; }
+
     public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
     {
-        var trace = new TraceNode($"Reverse direction {Direction.Name}", TraceStatus.Info);
+        var label = DirectionSlot?.ToString() ?? Direction.Name;
+        var trace = new TraceNode($"Reverse direction {label}", TraceStatus.Info);
 
-        if (!CanMoveCheck.TryReadDirection(context, Direction, trace, out var direction))
+        if (!CanMoveCheck.TryReadDirection(context, DirectionSlot, Direction, trace, out var direction))
         {
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
@@ -276,7 +433,9 @@ public sealed class ReverseDirectionEffect : IPlanEffect
             _ => direction
         };
 
-        trace.Add(context.Set(Direction.Name, new DirectionPlanValue(reversed)));
+        trace.Add(DirectionSlot is { } slot
+            ? context.Set(slot, new DirectionPlanValue(reversed))
+            : context.Set(Direction.Name, new DirectionPlanValue(reversed)));
         trace.Status = TraceStatus.Success;
         return new PlanEffectResult(true, _consumesTurn, _continuePlan, trace);
     }

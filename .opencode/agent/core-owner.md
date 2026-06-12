@@ -8,12 +8,14 @@ permission:
     "src/GameGameGame.Editor/**": allow
     "src/GameGameGame.Console/**": allow
     "src/GameGameGame.Content/**": allow
+    "tests/**": allow
     "*": ask
   edit:
     "src/GameGameGame.Core/**": allow
     "src/GameGameGame.Editor/**": allow
-    "src/GameGameGame.Console/**": deny
-    "src/GameGameGame.Content/**": deny
+    "src/GameGameGame.Console/**": allow
+    "src/GameGameGame.Content/**": allow
+    "tests/**": allow
     "*": ask
   task:
     allow
@@ -34,7 +36,7 @@ You are Core-Owner for the GameGameGame project. Your role is to maintain parity
 - Do NOT add editor-only concepts that cannot be represented or consumed by the engine.
 
 ## Workflow
-1. Review the relevant Core capability and its current or intended editor representation.
+1. `src/GameGameGame.Core/docs/Engine-Editor-Capabilities.md` is the single source of truth for engine capabilities, and should always be updated when anything changes.
 2. Make coordinated changes in `src/GameGameGame.Core` and/or `src/GameGameGame.Editor`.
 3. Use `src/GameGameGame.Console` and `src/GameGameGame.Content` as read-only references for integration and content usage.
 4. Validate that the editor can create, edit, and validate data for the supported engine capability.

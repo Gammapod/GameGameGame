@@ -1,4 +1,7 @@
-# Variable Abstraction Plan
+# Archived: Variable Abstraction Plan
+
+> Archived after the canonical slot cleanup direction was accepted. Future action-plan work should use
+> `Movement-Primitives-Parity-Plan.md` and `Engine-Editor-Capabilities.md` as the active planning documents.
 
 ## Goal
 

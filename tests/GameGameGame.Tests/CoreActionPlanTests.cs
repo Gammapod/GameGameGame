@@ -41,6 +41,85 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void ActionPlanContextStoresTypedCanonicalSlots()
+    {
+        var context = new ActionPlanContext();
+
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
+        context.Set(ActionPlanSlot.Target, new EntityPlanValue(TestWorld.RockId));
+
+        Assert.True(context.TryGet<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing));
+        Assert.Equal(Direction.West, facing.Value);
+        Assert.True(context.TryGet<EntityPlanValue>(ActionPlanSlot.Target, out var target));
+        Assert.Equal(TestWorld.RockId, target.Value);
+    }
+
+    [Fact]
+    public void ActionPlanContextCanonicalSlotWritesAreTraced()
+    {
+        var context = new ActionPlanContext();
+
+        var trace = context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.East));
+
+        Assert.Equal(TraceStatus.Success, trace.Status);
+        Assert.Equal("Set slot Facing", trace.Label);
+        Assert.Contains("East", trace.Detail);
+    }
+
+    [Fact]
+    public void ActionPlanContextCanonicalSlotReadsTraceMissingAndWrongKind()
+    {
+        var context = new ActionPlanContext();
+
+        Assert.False(context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out _, out var missingTrace));
+        Assert.Equal(TraceStatus.Failure, missingTrace.Status);
+        Assert.Equal("Read slot Facing", missingTrace.Label);
+        Assert.Contains("missing", missingTrace.Detail);
+
+        context.Set(ActionPlanSlot.Target, new EntityPlanValue(TestWorld.RockId));
+
+        Assert.False(context.TryRead<DirectionPlanValue>(ActionPlanSlot.Target, out _, out var wrongKindTrace));
+        Assert.Equal(TraceStatus.Failure, wrongKindTrace.Status);
+        Assert.Equal("Read slot Target", wrongKindTrace.Label);
+        Assert.Contains("expected Direction", wrongKindTrace.Detail);
+        Assert.Contains("actual Entity", wrongKindTrace.Detail);
+    }
+
+    [Fact]
+    public void ActionPlanContextCanonicalSlotsPersistAcrossPlanExecutions()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        var writer = new ActionPlanDefinition(
+            new ActionPlanId("write-facing"),
+            [
+                new ActionPlanStep(
+                    "write canonical facing",
+                    [],
+                    new SlotWritingEffect(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.East)),
+                    onFailure: null)
+            ]);
+        Direction? readFacing = null;
+        var reader = new ActionPlanDefinition(
+            new ActionPlanId("read-facing"),
+            [
+                new ActionPlanStep(
+                    "read canonical facing",
+                    [],
+                    new SlotReadingEffect(ActionPlanSlot.Facing, value => readFacing = value),
+                    onFailure: null)
+            ]);
+        var interpreter = new ActionPlanInterpreter(new MovementService());
+
+        var writeResult = interpreter.Execute(world, TestWorld.PlayerId, writer, context);
+        var readResult = interpreter.Execute(world, TestWorld.PlayerId, reader, context);
+
+        Assert.True(writeResult.Succeeded);
+        Assert.True(readResult.Succeeded);
+        Assert.Equal(Direction.East, readFacing);
+    }
+
+    [Fact]
     public void PlanVariableRefReadsTypedVariableFromContext()
     {
         var context = new ActionPlanContext();
@@ -149,6 +228,68 @@ public sealed class CoreActionPlanTests
         Assert.Contains(setVariable.Fields, field =>
             field.Name == "value"
             && field.Kind == PlanPrimitiveFieldKind.PlanValueLiteral);
+    }
+
+    [Fact]
+    public void PlanPrimitiveCatalogDescribesCanonicalSlotUsage()
+    {
+        var canMove = PlanPrimitiveCatalog.GetCheck(PlanCheckKind.CanMove);
+        var blockingEntity = PlanPrimitiveCatalog.GetCheck(PlanCheckKind.BlockingEntity);
+        var pickup = PlanPrimitiveCatalog.GetEffect(PlanEffectKind.Pickup);
+        var reverse = PlanPrimitiveCatalog.GetEffect(PlanEffectKind.ReverseDirection);
+
+        Assert.Contains(canMove.SlotReads, slot => slot.Slot == ActionPlanSlot.Facing && slot.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(blockingEntity.SlotReads, slot => slot.Slot == ActionPlanSlot.Facing && slot.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(blockingEntity.SlotWrites, slot => slot.Slot == ActionPlanSlot.Target && slot.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(pickup.SlotReads, slot => slot.Slot == ActionPlanSlot.Target && slot.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(reverse.SlotReads, slot => slot.Slot == ActionPlanSlot.Facing && slot.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(reverse.SlotWrites, slot => slot.Slot == ActionPlanSlot.Facing && slot.ValueKind == PlanValueKind.Direction);
+    }
+
+    [Fact]
+    public void ActionPlanDescriptorMaterializesCanonicalBuiltInsWithoutVariableNames()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.South));
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("canonical-descriptor-move"),
+            [
+                new ActionPlanStepDescriptor(
+                    "move facing",
+                    [PlanCheckDescriptor.CanMove()],
+                    PlanEffectDescriptor.Move(),
+                    OnFailure: null)
+            ]);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            context);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.True(TraceContains(result.Trace, "Read slot Facing"));
+    }
+
+    [Fact]
+    public void PlanPrimitiveCatalogCreatesDefaultCanonicalDescriptors()
+    {
+        var canMove = PlanPrimitiveCatalog.CreateDefaultCheck(PlanCheckKind.CanMove);
+        var blockingEntity = PlanPrimitiveCatalog.CreateDefaultCheck(PlanCheckKind.BlockingEntity);
+        var move = PlanPrimitiveCatalog.CreateDefaultEffect(PlanEffectKind.Move);
+        var reverse = PlanPrimitiveCatalog.CreateDefaultEffect(PlanEffectKind.ReverseDirection);
+
+        Assert.Equal(PlanCheckKind.CanMove, canMove.Kind);
+        Assert.Null(canMove.DirectionVariable);
+        Assert.Equal(PlanCheckKind.BlockingEntity, blockingEntity.Kind);
+        Assert.Null(blockingEntity.DirectionVariable);
+        Assert.Null(blockingEntity.TargetVariable);
+        Assert.Equal(PlanEffectKind.Move, move.Kind);
+        Assert.Null(move.DirectionVariable);
+        Assert.Equal(PlanEffectKind.ReverseDirection, reverse.Kind);
+        Assert.Null(reverse.DirectionVariable);
     }
 
     [Fact]
@@ -311,6 +452,32 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void BuiltInCanMoveCheckAndMoveEffectMoveActorUsingCanonicalFacingSlot()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.South));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("move-from-facing-slot"),
+            [
+                new ActionPlanStep(
+                    "move facing",
+                    [new CanMoveCheck()],
+                    new MoveEffect(),
+                    onFailure: null)
+            ]);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, context);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.True(TraceContains(result.Trace, "Read slot Facing"));
+        Assert.True(TraceContains(result.Trace, "Can move Facing"));
+        Assert.True(TraceContains(result.Trace, "Move Facing"));
+    }
+
+    [Fact]
     public void BuiltInCanMoveCheckFailureFallsThroughToSetVariableEffect()
     {
         var world = TestWorld.CreateWorld();
@@ -425,6 +592,26 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void BlockingEntityCheckWritesCanonicalTargetWhenCanonicalFacingIsBlocked()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.South));
+        var check = new BlockingEntityCheck();
+
+        var result = check.Evaluate(world, TestWorld.SlimeId, context, new MovementService());
+
+        Assert.True(result.Passed);
+        Assert.Equal(TraceStatus.Success, result.Trace.Status);
+        Assert.Empty(result.VariableWrites);
+        Assert.NotNull(result.SlotWrites);
+        Assert.True(result.SlotWrites.TryGetValue(ActionPlanSlot.Target, out var target));
+        var targetValue = Assert.IsType<EntityPlanValue>(target);
+        Assert.Equal(TestWorld.PlayerId, targetValue.Value);
+        Assert.Contains("Target=player", result.Trace.Detail);
+    }
+
+    [Fact]
     public void BlockingEntityCheckFailsWithoutWritingTargetWhenNoBlockerExists()
     {
         var world = TestWorld.CreateWorld();
@@ -485,6 +672,33 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void CanPickupCheckAndPickupEffectUseCanonicalTargetSlot()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Target, new EntityPlanValue(TestWorld.RockId));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("pickup-canonical-target"),
+            [
+                new ActionPlanStep(
+                    "pickup target",
+                    [new CanPickupCheck(new GridCoord(0, 0))],
+                    new PickupEffect(new GridCoord(0, 0)),
+                    onFailure: null)
+            ]);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, context);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(TestWorld.RockId));
+        Assert.True(TraceContains(result.Trace, "Read slot Target"));
+        Assert.True(TraceContains(result.Trace, "Pickup Target"));
+    }
+
+    [Fact]
     public void ReverseDirectionEffectUpdatesDirectionVariableWithoutConsumingTurn()
     {
         var world = TestWorld.CreateWorld();
@@ -499,6 +713,51 @@ public sealed class CoreActionPlanTests
         Assert.True(context.TryGet<DirectionPlanValue>("facing", out var facing));
         Assert.Equal(Direction.East, facing.Value);
         Assert.True(TraceContains(result.Trace, "Set variable facing"));
+    }
+
+    [Fact]
+    public void ReverseDirectionEffectUpdatesCanonicalFacingSlotWithoutConsumingTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
+        var effect = new ReverseDirectionEffect(consumesTurn: false, continuePlan: false);
+
+        var result = effect.Apply(world, TestWorld.SlimeId, context, new MovementService());
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.ConsumesTurn);
+        Assert.True(context.TryGet<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing));
+        Assert.Equal(Direction.East, facing.Value);
+        Assert.True(TraceContains(result.Trace, "Read slot Facing"));
+        Assert.True(TraceContains(result.Trace, "Set slot Facing"));
+    }
+
+    [Fact]
+    public void CallPlanEffectSharesCanonicalSlotsWithNestedPlan()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
+        var childId = new ActionPlanId("child-canonical");
+        var parent = new ActionPlanDefinition(
+            new ActionPlanId("parent-canonical"),
+            [new ActionPlanStep("call child", [], new CallPlanEffect(childId), onFailure: null)]);
+        var child = new ActionPlanDefinition(
+            childId,
+            [new ActionPlanStep("reverse facing", [], new ReverseDirectionEffect(consumesTurn: true, continuePlan: false), onFailure: null)]);
+        var interpreter = new ActionPlanInterpreter(
+            new MovementService(),
+            new Dictionary<ActionPlanId, ActionPlanDefinition> { [child.Id] = child });
+
+        var result = interpreter.Execute(world, TestWorld.PlayerId, parent, context);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.True(context.TryGet<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing));
+        Assert.Equal(Direction.East, facing.Value);
+        Assert.True(TraceContains(result.Trace, "Call plan child-canonical"));
+        Assert.True(TraceContains(result.Trace, "Set slot Facing"));
     }
 
     [Fact]
@@ -649,6 +908,31 @@ public sealed class CoreActionPlanTests
             read(value.Value);
 
             return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success(label, value.Value.ToString()));
+        }
+    }
+
+    private sealed class SlotWritingEffect(ActionPlanSlot slot, PlanValue value) : IPlanEffect
+    {
+        public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
+        {
+            var trace = context.Set(slot, value);
+
+            return new PlanEffectResult(true, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+    }
+
+    private sealed class SlotReadingEffect(ActionPlanSlot slot, Action<Direction> read) : IPlanEffect
+    {
+        public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
+        {
+            if (!context.TryRead<DirectionPlanValue>(slot, out var value, out var trace))
+            {
+                return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+            }
+
+            read(value.Value);
+
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
         }
     }
 }

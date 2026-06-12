@@ -237,8 +237,8 @@ public sealed class MainWindow : Window
                 },
                 new TabItem
                 {
-                    Header = "Variables",
-                    Content = new ScrollViewer { Content = BuildDefaultVariableEditor() }
+                    Header = "Actor State",
+                    Content = new ScrollViewer { Content = BuildActorStateEditor() }
                 }
             }
         };
@@ -397,19 +397,11 @@ public sealed class MainWindow : Window
             nameof(MainEditorViewModel.SuccessInventoryCoordY),
             nameof(MainEditorViewModel.SuccessConsumesTurnInput),
             nameof(MainEditorViewModel.SuccessContinuePlanInput),
-            nameof(MainEditorViewModel.SuccessSetVariableNameInput),
-            nameof(MainEditorViewModel.SelectedSuccessSetVariableValueKind),
-            nameof(MainEditorViewModel.SuccessSetVariableDirectionValue),
-            nameof(MainEditorViewModel.SuccessSetVariableEntityValueInput),
-            nameof(MainEditorViewModel.SuccessSetVariableCoordX),
-            nameof(MainEditorViewModel.SuccessSetVariableCoordY),
-            nameof(MainEditorViewModel.SuccessSetVariableIntValue),
             nameof(MainEditorViewModel.SelectedSuccessCallPlan),
             nameof(MainEditorViewModel.IsSuccessDirectionVariableVisible),
             nameof(MainEditorViewModel.IsSuccessTargetVariableVisible),
             nameof(MainEditorViewModel.IsSuccessInventoryCoordVisible),
             nameof(MainEditorViewModel.IsSuccessTurnFlagsVisible),
-            nameof(MainEditorViewModel.IsSuccessSetVariableVisible),
             nameof(MainEditorViewModel.IsSuccessCallPlanVisible)));
 
         var setSuccess = new Button { Content = "Set Success Effect", HorizontalAlignment = HorizontalAlignment.Left };
@@ -425,19 +417,11 @@ public sealed class MainWindow : Window
             nameof(MainEditorViewModel.FailureInventoryCoordY),
             nameof(MainEditorViewModel.FailureConsumesTurnInput),
             nameof(MainEditorViewModel.FailureContinuePlanInput),
-            nameof(MainEditorViewModel.FailureSetVariableNameInput),
-            nameof(MainEditorViewModel.SelectedFailureSetVariableValueKind),
-            nameof(MainEditorViewModel.FailureSetVariableDirectionValue),
-            nameof(MainEditorViewModel.FailureSetVariableEntityValueInput),
-            nameof(MainEditorViewModel.FailureSetVariableCoordX),
-            nameof(MainEditorViewModel.FailureSetVariableCoordY),
-            nameof(MainEditorViewModel.FailureSetVariableIntValue),
             nameof(MainEditorViewModel.SelectedFailureCallPlan),
             nameof(MainEditorViewModel.IsFailureDirectionVariableVisible),
             nameof(MainEditorViewModel.IsFailureTargetVariableVisible),
             nameof(MainEditorViewModel.IsFailureInventoryCoordVisible),
             nameof(MainEditorViewModel.IsFailureTurnFlagsVisible),
-            nameof(MainEditorViewModel.IsFailureSetVariableVisible),
             nameof(MainEditorViewModel.IsFailureCallPlanVisible)));
 
         var failureButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -461,19 +445,11 @@ public sealed class MainWindow : Window
         string coordYProperty,
         string consumesTurnProperty,
         string continuePlanProperty,
-        string setVariableNameProperty,
-        string setVariableKindProperty,
-        string setVariableDirectionProperty,
-        string setVariableEntityProperty,
-        string setVariableCoordXProperty,
-        string setVariableCoordYProperty,
-        string setVariableIntProperty,
         string callPlanProperty,
         string directionVariableVisibleProperty,
         string targetVariableVisibleProperty,
         string coordVisibleProperty,
         string turnFlagsVisibleProperty,
-        string setVariableVisibleProperty,
         string callPlanVisibleProperty)
     {
         var panel = new StackPanel { Spacing = 8 };
@@ -507,17 +483,6 @@ public sealed class MainWindow : Window
         continuePlan.Bind(IsVisibleProperty, new Binding(turnFlagsVisibleProperty));
         panel.Children.Add(continuePlan);
 
-        var setVariablePanel = BuildSetVariableInputs(
-            setVariableNameProperty,
-            setVariableKindProperty,
-            setVariableDirectionProperty,
-            setVariableEntityProperty,
-            setVariableCoordXProperty,
-            setVariableCoordYProperty,
-            setVariableIntProperty);
-        setVariablePanel.Bind(IsVisibleProperty, new Binding(setVariableVisibleProperty));
-        panel.Children.Add(setVariablePanel);
-
         var callPlan = new ComboBox();
         callPlan.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlans)));
         callPlan.Bind(ComboBox.SelectedItemProperty, new Binding(callPlanProperty) { Mode = BindingMode.TwoWay });
@@ -528,131 +493,29 @@ public sealed class MainWindow : Window
         return Wrap(header, panel);
     }
 
-    private Control BuildSetVariableInputs(
-        string nameProperty,
-        string kindProperty,
-        string directionProperty,
-        string entityProperty,
-        string coordXProperty,
-        string coordYProperty,
-        string intProperty)
-    {
-        var panel = new StackPanel { Spacing = 8 };
-
-        panel.Children.Add(BoundTextBox("Variable Name", nameProperty));
-
-        var kind = new ComboBox();
-        kind.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultVariableKinds)));
-        kind.Bind(ComboBox.SelectedItemProperty, new Binding(kindProperty) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Value Kind", kind));
-
-        var direction = new ComboBox();
-        direction.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.Directions)));
-        direction.Bind(ComboBox.SelectedItemProperty, new Binding(directionProperty) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Direction Value", direction));
-
-        panel.Children.Add(BoundTextBox("Entity Value", entityProperty));
-        panel.Children.Add(BoundNumeric("Coord X", coordXProperty));
-        panel.Children.Add(BoundNumeric("Coord Y", coordYProperty));
-        panel.Children.Add(BoundNumeric("Int Value", intProperty));
-
-        return Wrap("Set Variable", panel);
-    }
-
-    private Control BuildDefaultVariableEditor()
+    private Control BuildActorStateEditor()
     {
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 16, 0, 0) };
 
-        var variableList = new ListBox { MinHeight = 100 };
-        variableList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultPlanVariables)));
-        variableList.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultPlanVariable)) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Default Variables", variableList));
-
-        var directionSuggestions = new ListBox { MinHeight = 60 };
-        directionSuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DirectionVariableSuggestions)));
-        directionSuggestions.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDirectionVariableSuggestion)) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Direction Variable Suggestions", directionSuggestions));
-
-        var entitySuggestions = new ListBox { MinHeight = 60 };
-        entitySuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.EntityVariableSuggestions)));
-        entitySuggestions.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedEntityVariableSuggestion)) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Entity Variable Suggestions", entitySuggestions));
-
-        var applyDirectionButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var applyDirectionToCheck = new Button { Content = "Direction -> Check" };
-        applyDirectionToCheck.Click += (_, _) => ViewModel?.ApplySelectedDirectionSuggestionToCheck();
-        var applyDirectionToSuccess = new Button { Content = "Direction -> Success" };
-        applyDirectionToSuccess.Click += (_, _) => ViewModel?.ApplySelectedDirectionSuggestionToSuccessEffect();
-        var applyDirectionToFailure = new Button { Content = "Direction -> Failure" };
-        applyDirectionToFailure.Click += (_, _) => ViewModel?.ApplySelectedDirectionSuggestionToFailureEffect();
-        applyDirectionButtons.Children.Add(applyDirectionToCheck);
-        applyDirectionButtons.Children.Add(applyDirectionToSuccess);
-        applyDirectionButtons.Children.Add(applyDirectionToFailure);
-        panel.Children.Add(Wrap("Apply Direction Suggestion", applyDirectionButtons));
-
-        var applyEntityButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var applyEntityToCheck = new Button { Content = "Entity -> Check" };
-        applyEntityToCheck.Click += (_, _) => ViewModel?.ApplySelectedEntitySuggestionToCheck();
-        var applyEntityToSuccess = new Button { Content = "Entity -> Success" };
-        applyEntityToSuccess.Click += (_, _) => ViewModel?.ApplySelectedEntitySuggestionToSuccessEffect();
-        var applyEntityToFailure = new Button { Content = "Entity -> Failure" };
-        applyEntityToFailure.Click += (_, _) => ViewModel?.ApplySelectedEntitySuggestionToFailureEffect();
-        applyEntityButtons.Children.Add(applyEntityToCheck);
-        applyEntityButtons.Children.Add(applyEntityToSuccess);
-        applyEntityButtons.Children.Add(applyEntityToFailure);
-        panel.Children.Add(Wrap("Apply Entity Suggestion", applyEntityButtons));
-
-        var missingDirectionSuggestions = new ListBox { MinHeight = 60 };
-        missingDirectionSuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MissingDirectionVariableSuggestions)));
-        panel.Children.Add(Wrap("Missing Direction Variables", missingDirectionSuggestions));
-
-        var missingEntitySuggestions = new ListBox { MinHeight = 60 };
-        missingEntitySuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MissingEntityVariableSuggestions)));
-        panel.Children.Add(Wrap("Missing Entity Variables", missingEntitySuggestions));
-
-        var repairMissingDirection = new Button
-        {
-            Content = "Add First Missing Direction Variable",
-            HorizontalAlignment = HorizontalAlignment.Left
-        };
-        repairMissingDirection.Click += (_, _) => ViewModel?.AddFirstMissingDirectionVariableDefault();
-        panel.Children.Add(repairMissingDirection);
-
-        var repairMissingEntity = new Button
-        {
-            Content = "Add First Missing Entity Variable",
-            HorizontalAlignment = HorizontalAlignment.Left
-        };
-        repairMissingEntity.Click += (_, _) => ViewModel?.AddFirstMissingEntityVariableDefault();
-        panel.Children.Add(repairMissingEntity);
-
-        panel.Children.Add(BoundTextBox("Variable Name", nameof(MainEditorViewModel.DefaultVariableNameInput)));
-
-        var kinds = new ComboBox();
-        kinds.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultVariableKinds)));
-        kinds.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultVariableKind)) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Value Kind", kinds));
-
         var directions = new ComboBox();
         directions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.Directions)));
-        directions.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultVariableDirection)) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Direction Value", directions));
+        directions.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedInitialFacing)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Initial Facing", directions));
 
-        panel.Children.Add(BoundTextBox("Entity ID Value", nameof(MainEditorViewModel.DefaultVariableEntityIdInput)));
-        panel.Children.Add(BoundNumeric("Coord X", nameof(MainEditorViewModel.DefaultVariableCoordX)));
-        panel.Children.Add(BoundNumeric("Coord Y", nameof(MainEditorViewModel.DefaultVariableCoordY)));
-        panel.Children.Add(BoundNumeric("Int Value", nameof(MainEditorViewModel.DefaultVariableIntValue)));
+        var hasFacing = new TextBlock();
+        hasFacing.Bind(TextBlock.TextProperty, new Binding(nameof(MainEditorViewModel.HasInitialFacing)) { StringFormat = "Initial facing set: {0}" });
+        panel.Children.Add(hasFacing);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var set = new Button { Content = "Set Variable" };
-        set.Click += (_, _) => ViewModel?.SetDefaultPlanVariable();
-        var remove = new Button { Content = "Remove Selected" };
-        remove.Click += (_, _) => ViewModel?.RemoveSelectedDefaultPlanVariable();
+        var set = new Button { Content = "Set Initial Facing" };
+        set.Click += (_, _) => ViewModel?.SetInitialFacing();
+        var clear = new Button { Content = "Clear Initial Facing" };
+        clear.Click += (_, _) => ViewModel?.ClearInitialFacing();
         buttons.Children.Add(set);
-        buttons.Children.Add(remove);
+        buttons.Children.Add(clear);
         panel.Children.Add(buttons);
 
-        return Wrap("Default Plan Variables", panel);
+        return Wrap("Actor State", panel);
     }
 
     private Control BuildInventoryEditor()

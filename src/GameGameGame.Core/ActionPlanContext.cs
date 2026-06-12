@@ -1,5 +1,11 @@
 namespace GameGameGame.Core;
 
+public enum ActionPlanSlot
+{
+    Facing,
+    Target
+}
+
 public abstract record PlanValue;
 
 public sealed record DirectionPlanValue(Direction Value) : PlanValue
@@ -26,11 +32,20 @@ public sealed class ActionPlanContext
 {
     public Dictionary<string, PlanValue> Variables { get; } = [];
 
+    private readonly Dictionary<ActionPlanSlot, PlanValue> _slots = [];
+
     public TraceNode Set(string name, PlanValue value)
     {
         Variables[name] = value;
 
         return TraceNode.Success($"Set variable {name}", value.ToString());
+    }
+
+    public TraceNode Set(ActionPlanSlot slot, PlanValue value)
+    {
+        _slots[slot] = value;
+
+        return TraceNode.Success($"Set slot {slot}", value.ToString());
     }
 
     public bool TryGet<TValue>(string name, out TValue value)
@@ -45,4 +60,62 @@ public sealed class ActionPlanContext
         value = null!;
         return false;
     }
+
+    public bool TryGet<TValue>(ActionPlanSlot slot, out TValue value)
+        where TValue : PlanValue
+    {
+        if (_slots.TryGetValue(slot, out var stored) && stored is TValue typed)
+        {
+            value = typed;
+            return true;
+        }
+
+        value = null!;
+        return false;
+    }
+
+    public bool TryRead<TValue>(ActionPlanSlot slot, out TValue value, out TraceNode trace)
+        where TValue : PlanValue
+    {
+        trace = new TraceNode($"Read slot {slot}", TraceStatus.Info);
+
+        if (!_slots.TryGetValue(slot, out var stored))
+        {
+            value = null!;
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"missing {slot} slot";
+            return false;
+        }
+
+        if (stored is not TValue typed)
+        {
+            value = null!;
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"expected {FormatValueKind<TValue>()}, actual {FormatValueKind(stored)}";
+            return false;
+        }
+
+        value = typed;
+        trace.Status = TraceStatus.Success;
+        trace.Detail = typed.ToString();
+        return true;
+    }
+
+    private static string FormatValueKind<TValue>()
+        where TValue : PlanValue =>
+        typeof(TValue) == typeof(DirectionPlanValue) ? PlanValueKind.Direction.ToString() :
+        typeof(TValue) == typeof(EntityPlanValue) ? PlanValueKind.Entity.ToString() :
+        typeof(TValue) == typeof(CoordPlanValue) ? PlanValueKind.Coord.ToString() :
+        typeof(TValue) == typeof(IntPlanValue) ? PlanValueKind.Int.ToString() :
+        typeof(TValue).Name;
+
+    private static string FormatValueKind(PlanValue value) =>
+        value switch
+        {
+            DirectionPlanValue => PlanValueKind.Direction.ToString(),
+            EntityPlanValue => PlanValueKind.Entity.ToString(),
+            CoordPlanValue => PlanValueKind.Coord.ToString(),
+            IntPlanValue => PlanValueKind.Int.ToString(),
+            _ => value.GetType().Name
+        };
 }

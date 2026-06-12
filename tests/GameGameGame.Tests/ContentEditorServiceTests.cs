@@ -406,7 +406,99 @@ public sealed class ContentEditorServiceTests
         var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
 
         Assert.True(registry.Validate().IsValid);
-        Assert.Equal(Direction.East, registry.EntityTemplates[slimeId].DefaultPlanVariables!["facing"].DirectionValue);
+        Assert.Equal(Direction.East, registry.EntityTemplates[slimeId].ActionStateDefaults!.Facing);
+        Assert.Null(registry.EntityTemplates[slimeId].DefaultPlanVariables);
+    }
+
+    [Fact]
+    public void ContentEditorServiceEditsCanonicalActorActionStateDefaults()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans: {}
+            """));
+        var slimeId = new EntityTemplateId("slime");
+
+        editor.SetInitialFacing(slimeId, Direction.East);
+        var defaults = editor.GetActionStateDefaults(slimeId);
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(Direction.East, defaults.Facing);
+        Assert.Equal(Direction.East, registry.EntityTemplates[slimeId].ActionStateDefaults!.Facing);
+        Assert.Null(registry.EntityTemplates[slimeId].DefaultPlanVariables);
+
+        editor.ClearInitialFacing(slimeId);
+        var cleared = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Null(cleared.EntityTemplates[slimeId].ActionStateDefaults?.Facing);
+    }
+
+    [Fact]
+    public void ContentEditorServiceAddsAndUpdatesCanonicalActionPlanChecks()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              wandering:
+                id: wandering
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var planId = new ActionPlanTemplateId("wandering");
+
+        editor.AddActionPlanCheck(planId, stepIndex: 0, PlanCheckKind.CanMove);
+        editor.UpdateActionPlanCheck(planId, stepIndex: 0, checkIndex: 0, PlanCheckKind.BlockingEntity);
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var check = Assert.Single(registry.ActionPlanDescriptors[planId].Steps.Single().Checks);
+
+        Assert.Equal(PlanCheckKind.BlockingEntity, check.Kind);
+        Assert.Null(check.DirectionVariable);
+        Assert.Null(check.TargetVariable);
+    }
+
+    [Fact]
+    public void ContentEditorServiceSetsCanonicalActionPlanStepEffects()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              wandering:
+                id: wandering
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var planId = new ActionPlanTemplateId("wandering");
+
+        editor.SetActionPlanStepSuccessEffect(planId, stepIndex: 0, PlanEffectKind.Move);
+        editor.SetActionPlanStepFailureEffect(planId, stepIndex: 0, PlanEffectKind.ReverseDirection);
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var step = registry.ActionPlanDescriptors[planId].Steps.Single();
+
+        Assert.Equal(PlanEffectKind.Move, step.OnSuccess!.Kind);
+        Assert.Null(step.OnSuccess.DirectionVariable);
+        Assert.Equal(PlanEffectKind.ReverseDirection, step.OnFailure!.Kind);
+        Assert.Null(step.OnFailure.DirectionVariable);
     }
 
     [Fact]

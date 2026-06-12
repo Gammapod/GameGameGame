@@ -30,9 +30,15 @@ public sealed class PrototypeContentRegistry(
     public ActionPlanDescriptor GetActionPlanDescriptor(ActionPlanTemplateId id) => actionPlanTemplates[id];
 
     public IEntityActionPlan CreateActionPlan(ActionPlanTemplateId id) =>
-        CreateActionPlan(id, new Dictionary<string, PlanValueDescriptor>());
+        CreateActionPlan(id, new Dictionary<string, PlanValueDescriptor>(), actionStateDefaults: null);
 
     public IEntityActionPlan CreateActionPlan(ActionPlanTemplateId id, IReadOnlyDictionary<string, PlanValueDescriptor> variables)
+        => CreateActionPlan(id, variables, actionStateDefaults: null);
+
+    public IEntityActionPlan CreateActionPlan(
+        ActionPlanTemplateId id,
+        IReadOnlyDictionary<string, PlanValueDescriptor> variables,
+        ActorActionStateDefaults? actionStateDefaults)
     {
         var context = new ActionPlanContext();
 
@@ -40,6 +46,8 @@ public sealed class PrototypeContentRegistry(
         {
             context.Set(name, value.Materialize());
         }
+
+        ApplyActionStateDefaults(context, actionStateDefaults);
 
         return new InterpretedEntityActionPlan(
             GetActionPlanDescriptor(id).Materialize(),
@@ -105,6 +113,7 @@ public sealed class PrototypeContentRegistry(
         var defaultActionPlanId = options.ActionPlanOverrideId ?? template.DefaultActionPlanId;
 
         var variables = MergePlanVariables(template.DefaultPlanVariables, options.PlanVariableOverrides);
+        var actionStateDefaults = MergeActionStateDefaults(template.ActionStateDefaults, options.ActionStateOverrides);
 
         var carriedEntities = template.CarriedEntities;
         var parentResult = PrototypeContent.SpawnEntity(
@@ -116,7 +125,7 @@ public sealed class PrototypeContentRegistry(
 
         if (defaultActionPlanId is { } actionPlanTemplateId)
         {
-            actionPlan = CreateActionPlan(actionPlanTemplateId, variables);
+            actionPlan = CreateActionPlan(actionPlanTemplateId, variables, actionStateDefaults);
             actionPlans[parentResult.EntityId] = actionPlan;
         }
 
@@ -348,6 +357,161 @@ public sealed class PrototypeContentRegistry(
                 variables,
                 plansById,
                 []);
+
+            var slots = GetInitialActionSlots(template);
+            ValidatePlanSlots(
+                diagnostics,
+                $"Entity template {templateId} ({template.Name}) action plan {plan.Id}",
+                templateId,
+                actionPlanTemplateId,
+                plan,
+                slots,
+                plansById,
+                []);
+        }
+    }
+
+    private static Dictionary<ActionPlanSlot, PlanValueKind> GetInitialActionSlots(EntityTemplate template)
+    {
+        var slots = new Dictionary<ActionPlanSlot, PlanValueKind>();
+
+        if (template.ActionStateDefaults?.Facing is not null)
+        {
+            slots[ActionPlanSlot.Facing] = PlanValueKind.Direction;
+        }
+
+        if (template.ActionStateDefaults?.Target is not null)
+        {
+            slots[ActionPlanSlot.Target] = PlanValueKind.Entity;
+        }
+
+        if (template.DefaultPlanVariables is not null)
+        {
+            foreach (var (name, value) in template.DefaultPlanVariables)
+            {
+                if (string.Equals(name, "facing", StringComparison.Ordinal) && value.Kind == PlanValueKind.Direction)
+                {
+                    slots[ActionPlanSlot.Facing] = PlanValueKind.Direction;
+                }
+
+                if (string.Equals(name, "target", StringComparison.Ordinal) && value.Kind == PlanValueKind.Entity)
+                {
+                    slots[ActionPlanSlot.Target] = PlanValueKind.Entity;
+                }
+            }
+        }
+
+        return slots;
+    }
+
+    private static void ValidatePlanSlots(
+        List<ContentDiagnostic> diagnostics,
+        string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots,
+        IReadOnlyDictionary<ActionPlanId, ActionPlanDescriptor> plansById,
+        HashSet<ActionPlanId> callStack)
+    {
+        if (!callStack.Add(plan.Id))
+        {
+            return;
+        }
+
+        foreach (var step in plan.Steps)
+        {
+            foreach (var check in step.Checks)
+            {
+                ValidateSlotReads(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, PlanPrimitiveCatalog.GetCheck(check.Kind).SlotReads, slots);
+                ApplySlotWrites(PlanPrimitiveCatalog.GetCheck(check.Kind).SlotWrites, slots);
+            }
+
+            ValidateEffectSlots(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, step.OnSuccess, slots, plansById, callStack);
+            ValidateEffectSlots(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, step.OnFailure, slots, plansById, callStack);
+        }
+
+        callStack.Remove(plan.Id);
+    }
+
+    private static void ValidateEffectSlots(
+        List<ContentDiagnostic> diagnostics,
+        string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        ActionPlanStepDescriptor step,
+        PlanEffectDescriptor? effect,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots,
+        IReadOnlyDictionary<ActionPlanId, ActionPlanDescriptor> plansById,
+        HashSet<ActionPlanId> callStack)
+    {
+        if (effect is null)
+        {
+            return;
+        }
+
+        var fields = PlanPrimitiveCatalog.GetEffect(effect.Kind);
+        ValidateSlotReads(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, fields.SlotReads, slots);
+        ApplySlotWrites(fields.SlotWrites, slots);
+
+        if (effect.Kind == PlanEffectKind.CallPlan
+            && effect.PlanId is { } planId
+            && plansById.TryGetValue(planId, out var calledPlan))
+        {
+            ValidatePlanSlots(diagnostics, subject, entityTemplateId, actionPlanTemplateId, calledPlan, slots, plansById, callStack);
+        }
+    }
+
+    private static void ValidateSlotReads(
+        List<ContentDiagnostic> diagnostics,
+        string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        ActionPlanStepDescriptor step,
+        IReadOnlyList<PlanPrimitiveSlotDescriptor> reads,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots)
+    {
+        foreach (var read in reads)
+        {
+            if (!slots.TryGetValue(read.Slot, out var actualKind))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingPlanSlot,
+                    $"{subject} step {step.Label} reads missing required slot {read.Slot}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    stepIndex: StepIndex(plan, step),
+                    actionPlanSlot: read.Slot,
+                    expectedValueKind: read.ValueKind));
+                continue;
+            }
+
+            if (actualKind != read.ValueKind)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.PlanVariableTypeMismatch,
+                    $"{subject} step {step.Label} slot {read.Slot} expected {read.ValueKind} but found {actualKind}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    stepIndex: StepIndex(plan, step),
+                    actionPlanSlot: read.Slot,
+                    expectedValueKind: read.ValueKind,
+                    actualValueKind: actualKind));
+            }
+        }
+    }
+
+    private static void ApplySlotWrites(
+        IReadOnlyList<PlanPrimitiveSlotDescriptor> writes,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots)
+    {
+        foreach (var write in writes)
+        {
+            slots[write.Slot] = write.ValueKind;
         }
     }
 
@@ -612,5 +776,37 @@ public sealed class PrototypeContentRegistry(
         }
 
         return merged;
+    }
+
+    private static ActorActionStateDefaults? MergeActionStateDefaults(
+        ActorActionStateDefaults? defaults,
+        ActorActionStateDefaults? overrides)
+    {
+        if (defaults is null)
+        {
+            return overrides;
+        }
+
+        if (overrides is null)
+        {
+            return defaults;
+        }
+
+        return new ActorActionStateDefaults(
+            overrides.Facing ?? defaults.Facing,
+            overrides.Target ?? defaults.Target);
+    }
+
+    private static void ApplyActionStateDefaults(ActionPlanContext context, ActorActionStateDefaults? defaults)
+    {
+        if (defaults?.Facing is { } facing)
+        {
+            context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(facing));
+        }
+
+        if (defaults?.Target is { } target)
+        {
+            context.Set(ActionPlanSlot.Target, new EntityPlanValue(target));
+        }
     }
 }

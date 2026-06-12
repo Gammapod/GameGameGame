@@ -74,7 +74,7 @@ entityTemplates:
     inventoryHeight: 1
     weight: 3
     carryingCapacity: 0
-    defaultActionPlanId: wandering
+    defaultActionPlanId: test
     defaultPlanVariables:
       facing:
         kind: Direction
@@ -105,17 +105,13 @@ actionPlans:
     - label: move facing
       checks:
       - kind: CanMove
-        directionVariable: facing
       onSuccess:
         kind: Move
-        directionVariable: facing
         consumesTurn: false
         continuePlan: false
     - label: handle blocker
       checks:
       - kind: BlockingEntity
-        directionVariable: facing
-        targetVariable: target
       onSuccess:
         kind: CallPlan
         planId: handleBlocker
@@ -123,7 +119,6 @@ actionPlans:
         continuePlan: false
       onFailure:
         kind: ReverseDirection
-        directionVariable: facing
         consumesTurn: false
         continuePlan: true
     - label: wait
@@ -138,13 +133,11 @@ actionPlans:
     - label: pickup blocker
       checks:
       - kind: CanPickup
-        targetVariable: target
         inventoryCoord:
           x: 0
           y: 0
       onSuccess:
         kind: Pickup
-        targetVariable: target
         inventoryCoord:
           x: 0
           y: 0
@@ -154,6 +147,30 @@ actionPlans:
       checks: []
       onSuccess:
         kind: ReverseDirection
-        directionVariable: facing
+        consumesTurn: true
+        continuePlan: false
+  test:
+    id: test
+    steps:
+    - label: wait
+      checks:
+      - kind: CanMove
+      onSuccess:
+        kind: Move
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: ReverseDirection
+        consumesTurn: false
+        continuePlan: true
+    - label: wait 2
+      checks:
+      - kind: CanMove
+      onSuccess:
+        kind: Move
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: ReverseDirection
         consumesTurn: true
         continuePlan: false
