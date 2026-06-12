@@ -70,6 +70,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private int _defaultVariableCoordX;
     private int _defaultVariableCoordY;
     private int _defaultVariableIntValue;
+    private string? _selectedDirectionVariableSuggestion;
+    private string? _selectedEntityVariableSuggestion;
     private string? _statusMessage;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -105,6 +107,18 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     public ObservableCollection<string> MissingDirectionVariableSuggestions { get; } = [];
 
     public ObservableCollection<string> MissingEntityVariableSuggestions { get; } = [];
+
+    public string? SelectedDirectionVariableSuggestion
+    {
+        get => _selectedDirectionVariableSuggestion;
+        set => SetField(ref _selectedDirectionVariableSuggestion, value);
+    }
+
+    public string? SelectedEntityVariableSuggestion
+    {
+        get => _selectedEntityVariableSuggestion;
+        set => SetField(ref _selectedEntityVariableSuggestion, value);
+    }
 
     public IReadOnlyList<PlanValueKind> DefaultVariableKinds { get; } = Enum.GetValues<PlanValueKind>();
 
@@ -1200,6 +1214,54 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         SelectEntityPreset(presetId);
         SelectedDefaultPlanVariable = DefaultPlanVariables.SingleOrDefault(item => item.Name == variableName);
         StatusMessage = $"Added missing entity variable {variableName}.";
+    }
+
+    public void ApplySelectedDirectionSuggestionToCheck()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedDirectionVariableSuggestion))
+        {
+            CheckDirectionVariableInput = SelectedDirectionVariableSuggestion;
+        }
+    }
+
+    public void ApplySelectedEntitySuggestionToCheck()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedEntityVariableSuggestion))
+        {
+            CheckTargetVariableInput = SelectedEntityVariableSuggestion;
+        }
+    }
+
+    public void ApplySelectedDirectionSuggestionToSuccessEffect()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedDirectionVariableSuggestion))
+        {
+            SuccessDirectionVariableInput = SelectedDirectionVariableSuggestion;
+        }
+    }
+
+    public void ApplySelectedEntitySuggestionToSuccessEffect()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedEntityVariableSuggestion))
+        {
+            SuccessTargetVariableInput = SelectedEntityVariableSuggestion;
+        }
+    }
+
+    public void ApplySelectedDirectionSuggestionToFailureEffect()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedDirectionVariableSuggestion))
+        {
+            FailureDirectionVariableInput = SelectedDirectionVariableSuggestion;
+        }
+    }
+
+    public void ApplySelectedEntitySuggestionToFailureEffect()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedEntityVariableSuggestion))
+        {
+            FailureTargetVariableInput = SelectedEntityVariableSuggestion;
+        }
     }
 
     public void PlaceSelectedTemplateInInventory()

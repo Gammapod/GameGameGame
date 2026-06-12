@@ -15,6 +15,8 @@ permission:
     "src/GameGameGame.Console/**": deny
     "src/GameGameGame.Content/**": deny
     "*": ask
+  task:
+    allow
 ---
 
 You are Core-Owner for the GameGameGame project. Your role is to maintain parity between engine capabilities and the editor's ability to make use of those capabilities.

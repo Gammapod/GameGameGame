@@ -570,11 +570,37 @@ public sealed class MainWindow : Window
 
         var directionSuggestions = new ListBox { MinHeight = 60 };
         directionSuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DirectionVariableSuggestions)));
+        directionSuggestions.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDirectionVariableSuggestion)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Direction Variable Suggestions", directionSuggestions));
 
         var entitySuggestions = new ListBox { MinHeight = 60 };
         entitySuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.EntityVariableSuggestions)));
+        entitySuggestions.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedEntityVariableSuggestion)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Entity Variable Suggestions", entitySuggestions));
+
+        var applyDirectionButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var applyDirectionToCheck = new Button { Content = "Direction -> Check" };
+        applyDirectionToCheck.Click += (_, _) => ViewModel?.ApplySelectedDirectionSuggestionToCheck();
+        var applyDirectionToSuccess = new Button { Content = "Direction -> Success" };
+        applyDirectionToSuccess.Click += (_, _) => ViewModel?.ApplySelectedDirectionSuggestionToSuccessEffect();
+        var applyDirectionToFailure = new Button { Content = "Direction -> Failure" };
+        applyDirectionToFailure.Click += (_, _) => ViewModel?.ApplySelectedDirectionSuggestionToFailureEffect();
+        applyDirectionButtons.Children.Add(applyDirectionToCheck);
+        applyDirectionButtons.Children.Add(applyDirectionToSuccess);
+        applyDirectionButtons.Children.Add(applyDirectionToFailure);
+        panel.Children.Add(Wrap("Apply Direction Suggestion", applyDirectionButtons));
+
+        var applyEntityButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var applyEntityToCheck = new Button { Content = "Entity -> Check" };
+        applyEntityToCheck.Click += (_, _) => ViewModel?.ApplySelectedEntitySuggestionToCheck();
+        var applyEntityToSuccess = new Button { Content = "Entity -> Success" };
+        applyEntityToSuccess.Click += (_, _) => ViewModel?.ApplySelectedEntitySuggestionToSuccessEffect();
+        var applyEntityToFailure = new Button { Content = "Entity -> Failure" };
+        applyEntityToFailure.Click += (_, _) => ViewModel?.ApplySelectedEntitySuggestionToFailureEffect();
+        applyEntityButtons.Children.Add(applyEntityToCheck);
+        applyEntityButtons.Children.Add(applyEntityToSuccess);
+        applyEntityButtons.Children.Add(applyEntityToFailure);
+        panel.Children.Add(Wrap("Apply Entity Suggestion", applyEntityButtons));
 
         var missingDirectionSuggestions = new ListBox { MinHeight = 60 };
         missingDirectionSuggestions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MissingDirectionVariableSuggestions)));

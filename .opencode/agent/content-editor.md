@@ -15,6 +15,8 @@ permission:
     "src/GameGameGame.Console/**": deny
     "src/GameGameGame.Core/**": deny
     "*": ask
+  task:
+    allow
 ---
 
 You are a Content Editor for the GameGameGame project. Your role is to author and manage game content using the provided editor tools.

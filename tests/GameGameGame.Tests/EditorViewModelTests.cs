@@ -1252,6 +1252,47 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
+    public void EditorViewModelAppliesSelectedVariableSuggestionsToCheckAndEffects()
+    {
+        var path = WriteTempContentFile(BlockingEntityCheckActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+            editor.SelectedDirectionVariableSuggestion = "facing";
+            editor.SelectedEntityVariableSuggestion = "target";
+
+            editor.CheckDirectionVariableInput = string.Empty;
+            editor.CheckTargetVariableInput = string.Empty;
+            editor.SuccessDirectionVariableInput = string.Empty;
+            editor.SuccessTargetVariableInput = string.Empty;
+            editor.FailureDirectionVariableInput = string.Empty;
+            editor.FailureTargetVariableInput = string.Empty;
+
+            editor.ApplySelectedDirectionSuggestionToCheck();
+            editor.ApplySelectedEntitySuggestionToCheck();
+            editor.ApplySelectedDirectionSuggestionToSuccessEffect();
+            editor.ApplySelectedEntitySuggestionToSuccessEffect();
+            editor.ApplySelectedDirectionSuggestionToFailureEffect();
+            editor.ApplySelectedEntitySuggestionToFailureEffect();
+
+            Assert.Equal("facing", editor.CheckDirectionVariableInput);
+            Assert.Equal("target", editor.CheckTargetVariableInput);
+            Assert.Equal("facing", editor.SuccessDirectionVariableInput);
+            Assert.Equal("target", editor.SuccessTargetVariableInput);
+            Assert.Equal("facing", editor.FailureDirectionVariableInput);
+            Assert.Equal("target", editor.FailureTargetVariableInput);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void EditorViewModelSuggestsEntityVariablesForSelectedPresetDefaults()
     {
         var path = WriteTempContentFile(ActionPlanContentYamlWithEntityDefaultVariable);
