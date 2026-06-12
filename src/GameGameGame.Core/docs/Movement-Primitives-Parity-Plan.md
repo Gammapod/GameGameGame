@@ -111,14 +111,14 @@ Initial intended shape:
 
 ## Implementation phases
 
-### Phase 0: Finish current cleanup
+### Phase 0: Finish current cleanup - complete
 
-Complete before movement changes:
+Completed before movement changes:
 
-- Remove remaining hidden variable input plumbing from GUI/view-model.
-- Hide/fix GUI turn flags for `ReverseDirection`; keep descriptor/runtime fields as advanced compatibility.
-- Keep legacy `SetVariable` display/load/runtime compatibility only.
-- Update docs/tests after cleanup.
+- Removed remaining hidden variable input plumbing from GUI/view-model.
+- Fixed GUI-authored `ReverseDirection` turn behavior while keeping descriptor/runtime fields as advanced compatibility.
+- Kept legacy `SetVariable` display/load/runtime compatibility only.
+- Updated docs/tests after cleanup.
 
 ### Phase 1: Introduce typed relocation model in Core
 

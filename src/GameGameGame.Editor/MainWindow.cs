@@ -347,14 +347,6 @@ public sealed class MainWindow : Window
         kind.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedCheckKind)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Kind", kind));
 
-        var directionVariable = BoundTextBox("Direction Variable", nameof(MainEditorViewModel.CheckDirectionVariableInput));
-        directionVariable.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckDirectionVariableVisible)));
-        panel.Children.Add(directionVariable);
-
-        var targetVariable = BoundTextBox("Target Variable", nameof(MainEditorViewModel.CheckTargetVariableInput));
-        targetVariable.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckTargetVariableVisible)));
-        panel.Children.Add(targetVariable);
-
         var checkCoordX = BoundNumeric("Inventory X", nameof(MainEditorViewModel.CheckInventoryCoordX));
         checkCoordX.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckInventoryCoordVisible)));
         panel.Children.Add(checkCoordX);
@@ -391,17 +383,10 @@ public sealed class MainWindow : Window
         panel.Children.Add(BuildEffectInputs(
             "Success Effect",
             nameof(MainEditorViewModel.SelectedSuccessEffectKind),
-            nameof(MainEditorViewModel.SuccessDirectionVariableInput),
-            nameof(MainEditorViewModel.SuccessTargetVariableInput),
             nameof(MainEditorViewModel.SuccessInventoryCoordX),
             nameof(MainEditorViewModel.SuccessInventoryCoordY),
-            nameof(MainEditorViewModel.SuccessConsumesTurnInput),
-            nameof(MainEditorViewModel.SuccessContinuePlanInput),
             nameof(MainEditorViewModel.SelectedSuccessCallPlan),
-            nameof(MainEditorViewModel.IsSuccessDirectionVariableVisible),
-            nameof(MainEditorViewModel.IsSuccessTargetVariableVisible),
             nameof(MainEditorViewModel.IsSuccessInventoryCoordVisible),
-            nameof(MainEditorViewModel.IsSuccessTurnFlagsVisible),
             nameof(MainEditorViewModel.IsSuccessCallPlanVisible)));
 
         var setSuccess = new Button { Content = "Set Success Effect", HorizontalAlignment = HorizontalAlignment.Left };
@@ -411,17 +396,10 @@ public sealed class MainWindow : Window
         panel.Children.Add(BuildEffectInputs(
             "Failure Effect",
             nameof(MainEditorViewModel.SelectedFailureEffectKind),
-            nameof(MainEditorViewModel.FailureDirectionVariableInput),
-            nameof(MainEditorViewModel.FailureTargetVariableInput),
             nameof(MainEditorViewModel.FailureInventoryCoordX),
             nameof(MainEditorViewModel.FailureInventoryCoordY),
-            nameof(MainEditorViewModel.FailureConsumesTurnInput),
-            nameof(MainEditorViewModel.FailureContinuePlanInput),
             nameof(MainEditorViewModel.SelectedFailureCallPlan),
-            nameof(MainEditorViewModel.IsFailureDirectionVariableVisible),
-            nameof(MainEditorViewModel.IsFailureTargetVariableVisible),
             nameof(MainEditorViewModel.IsFailureInventoryCoordVisible),
-            nameof(MainEditorViewModel.IsFailureTurnFlagsVisible),
             nameof(MainEditorViewModel.IsFailureCallPlanVisible)));
 
         var failureButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -439,17 +417,10 @@ public sealed class MainWindow : Window
     private Control BuildEffectInputs(
         string header,
         string kindProperty,
-        string directionVariableProperty,
-        string targetVariableProperty,
         string coordXProperty,
         string coordYProperty,
-        string consumesTurnProperty,
-        string continuePlanProperty,
         string callPlanProperty,
-        string directionVariableVisibleProperty,
-        string targetVariableVisibleProperty,
         string coordVisibleProperty,
-        string turnFlagsVisibleProperty,
         string callPlanVisibleProperty)
     {
         var panel = new StackPanel { Spacing = 8 };
@@ -459,14 +430,6 @@ public sealed class MainWindow : Window
         kind.Bind(ComboBox.SelectedItemProperty, new Binding(kindProperty) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Kind", kind));
 
-        var directionVariable = BoundTextBox("Direction Variable", directionVariableProperty);
-        directionVariable.Bind(IsVisibleProperty, new Binding(directionVariableVisibleProperty));
-        panel.Children.Add(directionVariable);
-
-        var targetVariable = BoundTextBox("Target Variable", targetVariableProperty);
-        targetVariable.Bind(IsVisibleProperty, new Binding(targetVariableVisibleProperty));
-        panel.Children.Add(targetVariable);
-
         var coordX = BoundNumeric("Inventory X", coordXProperty);
         coordX.Bind(IsVisibleProperty, new Binding(coordVisibleProperty));
         panel.Children.Add(coordX);
@@ -474,14 +437,6 @@ public sealed class MainWindow : Window
         var coordY = BoundNumeric("Inventory Y", coordYProperty);
         coordY.Bind(IsVisibleProperty, new Binding(coordVisibleProperty));
         panel.Children.Add(coordY);
-
-        var consumesTurn = BoundCheckBox("Consumes Turn", consumesTurnProperty);
-        consumesTurn.Bind(IsVisibleProperty, new Binding(turnFlagsVisibleProperty));
-        panel.Children.Add(consumesTurn);
-
-        var continuePlan = BoundCheckBox("Continue Plan", continuePlanProperty);
-        continuePlan.Bind(IsVisibleProperty, new Binding(turnFlagsVisibleProperty));
-        panel.Children.Add(continuePlan);
 
         var callPlan = new ComboBox();
         callPlan.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlans)));

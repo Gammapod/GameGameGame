@@ -619,7 +619,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
 
             Assert.Equal(PlanEffectKind.Move, editor.SelectedSuccessEffectKind);
-            Assert.Equal("facing", editor.SuccessDirectionVariableInput);
             Assert.Equal(PlanEffectKind.CallPlan, editor.SelectedFailureEffectKind);
             Assert.Equal(editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("handleBlocker")), editor.SelectedFailureCallPlan);
         }
@@ -641,7 +640,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
             editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
-            editor.SuccessDirectionVariableInput = "facing";
 
             editor.SetSelectedStepSuccessEffect();
 
@@ -700,10 +698,8 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
 
             Assert.Equal(PlanEffectKind.Pickup, editor.SelectedSuccessEffectKind);
-            Assert.Equal("target", editor.SuccessTargetVariableInput);
             Assert.Equal(1, editor.SuccessInventoryCoordX);
             Assert.Equal(2, editor.SuccessInventoryCoordY);
-            Assert.False(editor.IsSuccessTargetVariableVisible);
             Assert.True(editor.IsSuccessInventoryCoordVisible);
         }
         finally
@@ -724,7 +720,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
             editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
-            editor.SuccessTargetVariableInput = "target";
             editor.SuccessInventoryCoordX = 1;
             editor.SuccessInventoryCoordY = 2;
 
@@ -753,11 +748,7 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
 
             Assert.Equal(PlanEffectKind.ReverseDirection, editor.SelectedSuccessEffectKind);
-            Assert.Equal("facing", editor.SuccessDirectionVariableInput);
-            Assert.True(editor.SuccessConsumesTurnInput);
-            Assert.False(editor.SuccessContinuePlanInput);
-            Assert.False(editor.IsSuccessDirectionVariableVisible);
-            Assert.True(editor.IsSuccessTurnFlagsVisible);
+            Assert.Equal("Success: ReverseDirection(directionVariable=facing, consumesTurn=True, continuePlan=False)", editor.ActionPlanSteps[0].SuccessSummary);
         }
         finally
         {
@@ -777,15 +768,12 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
             editor.SelectedFailureEffectKind = PlanEffectKind.ReverseDirection;
-            editor.FailureDirectionVariableInput = "facing";
-            editor.FailureConsumesTurnInput = false;
-            editor.FailureContinuePlanInput = true;
 
             editor.SetSelectedStepFailureEffect();
 
-            Assert.Equal("Failure: ReverseDirection(consumesTurn=False, continuePlan=True)", editor.ActionPlanSteps[1].FailureSummary);
+            Assert.Equal("Failure: ReverseDirection(consumesTurn=False, continuePlan=False)", editor.ActionPlanSteps[1].FailureSummary);
             Assert.Contains("kind: ReverseDirection", editor.YamlPreview);
-            Assert.Contains("continuePlan: true", editor.YamlPreview);
+            Assert.DoesNotContain("continuePlan: true", editor.YamlPreview);
         }
         finally
         {
@@ -807,7 +795,6 @@ public sealed class EditorViewModelTests
 
             Assert.Equal(PlanEffectKind.SetVariable, editor.SelectedSuccessEffectKind);
             Assert.Equal("Success: SetVariable(variableName=facing, value=East, consumesTurn=True, continuePlan=False)", editor.ActionPlanSteps[0].SuccessSummary);
-            Assert.False(editor.IsSuccessTurnFlagsVisible);
         }
         finally
         {
@@ -848,55 +835,33 @@ public sealed class EditorViewModelTests
         editor.SelectedSuccessEffectKind = PlanEffectKind.Wait;
         editor.SelectedFailureEffectKind = PlanEffectKind.CallPlan;
 
-        Assert.False(editor.IsSuccessDirectionVariableVisible);
         Assert.False(editor.IsSuccessCallPlanVisible);
-        Assert.False(editor.IsFailureDirectionVariableVisible);
         Assert.True(editor.IsFailureCallPlanVisible);
 
         editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
         editor.SelectedFailureEffectKind = PlanEffectKind.Wait;
 
-        Assert.False(editor.IsSuccessDirectionVariableVisible);
         Assert.False(editor.IsSuccessCallPlanVisible);
-        Assert.False(editor.IsFailureDirectionVariableVisible);
         Assert.False(editor.IsFailureCallPlanVisible);
 
         editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
 
-        Assert.False(editor.IsSuccessTargetVariableVisible);
         Assert.True(editor.IsSuccessInventoryCoordVisible);
-
-        editor.SelectedSuccessEffectKind = PlanEffectKind.ReverseDirection;
-
-        Assert.False(editor.IsSuccessDirectionVariableVisible);
-        Assert.True(editor.IsSuccessTurnFlagsVisible);
-
-        editor.SelectedSuccessEffectKind = PlanEffectKind.SetVariable;
-
-        Assert.False(editor.IsSuccessTurnFlagsVisible);
     }
 
     [Fact]
-    public void EditorViewModelHidesCanonicalVariableInputsForActionPlanPrimitives()
+    public void EditorViewModelExposesOnlyLiteralInputsForCanonicalPrimitives()
     {
         var editor = new MainEditorViewModel();
 
         editor.SelectedCheckKind = PlanCheckKind.CanMove;
-        Assert.False(editor.IsCheckDirectionVariableVisible);
         editor.SelectedCheckKind = PlanCheckKind.BlockingEntity;
-        Assert.False(editor.IsCheckDirectionVariableVisible);
-        Assert.False(editor.IsCheckTargetVariableVisible);
         editor.SelectedCheckKind = PlanCheckKind.CanPickup;
-        Assert.False(editor.IsCheckTargetVariableVisible);
         Assert.True(editor.IsCheckInventoryCoordVisible);
 
         editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
-        Assert.False(editor.IsSuccessDirectionVariableVisible);
         editor.SelectedSuccessEffectKind = PlanEffectKind.Pickup;
-        Assert.False(editor.IsSuccessTargetVariableVisible);
         Assert.True(editor.IsSuccessInventoryCoordVisible);
-        editor.SelectedFailureEffectKind = PlanEffectKind.ReverseDirection;
-        Assert.False(editor.IsFailureDirectionVariableVisible);
     }
 
     [Fact]
@@ -926,7 +891,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStepCheck = check;
 
             Assert.Equal(PlanCheckKind.CanMove, editor.SelectedCheckKind);
-            Assert.Equal("facing", editor.CheckDirectionVariableInput);
         }
         finally
         {
@@ -945,7 +909,6 @@ public sealed class EditorViewModelTests
             editor.OpenFile(path);
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
-            editor.CheckDirectionVariableInput = "facing";
 
             editor.AddCanMoveCheckToSelectedStep();
 
@@ -974,7 +937,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
             editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
-            editor.CheckDirectionVariableInput = "turnDirection";
 
             editor.UpdateSelectedStepCheck();
 
@@ -1061,10 +1023,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
 
             Assert.Equal(PlanCheckKind.BlockingEntity, editor.SelectedCheckKind);
-            Assert.Equal("facing", editor.CheckDirectionVariableInput);
-            Assert.Equal("target", editor.CheckTargetVariableInput);
-            Assert.False(editor.IsCheckDirectionVariableVisible);
-            Assert.False(editor.IsCheckTargetVariableVisible);
         }
         finally
         {
@@ -1084,15 +1042,12 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
             editor.SelectedCheckKind = PlanCheckKind.BlockingEntity;
-            editor.CheckDirectionVariableInput = "facing";
-            editor.CheckTargetVariableInput = "blocker";
 
             editor.AddSelectedCheckToSelectedStep();
 
             var check = Assert.Single(editor.ActionPlanStepChecks);
             Assert.Equal("BlockingEntity", check.Summary);
 
-            editor.CheckTargetVariableInput = "target";
             editor.UpdateSelectedStepCheck();
 
             Assert.Equal("BlockingEntity", editor.ActionPlanStepChecks.Single().Summary);
@@ -1119,11 +1074,8 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
 
             Assert.Equal(PlanCheckKind.CanPickup, editor.SelectedCheckKind);
-            Assert.Equal("target", editor.CheckTargetVariableInput);
             Assert.Equal(1, editor.CheckInventoryCoordX);
             Assert.Equal(2, editor.CheckInventoryCoordY);
-            Assert.False(editor.IsCheckDirectionVariableVisible);
-            Assert.False(editor.IsCheckTargetVariableVisible);
             Assert.True(editor.IsCheckInventoryCoordVisible);
         }
         finally
@@ -1144,7 +1096,6 @@ public sealed class EditorViewModelTests
             editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
             editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
             editor.SelectedCheckKind = PlanCheckKind.CanPickup;
-            editor.CheckTargetVariableInput = "target";
             editor.CheckInventoryCoordX = 1;
             editor.CheckInventoryCoordY = 2;
 

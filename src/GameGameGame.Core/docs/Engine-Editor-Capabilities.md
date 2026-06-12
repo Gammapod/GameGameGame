@@ -100,12 +100,17 @@ Canonical authoring should use:
 - `actionStateDefaults` for persistent initial state
 - primitive catalog slot read/write metadata
 
-## Current cleanup priorities before agent API
+## Remaining priorities before agent API
 
-1. Remove remaining hidden legacy variable input plumbing from the GUI/view-model.
-2. Make GUI author fixed turn behavior for `ReverseDirection`, while preserving descriptor/runtime advanced fields.
-3. Keep `SetVariable` legacy display/load/runtime compatibility only; do not author it from canonical editor workflows.
-4. Add field-level editor-service operations for remaining authored literal fields:
+Completed cleanup:
+
+- GUI/view-model hidden legacy variable input plumbing has been removed.
+- GUI authoring uses fixed default turn behavior for `ReverseDirection`; descriptor/runtime advanced fields remain for compatibility/future advanced support.
+- `SetVariable` is legacy display/load/runtime compatible only and is not authored from canonical editor workflows.
+
+Next priorities:
+
+1. Add field-level editor-service operations for remaining authored literal fields:
    - pickup inventory coordinate
    - called plan reference
-5. Plan typed movement/relocation locations before adding `Drop`/`Teleport` action-plan parity.
+2. Plan typed movement/relocation locations before adding `Drop`/`Teleport` action-plan parity.

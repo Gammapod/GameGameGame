@@ -28,24 +28,14 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private ActionPlanStepCheckListItem? _selectedActionPlanStepCheck;
     private string _actionPlanStepLabelInput = string.Empty;
     private PlanCheckKind _selectedCheckKind = PlanCheckKind.CanMove;
-    private string _checkDirectionVariableInput = string.Empty;
-    private string _checkTargetVariableInput = string.Empty;
     private int _checkInventoryCoordX;
     private int _checkInventoryCoordY;
     private PlanEffectKind _selectedSuccessEffectKind = PlanEffectKind.Wait;
     private PlanEffectKind _selectedFailureEffectKind = PlanEffectKind.Wait;
-    private string _successDirectionVariableInput = string.Empty;
-    private string _failureDirectionVariableInput = string.Empty;
-    private string _successTargetVariableInput = string.Empty;
-    private string _failureTargetVariableInput = string.Empty;
     private int _successInventoryCoordX;
     private int _successInventoryCoordY;
     private int _failureInventoryCoordX;
     private int _failureInventoryCoordY;
-    private bool _successConsumesTurnInput;
-    private bool _successContinuePlanInput;
-    private bool _failureConsumesTurnInput;
-    private bool _failureContinuePlanInput;
     private ActionPlanListItem? _selectedSuccessCallPlan;
     private ActionPlanListItem? _selectedFailureCallPlan;
     private bool _hasInitialFacing;
@@ -235,8 +225,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             }
 
             SelectedCheckKind = value.Kind;
-            CheckDirectionVariableInput = value.DirectionVariable ?? string.Empty;
-            CheckTargetVariableInput = value.TargetVariable ?? string.Empty;
             CheckInventoryCoordX = value.InventoryCoord?.X ?? 0;
             CheckInventoryCoordY = value.InventoryCoord?.Y ?? 0;
         }
@@ -258,29 +246,11 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 return;
             }
 
-            OnPropertyChanged(nameof(IsCheckDirectionVariableVisible));
-            OnPropertyChanged(nameof(IsCheckTargetVariableVisible));
             OnPropertyChanged(nameof(IsCheckInventoryCoordVisible));
         }
     }
 
-    public bool IsCheckDirectionVariableVisible => false;
-
-    public bool IsCheckTargetVariableVisible => false;
-
     public bool IsCheckInventoryCoordVisible => SelectedCheckKind == PlanCheckKind.CanPickup;
-
-    public string CheckDirectionVariableInput
-    {
-        get => _checkDirectionVariableInput;
-        set => SetField(ref _checkDirectionVariableInput, value);
-    }
-
-    public string CheckTargetVariableInput
-    {
-        get => _checkTargetVariableInput;
-        set => SetField(ref _checkTargetVariableInput, value);
-    }
 
     public int CheckInventoryCoordX
     {
@@ -304,10 +274,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 return;
             }
 
-            OnPropertyChanged(nameof(IsSuccessDirectionVariableVisible));
-            OnPropertyChanged(nameof(IsSuccessTargetVariableVisible));
             OnPropertyChanged(nameof(IsSuccessInventoryCoordVisible));
-            OnPropertyChanged(nameof(IsSuccessTurnFlagsVisible));
             OnPropertyChanged(nameof(IsSuccessCallPlanVisible));
         }
     }
@@ -322,57 +289,18 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 return;
             }
 
-            OnPropertyChanged(nameof(IsFailureDirectionVariableVisible));
-            OnPropertyChanged(nameof(IsFailureTargetVariableVisible));
             OnPropertyChanged(nameof(IsFailureInventoryCoordVisible));
-            OnPropertyChanged(nameof(IsFailureTurnFlagsVisible));
             OnPropertyChanged(nameof(IsFailureCallPlanVisible));
         }
     }
 
-    public bool IsSuccessDirectionVariableVisible => false;
-
-    public bool IsSuccessTargetVariableVisible => false;
-
     public bool IsSuccessInventoryCoordVisible => SelectedSuccessEffectKind == PlanEffectKind.Pickup;
-
-    public bool IsSuccessTurnFlagsVisible => SelectedSuccessEffectKind == PlanEffectKind.ReverseDirection;
 
     public bool IsSuccessCallPlanVisible => SelectedSuccessEffectKind == PlanEffectKind.CallPlan;
 
-    public bool IsFailureDirectionVariableVisible => false;
-
-    public bool IsFailureTargetVariableVisible => false;
-
     public bool IsFailureInventoryCoordVisible => SelectedFailureEffectKind == PlanEffectKind.Pickup;
 
-    public bool IsFailureTurnFlagsVisible => SelectedFailureEffectKind == PlanEffectKind.ReverseDirection;
-
     public bool IsFailureCallPlanVisible => SelectedFailureEffectKind == PlanEffectKind.CallPlan;
-
-    public string SuccessDirectionVariableInput
-    {
-        get => _successDirectionVariableInput;
-        set => SetField(ref _successDirectionVariableInput, value);
-    }
-
-    public string FailureDirectionVariableInput
-    {
-        get => _failureDirectionVariableInput;
-        set => SetField(ref _failureDirectionVariableInput, value);
-    }
-
-    public string SuccessTargetVariableInput
-    {
-        get => _successTargetVariableInput;
-        set => SetField(ref _successTargetVariableInput, value);
-    }
-
-    public string FailureTargetVariableInput
-    {
-        get => _failureTargetVariableInput;
-        set => SetField(ref _failureTargetVariableInput, value);
-    }
 
     public int SuccessInventoryCoordX
     {
@@ -396,30 +324,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     {
         get => _failureInventoryCoordY;
         set => SetField(ref _failureInventoryCoordY, value);
-    }
-
-    public bool SuccessConsumesTurnInput
-    {
-        get => _successConsumesTurnInput;
-        set => SetField(ref _successConsumesTurnInput, value);
-    }
-
-    public bool SuccessContinuePlanInput
-    {
-        get => _successContinuePlanInput;
-        set => SetField(ref _successContinuePlanInput, value);
-    }
-
-    public bool FailureConsumesTurnInput
-    {
-        get => _failureConsumesTurnInput;
-        set => SetField(ref _failureConsumesTurnInput, value);
-    }
-
-    public bool FailureContinuePlanInput
-    {
-        get => _failureContinuePlanInput;
-        set => SetField(ref _failureContinuePlanInput, value);
     }
 
     public ActionPlanListItem? SelectedSuccessCallPlan
@@ -901,8 +805,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         else
         {
             SelectedActionPlanStepCheck = null;
-            CheckDirectionVariableInput = string.Empty;
-            CheckTargetVariableInput = string.Empty;
         }
 
         StatusMessage = $"Removed check {checkIndex + 1} from step {step.Label}.";
@@ -1233,8 +1135,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         SelectedActionPlanStep = null;
         SelectedActionPlanStepCheck = null;
         ActionPlanStepLabelInput = string.Empty;
-        CheckDirectionVariableInput = string.Empty;
-        CheckTargetVariableInput = string.Empty;
         CheckInventoryCoordX = 0;
         CheckInventoryCoordY = 0;
 
@@ -1275,8 +1175,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     {
         ActionPlanStepChecks.Clear();
         SelectedActionPlanStepCheck = null;
-        CheckDirectionVariableInput = string.Empty;
-        CheckTargetVariableInput = string.Empty;
         CheckInventoryCoordX = 0;
         CheckInventoryCoordY = 0;
 
@@ -1351,9 +1249,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         {
             PlanEffectKind.Move => PlanEffectDescriptor.Move(),
             PlanEffectKind.Pickup => PlanEffectDescriptor.Pickup(GetInventoryCoord(success)),
-            PlanEffectKind.ReverseDirection => PlanEffectDescriptor.ReverseDirection(
-                success ? SuccessConsumesTurnInput : FailureConsumesTurnInput,
-                success ? SuccessContinuePlanInput : FailureContinuePlanInput),
+            PlanEffectKind.ReverseDirection => PlanEffectDescriptor.ReverseDirection(consumesTurn: false, continuePlan: false),
             PlanEffectKind.Wait => PlanEffectDescriptor.Wait(),
             PlanEffectKind.CallPlan => PlanEffectDescriptor.CallPlan(GetCallPlan(success)),
             _ => throw new InvalidOperationException($"Unsupported effect kind {kind}.")
@@ -1368,12 +1264,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             _ => throw new InvalidOperationException($"Unsupported check kind {SelectedCheckKind}.")
         };
 
-    private string GetDirectionVariable(bool success) =>
-        NormalizeVariable(success ? SuccessDirectionVariableInput : FailureDirectionVariableInput, "facing");
-
-    private string GetTargetVariable(bool success) =>
-        NormalizeVariable(success ? SuccessTargetVariableInput : FailureTargetVariableInput, "target");
-
     private GridCoord GetInventoryCoord(bool success) =>
         success ? new GridCoord(SuccessInventoryCoordX, SuccessInventoryCoordY) : new GridCoord(FailureInventoryCoordX, FailureInventoryCoordY);
 
@@ -1382,9 +1272,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         var plan = success ? SelectedSuccessCallPlan : SelectedFailureCallPlan;
         return new ActionPlanId((plan ?? ActionPlans.FirstOrDefault())?.Id.Value ?? "wait");
     }
-
-    private static string NormalizeVariable(string value, string fallback) =>
-        string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
     private void PopulateEffectInputs(int stepIndex)
     {
@@ -1417,23 +1304,15 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         if (success)
         {
             SelectedSuccessEffectKind = effect.Kind;
-            SuccessDirectionVariableInput = effect.DirectionVariable ?? string.Empty;
-            SuccessTargetVariableInput = effect.TargetVariable ?? string.Empty;
             SuccessInventoryCoordX = effect.InventoryCoord?.X ?? 0;
             SuccessInventoryCoordY = effect.InventoryCoord?.Y ?? 0;
-            SuccessConsumesTurnInput = effect.ConsumesTurn;
-            SuccessContinuePlanInput = effect.ContinuePlan;
             SelectedSuccessCallPlan = effect.PlanId is { } planId ? ActionPlans.SingleOrDefault(item => item.Id.Value == planId.Value) : null;
         }
         else
         {
             SelectedFailureEffectKind = effect.Kind;
-            FailureDirectionVariableInput = effect.DirectionVariable ?? string.Empty;
-            FailureTargetVariableInput = effect.TargetVariable ?? string.Empty;
             FailureInventoryCoordX = effect.InventoryCoord?.X ?? 0;
             FailureInventoryCoordY = effect.InventoryCoord?.Y ?? 0;
-            FailureConsumesTurnInput = effect.ConsumesTurn;
-            FailureContinuePlanInput = effect.ContinuePlan;
             SelectedFailureCallPlan = effect.PlanId is { } planId ? ActionPlans.SingleOrDefault(item => item.Id.Value == planId.Value) : null;
         }
     }
