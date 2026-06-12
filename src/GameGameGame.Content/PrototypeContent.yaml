@@ -74,6 +74,11 @@ entityTemplates:
     inventoryHeight: 1
     weight: 3
     carryingCapacity: 0
+    defaultActionPlanId: wandering
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: North
 presentations:
   game:
     glyph: G

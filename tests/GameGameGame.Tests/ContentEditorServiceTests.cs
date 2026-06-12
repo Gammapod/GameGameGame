@@ -178,6 +178,128 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceCreatesActionPlanWithGeneratedIdAndWaitStep()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans: {}
+            """));
+
+        var id = editor.CreateActionPlan("New Plan");
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(new ActionPlanTemplateId("newPlan"), id);
+        var plan = registry.ActionPlanDescriptors[id];
+        Assert.Equal(new ActionPlanId("newPlan"), plan.Id);
+        var step = Assert.Single(plan.Steps);
+        Assert.Equal("wait", step.Label);
+        Assert.Equal(PlanEffectKind.Wait, step.OnSuccess!.Kind);
+        Assert.True(registry.Validate().IsValid);
+    }
+
+    [Fact]
+    public void ContentEditorServiceDuplicatesActionPlanWithGeneratedId()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              wander:
+                id: wander
+                steps:
+                  - label: move
+                    checks:
+                      - kind: CanMove
+                        directionVariable: facing
+                    onSuccess:
+                      kind: Move
+                      directionVariable: facing
+            """));
+
+        var id = editor.DuplicateActionPlan(new ActionPlanTemplateId("wander"), "Wander Copy");
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(new ActionPlanTemplateId("wanderCopy"), id);
+        var plan = registry.ActionPlanDescriptors[id];
+        Assert.Equal(new ActionPlanId("wanderCopy"), plan.Id);
+        var step = Assert.Single(plan.Steps);
+        Assert.Equal("move", step.Label);
+        Assert.Equal(PlanCheckKind.CanMove, Assert.Single(step.Checks).Kind);
+        Assert.Equal(PlanEffectKind.Move, step.OnSuccess!.Kind);
+    }
+
+    [Fact]
+    public void ContentEditorServiceDeletesUnreferencedActionPlan()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              wait:
+                id: wait
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+
+        var result = editor.DeleteActionPlan(new ActionPlanTemplateId("wait"));
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.Empty(editor.Document.ActionPlans);
+    }
+
+    [Fact]
+    public void ContentEditorServiceBlocksDeletingReferencedActionPlan()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: wait
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              wait:
+                id: wait
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+              caller:
+                id: caller
+                steps:
+                  - label: call
+                    checks: []
+                    onSuccess:
+                      kind: CallPlan
+                      planId: wait
+            """));
+
+        var references = editor.ListActionPlanReferences(new ActionPlanTemplateId("wait"));
+        var result = editor.DeleteActionPlan(new ActionPlanTemplateId("wait"));
+
+        Assert.Contains(references, reference => reference.EntityTemplateId == new EntityTemplateId("slime"));
+        Assert.Contains(references, reference => reference.ActionPlanTemplateId == new ActionPlanTemplateId("caller"));
+        Assert.False(result.IsSuccess);
+        Assert.Contains("slime", result.ErrorMessage);
+        Assert.Contains("caller", result.ErrorMessage);
+    }
+
+    [Fact]
     public void ContentEditorServiceAddsReordersAndRemovesActionPlanSteps()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(

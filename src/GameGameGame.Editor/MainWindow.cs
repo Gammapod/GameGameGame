@@ -4,6 +4,7 @@ using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using GameGameGame.Content;
+using GameGameGame.Core;
 using System.Collections.Specialized;
 using System.ComponentModel;
 
@@ -205,9 +206,243 @@ public sealed class MainWindow : Window
         apply.Click += (_, _) => ViewModel?.ApplySelectedEntityPresetEdits();
         panel.Children.Add(apply);
 
+        panel.Children.Add(BuildDefaultActionPlanEditor());
+
+        panel.Children.Add(BuildActionPlanBrowser());
+
+        panel.Children.Add(BuildDefaultVariableEditor());
+
         panel.Children.Add(BuildInventoryEditor());
 
         return Wrap("Selected Preset", panel);
+    }
+
+    private Control BuildDefaultActionPlanEditor()
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 16, 0, 0) };
+
+        var actionPlans = new ComboBox();
+        actionPlans.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlans)));
+        actionPlans.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultActionPlan)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Default Action Plan", actionPlans));
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var assign = new Button { Content = "Assign Plan" };
+        assign.Click += (_, _) => ViewModel?.AssignSelectedDefaultActionPlan();
+        var clear = new Button { Content = "Clear Plan" };
+        clear.Click += (_, _) => ViewModel?.ClearSelectedDefaultActionPlan();
+        buttons.Children.Add(assign);
+        buttons.Children.Add(clear);
+        panel.Children.Add(buttons);
+
+        return Wrap("Action Plan Assignment", panel);
+    }
+
+    private Control BuildActionPlanBrowser()
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 16, 0, 0) };
+
+        var nameInput = new TextBox { Watermark = "New or duplicate plan name" };
+        nameInput.Bind(TextBox.TextProperty, new Binding(nameof(MainEditorViewModel.ActionPlanNameInput))
+        {
+            Mode = BindingMode.TwoWay,
+            UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+        });
+        panel.Children.Add(nameInput);
+
+        var planButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var create = new Button { Content = "Create Plan" };
+        create.Click += (_, _) => ViewModel?.CreateActionPlan();
+        var duplicate = new Button { Content = "Duplicate Selected" };
+        duplicate.Click += (_, _) => ViewModel?.DuplicateSelectedActionPlan();
+        var delete = new Button { Content = "Delete Selected" };
+        delete.Click += (_, _) => ViewModel?.DeleteSelectedActionPlan();
+        planButtons.Children.Add(create);
+        planButtons.Children.Add(duplicate);
+        planButtons.Children.Add(delete);
+        panel.Children.Add(planButtons);
+
+        var actionPlans = new ComboBox();
+        actionPlans.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlans)));
+        actionPlans.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlan)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Action Plan", actionPlans));
+
+        var steps = new ListBox { MinHeight = 140 };
+        steps.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlanSteps)));
+        steps.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanStep)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Steps", steps));
+
+        panel.Children.Add(BoundTextBox("Step Label", nameof(MainEditorViewModel.ActionPlanStepLabelInput)));
+
+        var stepButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var applyLabel = new Button { Content = "Apply Label" };
+        applyLabel.Click += (_, _) => ViewModel?.ApplySelectedActionPlanStepLabel();
+        var addWait = new Button { Content = "Add Wait Step" };
+        addWait.Click += (_, _) => ViewModel?.AddWaitStepToSelectedActionPlan();
+        var moveUp = new Button { Content = "Move Up" };
+        moveUp.Click += (_, _) => ViewModel?.MoveSelectedActionPlanStepUp();
+        var moveDown = new Button { Content = "Move Down" };
+        moveDown.Click += (_, _) => ViewModel?.MoveSelectedActionPlanStepDown();
+        var remove = new Button { Content = "Remove Step" };
+        remove.Click += (_, _) => ViewModel?.RemoveSelectedActionPlanStep();
+        stepButtons.Children.Add(applyLabel);
+        stepButtons.Children.Add(addWait);
+        stepButtons.Children.Add(moveUp);
+        stepButtons.Children.Add(moveDown);
+        stepButtons.Children.Add(remove);
+        panel.Children.Add(stepButtons);
+
+        panel.Children.Add(BuildStepCheckEditor());
+
+        panel.Children.Add(BuildStepEffectEditor());
+
+        return Wrap("Action Plan Browser", panel);
+    }
+
+    private Control BuildStepCheckEditor()
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
+
+        var checks = new ListBox { MinHeight = 80 };
+        checks.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlanStepChecks)));
+        checks.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanStepCheck)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Checks", checks));
+
+        var kind = new ComboBox();
+        kind.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.CheckKinds)));
+        kind.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedCheckKind)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Kind", kind));
+
+        var directionVariable = BoundTextBox("Direction Variable", nameof(MainEditorViewModel.CheckDirectionVariableInput));
+        directionVariable.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckDirectionVariableVisible)));
+        panel.Children.Add(directionVariable);
+
+        var targetVariable = BoundTextBox("Target Variable", nameof(MainEditorViewModel.CheckTargetVariableInput));
+        targetVariable.Bind(IsVisibleProperty, new Binding(nameof(MainEditorViewModel.IsCheckTargetVariableVisible)));
+        panel.Children.Add(targetVariable);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var add = new Button { Content = "Add Check" };
+        add.Click += (_, _) => ViewModel?.AddSelectedCheckToSelectedStep();
+        var update = new Button { Content = "Update Check" };
+        update.Click += (_, _) => ViewModel?.UpdateSelectedStepCheck();
+        var moveUp = new Button { Content = "Move Up" };
+        moveUp.Click += (_, _) => ViewModel?.MoveSelectedStepCheckUp();
+        var moveDown = new Button { Content = "Move Down" };
+        moveDown.Click += (_, _) => ViewModel?.MoveSelectedStepCheckDown();
+        var remove = new Button { Content = "Remove Check" };
+        remove.Click += (_, _) => ViewModel?.RemoveSelectedStepCheck();
+        buttons.Children.Add(add);
+        buttons.Children.Add(update);
+        buttons.Children.Add(moveUp);
+        buttons.Children.Add(moveDown);
+        buttons.Children.Add(remove);
+        panel.Children.Add(buttons);
+
+        return Wrap("Selected Step Checks", panel);
+    }
+
+    private Control BuildStepEffectEditor()
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
+
+        panel.Children.Add(BuildEffectInputs(
+            "Success Effect",
+            nameof(MainEditorViewModel.SelectedSuccessEffectKind),
+            nameof(MainEditorViewModel.SuccessDirectionVariableInput),
+            nameof(MainEditorViewModel.SelectedSuccessCallPlan),
+            nameof(MainEditorViewModel.IsSuccessDirectionVariableVisible),
+            nameof(MainEditorViewModel.IsSuccessCallPlanVisible)));
+
+        var setSuccess = new Button { Content = "Set Success Effect", HorizontalAlignment = HorizontalAlignment.Left };
+        setSuccess.Click += (_, _) => ViewModel?.SetSelectedStepSuccessEffect();
+        panel.Children.Add(setSuccess);
+
+        panel.Children.Add(BuildEffectInputs(
+            "Failure Effect",
+            nameof(MainEditorViewModel.SelectedFailureEffectKind),
+            nameof(MainEditorViewModel.FailureDirectionVariableInput),
+            nameof(MainEditorViewModel.SelectedFailureCallPlan),
+            nameof(MainEditorViewModel.IsFailureDirectionVariableVisible),
+            nameof(MainEditorViewModel.IsFailureCallPlanVisible)));
+
+        var failureButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var setFailure = new Button { Content = "Set Failure Effect" };
+        setFailure.Click += (_, _) => ViewModel?.SetSelectedStepFailureEffect();
+        var clearFailure = new Button { Content = "Clear Failure Effect" };
+        clearFailure.Click += (_, _) => ViewModel?.ClearSelectedStepFailureEffect();
+        failureButtons.Children.Add(setFailure);
+        failureButtons.Children.Add(clearFailure);
+        panel.Children.Add(failureButtons);
+
+        return Wrap("Selected Step Effects", panel);
+    }
+
+    private Control BuildEffectInputs(
+        string header,
+        string kindProperty,
+        string directionVariableProperty,
+        string callPlanProperty,
+        string directionVariableVisibleProperty,
+        string callPlanVisibleProperty)
+    {
+        var panel = new StackPanel { Spacing = 8 };
+
+        var kind = new ComboBox();
+        kind.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.EffectKinds)));
+        kind.Bind(ComboBox.SelectedItemProperty, new Binding(kindProperty) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Kind", kind));
+
+        var directionVariable = BoundTextBox("Direction Variable", directionVariableProperty);
+        directionVariable.Bind(IsVisibleProperty, new Binding(directionVariableVisibleProperty));
+        panel.Children.Add(directionVariable);
+
+        var callPlan = new ComboBox();
+        callPlan.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlans)));
+        callPlan.Bind(ComboBox.SelectedItemProperty, new Binding(callPlanProperty) { Mode = BindingMode.TwoWay });
+        var callPlanPanel = Wrap("Call Plan", callPlan);
+        callPlanPanel.Bind(IsVisibleProperty, new Binding(callPlanVisibleProperty));
+        panel.Children.Add(callPlanPanel);
+
+        return Wrap(header, panel);
+    }
+
+    private Control BuildDefaultVariableEditor()
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 16, 0, 0) };
+
+        var variableList = new ListBox { MinHeight = 100 };
+        variableList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultPlanVariables)));
+        variableList.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultPlanVariable)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Default Variables", variableList));
+
+        panel.Children.Add(BoundTextBox("Variable Name", nameof(MainEditorViewModel.DefaultVariableNameInput)));
+
+        var kinds = new ComboBox();
+        kinds.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.DefaultVariableKinds)));
+        kinds.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultVariableKind)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Value Kind", kinds));
+
+        var directions = new ComboBox();
+        directions.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.Directions)));
+        directions.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedDefaultVariableDirection)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Direction Value", directions));
+
+        panel.Children.Add(BoundTextBox("Entity ID Value", nameof(MainEditorViewModel.DefaultVariableEntityIdInput)));
+        panel.Children.Add(BoundNumeric("Coord X", nameof(MainEditorViewModel.DefaultVariableCoordX)));
+        panel.Children.Add(BoundNumeric("Coord Y", nameof(MainEditorViewModel.DefaultVariableCoordY)));
+        panel.Children.Add(BoundNumeric("Int Value", nameof(MainEditorViewModel.DefaultVariableIntValue)));
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var set = new Button { Content = "Set Variable" };
+        set.Click += (_, _) => ViewModel?.SetDefaultPlanVariable();
+        var remove = new Button { Content = "Remove Selected" };
+        remove.Click += (_, _) => ViewModel?.RemoveSelectedDefaultPlanVariable();
+        buttons.Children.Add(set);
+        buttons.Children.Add(remove);
+        panel.Children.Add(buttons);
+
+        return Wrap("Default Plan Variables", panel);
     }
 
     private Control BuildInventoryEditor()

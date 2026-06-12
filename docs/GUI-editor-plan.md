@@ -86,7 +86,7 @@ Testable outcomes:
 - Missing variable and type mismatch diagnostics identify template, action plan, step, variable name, expected type, and actual type when known.
 - GUI callers can filter diagnostics by selected entity preset, selected inventory layout, or selected action plan.
 
-## Step 3: Complete Entity Preset Editing Service - Ongoing
+## Step 3: Complete Entity Preset Editing Service - Done
 
 Round out preset operations so the GUI can implement normal create/edit/delete workflows without directly mutating document DTOs.
 
@@ -137,7 +137,7 @@ Testable outcomes:
 - First-open-cell helper returns expected coordinates or no result when full.
 - Proposed invalid placement reports out-of-bounds or overlap diagnostics without requiring runtime spawn.
 
-## Step 5: Action-Plan Field Editing Service - Not Ready
+## Step 5: Action-Plan Field Editing Service - Ongoing
 
 Provide field-level action-plan operations so a GUI can bind primitive forms directly to service calls.
 
@@ -164,7 +164,7 @@ Testable outcomes:
 - Reordering checks preserves descriptor content.
 - Invalid primitive field combinations are reported by validation.
 
-## Step 6: Variable Editing And Inference Helpers - Not Ready
+## Step 6: Variable Editing And Inference Helpers - Ongoing
 
 Action-plan UI needs strong support for variables, because this is where editor users are most likely to make mistakes.
 
@@ -284,28 +284,27 @@ Done:
 
 - Editor session and file workflow.
 - Structured diagnostics.
+- Complete entity preset editing service.
 - Complete inventory layout editing service.
 - YAML preview and document diff support.
 - Standalone desktop GUI skeleton.
 
 Ongoing:
 
-- Complete entity preset editing service.
 - First end-to-end GUI editing experiment.
+- Variable editing and inference helpers.
+- Action-plan field editing service.
 
 Not ready:
 
-- Action-plan field editing service.
-- Variable editing and inference helpers.
 - Runtime preview service.
 
 Recommended remaining order:
 
-1. Complete entity preset editing service.
-2. Finish first end-to-end GUI editing experiment.
-3. Action-plan field editing service.
-4. Variable editing and inference helpers.
-5. Runtime preview service.
-6. Full action-plan GUI.
+1. Finish first end-to-end GUI editing experiment.
+2. Action-plan field editing service.
+3. Variable editing and inference helpers.
+4. Runtime preview service.
+5. Full action-plan GUI.
 
 This order reflects the current test refactor: session/file workflow is already covered, content tests now focus on editor services and validation, and Core behavior is isolated from prototype content details. The remaining order gets to a usable standalone GUI quickly while avoiding premature complexity in the action-plan editor.

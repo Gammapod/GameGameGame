@@ -296,6 +296,768 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
+    public void EditorViewModelListsActionPlansAndShowsSelectedPresetDefaultPlan()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            var actionPlan = Assert.Single(editor.ActionPlans);
+            Assert.Equal(new ActionPlanTemplateId("wander"), actionPlan.Id);
+            Assert.Equal(actionPlan, editor.SelectedDefaultActionPlan);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingActionPlanShowsReadableStepSummaries()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            Assert.Collection(
+                editor.ActionPlanSteps,
+                step =>
+                {
+                    Assert.Equal(0, step.Index);
+                    Assert.Equal("move", step.Label);
+                    Assert.Equal("Checks: CanMove(directionVariable=facing)", step.ChecksSummary);
+                    Assert.Equal("Success: Move(directionVariable=facing)", step.SuccessSummary);
+                    Assert.Equal("Failure: CallPlan(planId=handleBlocker)", step.FailureSummary);
+                },
+                step =>
+                {
+                    Assert.Equal(1, step.Index);
+                    Assert.Equal("wait", step.Label);
+                    Assert.Equal("Checks: none", step.ChecksSummary);
+                    Assert.Equal("Success: Wait", step.SuccessSummary);
+                    Assert.Equal("Failure: none", step.FailureSummary);
+                });
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelReloadsSelectedActionPlanAfterRefresh()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.EntityPresetNameInput = "New Rock";
+            editor.CreateEntityPreset();
+
+            Assert.Equal(new ActionPlanTemplateId("wander"), editor.SelectedActionPlan?.Id);
+            Assert.Equal(2, editor.ActionPlanSteps.Count);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelCreatesActionPlanAndSelectsIt()
+    {
+        var path = WriteTempContentFile(BasicContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+
+            editor.ActionPlanNameInput = "New Plan";
+            editor.CreateActionPlan();
+
+            var plan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("newPlan"));
+            Assert.Equal(plan, editor.SelectedActionPlan);
+            Assert.Single(editor.ActionPlanSteps);
+            Assert.Contains("newPlan", editor.YamlPreview);
+            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("+") && line.Contains("newPlan"));
+            Assert.Equal("Created action plan New Plan.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelDuplicatesSelectedActionPlanAndSelectsCopy()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.ActionPlanNameInput = "Wander Copy";
+            editor.DuplicateSelectedActionPlan();
+
+            var duplicate = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wanderCopy"));
+            Assert.Equal(duplicate, editor.SelectedActionPlan);
+            Assert.Equal(2, editor.ActionPlanSteps.Count);
+            Assert.Contains("wanderCopy", editor.YamlPreview);
+            Assert.Equal("Duplicated action plan wander as Wander Copy.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelDeletesUnreferencedSelectedActionPlan()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.DeleteSelectedActionPlan();
+
+            Assert.Empty(editor.ActionPlans);
+            Assert.Null(editor.SelectedActionPlan);
+            Assert.Empty(editor.ActionPlanSteps);
+            Assert.DoesNotContain("wander:", editor.YamlPreview);
+            Assert.Equal("Deleted action plan wander.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelDoesNotDeleteReferencedSelectedActionPlan()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.DeleteSelectedActionPlan();
+
+            Assert.Contains(editor.ActionPlans, item => item.Id == new ActionPlanTemplateId("wander"));
+            Assert.Equal(new ActionPlanTemplateId("wander"), editor.SelectedActionPlan?.Id);
+            Assert.Contains("Cannot delete action plan wander", editor.StatusMessage);
+            Assert.Contains("slime", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingActionPlanStepPopulatesStepLabelInput()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+
+            Assert.Equal("wait", editor.ActionPlanStepLabelInput);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelUpdatesSelectedActionPlanStepLabel()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.ActionPlanStepLabelInput = "pause";
+
+            editor.ApplySelectedActionPlanStepLabel();
+
+            Assert.Equal("pause", editor.ActionPlanSteps[1].Label);
+            Assert.Equal(1, editor.SelectedActionPlanStep?.Index);
+            Assert.Contains("label: pause", editor.YamlPreview);
+            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("+") && line.Contains("label: pause"));
+            Assert.Equal("Updated step label to pause.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAddsWaitStepToSelectedActionPlan()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.AddWaitStepToSelectedActionPlan();
+
+            Assert.Equal(2, editor.ActionPlanSteps.Count);
+            Assert.Equal("wait 2", editor.ActionPlanSteps[1].Label);
+            Assert.Equal(1, editor.SelectedActionPlanStep?.Index);
+            Assert.Contains("label: wait 2", editor.YamlPreview);
+            Assert.Equal("Added wait step.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelMovesSelectedActionPlanStepUpAndDown()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+
+            editor.MoveSelectedActionPlanStepUp();
+
+            Assert.Equal("wait", editor.ActionPlanSteps[0].Label);
+            Assert.Equal(0, editor.SelectedActionPlanStep?.Index);
+
+            editor.MoveSelectedActionPlanStepDown();
+
+            Assert.Equal("wait", editor.ActionPlanSteps[1].Label);
+            Assert.Equal(1, editor.SelectedActionPlanStep?.Index);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelRemovesSelectedActionPlanStep()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            editor.RemoveSelectedActionPlanStep();
+
+            var step = Assert.Single(editor.ActionPlanSteps);
+            Assert.Equal("wait", step.Label);
+            Assert.Equal(0, editor.SelectedActionPlanStep?.Index);
+            Assert.DoesNotContain("label: move", editor.YamlPreview);
+            Assert.Equal("Removed step move.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingActionPlanStepPopulatesEffectInputs()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            Assert.Equal(PlanEffectKind.Move, editor.SelectedSuccessEffectKind);
+            Assert.Equal("facing", editor.SuccessDirectionVariableInput);
+            Assert.Equal(PlanEffectKind.CallPlan, editor.SelectedFailureEffectKind);
+            Assert.Equal(editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("handleBlocker")), editor.SelectedFailureCallPlan);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSetsSelectedStepSuccessEffect()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
+            editor.SuccessDirectionVariableInput = "facing";
+
+            editor.SetSelectedStepSuccessEffect();
+
+            Assert.Equal("Success: Move(directionVariable=facing)", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.Contains("kind: Move", editor.YamlPreview);
+            Assert.Contains("directionVariable: facing", editor.YamlPreview);
+            Assert.Equal("Updated success effect for step wait.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSetsAndClearsSelectedStepFailureEffect()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedFailureEffectKind = PlanEffectKind.CallPlan;
+            editor.SelectedFailureCallPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("handleBlocker"));
+
+            editor.SetSelectedStepFailureEffect();
+
+            Assert.Equal("Failure: CallPlan(planId=handleBlocker)", editor.ActionPlanSteps[1].FailureSummary);
+            Assert.Contains("onFailure", editor.YamlPreview);
+
+            editor.ClearSelectedStepFailureEffect();
+
+            Assert.Equal("Failure: none", editor.ActionPlanSteps[1].FailureSummary);
+            Assert.DoesNotContain("onFailure", editor.ActionPlanSteps[1].ToString());
+            Assert.Equal("Cleared failure effect for step wait.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelExposesRelevantEffectFieldsForSelectedKinds()
+    {
+        var editor = new MainEditorViewModel();
+
+        editor.SelectedSuccessEffectKind = PlanEffectKind.Wait;
+        editor.SelectedFailureEffectKind = PlanEffectKind.CallPlan;
+
+        Assert.False(editor.IsSuccessDirectionVariableVisible);
+        Assert.False(editor.IsSuccessCallPlanVisible);
+        Assert.False(editor.IsFailureDirectionVariableVisible);
+        Assert.True(editor.IsFailureCallPlanVisible);
+
+        editor.SelectedSuccessEffectKind = PlanEffectKind.Move;
+        editor.SelectedFailureEffectKind = PlanEffectKind.Wait;
+
+        Assert.True(editor.IsSuccessDirectionVariableVisible);
+        Assert.False(editor.IsSuccessCallPlanVisible);
+        Assert.False(editor.IsFailureDirectionVariableVisible);
+        Assert.False(editor.IsFailureCallPlanVisible);
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingActionPlanStepPopulatesCheckInputs()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+
+            var check = Assert.Single(editor.ActionPlanStepChecks);
+            Assert.Equal(0, check.Index);
+            Assert.Equal(PlanCheckKind.CanMove, check.Kind);
+
+            editor.SelectedActionPlanStepCheck = check;
+
+            Assert.Equal(PlanCheckKind.CanMove, editor.SelectedCheckKind);
+            Assert.Equal("facing", editor.CheckDirectionVariableInput);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAddsCanMoveCheckToSelectedStep()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.CheckDirectionVariableInput = "facing";
+
+            editor.AddCanMoveCheckToSelectedStep();
+
+            var check = Assert.Single(editor.ActionPlanStepChecks);
+            Assert.Equal("CanMove(directionVariable=facing)", check.Summary);
+            Assert.Equal("Checks: CanMove(directionVariable=facing)", editor.ActionPlanSteps[1].ChecksSummary);
+            Assert.Contains("kind: CanMove", editor.YamlPreview);
+            Assert.Contains("directionVariable: facing", editor.YamlPreview);
+            Assert.Equal("Added CanMove check to step wait.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelUpdatesSelectedCanMoveCheck()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+            editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
+            editor.CheckDirectionVariableInput = "turnDirection";
+
+            editor.UpdateSelectedStepCheck();
+
+            var check = Assert.Single(editor.ActionPlanStepChecks);
+            Assert.Equal("CanMove(directionVariable=turnDirection)", check.Summary);
+            Assert.Contains("directionVariable: turnDirection", editor.YamlPreview);
+            Assert.Equal("Updated check 1 for step move.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelRemovesSelectedStepCheck()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+            editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
+
+            editor.RemoveSelectedStepCheck();
+
+            Assert.Empty(editor.ActionPlanStepChecks);
+            Assert.Equal("Checks: none", editor.ActionPlanSteps[0].ChecksSummary);
+            Assert.DoesNotContain("kind: CanMove", editor.YamlPreview);
+            Assert.Equal("Removed check 1 from step move.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelMovesSelectedStepCheckUpAndDown()
+    {
+        var path = WriteTempContentFile(MultiCheckActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+            editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks[1];
+
+            editor.MoveSelectedStepCheckUp();
+
+            Assert.Equal("CanMove(directionVariable=turnDirection)", editor.ActionPlanStepChecks[0].Summary);
+            Assert.Equal(0, editor.SelectedActionPlanStepCheck?.Index);
+            Assert.Equal("Moved check up.", editor.StatusMessage);
+
+            editor.MoveSelectedStepCheckDown();
+
+            Assert.Equal("CanMove(directionVariable=turnDirection)", editor.ActionPlanStepChecks[1].Summary);
+            Assert.Equal(1, editor.SelectedActionPlanStepCheck?.Index);
+            Assert.Contains("directionVariable: turnDirection", editor.YamlPreview);
+            Assert.Equal("Moved check down.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingBlockingEntityCheckPopulatesInputs()
+    {
+        var path = WriteTempContentFile(BlockingEntityCheckActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[0];
+            editor.SelectedActionPlanStepCheck = editor.ActionPlanStepChecks.Single();
+
+            Assert.Equal(PlanCheckKind.BlockingEntity, editor.SelectedCheckKind);
+            Assert.Equal("facing", editor.CheckDirectionVariableInput);
+            Assert.Equal("target", editor.CheckTargetVariableInput);
+            Assert.True(editor.IsCheckDirectionVariableVisible);
+            Assert.True(editor.IsCheckTargetVariableVisible);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAddsAndUpdatesBlockingEntityCheck()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+            editor.SelectedCheckKind = PlanCheckKind.BlockingEntity;
+            editor.CheckDirectionVariableInput = "facing";
+            editor.CheckTargetVariableInput = "blocker";
+
+            editor.AddSelectedCheckToSelectedStep();
+
+            var check = Assert.Single(editor.ActionPlanStepChecks);
+            Assert.Equal("BlockingEntity(directionVariable=facing, targetVariable=blocker)", check.Summary);
+
+            editor.CheckTargetVariableInput = "target";
+            editor.UpdateSelectedStepCheck();
+
+            Assert.Equal("BlockingEntity(directionVariable=facing, targetVariable=target)", editor.ActionPlanStepChecks.Single().Summary);
+            Assert.Contains("targetVariable: target", editor.YamlPreview);
+            Assert.Equal("Updated check 1 for step wait.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAssignsDefaultActionPlanAndRefreshesPreviewDiffAndValidation()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+            editor.SelectedDefaultActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.AssignSelectedDefaultActionPlan();
+
+            Assert.Equal(new ActionPlanTemplateId("wander"), editor.SelectedDefaultActionPlan?.Id);
+            Assert.Contains("defaultActionPlanId: wander", editor.YamlPreview);
+            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("+") && line.Contains("defaultActionPlanId: wander"));
+            Assert.Equal("Assigned wander to Slime.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelClearsDefaultActionPlanAndRefreshesPreviewDiffAndValidation()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            editor.ClearSelectedDefaultActionPlan();
+
+            Assert.Null(editor.SelectedDefaultActionPlan);
+            Assert.DoesNotContain("defaultActionPlanId", editor.YamlPreview);
+            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("-") && line.Contains("defaultActionPlanId: wander"));
+            Assert.Equal("Cleared default action plan for Slime.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelListsDefaultPlanVariablesForSelectedPreset()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            var variable = Assert.Single(editor.DefaultPlanVariables);
+            Assert.Equal("facing", variable.Name);
+            Assert.Equal(PlanValueKind.Direction, variable.Kind);
+            Assert.Equal("West", variable.DisplayValue);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAddsOrUpdatesDefaultPlanVariableAndRefreshesPreviewDiffAndValidation()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+            editor.DefaultVariableNameInput = "facing";
+            editor.SelectedDefaultVariableKind = PlanValueKind.Direction;
+            editor.SelectedDefaultVariableDirection = Direction.East;
+
+            editor.SetDefaultPlanVariable();
+
+            var variable = Assert.Single(editor.DefaultPlanVariables);
+            Assert.Equal("facing", variable.Name);
+            Assert.Equal(PlanValueKind.Direction, variable.Kind);
+            Assert.Equal("East", variable.DisplayValue);
+            Assert.Contains("defaultPlanVariables", editor.YamlPreview);
+            Assert.Contains("directionValue: East", editor.YamlPreview);
+            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("+") && line.Contains("facing"));
+            Assert.Equal("Set default variable facing.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectsDefaultPlanVariableForEditing()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+
+            editor.SelectedDefaultPlanVariable = editor.DefaultPlanVariables.Single();
+
+            Assert.Equal("facing", editor.DefaultVariableNameInput);
+            Assert.Equal(PlanValueKind.Direction, editor.SelectedDefaultVariableKind);
+            Assert.Equal(Direction.West, editor.SelectedDefaultVariableDirection);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelRemovesSelectedDefaultPlanVariableAndRefreshesPreviewDiffAndValidation()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithDefaultVariable);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectEntityPreset(new EntityTemplateId("slime"));
+            editor.SelectedDefaultPlanVariable = editor.DefaultPlanVariables.Single();
+
+            editor.RemoveSelectedDefaultPlanVariable();
+
+            Assert.Empty(editor.DefaultPlanVariables);
+            Assert.DoesNotContain("defaultPlanVariables", editor.YamlPreview);
+            Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("-") && line.Contains("facing"));
+            Assert.Equal("Removed default variable facing.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void EditorViewModelListsCarriedEntitiesForSelectedPreset()
     {
         var path = WriteTempContentFile(InventoryContentYaml);
@@ -676,6 +1438,174 @@ public sealed class EditorViewModelTests
             glyph: g
             color: Green
         actionPlans: {}
+        """;
+
+    private const string ActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultActionPlanId: wander
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: wait
+                checks: []
+                onSuccess:
+                  kind: Wait
+        """;
+
+    private const string ActionPlanContentYamlWithoutAssignedPlan =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: wait
+                checks: []
+                onSuccess:
+                  kind: Wait
+        """;
+
+    private const string ActionPlanContentYamlWithDefaultVariable =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultActionPlanId: wander
+            defaultPlanVariables:
+              facing:
+                kind: Direction
+                directionValue: West
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: wait
+                checks: []
+                onSuccess:
+                  kind: Wait
+        """;
+
+    private const string MultiStepActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: move
+                checks:
+                  - kind: CanMove
+                    directionVariable: facing
+                onSuccess:
+                  kind: Move
+                  directionVariable: facing
+                onFailure:
+                  kind: CallPlan
+                  planId: handleBlocker
+              - label: wait
+                checks: []
+                onSuccess:
+                  kind: Wait
+          handleBlocker:
+            id: handleBlocker
+            steps:
+              - label: wait
+                checks: []
+                onSuccess:
+                  kind: Wait
+        """;
+
+    private const string MultiCheckActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: move
+                checks:
+                  - kind: CanMove
+                    directionVariable: facing
+                  - kind: CanMove
+                    directionVariable: turnDirection
+                onSuccess:
+                  kind: Wait
+        """;
+
+    private const string BlockingEntityCheckActionPlanContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          wander:
+            id: wander
+            steps:
+              - label: find blocker
+                checks:
+                  - kind: BlockingEntity
+                    directionVariable: facing
+                    targetVariable: target
+                onSuccess:
+                  kind: Wait
         """;
 
     private static string WriteTempContentFile(string yaml)

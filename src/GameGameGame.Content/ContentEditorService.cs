@@ -276,6 +276,74 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .ToList();
     }
 
+    public ActionPlanTemplateId CreateActionPlan(string name)
+    {
+        var id = GenerateActionPlanTemplateId(name);
+        Document.ActionPlans[id.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(
+            new ActionPlanDescriptor(
+                new ActionPlanId(id.Value),
+                [new ActionPlanStepDescriptor("wait", [], PlanEffectDescriptor.Wait(), OnFailure: null)]));
+        onChanged?.Invoke();
+
+        return id;
+    }
+
+    public ActionPlanTemplateId DuplicateActionPlan(ActionPlanTemplateId sourceId, string name)
+    {
+        var source = ListActionPlans().Single(plan => plan.TemplateId == sourceId).Descriptor;
+        var duplicateId = GenerateActionPlanTemplateId(name);
+        Document.ActionPlans[duplicateId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(
+            source with { Id = new ActionPlanId(duplicateId.Value) });
+        onChanged?.Invoke();
+
+        return duplicateId;
+    }
+
+    public IReadOnlyList<ActionPlanReference> ListActionPlanReferences(ActionPlanTemplateId id)
+    {
+        var references = Document.EntityTemplates
+            .Where(template => template.Value.DefaultActionPlanId == id.Value)
+            .Select(template => new ActionPlanReference(
+                EntityTemplateId: new EntityTemplateId(template.Key),
+                ActionPlanTemplateId: null,
+                StepIndex: null))
+            .ToList();
+
+        foreach (var (planId, plan) in Document.ActionPlans)
+        {
+            var steps = plan.Steps ?? [];
+            for (var index = 0; index < steps.Count; index++)
+            {
+                var step = steps[index];
+                if (step.OnSuccess?.Kind == PlanEffectKind.CallPlan && step.OnSuccess.PlanId == id.Value
+                    || step.OnFailure?.Kind == PlanEffectKind.CallPlan && step.OnFailure.PlanId == id.Value)
+                {
+                    references.Add(new ActionPlanReference(
+                        EntityTemplateId: null,
+                        ActionPlanTemplateId: new ActionPlanTemplateId(planId),
+                        StepIndex: index));
+                }
+            }
+        }
+
+        return references;
+    }
+
+    public ContentEditorOperationResult DeleteActionPlan(ActionPlanTemplateId id)
+    {
+        var references = ListActionPlanReferences(id);
+        if (references.Count > 0)
+        {
+            return ContentEditorOperationResult.Failure(
+                $"Cannot delete action plan {id}; it is referenced by {string.Join(", ", references.Select(reference => reference.ToString()))}.");
+        }
+
+        Document.ActionPlans.Remove(id.Value);
+        onChanged?.Invoke();
+
+        return ContentEditorOperationResult.Success();
+    }
+
     public void AddActionPlanStep(ActionPlanTemplateId planId, ActionPlanStepDescriptor step)
     {
         var plan = GetActionPlanDto(planId);
@@ -311,6 +379,31 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         var template = GetTemplateDto(templateId);
         template.DefaultPlanVariables ??= [];
         template.DefaultPlanVariables[variableName] = EditableContentDocument.PlanValueDescriptorDto.From(value);
+        onChanged?.Invoke();
+    }
+
+    public IReadOnlyList<DefaultPlanVariableEditorModel> ListDefaultPlanVariables(EntityTemplateId templateId)
+    {
+        var template = GetEntityPreset(templateId).Template;
+        return (template.DefaultPlanVariables ?? new Dictionary<string, PlanValueDescriptor>())
+            .OrderBy(entry => entry.Key)
+            .Select(entry => new DefaultPlanVariableEditorModel(entry.Key, entry.Value))
+            .ToList();
+    }
+
+    public void RemoveDefaultPlanVariable(EntityTemplateId templateId, string variableName)
+    {
+        var template = GetTemplateDto(templateId);
+        if (template.DefaultPlanVariables is null || !template.DefaultPlanVariables.Remove(variableName))
+        {
+            throw new InvalidOperationException($"Entity template {templateId} has no default variable {variableName}.");
+        }
+
+        if (template.DefaultPlanVariables.Count == 0)
+        {
+            template.DefaultPlanVariables = null;
+        }
+
         onChanged?.Invoke();
     }
 
@@ -384,6 +477,20 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
         return new EntityId(candidate);
     }
+
+    private ActionPlanTemplateId GenerateActionPlanTemplateId(string name)
+    {
+        var baseId = ToCamelCaseId(name);
+        var candidate = baseId;
+        var suffix = 2;
+        while (Document.ActionPlans.ContainsKey(candidate))
+        {
+            candidate = $"{baseId}{suffix}";
+            suffix++;
+        }
+
+        return new ActionPlanTemplateId(candidate);
+    }
 }
 
 public sealed record EntityPresetEditorModel(
@@ -395,7 +502,14 @@ public sealed record ActionPlanEditorModel(
     ActionPlanTemplateId TemplateId,
     ActionPlanDescriptor Descriptor);
 
+public sealed record ActionPlanReference(
+    EntityTemplateId? EntityTemplateId,
+    ActionPlanTemplateId? ActionPlanTemplateId,
+    int? StepIndex);
+
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
+
+public sealed record DefaultPlanVariableEditorModel(string Name, PlanValueDescriptor Value);
 
 public sealed record CarriedEntityEditorModel(
     EntityId EntityId,
