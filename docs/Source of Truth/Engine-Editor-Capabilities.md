@@ -4,7 +4,7 @@ This is the central manual for GameGameGame engine/editor capability parity. It 
 
 - engine/editor maintainers deciding how new Core features should be authored, validated, and exercised through editor tooling;
 - content creators and content-editing agents that need to know what the editor can safely author today;
-- future agent API work, which should use the same canonical authoring model as the GUI and editor service.
+- agent API work, which should use the same canonical authoring model as the GUI and editor service.
 
 Update this document whenever an engine capability is added, removed, renamed, promoted to editor support, intentionally kept engine-only, or moved into legacy compatibility.
 
@@ -98,6 +98,7 @@ The editor can currently:
 - edit pickup inventory coordinates and call-plan references;
 - edit movement target/destination fields for `Teleport` and `Drop`;
 - validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, and legacy/arbitrary variable fields;
+- author content through the first in-process `AgentContentEditorApi` facade over editor/content services;
 - load/display legacy variable-based content and legacy `SetVariable` effects without exposing them for new canonical GUI authoring.
 
 The editor intentionally does not currently:
@@ -107,7 +108,7 @@ The editor intentionally does not currently:
 - author `directionVariable`, `targetVariable`, or `variableName` fields through GUI;
 - author initial `Target` actor state through GUI;
 - expose `CanDrop`, which is deferred until a concrete branching use case appears;
-- provide a dedicated agent API layer yet.
+- provide an external agent transport/protocol layer yet.
 
 ## Action-plan checks
 
@@ -173,9 +174,11 @@ Current policy:
 
 ## Agent API readiness
 
-The movement primitive parity baseline is sufficient to plan the agent API.
+The movement primitive parity baseline is sufficient for the first in-process agent API facade.
 
-Agent API should:
+Agent API currently has an in-process `AgentContentEditorApi` facade in the Editor project. It wraps editor/content services for document/session snapshots, validation, entity template updates, actor initial facing, action plans/steps, canonical checks, and canonical/advanced supported effects. It rejects legacy `SetVariable` effect authoring.
+
+Agent API should continue to:
 
 - wrap `ContentEditorService`, not edit YAML/DTOs directly;
 - expose stable and advanced supported capabilities through typed commands;
@@ -184,4 +187,4 @@ Agent API should:
 - reuse movement target/destination descriptors for `Teleport` and `Drop`;
 - keep initial `Target`, `CanDrop`, and advanced turn-flag authoring deferred until concrete use cases appear.
 
-See `Agent-Editor-API-Plan.md` for the proposed first implementation slice.
+See `Agent-Editor-API-Plan.md` for the implementation plan and next transport/protocol considerations.

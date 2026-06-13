@@ -71,6 +71,8 @@ Initial command families:
 
 ## First implementation slice
 
+Status: Implemented as an in-process facade in `src/GameGameGame.Editor/AgentContentEditorApi.cs`.
+
 Before adding any network/tool protocol, add an in-process API facade around `ContentEditorService` with tests.
 
 Suggested first slice:
@@ -86,4 +88,82 @@ Suggested first slice:
   6. set `Drop` or `Teleport` with typed movement fields,
   7. validate and inspect YAML.
 
-After the in-process API is stable, expose it through whatever agent transport/protocol is chosen.
+Current test coverage includes authoring movement-capable content through the facade, validating canonical authoring, inspecting generated YAML, and rejecting legacy `SetVariable` authoring.
+
+After the in-process API is exercised against generated test content, expose it through whatever agent transport/protocol is chosen.
+
+## First generated-content exercise
+
+Exercise prompt: use the facade to author a barrel, a trap, and a rat.
+
+Results:
+
+- Barrel: authorable with the current API as a passive container entity.
+- Rat: partially authorable with the current API by reusing the existing wandering action plan and canonical initial facing.
+- Rat taking two actions per turn: blocked by current engine turn semantics. Current turn/action execution stops when an effect consumes the turn, and the currently supported movement/action effects consume through action resolution.
+- Trap bumping entities in all four directions per turn: blocked by current engine semantics and intentionally blocked API surface. The API correctly rejects legacy `SetVariable` authoring, so content cannot rotate arbitrary facing variables through the agent API. Current engine movement/teleport-style effects also do not provide a canonical multi-effect-per-turn primitive for this behavior.
+
+Lessons:
+
+- The facade is usable for ordinary template/action-plan authoring.
+- The `SetVariable` rejection is working as intended and should not be relaxed just to recover legacy directional scripting.
+- Multi-action-per-turn and multi-direction trap behavior should be modeled as future engine capabilities, not as arbitrary variable mutation.
+- Saving an existing content file through the facade may canonicalize legacy YAML, such as `defaultPlanVariables.facing` into `actionStateDefaults.facing`. Agent exercises should use temporary/generated content files unless the task explicitly intends to migrate checked-in content.
+
+Recommended next API work before external transport:
+
+1. Add a documented generated-content exercise workflow that uses temporary files or new documents instead of editing checked-in prototype content.
+2. Add dry-run/save-preview guidance or API support so agents can inspect canonicalization changes before writing files.
+3. Add higher-level content authoring helpers for common patterns, such as passive containers and actors that reuse an existing action plan.
+4. Keep multi-action turns, directional trap behavior, and other new gameplay semantics out of the agent API until Core supports canonical engine concepts for them.
+
+## Current priority: behavior-primitive action-plan authoring
+
+The next in-process API work should remodel canonical action-plan authoring around behavior primitives before the API is stabilized or exposed through an external transport. The engine can keep low-level checks/effects as internal, legacy, or advanced machinery, but normal content authoring should expose plans as primitive behaviors with typed configuration.
+
+### Phase 1: Define the behavior primitive model
+
+Testable outcomes:
+
+- A checked-in document defines behavior primitives, required state, initializable state, implicit state writes, and followup ports.
+- The capability manual identifies behavior-primitive authoring as canonical and low-level step/check/effect authoring as advanced or compatibility-oriented.
+- `Wandering` is specified as the first primitive: requires `Facing`, attempts one move, sets `Target` to the blocker for followup, reverses `Facing` for next turn when blocked, and resolves to one action.
+
+### Phase 2: Add Core/content descriptor support
+
+Testable outcomes:
+
+- Tests can materialize or interpret a `Wandering` primitive descriptor.
+- An unblocked `Wandering` actor moves in its current `Facing` direction.
+- A blocked `Wandering` actor updates canonical `Target` to the blocker and reverses canonical `Facing` for the next turn.
+- A blocked `Wandering` plan calls its configured followup and still resolves to exactly one consumed action.
+- Existing low-level descriptor/YAML compatibility tests continue to pass.
+
+### Phase 3: Add validation and editor/content parity
+
+Testable outcomes:
+
+- Validation reports missing required state for entities assigned primitive-backed plans.
+- Validation reports missing or malformed followup references.
+- Canonical validation passes for valid `Wandering` content.
+- Canonical validation continues to reject arbitrary variable mutation and legacy `SetVariable` authoring.
+
+### Phase 4: Adjust the agent/editor API around behavior primitives
+
+Testable outcomes:
+
+- The agent API can create/configure a `Wandering` primitive plan without manual `CanMove`, `Move`, `BlockingEntity`, `ReverseDirection`, or `CallPlan` authoring.
+- The agent API can assign the primitive plan to an entity and set initial `Facing`.
+- The agent API can configure the `Wandering` followup port.
+- Unsupported arbitrary internal state mutation is rejected or clearly marked non-canonical.
+- Generated primitive-backed content validates with zero canonical diagnostics.
+
+### Phase 5: Re-run generated-content exercises and revise roadmap
+
+Testable outcomes:
+
+- Barrel authoring still succeeds as a passive container.
+- Rat authoring succeeds as a `Wandering` entity with initial `Facing` and configured followup.
+- Rat two-actions-per-turn remains classified as scheduler/speed engine work unless a speed capability has been added.
+- Trap all-direction bumping remains classified as new behavior/action primitive or scheduler work unless such a capability has been added.
+- Roadmap and capability docs are updated with the exercise results.
