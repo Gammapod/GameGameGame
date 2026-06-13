@@ -1,0 +1,240 @@
+entityTemplates:
+  game:
+    name: Game
+    inventoryWidth: 25
+    inventoryHeight: 25
+    weight: 0
+    carryingCapacity: 0
+    carriedEntities:
+    - entityId: gamePlayer
+      templateId: player
+      coord:
+        x: 12
+        y: 12
+    - entityId: gameChest
+      templateId: chest
+      coord:
+        x: 14
+        y: 12
+  player:
+    name: Player
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 10
+    carryingCapacity: 15
+    defaultActionPlanId: wandering
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: West
+    carriedEntities:
+    - entityId: playerSword1
+      templateId: sword
+      coord:
+        x: 0
+        y: 0
+    - entityId: playerSword2
+      templateId: sword
+      coord:
+        x: 1
+        y: 0
+    - entityId: playerSword3
+      templateId: sword
+      coord:
+        x: 2
+        y: 0
+  chest:
+    name: Chest
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 20
+    carryingCapacity: 50
+    defaultActionPlanId: stealSword
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: South
+  slime:
+    name: Slime
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    defaultActionPlanId: wandering
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: West
+    carriedEntities:
+    - entityId: slimeSword
+      templateId: sword
+      coord:
+        x: 0
+        y: 0
+  giantSlime:
+    name: Giant Slime
+    inventoryWidth: 4
+    inventoryHeight: 3
+    weight: 15
+    carryingCapacity: 20
+    defaultActionPlanId: wandering
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: West
+    carriedEntities:
+    - entityId: giantSlimeRock
+      templateId: rock
+      coord:
+        x: 2
+        y: 1
+  rock:
+    name: Rock
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 3
+    carryingCapacity: 3
+  sword:
+    name: Sword
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 0
+    defaultActionPlanId: test
+    defaultPlanVariables:
+      facing:
+        kind: Direction
+        directionValue: North
+presentations:
+  game:
+    glyph: G
+    color: Yellow
+  player:
+    glyph: '@'
+    color: Cyan
+  chest:
+    glyph: 'C'
+    color: Earth
+  slime:
+    glyph: s
+    color: Green
+  giantSlime:
+    glyph: h
+    color: Earth
+  rock:
+    glyph: '*'
+    color: Earth
+  sword:
+    glyph: t
+    color: Gray
+actionPlans:
+  wandering:
+    id: wandering
+    steps:
+    - label: move facing
+      checks:
+      - kind: CanMove
+      onSuccess:
+        kind: Move
+        consumesTurn: false
+        continuePlan: false
+    - label: handle blocker
+      checks:
+      - kind: BlockingEntity
+      onSuccess:
+        kind: CallPlan
+        planId: handleBlocker
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: ReverseDirection
+        consumesTurn: false
+        continuePlan: true
+    - label: wait
+      checks: []
+      onSuccess:
+        kind: Wait
+        consumesTurn: false
+        continuePlan: false
+  handleBlocker:
+    id: handleBlocker
+    steps:
+    - label: pickup blocker
+      checks:
+      - kind: CanPickup
+        inventoryCoord:
+          x: 0
+          y: 0
+      onSuccess:
+        kind: Pickup
+        inventoryCoord:
+          x: 0
+          y: 0
+        consumesTurn: false
+        continuePlan: false
+    - label: reverse after bump
+      checks: []
+      onSuccess:
+        kind: ReverseDirection
+        consumesTurn: true
+        continuePlan: false
+  test:
+    id: test
+    steps:
+    - label: wait
+      checks:
+      - kind: CanMove
+      onSuccess:
+        kind: Move
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: ReverseDirection
+        consumesTurn: false
+        continuePlan: true
+    - label: wait 2
+      checks:
+      - kind: CanMove
+      onSuccess:
+        kind: Move
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: ReverseDirection
+        consumesTurn: true
+        continuePlan: false
+  stealSword:
+    id: stealSword
+    steps:
+    - label: check for adjacent player
+      checks:
+      - kind: BlockingEntity
+      onSuccess:
+        kind: CallPlan
+        planId: stealFromBlocker
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: Wait
+        consumesTurn: false
+        continuePlan: true
+  stealFromBlocker:
+    id: stealFromBlocker
+    steps:
+    - label: steal sword from blocker
+      checks:
+      - kind: CanPickup
+        inventoryCoord:
+          x: 0
+          y: 0
+      onSuccess:
+        kind: Pickup
+        inventoryCoord:
+          x: 0
+          y: 0
+        consumesTurn: false
+        continuePlan: false
+      onFailure:
+        kind: Wait
+        consumesTurn: false
+        continuePlan: true
