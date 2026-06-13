@@ -1,6 +1,36 @@
+# Build outputs
 bin/
 obj/
+publish/
+artifacts/
+build/
+
+# IDE/Editor files
+.vs/
+.idea/
 *.user
 *.suo
-.vs/
+*.csproj.user
+*.sln
+*.slnx
+*.DotSettings
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# Test results
 TestResults/
+coverage/
+*.coverage
+*.trx
