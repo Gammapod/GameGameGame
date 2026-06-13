@@ -437,6 +437,10 @@ public sealed class EditableContentDocument
 
         public PlanValueDescriptorDto? Value { get; set; }
 
+        public MovementTargetDescriptorDto? MovementTarget { get; set; }
+
+        public MovementDestinationDescriptorDto? MovementDestination { get; set; }
+
         public bool ConsumesTurn { get; set; }
 
         public bool ContinuePlan { get; set; }
@@ -450,6 +454,8 @@ public sealed class EditableContentDocument
             PlanId = descriptor.PlanId?.Value,
             VariableName = descriptor.VariableName,
             Value = descriptor.Value is null ? null : PlanValueDescriptorDto.From(descriptor.Value),
+            MovementTarget = descriptor.MovementTarget is null ? null : MovementTargetDescriptorDto.From(descriptor.MovementTarget),
+            MovementDestination = descriptor.MovementDestination is null ? null : MovementDestinationDescriptorDto.From(descriptor.MovementDestination),
             ConsumesTurn = descriptor.ConsumesTurn,
             ContinuePlan = descriptor.ContinuePlan
         };
@@ -457,12 +463,18 @@ public sealed class EditableContentDocument
         public PlanEffectDescriptor ToDescriptor() =>
             Kind switch
             {
+                PlanEffectKind.Teleport => PlanEffectDescriptor.Teleport(
+                    MovementTarget?.ToDescriptor() ?? MovementTargetDescriptor.Entity(new EntityId(string.Empty)),
+                    MovementDestination?.ToDescriptor() ?? MovementDestinationDescriptor.Plane(new PlaneCoord(new PlaneId(string.Empty), new GridCoord(0, 0)))),
                 PlanEffectKind.Move => DirectionVariable is null
                     ? PlanEffectDescriptor.Move()
                     : PlanEffectDescriptor.Move(DirectionVariable),
                 PlanEffectKind.Pickup => TargetVariable is null
                     ? PlanEffectDescriptor.Pickup(ToCoord(InventoryCoord))
                     : PlanEffectDescriptor.Pickup(TargetVariable, ToCoord(InventoryCoord)),
+                PlanEffectKind.Drop => PlanEffectDescriptor.Drop(
+                    MovementTarget?.ToDescriptor() ?? MovementTargetDescriptor.CarriedInventoryCoord(new GridCoord(0, 0)),
+                    MovementDestination?.ToDescriptor() ?? MovementDestinationDescriptor.AdjacentToSelf(Direction.South)),
                 PlanEffectKind.ReverseDirection => DirectionVariable is null
                     ? PlanEffectDescriptor.ReverseDirection(ConsumesTurn, ContinuePlan)
                     : PlanEffectDescriptor.ReverseDirection(DirectionVariable, ConsumesTurn, ContinuePlan),
@@ -471,6 +483,81 @@ public sealed class EditableContentDocument
                 PlanEffectKind.CallPlan => PlanEffectDescriptor.CallPlan(new ActionPlanId(PlanId ?? string.Empty)),
                 _ => throw new InvalidOperationException($"Unsupported plan effect kind {Kind}.")
             };
+    }
+
+    public sealed class MovementTargetDescriptorDto
+    {
+        public MovementTargetKind Kind { get; set; }
+
+        public string? EntityId { get; set; }
+
+        public GridCoordDto? InventoryCoord { get; set; }
+
+        public static MovementTargetDescriptorDto From(MovementTargetDescriptor descriptor) => new()
+        {
+            Kind = descriptor.Kind,
+            EntityId = descriptor.EntityId?.Value,
+            InventoryCoord = descriptor.InventoryCoord is { } coord ? GridCoordDto.From(coord) : null
+        };
+
+        public MovementTargetDescriptor ToDescriptor() =>
+            Kind switch
+            {
+                MovementTargetKind.Self => MovementTargetDescriptor.Self(),
+                MovementTargetKind.CanonicalTarget => MovementTargetDescriptor.CanonicalTarget(),
+                MovementTargetKind.Entity => MovementTargetDescriptor.Entity(new EntityId(EntityId ?? string.Empty)),
+                MovementTargetKind.CarriedInventoryCoord => MovementTargetDescriptor.CarriedInventoryCoord(ToCoord(InventoryCoord)),
+                _ => throw new InvalidOperationException($"Unsupported movement target kind {Kind}.")
+            };
+    }
+
+    public sealed class MovementDestinationDescriptorDto
+    {
+        public MovementDestinationKind Kind { get; set; }
+
+        public PlaneCoordDto? PlaneCoord { get; set; }
+
+        public string? OwnerId { get; set; }
+
+        public GridCoordDto? InventoryCoord { get; set; }
+
+        public string? AnchorEntityId { get; set; }
+
+        public Direction? Direction { get; set; }
+
+        public static MovementDestinationDescriptorDto From(MovementDestinationDescriptor descriptor) => new()
+        {
+            Kind = descriptor.Kind,
+            PlaneCoord = descriptor.PlaneCoord is { } coord ? PlaneCoordDto.From(coord) : null,
+            OwnerId = descriptor.OwnerId?.Value,
+            InventoryCoord = descriptor.InventoryCoord is { } inventoryCoord ? GridCoordDto.From(inventoryCoord) : null,
+            AnchorEntityId = descriptor.AnchorEntityId?.Value,
+            Direction = descriptor.Direction
+        };
+
+        public MovementDestinationDescriptor ToDescriptor() =>
+            Kind switch
+            {
+                MovementDestinationKind.PlaneCoord => MovementDestinationDescriptor.Plane(ToPlaneCoord(PlaneCoord)),
+                MovementDestinationKind.InventorySlot => MovementDestinationDescriptor.InventorySlot(new EntityId(OwnerId ?? string.Empty), ToCoord(InventoryCoord)),
+                MovementDestinationKind.AdjacentToSelf => MovementDestinationDescriptor.AdjacentToSelf(Direction ?? global::GameGameGame.Core.Direction.South),
+                MovementDestinationKind.AdjacentToEntity => MovementDestinationDescriptor.AdjacentToEntity(new EntityId(AnchorEntityId ?? string.Empty), Direction ?? global::GameGameGame.Core.Direction.South),
+                MovementDestinationKind.AdjacentToCanonicalTarget => MovementDestinationDescriptor.AdjacentToCanonicalTarget(Direction ?? global::GameGameGame.Core.Direction.South),
+                _ => throw new InvalidOperationException($"Unsupported movement destination kind {Kind}.")
+            };
+    }
+
+    public sealed class PlaneCoordDto
+    {
+        public string? PlaneId { get; set; }
+
+        public GridCoordDto? Coord { get; set; }
+
+        public static PlaneCoordDto From(PlaneCoord coord) => new()
+        {
+            PlaneId = coord.PlaneId.Value,
+            Coord = GridCoordDto.From(coord.Coord)
+        };
     }
 
     public sealed class PlanValueDescriptorDto
@@ -526,4 +613,7 @@ public sealed class EditableContentDocument
 
     private static GridCoord ToCoord(GridCoordDto? coord) =>
         coord is null ? new GridCoord(0, 0) : new GridCoord(coord.X, coord.Y);
+
+    private static PlaneCoord ToPlaneCoord(PlaneCoordDto? coord) =>
+        coord is null ? new PlaneCoord(new PlaneId(string.Empty), new GridCoord(0, 0)) : new PlaneCoord(new PlaneId(coord.PlaneId ?? string.Empty), ToCoord(coord.Coord));
 }

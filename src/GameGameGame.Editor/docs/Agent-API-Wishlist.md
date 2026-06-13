@@ -1,53 +1,77 @@
-# Agent API Wishlist
+# Agent Content API Wishlist
 
-This document describes the API surface that would make GameGameGame content authoring practical and reliable for code agents. The goal is not to replace the human GUI, but to expose the same editor capabilities through a headless, scriptable, strongly validated interface.
+This document describes the remaining API surface that would make GameGameGame content authoring practical and reliable for code agents. It has been updated to reflect the current editor/content services.
+
+The editor now has a strong headless foundation in `GameGameGame.Content`, especially `ContentEditorSession`, `ContentEditorService`, `EditableContentDocument`, `ContentValidationResult`, and `ContentDiagnostic`. The goal of the agent API is therefore not to recreate editor logic, but to expose the existing content-authoring capabilities through stable, documented, structured contracts.
 
 ## Primary goals
 
-- Let agents create, edit, inspect, validate, and save content without GUI automation.
-- Keep agent workflows aligned with the human editor so both use the same rules and validation.
+- Let agents create, edit, inspect, validate, format, diff, and save content without GUI automation.
+- Keep agent workflows aligned with the human editor by reusing the same content services and validation rules.
 - Make every operation deterministic, inspectable, and easy to recover from.
 - Prefer structured inputs/outputs over free-form text.
+- Avoid direct YAML guessing when an editor operation exists.
 
-## Required capabilities
+## Current foundation
 
-### 1. Headless content session API
+The existing services already provide these core authoring capabilities and should be wrapped rather than reimplemented:
 
-Agents need a programmatic equivalent of the editor session:
+- Content sessions: create new, open YAML, save, save-as, reload, dirty state, YAML preview, validation.
+- Entity presets: list, get, create with generated ID, duplicate, update, delete with reference checks.
+- Entity fields: display name, inventory dimensions, weight, carrying capacity, glyph, color, default action plan.
+- Inventory layout: list carried entities, place in first open cell, place at coordinate, move, remove, replace template reference, find first open cell, validate prospective placement.
+- Action plans: list, create with generated ID, duplicate, delete with reference checks.
+- Action plan steps: add, update, move, remove.
+- Action plan checks/effects: add/update/move/remove checks, set success effect, set/clear failure effect.
+- Actor state defaults: set/clear initial facing using canonical `actionStateDefaults`.
+- Validation diagnostics: structured severity/code/message plus entity, plan, step, variable, slot, expected/actual kind, carried entity, related entity, and coordinate fields.
 
-- Create new content document.
-- Open existing YAML content file.
-- Save and save-as.
-- Reload from disk.
-- Report dirty state.
-- Return YAML preview.
-- Return a real ordered diff against the saved baseline.
-- Validate current in-memory document.
+## Required remaining capabilities
 
-The current `ContentEditorSession` is close to this, but the agent-facing layer should expose stable, documented request/response contracts.
+### 1. Stable agent-facing interface
 
-### 2. Machine-readable diagnostics
+Provide a documented, headless API over the current content services.
 
-Validation should return structured diagnostics, not only strings.
+Preferred shapes:
 
-Each diagnostic should include:
+- CLI tool emitting JSON.
+- MCP server exposing content-editor tools.
+- Local HTTP API with OpenAPI documentation.
+- .NET library with stable public DTOs plus a thin CLI or MCP wrapper.
 
-- severity
-- code
-- message
-- YAML path, when known
-- entity template id, when relevant
-- action plan id/template id, when relevant
-- step index, when relevant
-- carried entity id, when relevant
-- expected and actual value kinds, when relevant
-- suggested fix, when available
+The most useful first version would be a CLI or MCP layer over `ContentEditorSession` and `ContentEditorService`.
 
-Agents can act much more reliably when diagnostics identify exact content locations and expected corrections.
+Every operation should have stable request/response DTOs. Agent-facing contracts should not expose implementation-specific exceptions or GUI view-model state as primary control flow.
 
-### 3. Strict schema validation
+### 2. Structured error model for all operations
 
-The API should support a strict validation mode that rejects:
+Validation diagnostics are now structured, but mutation/file/session failures are still often string-only results or thrown exceptions. Agent-facing failures should use a predictable object, for example:
+
+```json
+{
+  "code": "InventoryCellOccupied",
+  "message": "Cannot place carried entity at 0,0; cell is already occupied by carriedRock.",
+  "path": "entityTemplates.bag.carriedEntities[1].coord",
+  "recoverable": true,
+  "suggestedActions": []
+}
+```
+
+Useful fields:
+
+- `code`
+- `message`
+- `severity`
+- `path`, when known
+- `recoverable`
+- `suggestedActions`
+- relevant IDs/indexes/coordinates
+
+Avoid exceptions or free-form status strings as the primary agent-facing response.
+
+### 3. Strict and canonical validation modes
+
+The current YAML loaders still ignore unmatched properties. Agent-authored content needs an opt-in strict mode that rejects:
 
 - unknown YAML properties
 - misspelled enum values
@@ -56,20 +80,22 @@ The API should support a strict validation mode that rejects:
 - malformed IDs
 - invalid glyph values
 - negative values where unsupported
+- non-canonical legacy authoring forms
 
-The current loader ignores unmatched properties, which is convenient for compatibility but risky for agent-authored content.
+Canonical validation should also expose `EditableContentDocument.ValidateCanonicalAuthoring()` behavior, especially around legacy arbitrary plan variables and legacy variable fields.
 
-### 4. Checked-in content schema
+### 4. Checked-in content schema and catalogs
 
-Please provide a schema file for the content format, ideally generated or kept in sync with the editor API.
+Provide checked-in machine-readable schema/catalog files, generated or kept in sync with the content API.
 
-Useful forms:
+Useful outputs:
 
-- JSON Schema for YAML editor tooling
-- OpenAPI schema if the API is HTTP-based
-- machine-readable enum/value catalog
+- JSON Schema for YAML editor tooling.
+- OpenAPI schema if HTTP-based.
+- MCP/CLI metadata schema if tool-based.
+- Machine-readable enum and primitive catalogs.
 
-This should include all valid values for:
+Catalogs should include valid values for:
 
 - `PresentationColor`
 - `PlanCheckKind`
@@ -77,201 +103,177 @@ This should include all valid values for:
 - `PlanValueKind`
 - `Direction`
 
-### 5. CRUD operations for entity templates
+They should also expose action primitive metadata already present in the engine/content model:
 
-Required entity operations:
+- available check primitives
+- available effect primitives
+- required/optional fields per primitive
+- variable read/write fields per primitive, if still applicable
+- slot read/write behavior
+- default descriptor produced for each primitive
+- legacy-only primitives or fields, such as `SetVariable`, when applicable
 
-- List entity templates.
-- Get entity template by id.
-- Create entity template from explicit fields.
-- Duplicate entity template.
-- Rename display name.
-- Update inventory dimensions.
-- Update weight/carrying capacity.
-- Update presentation glyph/color.
-- Delete entity template, with reference checks.
-- List references to an entity template.
+### 5. Explicit IDs and reference management
 
-Important: creation should support both generated IDs and explicit requested IDs. If an explicit ID conflicts or is invalid, return a structured error.
+Current creation APIs generate IDs from names. Agents also need explicit-ID creation and upsert paths.
 
-### 6. Inventory layout operations
-
-Required inventory operations:
-
-- List carried entities for a template.
-- Place carried entity in first open cell.
-- Place carried entity at explicit coordinate.
-- Move carried entity.
-- Remove carried entity.
-- Replace carried entity template reference.
-- Find first open cell.
-- Validate prospective placement without mutation.
-- Return occupied/free cell grid.
-
-Every mutating operation should return the changed object and any warnings/diagnostics.
-
-### 7. CRUD operations for action plans
-
-Required action plan operations:
-
-- List action plans.
-- Get action plan by id.
-- Create action plan.
-- Duplicate action plan.
-- Delete action plan, with reference checks.
-- List references to an action plan.
-- Rename plan id/template id if supported.
-- Validate action plan independently and in context of assigned entity templates.
-
-### 8. Action plan step editing
-
-Required step operations:
-
-- List steps.
-- Add step.
-- Update step label.
-- Move step.
-- Remove step.
-- Add/update/move/remove checks.
-- Set/clear success effect.
-- Set/clear failure effect.
-
-The API should expose available check/effect primitives with their required fields and variable read/write behavior. Agents need to know which fields are required before constructing a step.
-
-### 9. Default action plan variables
-
-Required variable operations:
-
-- List default variables for an entity template.
-- Set default variable.
-- Remove default variable.
-- Suggest required variables for an assigned action plan.
-- Identify missing variables.
-- Identify type mismatches.
-- Suggest safe default values by required kind.
-
-### 10. Catalog/discovery endpoints
-
-Agents need discoverable metadata instead of hardcoding assumptions.
-
-Useful catalog data:
-
-- valid enum values
-- available plan check primitives
-- available plan effect primitives
-- required fields per primitive
-- variable read/write fields per primitive
-- content document version
-- supported API version
-- known content file paths
-- default prototype content path
-
-### 11. Transaction or dry-run support
-
-Agents frequently need to test edits before committing them.
-
-Useful modes:
-
-- dry-run operation: return proposed YAML/diff/diagnostics without mutating session
-- transaction begin/commit/rollback
-- batch apply multiple operations atomically
-- reject commit if validation fails above a configurable severity
-
-### 12. Formatting and canonicalization
-
-The API should provide a canonical formatter for content YAML.
-
-Desired behavior:
-
-- stable key ordering
-- stable indentation
-- predictable enum casing
-- optional comments preserved if feasible
-- no unrelated reformatting when possible
-
-This reduces noisy diffs and makes agent edits easier to review.
-
-### 13. Content-wide validation command
-
-There should be one operation that validates every checked-in content file, not just the built-in prototype YAML.
-
-The operation should report:
-
-- files checked
-- files skipped and why
-- all diagnostics grouped by file
-- overall pass/fail status
-
-This is especially important for files like `Calibrations.yml` if they are intended to remain valid content.
-
-### 14. Structured error model
-
-All API failures should use a predictable error object, for example:
-
-```json
-{
-  "code": "MissingActionPlanReference",
-  "message": "Entity template slime references missing action plan wandering.",
-  "path": "entityTemplates.slime.defaultActionPlanId",
-  "recoverable": true,
-  "suggestedActions": []
-}
-```
-
-Avoid exceptions or free-form status strings as the primary control flow for agent-facing operations.
-
-### 15. Stable IDs and reference management
-
-Agents need clear ID rules:
+The API should define and enforce ID rules:
 
 - allowed characters
 - casing convention
 - maximum length, if any
 - uniqueness scope
 - generated ID algorithm
+- explicit-ID conflict behavior
 - rename behavior
 - reference update behavior
 
-If IDs can be renamed, the API should optionally update references automatically and return the full affected set.
+Required additions:
+
+- Create entity template with requested ID.
+- Create action plan with requested template ID/runtime ID.
+- Rename entity template ID, optionally updating references.
+- Rename action plan template/runtime ID, optionally updating references.
+- Return affected references for any rename/delete operation.
+
+### 6. Real ordered diff and semantic diff
+
+`ContentEditorSession.GetYamlDiff()` currently provides a simple line-membership diff. Agents need a deterministic, ordered diff against the saved baseline.
+
+Desired outputs:
+
+- ordered unified diff text
+- structured JSON diff hunks
+- semantic diff option for entity/action-plan changes
+- indication of whether formatting-only changes occurred
+
+### 7. Dry-run, batch, and transaction support
+
+Agents frequently need to test edits before committing them.
+
+Useful modes:
+
+- dry-run operation: return proposed YAML, ordered diff, and diagnostics without mutating the session
+- batch apply multiple operations atomically
+- reject commit/save if validation fails above a configurable severity
+- transaction begin/commit/rollback, if stateful sessions are used
+
+### 8. Formatting and canonicalization command
+
+`EditableContentDocument.SaveYaml()` already canonicalizes some legacy content. Expose this as an explicit agent operation.
+
+Desired behavior:
+
+- stable key ordering where practical
+- stable indentation
+- predictable enum casing
+- canonical actor state defaults instead of legacy `defaultPlanVariables.facing`
+- canonical primitive fields, avoiding legacy arbitrary variable fields where possible
+- no unrelated reformatting when possible
+
+### 9. Content-wide validation command
+
+Provide one operation that validates every checked-in content file intended to remain valid.
+
+The operation should report:
+
+- files checked
+- files skipped and why
+- all diagnostics grouped by file
+- strict/canonical validation status per file
+- overall pass/fail status
+
+This is especially important for files such as `PrototypeContent.yaml` and `Calibrations.yml` if they are both intended to remain valid content inputs.
+
+### 10. YAML path support in diagnostics
+
+Current diagnostics contain useful semantic fields, but not YAML paths. Add path information where feasible.
+
+Examples:
+
+- `entityTemplates.slime.defaultActionPlanId`
+- `entityTemplates.bag.carriedEntities[0].coord`
+- `actionPlans.wandering.steps[1].checks[0]`
+- `actionPlans.wandering.steps[1].onSuccess.planId`
+
+When exact paths cannot be known, return the closest stable semantic location.
+
+### 11. Canonical actor state and plan slot authoring
+
+The old wishlist focused on default action plan variables. Current content now has canonical actor state defaults and slot validation.
+
+Agent APIs should prefer canonical operations:
+
+- list actor state defaults for an entity template
+- set/clear initial facing
+- set/clear initial target, if target authoring is intended
+- identify missing required slots for assigned action plans
+- suggest safe actor state defaults by required slot kind
+
+Arbitrary `defaultPlanVariables` and legacy variable fields should be treated as legacy/advanced authoring unless deliberately reintroduced as supported content.
+
+### 12. Content search and reference discovery
+
+Add structured search/discovery helpers useful for agents:
+
+- search by entity/action plan ID
+- search by display name
+- search by glyph/color
+- search by primitive kind
+- list references to an entity template
+- list references to an action plan
+- list carried entities referencing a template
+- list templates assigned to an action plan
+
+Some reference helpers already exist internally; the agent API should expose them consistently.
 
 ## Nice-to-have capabilities
 
 - Undo/redo history exposed to the API.
-- Content search by id/name/glyph/action primitive/reference.
 - Import/export selected templates or action plans.
 - Compare two content documents semantically.
-- Generate starter templates from presets, such as item, creature, container, terrain, AI actor.
+- Generate starter templates from presets such as item, creature, container, terrain, AI actor.
 - Explain an action plan in human-readable form.
 - Simulate or trace an action plan against a small test world, once engine-facing support exists.
 
-## Preferred interface shapes
+## Updated minimum viable agent API
 
-Any of these would work well for agents:
+If prioritizing a first pass, build a thin JSON-emitting CLI or MCP server around the existing content services.
 
-- CLI tool emitting JSON.
-- Local HTTP API with OpenAPI documentation.
-- MCP server exposing content-editor tools.
-- .NET library with stable public DTOs plus a thin CLI wrapper.
+Suggested MVP operations:
 
-The most agent-friendly option would be a CLI or MCP layer over the same core service used by the GUI.
+1. `validate <file> --json --strict --canonical`
+2. `format <file> --check|--write --json`
+3. `diff <file> --json --ordered`
+4. `list-entities <file> --json`
+5. `get-entity <file> <entityTemplateId> --json`
+6. `create-entity <file> --json <entity.json> [--id <id>] [--dry-run]`
+7. `update-entity <file> <entityTemplateId> --json <patch.json> [--dry-run]`
+8. `delete-entity <file> <entityTemplateId> [--dry-run] --json`
+9. `list-carried <file> <parentEntityTemplateId> --json`
+10. `place-carried <file> <parentEntityTemplateId> <templateId> [--entity-id <id>] [--x <x> --y <y>] [--dry-run] --json`
+11. `move-carried <file> <parentEntityTemplateId> <entityId> --x <x> --y <y> [--dry-run] --json`
+12. `remove-carried <file> <parentEntityTemplateId> <entityId> [--dry-run] --json`
+13. `list-action-plans <file> --json`
+14. `get-action-plan <file> <actionPlanTemplateId> --json`
+15. `create-action-plan <file> --json <plan.json> [--id <id>] [--dry-run]`
+16. `update-action-plan <file> <actionPlanTemplateId> --json <patch.json> [--dry-run]`
+17. `delete-action-plan <file> <actionPlanTemplateId> [--dry-run] --json`
+18. `assign-default-action-plan <file> <entityTemplateId> <actionPlanTemplateId> [--dry-run] --json`
+19. `set-actor-state <file> <entityTemplateId> --facing <direction>|--clear-facing [--dry-run] --json`
+20. `catalog --json`
+21. `validate-all --json --strict --canonical`
+22. `apply-batch <file> <operations.json> --dry-run --json`
 
-## Minimum viable agent API
+Each mutating command should return:
 
-If prioritizing a first pass, I would start with:
-
-1. `validate <file> --json --strict`
-2. `format <file>`
-3. `list-entities <file> --json`
-4. `get-entity <file> <id> --json`
-5. `upsert-entity <file> <json>`
-6. `list-action-plans <file> --json`
-7. `get-action-plan <file> <id> --json`
-8. `upsert-action-plan <file> <json>`
-9. `diff <file> --json`
-10. `apply-batch <file> <operations.json> --dry-run --json`
-
-That would be enough for agents to author most current content safely.
+- success/failure
+- changed object or affected IDs
+- structured errors/diagnostics
+- validation result after the proposed change
+- ordered diff
+- YAML preview when requested
 
 ## Summary
 
-The existing content/editor services already provide a strong foundation. The main missing piece for agents is a formal, headless, structured API with strict validation, schemas, deterministic formatting, and machine-readable diagnostics. Once those are available, agents can author content confidently without relying on GUI automation or direct YAML guessing.
+The original wishlist asked for many editor capabilities that now exist in `GameGameGame.Content`. The remaining need is a stable, structured, headless agent API over those capabilities, plus strict validation, schemas/catalogs, explicit ID/reference management, ordered diffs, dry-run/batch operations, and canonical actor-state-oriented authoring.

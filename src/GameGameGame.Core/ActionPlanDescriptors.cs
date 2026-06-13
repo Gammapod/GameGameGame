@@ -83,8 +83,10 @@ public sealed record PlanCheckDescriptor(
 
 public enum PlanEffectKind
 {
+    Teleport,
     Move,
     Pickup,
+    Drop,
     ReverseDirection,
     Wait,
     SetVariable,
@@ -99,9 +101,14 @@ public sealed record PlanEffectDescriptor(
     ActionPlanId? PlanId = null,
     string? VariableName = null,
     PlanValue? Value = null,
+    MovementTargetDescriptor? MovementTarget = null,
+    MovementDestinationDescriptor? MovementDestination = null,
     bool ConsumesTurn = false,
     bool ContinuePlan = false)
 {
+    public static PlanEffectDescriptor Teleport(MovementTargetDescriptor target, MovementDestinationDescriptor destination) =>
+        new(PlanEffectKind.Teleport, MovementTarget: target, MovementDestination: destination);
+
     public static PlanEffectDescriptor Move() =>
         new(PlanEffectKind.Move);
 
@@ -113,6 +120,9 @@ public sealed record PlanEffectDescriptor(
 
     public static PlanEffectDescriptor Pickup(string targetVariable, GridCoord inventoryCoord) =>
         new(PlanEffectKind.Pickup, TargetVariable: targetVariable, InventoryCoord: inventoryCoord);
+
+    public static PlanEffectDescriptor Drop(MovementTargetDescriptor target, MovementDestinationDescriptor destination) =>
+        new(PlanEffectKind.Drop, MovementTarget: target, MovementDestination: destination);
 
     public static PlanEffectDescriptor ReverseDirection(bool consumesTurn, bool continuePlan) =>
         new(PlanEffectKind.ReverseDirection, ConsumesTurn: consumesTurn, ContinuePlan: continuePlan);
@@ -132,6 +142,9 @@ public sealed record PlanEffectDescriptor(
     public IPlanEffect Materialize() =>
         Kind switch
         {
+            PlanEffectKind.Teleport => new TeleportEffect(
+                MovementTarget ?? throw new InvalidOperationException("Plan effect MovementTarget is required."),
+                MovementDestination ?? throw new InvalidOperationException("Plan effect MovementDestination is required.")),
             PlanEffectKind.Move => DirectionVariable is null
                 ? new MoveEffect()
                 : new MoveEffect(Required(DirectionVariable, nameof(DirectionVariable))),
@@ -140,6 +153,9 @@ public sealed record PlanEffectDescriptor(
                 : new PickupEffect(
                     Required(TargetVariable, nameof(TargetVariable)),
                     Required(InventoryCoord, nameof(InventoryCoord))),
+            PlanEffectKind.Drop => new DropEffect(
+                MovementTarget ?? throw new InvalidOperationException("Plan effect MovementTarget is required."),
+                MovementDestination ?? throw new InvalidOperationException("Plan effect MovementDestination is required.")),
             PlanEffectKind.ReverseDirection => DirectionVariable is null
                 ? new ReverseDirectionEffect(ConsumesTurn, ContinuePlan)
                 : new ReverseDirectionEffect(

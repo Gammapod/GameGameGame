@@ -36,21 +36,14 @@ public sealed record MoveAction(Direction Direction) : IActionIntent
     {
         var trace = new TraceNode($"Move {Direction}", TraceStatus.Info);
 
-        if (!movement.TryGetMoveDestination(world, actorId, Direction, out var destination))
+        var relocation = movement.EvaluateRelocation(world, actorId, MovementDestination.AdjacentTo(actorId, Direction));
+        trace.Add(relocation.Trace);
+
+        if (!relocation.CanRelocate)
         {
             trace.Status = TraceStatus.Failure;
-            trace.Reason = FailureReason.MoveOutOfBounds;
-            trace.Detail = "destination is outside the current plane";
-            return new ActionEvaluation(false, trace);
-        }
-
-        trace.Add(TraceNode.Info("Destination", destination.ToString()));
-
-        if (world.GetOccupant(destination) is { } occupantId)
-        {
-            trace.Status = TraceStatus.Failure;
-            trace.Reason = FailureReason.MoveBlocked;
-            trace.Detail = $"blocked by {world.FormatEntityAddress(occupantId)}";
+            trace.Reason = relocation.Trace.Reason;
+            trace.Detail = relocation.Trace.Detail;
             return new ActionEvaluation(false, trace);
         }
 
@@ -59,7 +52,7 @@ public sealed record MoveAction(Direction Direction) : IActionIntent
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        movement.TryMove(world, actorId, Direction);
+        movement.TryRelocate(world, actorId, MovementDestination.AdjacentTo(actorId, Direction));
 }
 
 public sealed record WaitAction : IActionIntent
@@ -124,7 +117,10 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
 
         trace.Add(TraceNode.Success("Target is adjacent"));
 
-        if (!movement.CanPlace(world, Destination))
+        var relocation = movement.EvaluateRelocation(world, TargetId, MovementDestination.Plane(Destination));
+        trace.Add(relocation.Trace);
+
+        if (!relocation.CanRelocate)
         {
             return ActionTrace.Fail(trace, FailureReason.InvalidPlacement, $"cannot place into {Destination}");
         }
@@ -152,7 +148,7 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        movement.TryPlace(world, TargetId, Destination);
+        movement.TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
 }
 
 public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IActionIntent
@@ -198,7 +194,10 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
 
         trace.Add(TraceNode.Success("Destination is on actor plane", Destination.ToString()));
 
-        if (!movement.CanPlace(world, Destination))
+        var relocation = movement.EvaluateRelocation(world, TargetId, MovementDestination.Plane(Destination));
+        trace.Add(relocation.Trace);
+
+        if (!relocation.CanRelocate)
         {
             return ActionTrace.Fail(trace, FailureReason.InvalidPlacement, $"cannot place into {Destination}");
         }
@@ -209,7 +208,7 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        movement.TryPlace(world, TargetId, Destination);
+        movement.TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
 
 }
 

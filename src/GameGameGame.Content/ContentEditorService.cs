@@ -400,6 +400,24 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanStepFailureEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectKind kind) =>
         SetActionPlanStepEffect(planId, stepIndex, kind, updateSuccess: false);
 
+    public void SetActionPlanStepSuccessEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectDescriptor effect) =>
+        SetActionPlanStepEffect(planId, stepIndex, effect, updateSuccess: true);
+
+    public void SetActionPlanStepFailureEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectDescriptor effect) =>
+        SetActionPlanStepEffect(planId, stepIndex, effect, updateSuccess: false);
+
+    public void SetActionPlanStepSuccessEffectMovementTarget(ActionPlanTemplateId planId, int stepIndex, MovementTargetDescriptor target) =>
+        UpdateActionPlanStepEffect(planId, stepIndex, updateSuccess: true, effect => effect with { MovementTarget = target });
+
+    public void SetActionPlanStepFailureEffectMovementTarget(ActionPlanTemplateId planId, int stepIndex, MovementTargetDescriptor target) =>
+        UpdateActionPlanStepEffect(planId, stepIndex, updateSuccess: false, effect => effect with { MovementTarget = target });
+
+    public void SetActionPlanStepSuccessEffectMovementDestination(ActionPlanTemplateId planId, int stepIndex, MovementDestinationDescriptor destination) =>
+        UpdateActionPlanStepEffect(planId, stepIndex, updateSuccess: true, effect => effect with { MovementDestination = destination });
+
+    public void SetActionPlanStepFailureEffectMovementDestination(ActionPlanTemplateId planId, int stepIndex, MovementDestinationDescriptor destination) =>
+        UpdateActionPlanStepEffect(planId, stepIndex, updateSuccess: false, effect => effect with { MovementDestination = destination });
+
     private void SetActionPlanStepEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectKind kind, bool updateSuccess)
     {
         var steps = GetActionPlanSteps(planId);
@@ -408,6 +426,37 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         steps[stepIndex] = EditableContentDocument.ActionPlanStepDescriptorDto.From(updateSuccess
             ? step with { OnSuccess = effect }
             : step with { OnFailure = effect });
+        onChanged?.Invoke();
+    }
+
+    private void SetActionPlanStepEffect(ActionPlanTemplateId planId, int stepIndex, PlanEffectDescriptor effect, bool updateSuccess)
+    {
+        var steps = GetActionPlanSteps(planId);
+        var step = steps[stepIndex].ToDescriptor();
+        steps[stepIndex] = EditableContentDocument.ActionPlanStepDescriptorDto.From(updateSuccess
+            ? step with { OnSuccess = effect }
+            : step with { OnFailure = effect });
+        onChanged?.Invoke();
+    }
+
+    private void UpdateActionPlanStepEffect(
+        ActionPlanTemplateId planId,
+        int stepIndex,
+        bool updateSuccess,
+        Func<PlanEffectDescriptor, PlanEffectDescriptor> update)
+    {
+        var steps = GetActionPlanSteps(planId);
+        var step = steps[stepIndex].ToDescriptor();
+        var effect = updateSuccess ? step.OnSuccess : step.OnFailure;
+        if (effect is null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} step {stepIndex} has no {(updateSuccess ? "success" : "failure")} effect.");
+        }
+
+        var updated = update(effect);
+        steps[stepIndex] = EditableContentDocument.ActionPlanStepDescriptorDto.From(updateSuccess
+            ? step with { OnSuccess = updated }
+            : step with { OnFailure = updated });
         onChanged?.Invoke();
     }
 

@@ -170,6 +170,61 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsMovementPrimitiveDescriptors()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              movement:
+                id: movement
+                steps:
+                  - label: teleport rock
+                    checks: []
+                    onSuccess:
+                      kind: Teleport
+                      movementTarget:
+                        kind: Entity
+                        entityId: rock
+                      movementDestination:
+                        kind: PlaneCoord
+                        planeCoord:
+                          planeId: world
+                          coord:
+                            x: 4
+                            y: 2
+                  - label: drop carried
+                    checks: []
+                    onSuccess:
+                      kind: Drop
+                      movementTarget:
+                        kind: CarriedInventoryCoord
+                        inventoryCoord:
+                          x: 0
+                          y: 1
+                      movementDestination:
+                        kind: AdjacentToSelf
+                        direction: East
+            """);
+
+        var descriptor = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("movement"));
+        var teleport = descriptor.Steps[0].OnSuccess!;
+        var drop = descriptor.Steps[1].OnSuccess!;
+
+        Assert.Equal(PlanEffectKind.Teleport, teleport.Kind);
+        Assert.Equal(MovementTargetKind.Entity, teleport.MovementTarget!.Kind);
+        Assert.Equal(new EntityId("rock"), teleport.MovementTarget.EntityId);
+        Assert.Equal(MovementDestinationKind.PlaneCoord, teleport.MovementDestination!.Kind);
+        Assert.Equal(new PlaneCoord(new PlaneId("world"), new GridCoord(4, 2)), teleport.MovementDestination.PlaneCoord);
+        Assert.Equal(PlanEffectKind.Drop, drop.Kind);
+        Assert.Equal(MovementTargetKind.CarriedInventoryCoord, drop.MovementTarget!.Kind);
+        Assert.Equal(new GridCoord(0, 1), drop.MovementTarget.InventoryCoord);
+        Assert.Equal(MovementDestinationKind.AdjacentToSelf, drop.MovementDestination!.Kind);
+        Assert.Equal(Direction.East, drop.MovementDestination.Direction);
+    }
+
+    [Fact]
     public void SpawnedActionPlanUsesCanonicalInitialFacingDefault()
     {
         var registry = YamlContentLoader.LoadRegistry(

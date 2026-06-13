@@ -502,6 +502,116 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceSetsTeleportActionPlanStepEffectDescriptor()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              movement:
+                id: movement
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var planId = new ActionPlanTemplateId("movement");
+
+        editor.SetActionPlanStepSuccessEffect(
+            planId,
+            stepIndex: 0,
+            PlanEffectDescriptor.Teleport(
+                MovementTargetDescriptor.Entity(new EntityId("rock")),
+                MovementDestinationDescriptor.Plane(new PlaneCoord(new PlaneId("world"), new GridCoord(4, 2)))));
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var effect = registry.ActionPlanDescriptors[planId].Steps.Single().OnSuccess!;
+
+        Assert.Equal(PlanEffectKind.Teleport, effect.Kind);
+        Assert.Equal(MovementTargetKind.Entity, effect.MovementTarget!.Kind);
+        Assert.Equal(new EntityId("rock"), effect.MovementTarget.EntityId);
+        Assert.Equal(new PlaneCoord(new PlaneId("world"), new GridCoord(4, 2)), effect.MovementDestination!.PlaneCoord);
+    }
+
+    [Fact]
+    public void ContentEditorServiceSetsDropActionPlanStepEffectDescriptor()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              movement:
+                id: movement
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var planId = new ActionPlanTemplateId("movement");
+
+        editor.SetActionPlanStepSuccessEffect(
+            planId,
+            stepIndex: 0,
+            PlanEffectDescriptor.Drop(
+                MovementTargetDescriptor.CarriedInventoryCoord(new GridCoord(0, 0)),
+                MovementDestinationDescriptor.AdjacentToSelf(Direction.West)));
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var effect = registry.ActionPlanDescriptors[planId].Steps.Single().OnSuccess!;
+
+        Assert.Equal(PlanEffectKind.Drop, effect.Kind);
+        Assert.Equal(MovementTargetKind.CarriedInventoryCoord, effect.MovementTarget!.Kind);
+        Assert.Equal(new GridCoord(0, 0), effect.MovementTarget.InventoryCoord);
+        Assert.Equal(MovementDestinationKind.AdjacentToSelf, effect.MovementDestination!.Kind);
+        Assert.Equal(Direction.West, effect.MovementDestination.Direction);
+    }
+
+    [Fact]
+    public void ContentEditorServiceUpdatesMovementEffectTargetAndDestinationFields()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              movement:
+                id: movement
+                steps:
+                  - label: teleport
+                    checks: []
+                    onSuccess:
+                      kind: Teleport
+                      movementTarget:
+                        kind: Self
+                      movementDestination:
+                        kind: AdjacentToSelf
+                        direction: East
+            """));
+        var planId = new ActionPlanTemplateId("movement");
+
+        editor.SetActionPlanStepSuccessEffectMovementTarget(
+            planId,
+            stepIndex: 0,
+            MovementTargetDescriptor.Entity(new EntityId("rock")));
+        editor.SetActionPlanStepSuccessEffectMovementDestination(
+            planId,
+            stepIndex: 0,
+            MovementDestinationDescriptor.Plane(new PlaneCoord(new PlaneId("world"), new GridCoord(4, 2))));
+
+        var effect = EditableContentDocument.LoadYaml(editor.Document.SaveYaml())
+            .ToRegistry()
+            .ActionPlanDescriptors[planId]
+            .Steps.Single().OnSuccess!;
+
+        Assert.Equal(MovementTargetKind.Entity, effect.MovementTarget!.Kind);
+        Assert.Equal(new EntityId("rock"), effect.MovementTarget.EntityId);
+        Assert.Equal(MovementDestinationKind.PlaneCoord, effect.MovementDestination!.Kind);
+        Assert.Equal(new PlaneCoord(new PlaneId("world"), new GridCoord(4, 2)), effect.MovementDestination.PlaneCoord);
+    }
+
+    [Fact]
     public void ContentEditorServiceValidatesCurrentDocumentAfterEdits()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(

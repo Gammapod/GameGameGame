@@ -64,6 +64,60 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsInvalidMovementTargetDescriptor()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("invalidMovement"),
+                    [
+                        new ActionPlanStepDescriptor(
+                            "teleport missing entity",
+                            [],
+                            PlanEffectDescriptor.Teleport(
+                                new MovementTargetDescriptor(MovementTargetKind.Entity),
+                                MovementDestinationDescriptor.Plane(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0)))),
+                            OnFailure: null)
+                    ]));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidMovementDescriptor);
+        Assert.Equal(new ActionPlanId("invalidMovement"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("entityId", diagnostic.Message);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsInvalidMovementDestinationDescriptor()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("invalidMovement"),
+                    [
+                        new ActionPlanStepDescriptor(
+                            "drop missing direction",
+                            [],
+                            PlanEffectDescriptor.Drop(
+                                MovementTargetDescriptor.CarriedInventoryCoord(new GridCoord(0, 0)),
+                                new MovementDestinationDescriptor(MovementDestinationKind.AdjacentToSelf)),
+                            OnFailure: null)
+                    ]));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidMovementDescriptor);
+        Assert.Equal(new ActionPlanId("invalidMovement"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("direction", diagnostic.Message);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingCanonicalFacingSlot()
     {
         var registry = YamlContentLoader.LoadRegistry(

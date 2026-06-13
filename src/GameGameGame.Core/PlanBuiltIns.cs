@@ -384,6 +384,251 @@ public sealed class PickupEffect : IPlanEffect
     }
 }
 
+public sealed class TeleportEffect(
+    MovementTargetDescriptor target,
+    MovementDestinationDescriptor destination) : IPlanEffect
+{
+    public MovementTargetDescriptor Target { get; } = target;
+
+    public MovementDestinationDescriptor Destination { get; } = destination;
+
+    public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
+    {
+        var trace = new TraceNode($"Teleport {Target.Kind}", TraceStatus.Info, detail: $"destination={Destination.Kind}");
+
+        if (!TryResolveTarget(world, actorId, context, Target, trace, out var targetId) ||
+            !TryResolveDestination(world, actorId, context, Destination, trace, out var movementDestination))
+        {
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var relocation = movement.EvaluateRelocation(world, targetId, movementDestination);
+        trace.Add(relocation.Trace);
+
+        if (!relocation.CanRelocate || relocation.Destination is not { } resolvedDestination)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = relocation.Trace.Reason;
+            trace.Detail = relocation.Trace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        movement.TryPlace(world, targetId, resolvedDestination);
+        trace.Status = TraceStatus.Success;
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    internal static bool TryResolveTarget(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        MovementTargetDescriptor target,
+        TraceNode trace,
+        out EntityId targetId)
+    {
+        switch (target.Kind)
+        {
+            case MovementTargetKind.Self:
+                targetId = actorId;
+                trace.Add(TraceNode.Success("Resolve target self", actorId.ToString()));
+                return true;
+
+            case MovementTargetKind.CanonicalTarget:
+                if (context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var value, out var readTrace))
+                {
+                    trace.Add(readTrace);
+                    targetId = value.Value;
+                    return true;
+                }
+
+                trace.Add(readTrace);
+                targetId = default;
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = readTrace.Detail;
+                return false;
+
+            case MovementTargetKind.Entity:
+                if (target.EntityId is { } explicitEntityId)
+                {
+                    targetId = explicitEntityId;
+                    trace.Add(TraceNode.Success("Resolve target entity", explicitEntityId.ToString()));
+                    return true;
+                }
+
+                targetId = default;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.TargetMissing;
+                trace.Detail = "movement target entity id is required";
+                return false;
+
+            case MovementTargetKind.CarriedInventoryCoord:
+                if (target.InventoryCoord is not { } inventoryCoord)
+                {
+                    targetId = default;
+                    trace.Status = TraceStatus.Failure;
+                    trace.Reason = FailureReason.InvalidInventoryDestination;
+                    trace.Detail = "movement target inventory coordinate is required";
+                    return false;
+                }
+
+                if (world.GetInventoryPlaneId(actorId) is not { } inventoryPlaneId)
+                {
+                    targetId = default;
+                    trace.Status = TraceStatus.Failure;
+                    trace.Reason = FailureReason.ActorHasNoInventory;
+                    trace.Detail = $"{actorId} has no usable inventory plane";
+                    return false;
+                }
+
+                var source = new PlaneCoord(inventoryPlaneId, inventoryCoord);
+                if (world.GetOccupant(source) is { } carriedEntityId)
+                {
+                    targetId = carriedEntityId;
+                    trace.Add(TraceNode.Success("Resolve carried target", carriedEntityId.ToString()));
+                    return true;
+                }
+
+                targetId = default;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.TargetNotInInventory;
+                trace.Detail = $"no carried entity at {source}";
+                return false;
+
+            default:
+                targetId = default;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.TargetMissing;
+                trace.Detail = $"unsupported movement target {target.Kind}";
+                return false;
+        }
+    }
+
+    internal static bool TryResolveDestination(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        MovementDestinationDescriptor destination,
+        TraceNode trace,
+        out MovementDestination movementDestination)
+    {
+        switch (destination.Kind)
+        {
+            case MovementDestinationKind.PlaneCoord:
+                if (destination.PlaneCoord is { } planeCoord)
+                {
+                    movementDestination = MovementDestination.Plane(planeCoord);
+                    return true;
+                }
+
+                movementDestination = default!;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.InvalidPlacement;
+                trace.Detail = "plane destination coordinate is required";
+                return false;
+
+            case MovementDestinationKind.InventorySlot:
+                if (destination.OwnerId is { } ownerId && destination.InventoryCoord is { } inventoryCoord)
+                {
+                    movementDestination = MovementDestination.InventorySlot(ownerId, inventoryCoord);
+                    return true;
+                }
+
+                movementDestination = default!;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.InvalidInventoryDestination;
+                trace.Detail = "inventory destination owner and coordinate are required";
+                return false;
+
+            case MovementDestinationKind.AdjacentToSelf:
+                if (destination.Direction is { } selfDirection)
+                {
+                    movementDestination = MovementDestination.AdjacentTo(actorId, selfDirection);
+                    return true;
+                }
+
+                movementDestination = default!;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.MoveOutOfBounds;
+                trace.Detail = "adjacent destination direction is required";
+                return false;
+
+            case MovementDestinationKind.AdjacentToEntity:
+                if (destination.AnchorEntityId is { } anchorEntityId && destination.Direction is { } entityDirection)
+                {
+                    movementDestination = MovementDestination.AdjacentTo(anchorEntityId, entityDirection);
+                    return true;
+                }
+
+                movementDestination = default!;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.TargetMissing;
+                trace.Detail = "adjacent entity destination anchor and direction are required";
+                return false;
+
+            case MovementDestinationKind.AdjacentToCanonicalTarget:
+                if (context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var value, out var readTrace) &&
+                    destination.Direction is { } targetDirection)
+                {
+                    trace.Add(readTrace);
+                    movementDestination = MovementDestination.AdjacentTo(value.Value, targetDirection);
+                    return true;
+                }
+
+                trace.Add(readTrace);
+                movementDestination = default!;
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = readTrace.Detail;
+                return false;
+
+            default:
+                movementDestination = default!;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.InvalidPlacement;
+                trace.Detail = $"unsupported movement destination {destination.Kind}";
+                return false;
+        }
+    }
+}
+
+public sealed class DropEffect(
+    MovementTargetDescriptor target,
+    MovementDestinationDescriptor destination) : IPlanEffect
+{
+    public MovementTargetDescriptor Target { get; } = target;
+
+    public MovementDestinationDescriptor Destination { get; } = destination;
+
+    public PlanEffectResult Apply(WorldState world, EntityId actorId, ActionPlanContext context, MovementService movement)
+    {
+        var trace = new TraceNode($"Drop {Target.Kind}", TraceStatus.Info, detail: $"destination={Destination.Kind}");
+
+        if (!TeleportEffect.TryResolveTarget(world, actorId, context, Target, trace, out var targetId) ||
+            !TeleportEffect.TryResolveDestination(world, actorId, context, Destination, trace, out var movementDestination))
+        {
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var relocation = movement.EvaluateRelocation(world, targetId, movementDestination);
+        trace.Add(relocation.Trace);
+        if (!relocation.CanRelocate || relocation.Destination is not { } resolvedDestination)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = relocation.Trace.Reason;
+            trace.Detail = relocation.Trace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        IActionIntent action = new DropAction(targetId, resolvedDestination);
+        var resolution = action.Resolve(world, actorId, movement);
+        trace.Add(resolution.Trace);
+        trace.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+
+        return new PlanEffectResult(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+    }
+}
+
 public sealed class ReverseDirectionEffect : IPlanEffect
 {
     public ReverseDirectionEffect(bool consumesTurn, bool continuePlan)

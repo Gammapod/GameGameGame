@@ -120,9 +120,9 @@ Completed before movement changes:
 - Kept legacy `SetVariable` display/load/runtime compatibility only.
 - Updated docs/tests after cleanup.
 
-### Phase 1: Introduce typed relocation model in Core
+### Phase 1: Introduce typed relocation model in Core - initial complete
 
-Add tests first for typed movement locations and relocation behavior.
+Initial implementation added typed movement destinations and common relocation evaluation/execution in Core.
 
 Expected outcomes:
 
@@ -131,7 +131,19 @@ Expected outcomes:
 - Existing direct move/pickup behavior can be expressed through the relocation path or an adapter around it.
 - Invalid locations produce structured failures/traces.
 
-### Phase 2: Add catalog/descriptor/YAML representation
+Implemented initial destination forms:
+
+- explicit `PlaneCoord`,
+- inventory slot by owner entity + inventory coordinate,
+- adjacent location by anchor entity + direction.
+
+Remaining Phase 1 follow-up before Phase 2/3 if needed:
+
+- decide whether movement targets need a matching typed reference model now, or whether explicit `EntityId` is sufficient until `Teleport` descriptors are introduced,
+- decide whether the relocation path should replace `TryMove`/`TryPlace` internals now or during Phase 4,
+- refine failure reasons if generic relocation needs movement-specific diagnostics beyond the current reused reasons.
+
+### Phase 2: Add catalog/descriptor/YAML representation - initial complete
 
 Expected outcomes:
 
@@ -140,7 +152,21 @@ Expected outcomes:
 - Legacy/current `Move` and `Pickup` YAML remains compatible.
 - Validation reports missing/invalid movement targets and destinations with actionable diagnostics.
 
-### Phase 3: Implement `Teleport`
+Initial implementation added:
+
+- `MovementTargetDescriptor` with `Self`, `CanonicalTarget`, `Entity`, and `CarriedInventoryCoord` target kinds.
+- `MovementDestinationDescriptor` with `PlaneCoord`, `InventorySlot`, `AdjacentToSelf`, `AdjacentToEntity`, and `AdjacentToCanonicalTarget` destination kinds.
+- `Teleport` and `Drop` `PlanEffectKind` values plus descriptor factories.
+- Primitive catalog field kinds for movement target/destination fields.
+- YAML load/save support for movement target/destination descriptors.
+
+Remaining Phase 2 follow-up:
+
+- validation diagnostics for invalid movement target/destination field combinations,
+- editor-service field-level authoring operations for movement descriptors,
+- GUI exposure after runtime support is implemented or deliberately gated.
+
+### Phase 3: Implement `Teleport` - runtime complete
 
 Expected outcomes:
 
@@ -149,7 +175,21 @@ Expected outcomes:
 - GUI can expose teleport as an advanced movement primitive.
 - Tests cover world-to-world and at least one inventory-related relocation, depending on Phase 1 location support.
 
-### Phase 4: Rebase `Move` and `Pickup` on relocation semantics
+Implemented:
+
+- `TeleportEffect` materializes from `PlanEffectDescriptor.Teleport`.
+- Runtime target resolution supports self, canonical target, explicit entity, and actor-carried inventory coordinate.
+- Runtime destination resolution supports explicit plane coordinate, explicit inventory slot, adjacent to self/entity/canonical target.
+- Descriptor-level editor-service authoring can set teleport effects and update movement target/destination fields.
+- Validation reports malformed teleport movement target/destination descriptors.
+- Tests cover explicit world relocation, canonical target to inventory relocation, and carried-inventory-coordinate target relocation.
+
+Remaining Phase 3 follow-up:
+
+- expose teleport fields in GUI only after the advanced movement authoring UX is designed,
+- decide whether generic teleport should enforce extra game rules for inventory capacity or intentionally remain arbitrary relocation.
+
+### Phase 4: Rebase `Move` and `Pickup` on relocation semantics - complete
 
 Expected outcomes:
 
@@ -157,7 +197,14 @@ Expected outcomes:
 - Catalog identifies `Move` and `Pickup` as movement primitives with constrained target/destination fields.
 - Editor remains simple: no arbitrary variable names, only required literal fields.
 
-### Phase 5: Add `Drop`
+Implemented:
+
+- `MoveAction` evaluates and executes through the shared relocation path using an adjacent-to-self destination.
+- `PickupAction` keeps pickup-specific gameplay validation, including adjacency and carrying capacity, then uses the shared relocation path for final placement.
+- Generic `Teleport` remains arbitrary advanced relocation; inventory capacity is still enforced by constrained `Pickup`, not by generic relocation.
+- Tests assert both `Move` and `Pickup` traces include relocation path usage while existing behavior remains compatible.
+
+### Phase 5: Add `Drop` - runtime complete
 
 Expected outcomes:
 
@@ -165,6 +212,21 @@ Expected outcomes:
 - Validation and editor service can author drop parameters.
 - GUI exposes drop using constrained movement fields.
 - Content can use drop through action plans with engine/editor parity.
+
+Implemented:
+
+- `DropEffect` materializes from `PlanEffectDescriptor.Drop`.
+- Runtime target resolution reuses movement target descriptors and supports carried-inventory-coordinate targets.
+- Runtime destination resolution reuses movement destination descriptors.
+- `DropAction` keeps drop-specific validation, including target-in-actor-inventory and destination-on-actor-plane checks, then uses the shared relocation path for final placement.
+- Descriptor-level editor-service authoring can set drop effects and update movement target/destination fields.
+- Validation reports malformed drop movement target/destination descriptors.
+- Tests cover dropping a carried inventory-coordinate target to an adjacent peer/world location and failure when an explicit target is not carried by the actor.
+
+Remaining Phase 5 follow-up:
+
+- expose drop fields in GUI after constrained movement authoring UX is designed,
+- `CanDrop` is intentionally deferred for now; drop effect validation is sufficient for the first authoring pass unless a concrete branching use case appears.
 
 ### Phase 6: Agent/editor API readiness check
 

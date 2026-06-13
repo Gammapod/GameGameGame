@@ -306,6 +306,8 @@ public sealed class PrototypeContentRegistry(
             {
                 ValidateCalledPlan(errors, templateId, descriptor, step, step.OnSuccess);
                 ValidateCalledPlan(errors, templateId, descriptor, step, step.OnFailure);
+                ValidateMovementEffectDescriptor(diagnostics, templateId, descriptor, step, step.OnSuccess);
+                ValidateMovementEffectDescriptor(diagnostics, templateId, descriptor, step, step.OnFailure);
             }
         }
 
@@ -329,6 +331,74 @@ public sealed class PrototypeContentRegistry(
         }
 
         ValidateTemplateActionPlanVariables(errors, diagnostics);
+    }
+
+    private static void ValidateMovementEffectDescriptor(
+        List<ContentDiagnostic> diagnostics,
+        ActionPlanTemplateId actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        ActionPlanStepDescriptor step,
+        PlanEffectDescriptor? effect)
+    {
+        if (effect?.Kind is not (PlanEffectKind.Teleport or PlanEffectKind.Drop))
+        {
+            return;
+        }
+
+        if (effect.MovementTarget is null)
+        {
+            AddInvalidMovementDiagnostic(diagnostics, actionPlanTemplateId, plan, step, effect, "movementTarget is required.");
+        }
+        else if (GetMovementTargetError(effect.MovementTarget) is { } targetError)
+        {
+            AddInvalidMovementDiagnostic(diagnostics, actionPlanTemplateId, plan, step, effect, targetError);
+        }
+
+        if (effect.MovementDestination is null)
+        {
+            AddInvalidMovementDiagnostic(diagnostics, actionPlanTemplateId, plan, step, effect, "movementDestination is required.");
+        }
+        else if (GetMovementDestinationError(effect.MovementDestination) is { } destinationError)
+        {
+            AddInvalidMovementDiagnostic(diagnostics, actionPlanTemplateId, plan, step, effect, destinationError);
+        }
+    }
+
+    private static string? GetMovementTargetError(MovementTargetDescriptor target) =>
+        target.Kind switch
+        {
+            MovementTargetKind.Entity when target.EntityId is null => "movementTarget.entityId is required for Entity targets.",
+            MovementTargetKind.CarriedInventoryCoord when target.InventoryCoord is null => "movementTarget.inventoryCoord is required for CarriedInventoryCoord targets.",
+            _ => null
+        };
+
+    private static string? GetMovementDestinationError(MovementDestinationDescriptor destination) =>
+        destination.Kind switch
+        {
+            MovementDestinationKind.PlaneCoord when destination.PlaneCoord is null => "movementDestination.planeCoord is required for PlaneCoord destinations.",
+            MovementDestinationKind.InventorySlot when destination.OwnerId is null => "movementDestination.ownerId is required for InventorySlot destinations.",
+            MovementDestinationKind.InventorySlot when destination.InventoryCoord is null => "movementDestination.inventoryCoord is required for InventorySlot destinations.",
+            MovementDestinationKind.AdjacentToSelf when destination.Direction is null => "movementDestination.direction is required for AdjacentToSelf destinations.",
+            MovementDestinationKind.AdjacentToEntity when destination.AnchorEntityId is null => "movementDestination.anchorEntityId is required for AdjacentToEntity destinations.",
+            MovementDestinationKind.AdjacentToEntity when destination.Direction is null => "movementDestination.direction is required for AdjacentToEntity destinations.",
+            MovementDestinationKind.AdjacentToCanonicalTarget when destination.Direction is null => "movementDestination.direction is required for AdjacentToCanonicalTarget destinations.",
+            _ => null
+        };
+
+    private static void AddInvalidMovementDiagnostic(
+        List<ContentDiagnostic> diagnostics,
+        ActionPlanTemplateId actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        ActionPlanStepDescriptor step,
+        PlanEffectDescriptor effect,
+        string detail)
+    {
+        AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+            ContentDiagnosticCode.InvalidMovementDescriptor,
+            $"Action plan {plan.Id} step {step.Label} has invalid {effect.Kind} movement descriptor: {detail}",
+            actionPlanTemplateId: actionPlanTemplateId,
+            actionPlanId: plan.Id,
+            stepIndex: StepIndex(plan, step)));
     }
 
     private void ValidateTemplateActionPlanVariables(List<string> errors, List<ContentDiagnostic> diagnostics)

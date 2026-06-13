@@ -240,4 +240,46 @@ public sealed class EditableContentDocumentTests
         Assert.Equal(new EntityTemplateId("slime"), diagnostic.EntityTemplateId);
         Assert.Equal("mood", diagnostic.VariableName);
     }
+
+    [Fact]
+    public void EditableContentDocumentSavesMovementPrimitiveDescriptors()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              movement:
+                id: movement
+                steps:
+                  - label: teleport rock
+                    checks: []
+                    onSuccess:
+                      kind: Teleport
+                      movementTarget:
+                        kind: Entity
+                        entityId: rock
+                      movementDestination:
+                        kind: PlaneCoord
+                        planeCoord:
+                          planeId: world
+                          coord:
+                            x: 4
+                            y: 2
+            """);
+
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ActionPlans["movement"]
+            .Steps!.Single().OnSuccess!;
+
+        Assert.Contains("kind: Teleport", saved);
+        Assert.Contains("movementTarget", saved);
+        Assert.Contains("movementDestination", saved);
+        Assert.Equal(PlanEffectKind.Teleport, reloaded.Kind);
+        Assert.Equal(MovementTargetKind.Entity, reloaded.MovementTarget!.Kind);
+        Assert.Equal("rock", reloaded.MovementTarget.EntityId);
+        Assert.Equal("world", reloaded.MovementDestination!.PlaneCoord!.PlaneId);
+        Assert.Equal(4, reloaded.MovementDestination.PlaneCoord.Coord!.X);
+        Assert.Equal(2, reloaded.MovementDestination.PlaneCoord.Coord.Y);
+    }
 }

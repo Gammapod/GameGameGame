@@ -7,7 +7,9 @@ public enum PlanPrimitiveFieldKind
     CoordLiteral,
     ActionPlanReference,
     PlanValueLiteral,
-    BoolLiteral
+    BoolLiteral,
+    MovementTarget,
+    MovementDestination
 }
 
 public sealed record PlanPrimitiveFieldDescriptor(
@@ -81,6 +83,13 @@ public static class PlanPrimitiveCatalog
     public static IReadOnlyList<PlanEffectPrimitiveDescriptor> Effects { get; } =
     [
         new(
+            PlanEffectKind.Teleport,
+            "Teleport",
+            [
+                MovementTarget("movementTarget"),
+                MovementDestination("movementDestination")
+            ]),
+        new(
             PlanEffectKind.Move,
             "Move",
             [
@@ -95,6 +104,13 @@ public static class PlanPrimitiveCatalog
                 CoordLiteral("inventoryCoord")
             ],
             SlotReads: [SlotRead(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            PlanEffectKind.Drop,
+            "Drop",
+            [
+                MovementTarget("movementTarget"),
+                MovementDestination("movementDestination")
+            ]),
         new(
             PlanEffectKind.ReverseDirection,
             "Reverse Direction",
@@ -153,8 +169,14 @@ public static class PlanPrimitiveCatalog
     public static PlanEffectDescriptor CreateDefaultEffect(PlanEffectKind kind) =>
         kind switch
         {
+            PlanEffectKind.Teleport => PlanEffectDescriptor.Teleport(
+                MovementTargetDescriptor.Entity(new EntityId("target")),
+                MovementDestinationDescriptor.Plane(new PlaneCoord(new PlaneId("world"), new GridCoord(0, 0)))),
             PlanEffectKind.Move => PlanEffectDescriptor.Move(),
             PlanEffectKind.Pickup => PlanEffectDescriptor.Pickup(new GridCoord(0, 0)),
+            PlanEffectKind.Drop => PlanEffectDescriptor.Drop(
+                MovementTargetDescriptor.CarriedInventoryCoord(new GridCoord(0, 0)),
+                MovementDestinationDescriptor.AdjacentToSelf(Direction.South)),
             PlanEffectKind.ReverseDirection => PlanEffectDescriptor.ReverseDirection(consumesTurn: false, continuePlan: false),
             PlanEffectKind.Wait => PlanEffectDescriptor.Wait(),
             PlanEffectKind.SetVariable => PlanEffectDescriptor.SetVariable("facing", new DirectionPlanValue(Direction.West), consumesTurn: false, continuePlan: false),
@@ -173,6 +195,12 @@ public static class PlanPrimitiveCatalog
 
     private static PlanPrimitiveFieldDescriptor BoolLiteral(string name) =>
         new(name, PlanPrimitiveFieldKind.BoolLiteral, IsRequired: false);
+
+    private static PlanPrimitiveFieldDescriptor MovementTarget(string name) =>
+        new(name, PlanPrimitiveFieldKind.MovementTarget);
+
+    private static PlanPrimitiveFieldDescriptor MovementDestination(string name) =>
+        new(name, PlanPrimitiveFieldKind.MovementDestination);
 
     private static PlanPrimitiveSlotDescriptor SlotRead(ActionPlanSlot slot, PlanValueKind valueKind) =>
         new(slot, valueKind);

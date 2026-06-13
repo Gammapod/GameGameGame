@@ -2,6 +2,44 @@ namespace GameGameGame.Core;
 
 public sealed class MovementService
 {
+    public RelocationEvaluation EvaluateRelocation(WorldState world, EntityId entityId, MovementDestination destination)
+    {
+        var trace = new TraceNode($"Relocate {entityId} -> {destination}", TraceStatus.Info);
+
+        if (!world.Entities.ContainsKey(entityId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {entityId} does not exist";
+            return new RelocationEvaluation(false, Destination: null, trace);
+        }
+
+        if (!TryResolveDestination(world, destination, trace, out var resolvedDestination))
+        {
+            return new RelocationEvaluation(false, Destination: null, trace);
+        }
+
+        trace.Add(TraceNode.Info("Resolved destination", resolvedDestination.ToString()));
+
+        if (!CanPlace(world, resolvedDestination))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.InvalidPlacement;
+            trace.Detail = $"cannot place into {resolvedDestination}";
+            return new RelocationEvaluation(false, resolvedDestination, trace);
+        }
+
+        trace.Status = TraceStatus.Success;
+        return new RelocationEvaluation(true, resolvedDestination, trace);
+    }
+
+    public bool TryRelocate(WorldState world, EntityId entityId, MovementDestination destination)
+    {
+        var evaluation = EvaluateRelocation(world, entityId, destination);
+        return evaluation is { CanRelocate: true, Destination: { } resolvedDestination }
+            && TryPlace(world, entityId, resolvedDestination);
+    }
+
     public bool AreAdjacent(WorldState world, EntityId firstEntityId, EntityId secondEntityId)
     {
         var first = world.GetEntityLocation(firstEntityId);
@@ -79,5 +117,83 @@ public sealed class MovementService
         }
 
         return world.GetOccupant(destination);
+    }
+
+    private static bool TryResolveDestination(
+        WorldState world,
+        MovementDestination destination,
+        TraceNode trace,
+        out PlaneCoord resolvedDestination)
+    {
+        switch (destination)
+        {
+            case MovementDestination.PlaneMovementDestination planeDestination:
+                resolvedDestination = planeDestination.Coord;
+                if (world.Planes.TryGetValue(resolvedDestination.PlaneId, out var plane) &&
+                    plane.Contains(resolvedDestination.Coord) &&
+                    world.TryGetNodeId(resolvedDestination, out _))
+                {
+                    return true;
+                }
+
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.InvalidPlacement;
+                trace.Detail = $"destination {resolvedDestination} is not a valid plane coordinate";
+                return false;
+
+            case MovementDestination.InventorySlotMovementDestination inventoryDestination:
+                if (world.GetInventoryPlaneId(inventoryDestination.OwnerId) is not { } inventoryPlaneId)
+                {
+                    resolvedDestination = default;
+                    trace.Status = TraceStatus.Failure;
+                    trace.Reason = FailureReason.ActorHasNoInventory;
+                    trace.Detail = $"{inventoryDestination.OwnerId} has no usable inventory plane";
+                    return false;
+                }
+
+                resolvedDestination = new PlaneCoord(inventoryPlaneId, inventoryDestination.Coord);
+                if (world.Planes.TryGetValue(resolvedDestination.PlaneId, out var inventoryPlane) &&
+                    inventoryPlane.Contains(resolvedDestination.Coord) &&
+                    world.TryGetNodeId(resolvedDestination, out _))
+                {
+                    return true;
+                }
+
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.InvalidInventoryDestination;
+                trace.Detail = $"inventory destination {resolvedDestination} is outside {inventoryPlaneId}";
+                return false;
+
+            case MovementDestination.AdjacentMovementDestination adjacentDestination:
+                if (!world.Entities.ContainsKey(adjacentDestination.AnchorId))
+                {
+                    resolvedDestination = default;
+                    trace.Status = TraceStatus.Failure;
+                    trace.Reason = FailureReason.TargetMissing;
+                    trace.Detail = $"anchor {adjacentDestination.AnchorId} does not exist";
+                    return false;
+                }
+
+                var anchorLocation = world.GetEntityLocation(adjacentDestination.AnchorId);
+                var adjacentCoord = anchorLocation.Coord.Offset(adjacentDestination.Direction);
+                resolvedDestination = new PlaneCoord(anchorLocation.PlaneId, adjacentCoord);
+                if (world.Planes[anchorLocation.PlaneId].Contains(adjacentCoord) &&
+                    world.TryGetNodeId(resolvedDestination, out _))
+                {
+                    return true;
+                }
+
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.MoveOutOfBounds;
+                trace.Detail = $"adjacent destination {resolvedDestination} is outside the anchor plane";
+                return false;
+
+            default:
+                resolvedDestination = default;
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.InvalidPlacement;
+                trace.Detail = $"unsupported movement destination {destination}";
+                return false;
+        }
     }
 }

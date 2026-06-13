@@ -162,6 +162,9 @@ public static class YamlContentLoader
     private static PlanEffectDescriptor MaterializeEffect(PlanEffectDescriptorDto effect) =>
         effect.Kind switch
         {
+            PlanEffectKind.Teleport => PlanEffectDescriptor.Teleport(
+                MaterializeMovementTarget(effect.MovementTarget),
+                MaterializeMovementDestination(effect.MovementDestination)),
             PlanEffectKind.Move => effect.DirectionVariable is null
                 ? PlanEffectDescriptor.Move()
                 : PlanEffectDescriptor.Move(Required(effect.DirectionVariable, nameof(effect.DirectionVariable))),
@@ -170,6 +173,9 @@ public static class YamlContentLoader
                 : PlanEffectDescriptor.Pickup(
                     Required(effect.TargetVariable, nameof(effect.TargetVariable)),
                     MaterializeCoord(effect.InventoryCoord)),
+            PlanEffectKind.Drop => PlanEffectDescriptor.Drop(
+                MaterializeMovementTarget(effect.MovementTarget),
+                MaterializeMovementDestination(effect.MovementDestination)),
             PlanEffectKind.ReverseDirection => effect.DirectionVariable is null
                 ? PlanEffectDescriptor.ReverseDirection(effect.ConsumesTurn, effect.ContinuePlan)
                 : PlanEffectDescriptor.ReverseDirection(
@@ -185,6 +191,50 @@ public static class YamlContentLoader
             PlanEffectKind.CallPlan => PlanEffectDescriptor.CallPlan(new ActionPlanId(Required(effect.PlanId, nameof(effect.PlanId)))),
             _ => throw new InvalidOperationException($"Unsupported plan effect kind {effect.Kind}.")
         };
+
+    private static MovementTargetDescriptor MaterializeMovementTarget(MovementTargetDescriptorDto? target)
+    {
+        if (target is null)
+        {
+            throw Missing(nameof(target));
+        }
+
+        return target.Kind switch
+        {
+            MovementTargetKind.Self => MovementTargetDescriptor.Self(),
+            MovementTargetKind.CanonicalTarget => MovementTargetDescriptor.CanonicalTarget(),
+            MovementTargetKind.Entity => MovementTargetDescriptor.Entity(new EntityId(Required(target.EntityId, nameof(target.EntityId)))),
+            MovementTargetKind.CarriedInventoryCoord => MovementTargetDescriptor.CarriedInventoryCoord(MaterializeCoord(target.InventoryCoord)),
+            _ => throw new InvalidOperationException($"Unsupported movement target kind {target.Kind}.")
+        };
+    }
+
+    private static MovementDestinationDescriptor MaterializeMovementDestination(MovementDestinationDescriptorDto? destination)
+    {
+        if (destination is null)
+        {
+            throw Missing(nameof(destination));
+        }
+
+        return destination.Kind switch
+        {
+            MovementDestinationKind.PlaneCoord => MovementDestinationDescriptor.Plane(MaterializePlaneCoord(destination.PlaneCoord)),
+            MovementDestinationKind.InventorySlot => MovementDestinationDescriptor.InventorySlot(
+                new EntityId(Required(destination.OwnerId, nameof(destination.OwnerId))),
+                MaterializeCoord(destination.InventoryCoord)),
+            MovementDestinationKind.AdjacentToSelf => MovementDestinationDescriptor.AdjacentToSelf(destination.Direction ?? throw Missing(nameof(destination.Direction))),
+            MovementDestinationKind.AdjacentToEntity => MovementDestinationDescriptor.AdjacentToEntity(
+                new EntityId(Required(destination.AnchorEntityId, nameof(destination.AnchorEntityId))),
+                destination.Direction ?? throw Missing(nameof(destination.Direction))),
+            MovementDestinationKind.AdjacentToCanonicalTarget => MovementDestinationDescriptor.AdjacentToCanonicalTarget(destination.Direction ?? throw Missing(nameof(destination.Direction))),
+            _ => throw new InvalidOperationException($"Unsupported movement destination kind {destination.Kind}.")
+        };
+    }
+
+    private static PlaneCoord MaterializePlaneCoord(PlaneCoordDto? coord) =>
+        coord is null
+            ? throw Missing(nameof(coord))
+            : new PlaneCoord(new PlaneId(Required(coord.PlaneId, nameof(coord.PlaneId))), MaterializeCoord(coord.Coord));
 
     private static GridCoord MaterializeCoord(GridCoordDto? coord) =>
         coord is null ? throw Missing(nameof(coord)) : new GridCoord(coord.X, coord.Y);
@@ -293,6 +343,10 @@ public static class YamlContentLoader
 
         public PlanValueDescriptorDto? Value { get; set; }
 
+        public MovementTargetDescriptorDto? MovementTarget { get; set; }
+
+        public MovementDestinationDescriptorDto? MovementDestination { get; set; }
+
         public bool ConsumesTurn { get; set; }
 
         public bool ContinuePlan { get; set; }
@@ -309,6 +363,37 @@ public static class YamlContentLoader
         public GridCoordDto? CoordValue { get; set; }
 
         public int? IntValue { get; set; }
+    }
+
+    private sealed class MovementTargetDescriptorDto
+    {
+        public MovementTargetKind Kind { get; set; }
+
+        public string? EntityId { get; set; }
+
+        public GridCoordDto? InventoryCoord { get; set; }
+    }
+
+    private sealed class MovementDestinationDescriptorDto
+    {
+        public MovementDestinationKind Kind { get; set; }
+
+        public PlaneCoordDto? PlaneCoord { get; set; }
+
+        public string? OwnerId { get; set; }
+
+        public GridCoordDto? InventoryCoord { get; set; }
+
+        public string? AnchorEntityId { get; set; }
+
+        public Direction? Direction { get; set; }
+    }
+
+    private sealed class PlaneCoordDto
+    {
+        public string? PlaneId { get; set; }
+
+        public GridCoordDto? Coord { get; set; }
     }
 
     private sealed class GridCoordDto
