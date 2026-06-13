@@ -186,7 +186,7 @@ Implemented:
 
 Remaining Phase 3 follow-up:
 
-- expose teleport fields in GUI only after the advanced movement authoring UX is designed,
+- expose teleport fields in GUI only after the advanced movement authoring UX is designed, done with initial advanced movement fields,
 - decide whether generic teleport should enforce extra game rules for inventory capacity or intentionally remain arbitrary relocation.
 
 ### Phase 4: Rebase `Move` and `Pickup` on relocation semantics - complete
@@ -225,7 +225,7 @@ Implemented:
 
 Remaining Phase 5 follow-up:
 
-- expose drop fields in GUI after constrained movement authoring UX is designed,
+- expose drop fields in GUI after constrained movement authoring UX is designed, done with initial movement fields,
 - `CanDrop` is intentionally deferred for now; drop effect validation is sufficient for the first authoring pass unless a concrete branching use case appears.
 
 ### Phase 6: Agent/editor API readiness check
@@ -237,6 +237,8 @@ Start agent API only after:
 - validation catches invalid movement descriptors,
 - GUI can exercise common movement primitive authoring paths,
 - capabilities manual marks movement primitive parity status accurately.
+
+Status: ready to start planning the agent/editor API. Remaining GUI polish can proceed in parallel with API design as long as it uses the existing editor-service movement field operations.
 
 ## Testing policy
 

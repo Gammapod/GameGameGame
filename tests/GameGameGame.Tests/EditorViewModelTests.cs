@@ -870,6 +870,54 @@ public sealed class EditorViewModelTests
         var editor = new MainEditorViewModel();
 
         Assert.DoesNotContain(PlanEffectKind.SetVariable, editor.EffectKinds);
+        Assert.Contains(PlanEffectKind.Teleport, editor.EffectKinds);
+        Assert.Contains(PlanEffectKind.Drop, editor.EffectKinds);
+    }
+
+    [Fact]
+    public void EditorViewModelAuthorsTeleportAndDropMovementEffects()
+    {
+        var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+            editor.SelectedActionPlanStep = editor.ActionPlanSteps[1];
+
+            editor.SelectedSuccessEffectKind = PlanEffectKind.Teleport;
+            editor.SelectedSuccessMovementTargetKind = MovementTargetKind.Entity;
+            editor.SuccessMovementTargetEntityIdInput = "rock";
+            editor.SelectedSuccessMovementDestinationKind = MovementDestinationKind.PlaneCoord;
+            editor.SuccessMovementDestinationPlaneIdInput = "world";
+            editor.SuccessMovementDestinationCoordX = 4;
+            editor.SuccessMovementDestinationCoordY = 2;
+
+            editor.SetSelectedStepSuccessEffect();
+
+            Assert.Equal("Success: Teleport(movementTarget=Entity:rock, movementDestination=PlaneCoord:world(4,2))", editor.ActionPlanSteps[1].SuccessSummary);
+            Assert.Contains("kind: Teleport", editor.YamlPreview);
+            Assert.Contains("movementTarget", editor.YamlPreview);
+            Assert.Contains("entityId: rock", editor.YamlPreview);
+            Assert.Contains("planeId: world", editor.YamlPreview);
+
+            editor.SelectedFailureEffectKind = PlanEffectKind.Drop;
+            editor.SelectedFailureMovementTargetKind = MovementTargetKind.CarriedInventoryCoord;
+            editor.FailureMovementTargetCoordX = 0;
+            editor.FailureMovementTargetCoordY = 1;
+            editor.SelectedFailureMovementDestinationKind = MovementDestinationKind.AdjacentToSelf;
+            editor.FailureMovementDestinationDirection = Direction.West;
+
+            editor.SetSelectedStepFailureEffect();
+
+            Assert.Equal("Failure: Drop(movementTarget=CarriedInventoryCoord:0,1, movementDestination=AdjacentToSelf:West)", editor.ActionPlanSteps[1].FailureSummary);
+            Assert.Contains("kind: Drop", editor.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
     }
 
     [Fact]

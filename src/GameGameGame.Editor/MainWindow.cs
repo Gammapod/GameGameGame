@@ -387,7 +387,19 @@ public sealed class MainWindow : Window
             nameof(MainEditorViewModel.SuccessInventoryCoordY),
             nameof(MainEditorViewModel.SelectedSuccessCallPlan),
             nameof(MainEditorViewModel.IsSuccessInventoryCoordVisible),
-            nameof(MainEditorViewModel.IsSuccessCallPlanVisible)));
+            nameof(MainEditorViewModel.IsSuccessCallPlanVisible),
+            nameof(MainEditorViewModel.IsSuccessMovementVisible),
+            nameof(MainEditorViewModel.SelectedSuccessMovementTargetKind),
+            nameof(MainEditorViewModel.SuccessMovementTargetEntityIdInput),
+            nameof(MainEditorViewModel.SuccessMovementTargetCoordX),
+            nameof(MainEditorViewModel.SuccessMovementTargetCoordY),
+            nameof(MainEditorViewModel.SelectedSuccessMovementDestinationKind),
+            nameof(MainEditorViewModel.SuccessMovementDestinationPlaneIdInput),
+            nameof(MainEditorViewModel.SuccessMovementDestinationCoordX),
+            nameof(MainEditorViewModel.SuccessMovementDestinationCoordY),
+            nameof(MainEditorViewModel.SuccessMovementDestinationOwnerIdInput),
+            nameof(MainEditorViewModel.SuccessMovementDestinationAnchorEntityIdInput),
+            nameof(MainEditorViewModel.SuccessMovementDestinationDirection)));
 
         var setSuccess = new Button { Content = "Set Success Effect", HorizontalAlignment = HorizontalAlignment.Left };
         setSuccess.Click += (_, _) => ViewModel?.SetSelectedStepSuccessEffect();
@@ -400,7 +412,19 @@ public sealed class MainWindow : Window
             nameof(MainEditorViewModel.FailureInventoryCoordY),
             nameof(MainEditorViewModel.SelectedFailureCallPlan),
             nameof(MainEditorViewModel.IsFailureInventoryCoordVisible),
-            nameof(MainEditorViewModel.IsFailureCallPlanVisible)));
+            nameof(MainEditorViewModel.IsFailureCallPlanVisible),
+            nameof(MainEditorViewModel.IsFailureMovementVisible),
+            nameof(MainEditorViewModel.SelectedFailureMovementTargetKind),
+            nameof(MainEditorViewModel.FailureMovementTargetEntityIdInput),
+            nameof(MainEditorViewModel.FailureMovementTargetCoordX),
+            nameof(MainEditorViewModel.FailureMovementTargetCoordY),
+            nameof(MainEditorViewModel.SelectedFailureMovementDestinationKind),
+            nameof(MainEditorViewModel.FailureMovementDestinationPlaneIdInput),
+            nameof(MainEditorViewModel.FailureMovementDestinationCoordX),
+            nameof(MainEditorViewModel.FailureMovementDestinationCoordY),
+            nameof(MainEditorViewModel.FailureMovementDestinationOwnerIdInput),
+            nameof(MainEditorViewModel.FailureMovementDestinationAnchorEntityIdInput),
+            nameof(MainEditorViewModel.FailureMovementDestinationDirection)));
 
         var failureButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var setFailure = new Button { Content = "Set Failure Effect" };
@@ -421,7 +445,19 @@ public sealed class MainWindow : Window
         string coordYProperty,
         string callPlanProperty,
         string coordVisibleProperty,
-        string callPlanVisibleProperty)
+        string callPlanVisibleProperty,
+        string movementVisibleProperty,
+        string movementTargetKindProperty,
+        string movementTargetEntityProperty,
+        string movementTargetCoordXProperty,
+        string movementTargetCoordYProperty,
+        string movementDestinationKindProperty,
+        string movementDestinationPlaneIdProperty,
+        string movementDestinationCoordXProperty,
+        string movementDestinationCoordYProperty,
+        string movementDestinationOwnerIdProperty,
+        string movementDestinationAnchorEntityIdProperty,
+        string movementDestinationDirectionProperty)
     {
         var panel = new StackPanel { Spacing = 8 };
 
@@ -444,6 +480,31 @@ public sealed class MainWindow : Window
         var callPlanPanel = Wrap("Call Plan", callPlan);
         callPlanPanel.Bind(IsVisibleProperty, new Binding(callPlanVisibleProperty));
         panel.Children.Add(callPlanPanel);
+
+        var movementPanel = new StackPanel { Spacing = 8 };
+        var targetKind = new ComboBox();
+        targetKind.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MovementTargetKinds)));
+        targetKind.Bind(ComboBox.SelectedItemProperty, new Binding(movementTargetKindProperty) { Mode = BindingMode.TwoWay });
+        movementPanel.Children.Add(Wrap("Target Kind", targetKind));
+        movementPanel.Children.Add(BoundTextBox("Target Entity ID", movementTargetEntityProperty));
+        movementPanel.Children.Add(BoundNumeric("Target Inventory X", movementTargetCoordXProperty));
+        movementPanel.Children.Add(BoundNumeric("Target Inventory Y", movementTargetCoordYProperty));
+        var destinationKind = new ComboBox();
+        destinationKind.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.MovementDestinationKinds)));
+        destinationKind.Bind(ComboBox.SelectedItemProperty, new Binding(movementDestinationKindProperty) { Mode = BindingMode.TwoWay });
+        movementPanel.Children.Add(Wrap("Destination Kind", destinationKind));
+        movementPanel.Children.Add(BoundTextBox("Destination Plane ID", movementDestinationPlaneIdProperty));
+        movementPanel.Children.Add(BoundNumeric("Destination X", movementDestinationCoordXProperty));
+        movementPanel.Children.Add(BoundNumeric("Destination Y", movementDestinationCoordYProperty));
+        movementPanel.Children.Add(BoundTextBox("Destination Owner ID", movementDestinationOwnerIdProperty));
+        movementPanel.Children.Add(BoundTextBox("Destination Anchor Entity ID", movementDestinationAnchorEntityIdProperty));
+        var direction = new ComboBox();
+        direction.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.Directions)));
+        direction.Bind(ComboBox.SelectedItemProperty, new Binding(movementDestinationDirectionProperty) { Mode = BindingMode.TwoWay });
+        movementPanel.Children.Add(Wrap("Destination Direction", direction));
+        var movementWrap = Wrap("Movement", movementPanel);
+        movementWrap.Bind(IsVisibleProperty, new Binding(movementVisibleProperty));
+        panel.Children.Add(movementWrap);
 
         return Wrap(header, panel);
     }

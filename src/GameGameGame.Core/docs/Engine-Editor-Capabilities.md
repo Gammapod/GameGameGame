@@ -26,10 +26,10 @@ Dependent guides, catalogs, schemas, editor workflows, validation rules, and fut
 
 | Effect | Engine | Descriptor | YAML | Validation | Editor service | GUI | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| `Teleport` | Yes | Yes | Yes | Yes | Yes | No | Engine-level ur-primitive for moving any entity to any valid destination. Runtime, descriptor, YAML, validation, and editor-service field operations exist; GUI field UX still needs follow-up. |
+| `Teleport` | Yes | Yes | Yes | Yes | Yes | Yes | Engine-level ur-primitive for moving any entity to any valid destination. Advanced GUI movement fields are available. |
 | `Move` | Yes | Yes, canonical | Yes | Yes, reads `Facing` | Yes | Yes | Movement primitive: constrained teleport of self to adjacent peer/world location derived from canonical `Facing`. |
 | `Pickup` | Yes | Yes, canonical target + literal coord | Yes | Yes, reads `Target` | Yes | Yes | Movement primitive: constrained teleport of canonical `Target` into authored carried inventory coordinate. |
-| `Drop` | Yes | Yes | Yes | Yes | Yes | No | Movement primitive: constrained teleport of carried entity to peer/world destination. Runtime, descriptor, YAML, validation, and editor-service field operations exist; GUI field UX still needs follow-up. |
+| `Drop` | Yes | Yes | Yes | Yes | Yes | Yes | Movement primitive: constrained teleport of carried entity to peer/world destination. GUI movement fields are available. |
 | `ReverseDirection` | Yes | Yes, canonical | Yes | Yes, reads/writes `Facing` | Yes | Yes | GUI should author fixed default turn behavior. Descriptor/runtime can retain turn flags for advanced support later. |
 | `Wait` | Yes | Yes | Yes | Yes | Yes | Yes | Consumes a turn through `WaitAction`. |
 | `CallPlan` | Yes | Yes | Yes | Yes, includes called-plan slot requirements | Partial | Yes | GUI can select called plan; service has basic default effect creation but still needs field-level plan-reference editing. |

@@ -38,6 +38,28 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private int _failureInventoryCoordY;
     private ActionPlanListItem? _selectedSuccessCallPlan;
     private ActionPlanListItem? _selectedFailureCallPlan;
+    private MovementTargetKind _selectedSuccessMovementTargetKind = MovementTargetKind.Self;
+    private MovementTargetKind _selectedFailureMovementTargetKind = MovementTargetKind.CarriedInventoryCoord;
+    private string _successMovementTargetEntityIdInput = string.Empty;
+    private string _failureMovementTargetEntityIdInput = string.Empty;
+    private int _successMovementTargetCoordX;
+    private int _successMovementTargetCoordY;
+    private int _failureMovementTargetCoordX;
+    private int _failureMovementTargetCoordY;
+    private MovementDestinationKind _selectedSuccessMovementDestinationKind = MovementDestinationKind.AdjacentToSelf;
+    private MovementDestinationKind _selectedFailureMovementDestinationKind = MovementDestinationKind.AdjacentToSelf;
+    private string _successMovementDestinationPlaneIdInput = "world";
+    private string _failureMovementDestinationPlaneIdInput = "world";
+    private int _successMovementDestinationCoordX;
+    private int _successMovementDestinationCoordY;
+    private int _failureMovementDestinationCoordX;
+    private int _failureMovementDestinationCoordY;
+    private string _successMovementDestinationOwnerIdInput = string.Empty;
+    private string _failureMovementDestinationOwnerIdInput = string.Empty;
+    private string _successMovementDestinationAnchorEntityIdInput = string.Empty;
+    private string _failureMovementDestinationAnchorEntityIdInput = string.Empty;
+    private Direction _successMovementDestinationDirection = Direction.South;
+    private Direction _failureMovementDestinationDirection = Direction.South;
     private bool _hasInitialFacing;
     private Direction _selectedInitialFacing = Direction.West;
     private string? _statusMessage;
@@ -68,6 +90,10 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<Direction> Directions { get; } = Enum.GetValues<Direction>();
 
+    public IReadOnlyList<MovementTargetKind> MovementTargetKinds { get; } = Enum.GetValues<MovementTargetKind>();
+
+    public IReadOnlyList<MovementDestinationKind> MovementDestinationKinds { get; } = Enum.GetValues<MovementDestinationKind>();
+
     public IReadOnlyList<PlanCheckKind> CheckKinds { get; } =
     [
         PlanCheckKind.CanMove,
@@ -78,8 +104,10 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     public IReadOnlyList<PlanEffectKind> EffectKinds { get; } =
     [
         PlanEffectKind.Wait,
+        PlanEffectKind.Teleport,
         PlanEffectKind.Move,
         PlanEffectKind.Pickup,
+        PlanEffectKind.Drop,
         PlanEffectKind.ReverseDirection,
         PlanEffectKind.CallPlan
     ];
@@ -275,6 +303,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged(nameof(IsSuccessInventoryCoordVisible));
+            OnPropertyChanged(nameof(IsSuccessMovementVisible));
             OnPropertyChanged(nameof(IsSuccessCallPlanVisible));
         }
     }
@@ -290,15 +319,20 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged(nameof(IsFailureInventoryCoordVisible));
+            OnPropertyChanged(nameof(IsFailureMovementVisible));
             OnPropertyChanged(nameof(IsFailureCallPlanVisible));
         }
     }
 
     public bool IsSuccessInventoryCoordVisible => SelectedSuccessEffectKind == PlanEffectKind.Pickup;
 
+    public bool IsSuccessMovementVisible => SelectedSuccessEffectKind is PlanEffectKind.Teleport or PlanEffectKind.Drop;
+
     public bool IsSuccessCallPlanVisible => SelectedSuccessEffectKind == PlanEffectKind.CallPlan;
 
     public bool IsFailureInventoryCoordVisible => SelectedFailureEffectKind == PlanEffectKind.Pickup;
+
+    public bool IsFailureMovementVisible => SelectedFailureEffectKind is PlanEffectKind.Teleport or PlanEffectKind.Drop;
 
     public bool IsFailureCallPlanVisible => SelectedFailureEffectKind == PlanEffectKind.CallPlan;
 
@@ -337,6 +371,50 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         get => _selectedFailureCallPlan;
         set => SetField(ref _selectedFailureCallPlan, value);
     }
+
+    public MovementTargetKind SelectedSuccessMovementTargetKind { get => _selectedSuccessMovementTargetKind; set => SetField(ref _selectedSuccessMovementTargetKind, value); }
+
+    public MovementTargetKind SelectedFailureMovementTargetKind { get => _selectedFailureMovementTargetKind; set => SetField(ref _selectedFailureMovementTargetKind, value); }
+
+    public string SuccessMovementTargetEntityIdInput { get => _successMovementTargetEntityIdInput; set => SetField(ref _successMovementTargetEntityIdInput, value); }
+
+    public string FailureMovementTargetEntityIdInput { get => _failureMovementTargetEntityIdInput; set => SetField(ref _failureMovementTargetEntityIdInput, value); }
+
+    public int SuccessMovementTargetCoordX { get => _successMovementTargetCoordX; set => SetField(ref _successMovementTargetCoordX, value); }
+
+    public int SuccessMovementTargetCoordY { get => _successMovementTargetCoordY; set => SetField(ref _successMovementTargetCoordY, value); }
+
+    public int FailureMovementTargetCoordX { get => _failureMovementTargetCoordX; set => SetField(ref _failureMovementTargetCoordX, value); }
+
+    public int FailureMovementTargetCoordY { get => _failureMovementTargetCoordY; set => SetField(ref _failureMovementTargetCoordY, value); }
+
+    public MovementDestinationKind SelectedSuccessMovementDestinationKind { get => _selectedSuccessMovementDestinationKind; set => SetField(ref _selectedSuccessMovementDestinationKind, value); }
+
+    public MovementDestinationKind SelectedFailureMovementDestinationKind { get => _selectedFailureMovementDestinationKind; set => SetField(ref _selectedFailureMovementDestinationKind, value); }
+
+    public string SuccessMovementDestinationPlaneIdInput { get => _successMovementDestinationPlaneIdInput; set => SetField(ref _successMovementDestinationPlaneIdInput, value); }
+
+    public string FailureMovementDestinationPlaneIdInput { get => _failureMovementDestinationPlaneIdInput; set => SetField(ref _failureMovementDestinationPlaneIdInput, value); }
+
+    public int SuccessMovementDestinationCoordX { get => _successMovementDestinationCoordX; set => SetField(ref _successMovementDestinationCoordX, value); }
+
+    public int SuccessMovementDestinationCoordY { get => _successMovementDestinationCoordY; set => SetField(ref _successMovementDestinationCoordY, value); }
+
+    public int FailureMovementDestinationCoordX { get => _failureMovementDestinationCoordX; set => SetField(ref _failureMovementDestinationCoordX, value); }
+
+    public int FailureMovementDestinationCoordY { get => _failureMovementDestinationCoordY; set => SetField(ref _failureMovementDestinationCoordY, value); }
+
+    public string SuccessMovementDestinationOwnerIdInput { get => _successMovementDestinationOwnerIdInput; set => SetField(ref _successMovementDestinationOwnerIdInput, value); }
+
+    public string FailureMovementDestinationOwnerIdInput { get => _failureMovementDestinationOwnerIdInput; set => SetField(ref _failureMovementDestinationOwnerIdInput, value); }
+
+    public string SuccessMovementDestinationAnchorEntityIdInput { get => _successMovementDestinationAnchorEntityIdInput; set => SetField(ref _successMovementDestinationAnchorEntityIdInput, value); }
+
+    public string FailureMovementDestinationAnchorEntityIdInput { get => _failureMovementDestinationAnchorEntityIdInput; set => SetField(ref _failureMovementDestinationAnchorEntityIdInput, value); }
+
+    public Direction SuccessMovementDestinationDirection { get => _successMovementDestinationDirection; set => SetField(ref _successMovementDestinationDirection, value); }
+
+    public Direction FailureMovementDestinationDirection { get => _failureMovementDestinationDirection; set => SetField(ref _failureMovementDestinationDirection, value); }
 
     public bool HasInitialFacing
     {
@@ -1247,8 +1325,10 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private PlanEffectDescriptor CreateEffect(PlanEffectKind kind, bool success) =>
         kind switch
         {
+            PlanEffectKind.Teleport => PlanEffectDescriptor.Teleport(GetMovementTarget(success), GetMovementDestination(success)),
             PlanEffectKind.Move => PlanEffectDescriptor.Move(),
             PlanEffectKind.Pickup => PlanEffectDescriptor.Pickup(GetInventoryCoord(success)),
+            PlanEffectKind.Drop => PlanEffectDescriptor.Drop(GetMovementTarget(success), GetMovementDestination(success)),
             PlanEffectKind.ReverseDirection => PlanEffectDescriptor.ReverseDirection(consumesTurn: false, continuePlan: false),
             PlanEffectKind.Wait => PlanEffectDescriptor.Wait(),
             PlanEffectKind.CallPlan => PlanEffectDescriptor.CallPlan(GetCallPlan(success)),
@@ -1266,6 +1346,44 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
     private GridCoord GetInventoryCoord(bool success) =>
         success ? new GridCoord(SuccessInventoryCoordX, SuccessInventoryCoordY) : new GridCoord(FailureInventoryCoordX, FailureInventoryCoordY);
+
+    private MovementTargetDescriptor GetMovementTarget(bool success)
+    {
+        var kind = success ? SelectedSuccessMovementTargetKind : SelectedFailureMovementTargetKind;
+        return kind switch
+        {
+            MovementTargetKind.Self => MovementTargetDescriptor.Self(),
+            MovementTargetKind.CanonicalTarget => MovementTargetDescriptor.CanonicalTarget(),
+            MovementTargetKind.Entity => MovementTargetDescriptor.Entity(new EntityId(Normalize(success ? SuccessMovementTargetEntityIdInput : FailureMovementTargetEntityIdInput, "target"))),
+            MovementTargetKind.CarriedInventoryCoord => MovementTargetDescriptor.CarriedInventoryCoord(success
+                ? new GridCoord(SuccessMovementTargetCoordX, SuccessMovementTargetCoordY)
+                : new GridCoord(FailureMovementTargetCoordX, FailureMovementTargetCoordY)),
+            _ => throw new InvalidOperationException($"Unsupported movement target kind {kind}.")
+        };
+    }
+
+    private MovementDestinationDescriptor GetMovementDestination(bool success)
+    {
+        var kind = success ? SelectedSuccessMovementDestinationKind : SelectedFailureMovementDestinationKind;
+        return kind switch
+        {
+            MovementDestinationKind.PlaneCoord => MovementDestinationDescriptor.Plane(new PlaneCoord(
+                new PlaneId(Normalize(success ? SuccessMovementDestinationPlaneIdInput : FailureMovementDestinationPlaneIdInput, "world")),
+                success ? new GridCoord(SuccessMovementDestinationCoordX, SuccessMovementDestinationCoordY) : new GridCoord(FailureMovementDestinationCoordX, FailureMovementDestinationCoordY))),
+            MovementDestinationKind.InventorySlot => MovementDestinationDescriptor.InventorySlot(
+                new EntityId(Normalize(success ? SuccessMovementDestinationOwnerIdInput : FailureMovementDestinationOwnerIdInput, "actor")),
+                success ? new GridCoord(SuccessMovementDestinationCoordX, SuccessMovementDestinationCoordY) : new GridCoord(FailureMovementDestinationCoordX, FailureMovementDestinationCoordY)),
+            MovementDestinationKind.AdjacentToSelf => MovementDestinationDescriptor.AdjacentToSelf(success ? SuccessMovementDestinationDirection : FailureMovementDestinationDirection),
+            MovementDestinationKind.AdjacentToEntity => MovementDestinationDescriptor.AdjacentToEntity(
+                new EntityId(Normalize(success ? SuccessMovementDestinationAnchorEntityIdInput : FailureMovementDestinationAnchorEntityIdInput, "target")),
+                success ? SuccessMovementDestinationDirection : FailureMovementDestinationDirection),
+            MovementDestinationKind.AdjacentToCanonicalTarget => MovementDestinationDescriptor.AdjacentToCanonicalTarget(success ? SuccessMovementDestinationDirection : FailureMovementDestinationDirection),
+            _ => throw new InvalidOperationException($"Unsupported movement destination kind {kind}.")
+        };
+    }
+
+    private static string Normalize(string value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
     private ActionPlanId GetCallPlan(bool success)
     {
@@ -1306,6 +1424,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             SelectedSuccessEffectKind = effect.Kind;
             SuccessInventoryCoordX = effect.InventoryCoord?.X ?? 0;
             SuccessInventoryCoordY = effect.InventoryCoord?.Y ?? 0;
+            PopulateMovementInputs(effect, success: true);
             SelectedSuccessCallPlan = effect.PlanId is { } planId ? ActionPlans.SingleOrDefault(item => item.Id.Value == planId.Value) : null;
         }
         else
@@ -1313,7 +1432,53 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             SelectedFailureEffectKind = effect.Kind;
             FailureInventoryCoordX = effect.InventoryCoord?.X ?? 0;
             FailureInventoryCoordY = effect.InventoryCoord?.Y ?? 0;
+            PopulateMovementInputs(effect, success: false);
             SelectedFailureCallPlan = effect.PlanId is { } planId ? ActionPlans.SingleOrDefault(item => item.Id.Value == planId.Value) : null;
+        }
+    }
+
+    private void PopulateMovementInputs(PlanEffectDescriptor effect, bool success)
+    {
+        if (effect.MovementTarget is { } target)
+        {
+            if (success)
+            {
+                SelectedSuccessMovementTargetKind = target.Kind;
+                SuccessMovementTargetEntityIdInput = target.EntityId?.Value ?? string.Empty;
+                SuccessMovementTargetCoordX = target.InventoryCoord?.X ?? 0;
+                SuccessMovementTargetCoordY = target.InventoryCoord?.Y ?? 0;
+            }
+            else
+            {
+                SelectedFailureMovementTargetKind = target.Kind;
+                FailureMovementTargetEntityIdInput = target.EntityId?.Value ?? string.Empty;
+                FailureMovementTargetCoordX = target.InventoryCoord?.X ?? 0;
+                FailureMovementTargetCoordY = target.InventoryCoord?.Y ?? 0;
+            }
+        }
+
+        if (effect.MovementDestination is { } destination)
+        {
+            if (success)
+            {
+                SelectedSuccessMovementDestinationKind = destination.Kind;
+                SuccessMovementDestinationPlaneIdInput = destination.PlaneCoord?.PlaneId.Value ?? "world";
+                SuccessMovementDestinationCoordX = destination.PlaneCoord?.Coord.X ?? destination.InventoryCoord?.X ?? 0;
+                SuccessMovementDestinationCoordY = destination.PlaneCoord?.Coord.Y ?? destination.InventoryCoord?.Y ?? 0;
+                SuccessMovementDestinationOwnerIdInput = destination.OwnerId?.Value ?? string.Empty;
+                SuccessMovementDestinationAnchorEntityIdInput = destination.AnchorEntityId?.Value ?? string.Empty;
+                SuccessMovementDestinationDirection = destination.Direction ?? Direction.South;
+            }
+            else
+            {
+                SelectedFailureMovementDestinationKind = destination.Kind;
+                FailureMovementDestinationPlaneIdInput = destination.PlaneCoord?.PlaneId.Value ?? "world";
+                FailureMovementDestinationCoordX = destination.PlaneCoord?.Coord.X ?? destination.InventoryCoord?.X ?? 0;
+                FailureMovementDestinationCoordY = destination.PlaneCoord?.Coord.Y ?? destination.InventoryCoord?.Y ?? 0;
+                FailureMovementDestinationOwnerIdInput = destination.OwnerId?.Value ?? string.Empty;
+                FailureMovementDestinationAnchorEntityIdInput = destination.AnchorEntityId?.Value ?? string.Empty;
+                FailureMovementDestinationDirection = destination.Direction ?? Direction.South;
+            }
         }
     }
 
@@ -1442,6 +1607,16 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             fields.Add($"value={effect.Value}");
         }
 
+        if (effect.MovementTarget is { } movementTarget)
+        {
+            fields.Add($"movementTarget={FormatMovementTarget(movementTarget)}");
+        }
+
+        if (effect.MovementDestination is { } movementDestination)
+        {
+            fields.Add($"movementDestination={FormatMovementDestination(movementDestination)}");
+        }
+
         if (effect.Kind is PlanEffectKind.ReverseDirection or PlanEffectKind.SetVariable)
         {
             fields.Add($"consumesTurn={effect.ConsumesTurn}");
@@ -1450,6 +1625,25 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
         return fields.Count == 0 ? effect.Kind.ToString() : $"{effect.Kind}({string.Join(", ", fields)})";
     }
+
+    private static string FormatMovementTarget(MovementTargetDescriptor target) =>
+        target.Kind switch
+        {
+            MovementTargetKind.Entity => $"Entity:{target.EntityId}",
+            MovementTargetKind.CarriedInventoryCoord => target.InventoryCoord is { } coord ? $"CarriedInventoryCoord:{coord.X},{coord.Y}" : "CarriedInventoryCoord",
+            _ => target.Kind.ToString()
+        };
+
+    private static string FormatMovementDestination(MovementDestinationDescriptor destination) =>
+        destination.Kind switch
+        {
+            MovementDestinationKind.PlaneCoord => destination.PlaneCoord is { } coord ? $"PlaneCoord:{coord.PlaneId}({coord.Coord.X},{coord.Coord.Y})" : "PlaneCoord",
+            MovementDestinationKind.InventorySlot => destination.InventoryCoord is { } coord ? $"InventorySlot:{destination.OwnerId}:{coord.X},{coord.Y}" : $"InventorySlot:{destination.OwnerId}",
+            MovementDestinationKind.AdjacentToSelf => $"AdjacentToSelf:{destination.Direction}",
+            MovementDestinationKind.AdjacentToEntity => $"AdjacentToEntity:{destination.AnchorEntityId}:{destination.Direction}",
+            MovementDestinationKind.AdjacentToCanonicalTarget => $"AdjacentToCanonicalTarget:{destination.Direction}",
+            _ => destination.Kind.ToString()
+        };
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
