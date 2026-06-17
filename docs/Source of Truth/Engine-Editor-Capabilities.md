@@ -32,7 +32,7 @@ Current stable authoring areas:
 
 - entity templates and presentations;
 - inventory dimensions, weight, carrying capacity, and carried entity layout;
-- action plans and action-plan steps;
+- action plans and action-plan steps, pending migration toward behavior-primitive canonical authoring;
 - actor initial `Facing` through `actionStateDefaults.facing`;
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
 - effects: `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`;
@@ -44,6 +44,7 @@ Advanced support is usable and validated but may evolve as the engine grows. Con
 
 Current advanced support:
 
+- low-level action-plan step/check/effect authoring while behavior-primitive action plans are being designed;
 - `Teleport`, the general relocation/ur-primitive;
 - `Drop`, constrained relocation from actor-carried inventory to peer/world destination;
 - typed movement target/destination descriptors;
@@ -109,6 +110,27 @@ The editor intentionally does not currently:
 - author initial `Target` actor state through GUI;
 - expose `CanDrop`, which is deferred until a concrete branching use case appears;
 - provide an external agent transport/protocol layer yet.
+
+## Planned canonical behavior-primitive action plans
+
+Canonical action-plan authoring is being remodeled around behavior primitives. See `docs/Plans/Behavior-Primitive-Action-Plans.md`.
+
+Target model:
+
+- an action plan has one attempted engine-defined behavior and one optional generic followup action plan;
+- one action-plan resolution should produce exactly one action;
+- internal state changes are engine-defined consequences, not arbitrary author-authored variable mutation;
+- missing followup resolves to `Wait`;
+- primitive-backed plans should coexist with current low-level step/check/effect plans during implementation, with low-level authoring becoming advanced/legacy over time.
+
+Initial planned primitives:
+
+| Primitive | Status | Required state | Default state | Followup behavior |
+|---|---|---|---|---|
+| `Wandering` | Planned | `Facing` | `West` | Followup when movement fails; sets `Target` to blocker when available and reverses `Facing` for next turn. |
+| `SeekTarget` | Planned | `Target` | `Self` | Followup when movement toward target fails for any reason. |
+| `PickupTarget` | Planned | `Target` | `Self` | Followup when pickup target fails. |
+| `BumpTarget` | Planned | `Target` | `Self` | First pass reproduces current `handleBlocker` fallback behavior. |
 
 ## Action-plan checks
 

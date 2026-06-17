@@ -123,20 +123,26 @@ The next in-process API work should remodel canonical action-plan authoring arou
 
 ### Phase 1: Define the behavior primitive model
 
+Status: Satisfied by `Behavior-Primitive-Action-Plans.md`; keep open only for small clarifications discovered during implementation.
+
 Testable outcomes:
 
 - A checked-in document defines behavior primitives, required state, initializable state, implicit state writes, and followup ports.
 - The capability manual identifies behavior-primitive authoring as canonical and low-level step/check/effect authoring as advanced or compatibility-oriented.
 - `Wandering` is specified as the first primitive: requires `Facing`, attempts one move, sets `Target` to the blocker for followup, reverses `Facing` for next turn when blocked, and resolves to one action.
+- `SeekTarget`, `PickupTarget`, and `BumpTarget` are specified as first-pass primitives, with generic followup behavior and default required state.
 
 ### Phase 2: Add Core/content descriptor support
 
 Testable outcomes:
 
-- Tests can materialize or interpret a `Wandering` primitive descriptor.
+- Tests can materialize or interpret primitive descriptors.
 - An unblocked `Wandering` actor moves in its current `Facing` direction.
 - A blocked `Wandering` actor updates canonical `Target` to the blocker and reverses canonical `Facing` for the next turn.
 - A blocked `Wandering` plan calls its configured followup and still resolves to exactly one consumed action.
+- A `SeekTarget` actor moves toward `Target` using counter-clockwise tie-breaking and calls followup or waits when movement fails.
+- `PickupTarget` reproduces the pickup portion of current `handleBlocker` behavior.
+- `BumpTarget` reproduces the current `handleBlocker` fallback behavior.
 - Existing low-level descriptor/YAML compatibility tests continue to pass.
 
 ### Phase 3: Add validation and editor/content parity

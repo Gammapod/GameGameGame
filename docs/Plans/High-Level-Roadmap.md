@@ -27,20 +27,23 @@ Current phased work:
 
 #### Phase 1: Define the behavior primitive model
 
+Status: Satisfied by `Behavior-Primitive-Action-Plans.md`; keep open only for small clarifications discovered during implementation.
+
 Purpose: establish the canonical model before expanding the API surface.
 
 Scope:
 
 - Define what a behavior primitive/action-plan primitive is.
 - Define required state, initializable state, implicit state writes, and followup ports.
-- Define `Wandering` as the first canonical behavior primitive.
+- Define `Wandering`, `SeekTarget`, `PickupTarget`, and `BumpTarget` as the first-pass primitive catalog.
 - Define how low-level checks/effects remain available as legacy/advanced/internal machinery.
 
 Testable outcomes:
 
-- A checked-in design/update document describes behavior primitives, state requirements, followup ports, and the initial `Wandering` behavior.
+- A checked-in design/update document describes behavior primitives, state requirements, followup ports, and the initial primitive catalog.
 - The capability manual distinguishes canonical behavior-primitive authoring from advanced/legacy low-level step/check/effect authoring.
 - The documented `Wandering` behavior explains that it requires `Facing`, attempts one move, sets `Target` to the blocker for followup, reverses `Facing` for the next turn when blocked, and resolves to one action.
+- The documented `SeekTarget` behavior explains that it requires `Target`, moves toward target using counter-clockwise tie-breaking, and uses the generic followup when movement fails for any reason.
 
 #### Phase 2: Add Core/content descriptor support
 
@@ -50,14 +53,17 @@ Scope:
 
 - Add a descriptor shape for primitive-backed action plans or behavior plans.
 - Preserve loading/runtime compatibility for existing step/check/effect descriptors.
-- Materialize or interpret `Wandering` through engine-owned behavior semantics.
+- Materialize or interpret the first primitive subset through engine-owned behavior semantics.
 
 Testable outcomes:
 
-- Unit tests can materialize a `Wandering` primitive descriptor into executable runtime behavior.
+- Unit tests can materialize primitive descriptors into executable runtime behavior.
 - A `Wandering` entity moves in its current `Facing` direction when unblocked.
 - When blocked, `Wandering` updates canonical `Target` to the blocker and reverses canonical `Facing` for the next turn.
 - A blocked `Wandering` plan can call its configured followup and still resolves to exactly one consumed action.
+- A `SeekTarget` entity moves toward `Target` using counter-clockwise tie-breaking and uses followup or `Wait` when movement fails.
+- `PickupTarget` reproduces the pickup portion of current `handleBlocker` behavior.
+- `BumpTarget` reproduces the current `handleBlocker` fallback behavior.
 - Existing step/check/effect YAML still loads and existing compatibility tests continue to pass.
 
 #### Phase 3: Add validation and editor/content parity
