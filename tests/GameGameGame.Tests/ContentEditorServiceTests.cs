@@ -502,6 +502,62 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceSetsPrimitiveBackedActionPlan()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              moveFacing:
+                id: moveFacing
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+              fallback:
+                id: fallback
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var planId = new ActionPlanTemplateId("moveFacing");
+
+        editor.SetActionPlanPrimitive(planId, ActionPlanPrimitiveKind.MoveFacing, new ActionPlanId("fallback"));
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var descriptor = registry.ActionPlanDescriptors[planId];
+
+        Assert.Empty(descriptor.Steps);
+        Assert.Equal(ActionPlanPrimitiveKind.MoveFacing, descriptor.Primitive!.Kind);
+        Assert.Equal(new ActionPlanId("fallback"), descriptor.Primitive.FallbackPlanId);
+    }
+
+    [Fact]
+    public void ContentEditorServiceCreatesMoveFacingPickupTargetChain()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans: {}
+            """));
+
+        var chain = editor.CreateMoveFacingPickupTargetChain("Rat Wander", "Rat Pickup");
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var move = registry.ActionPlanDescriptors[chain.MoveFacingPlanId];
+        var pickup = registry.ActionPlanDescriptors[chain.PickupTargetPlanId];
+
+        Assert.Equal(ActionPlanPrimitiveKind.MoveFacing, move.Primitive!.Kind);
+        Assert.Equal(new ActionPlanId(chain.PickupTargetPlanId.Value), move.Primitive.FallbackPlanId);
+        Assert.Equal(ActionPlanPrimitiveKind.PickupTarget, pickup.Primitive!.Kind);
+        Assert.Empty(move.Steps);
+        Assert.Empty(pickup.Steps);
+    }
+
+    [Fact]
     public void ContentEditorServiceSetsTeleportActionPlanStepEffectDescriptor()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(

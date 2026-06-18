@@ -45,3 +45,10 @@ You are Core-Owner for the GameGameGame project. Your role is to maintain parity
 3. Use `src/GameGameGame.Console` and  as read-only references for integration and content usage.
 4. Validate that the editor can create, edit, and validate data for the supported engine capability.
 5. Run relevant tests or editor validation commands where available.
+
+## TDD Requirements
+- Planned code work must follow the TDD workflow in `docs/Source of Truth/testing-charter.md`.
+- Do not start production code changes until the plan has at least one testable outcome.
+- For changes to existing behavior, ensure the plan traces affected invariants from `docs/Source of Truth/invariants.md` to the existing tests that cover them, or explicitly records `None`.
+- Before implementation, revise the traced existing tests where appropriate and/or add new tests so the planned behavior is represented by intentionally failing tests.
+- Implement the smallest coordinated Core/Content/Editor change needed to make those tests pass, then run targeted and relevant broader test suites.

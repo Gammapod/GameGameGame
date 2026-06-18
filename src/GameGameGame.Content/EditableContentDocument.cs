@@ -352,13 +352,32 @@ public sealed class EditableContentDocument
     {
         public string? Id { get; set; }
 
+        public ActionPlanPrimitiveDescriptorDto? Primitive { get; set; }
+
         public List<ActionPlanStepDescriptorDto>? Steps { get; set; }
 
         public static ActionPlanDescriptorDto From(ActionPlanDescriptor descriptor) => new()
         {
             Id = descriptor.Id.Value,
+            Primitive = descriptor.Primitive is null ? null : ActionPlanPrimitiveDescriptorDto.From(descriptor.Primitive),
             Steps = descriptor.Steps.Select(ActionPlanStepDescriptorDto.From).ToList()
         };
+    }
+
+    public sealed class ActionPlanPrimitiveDescriptorDto
+    {
+        public ActionPlanPrimitiveKind Kind { get; set; }
+
+        public string? FallbackPlanId { get; set; }
+
+        public static ActionPlanPrimitiveDescriptorDto From(ActionPlanPrimitiveDescriptor descriptor) => new()
+        {
+            Kind = descriptor.Kind,
+            FallbackPlanId = descriptor.FallbackPlanId?.Value
+        };
+
+        public ActionPlanPrimitiveDescriptor ToDescriptor() =>
+            new(Kind, FallbackPlanId is null ? null : new ActionPlanId(FallbackPlanId));
     }
 
     public sealed class ActionPlanStepDescriptorDto

@@ -144,6 +144,39 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderRoundTripsPrimitiveBackedActionPlanDescriptor()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              primitiveMove:
+                id: primitiveMove
+                primitive:
+                  kind: MoveFacing
+                  fallbackPlanId: wait
+              wait:
+                id: wait
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """);
+
+        var registry = document.ToRegistry();
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+
+        var descriptor = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("primitiveMove"));
+        Assert.Equal(ActionPlanPrimitiveKind.MoveFacing, descriptor.Primitive!.Kind);
+        Assert.Equal(new ActionPlanId("wait"), descriptor.Primitive.FallbackPlanId);
+        Assert.Contains("primitive:", saved);
+        Assert.Equal(ActionPlanPrimitiveKind.MoveFacing, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("primitiveMove")).Primitive!.Kind);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCanonicalActorActionStateDefaults()
     {
         var registry = YamlContentLoader.LoadRegistry(
@@ -260,6 +293,8 @@ public sealed class YamlContentLoaderTests
             new EntityTemplateId("actor"),
             new EntitySpawnOptions(actorId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 1))));
         var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.Equal(Direction.South, world.GetActionFacing(actorId));
 
         var acted = turns.ResolvePlan(world, actorId, spawn.ActionPlan!.PlanTurn(world, actorId, new MovementService()));
 

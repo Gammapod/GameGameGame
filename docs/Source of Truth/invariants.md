@@ -19,22 +19,23 @@ This document records minimal functional requirements that should influence test
 
 ## Actions And Turns
 
-- An entity is an actor only if it has a decidable action plan or decision trigger.
+- An entity is an actor only if it has a decidable Action Plan/fallback chain or decision trigger.
 - Actions must produce structured traces for failed checks and resolutions.
-- Ranked action plans must distinguish failure that continues to the next action from failure that consumes the turn.
+- Action Plan resolution must distinguish failure that follows an explicit fallback from terminal resolution that ends the current root actor's turn.
 - Spatial recursion may exist, but temporal recursion must be explicitly guarded.
 
 ## Action Plan Data
 
-- Action plan variables are typed, persist in context, and can be written by checks before later reads.
-- Action plan descriptors preserve structured built-in inputs and materialize executable plans.
-- The primitive catalog describes every exposed check, effect, value kind, and field contract.
+- Entity action state such as `Facing` and `Target` is typed and persists on the actor entity across plan executions.
+- Legacy action plan variables are typed, persist in invocation context, and can be written by checks before later reads while compatibility support remains.
+- Canonical behavior descriptors and legacy action-plan descriptors preserve structured built-in inputs and materialize executable plans.
+- The Action Step/primitive catalog describes every exposed primitive, value kind, implied state contract, and field contract.
 
 ## Content Pipeline
 
 - YAML content loads from strings and files into registries that can be validated.
 - Editable content documents round-trip through materialization and saved YAML.
-- Content editor operations preserve declared IDs, presentations, carried layouts, action plans, and validation results.
+- Content editor operations preserve declared IDs, presentations, carried layouts, Action Plans/behavior assignments, legacy action plans, and validation results.
 - Built-in content must load and validate, but tests should not pin valid design choices such as balance values, glyphs, positions, or action plan behavior.
 
 ## Test Coverage Map
@@ -50,9 +51,9 @@ This document records minimal functional requirements that should influence test
 - Pickup capacity failure: `PickupFailsWhenTargetTotalWeightWouldExceedCapacity`.
 - Actor scheduling: `TurnServiceOnlySchedulesEntitiesWithActionPlans`, `InterpretedEntityActionPlanCanBeScheduledByTurnService`.
 - Structured traces: `ActionPlanContextVariableUpdatesAreTraced`, `CallPlanEffectRunsNestedPlanWithSharedContextAndTrace`, `PickupFailsWhenTargetTotalWeightWouldExceedCapacity`.
-- Ranked action plan failure/turn behavior: `PlanInterpreterUsesFirstSuccessfulConsumingRankedStep`, `PlanInterpreterReturnsFailureWhenNoStepConsumesOrStops`, `BuiltInCanMoveCheckFailureFallsThroughToSetVariableEffect`.
-- Temporal recursion guard: `CallPlanEffectFailsWithTraceWhenDepthGuardIsExceeded`.
-- Typed action plan variables and check writes: `ActionPlanContextStoresTypedVariables`, `PlanVariableRefReadsTypedVariableFromContext`, `PlanInterpreterCommitsCheckVariableWritesBeforeEffect`, `PrototypeRegistryValidationAcceptsVariablesWrittenByChecksBeforeLaterReads`.
+- Fallback/terminal action plan failure and turn behavior: `PrimitiveBackedPlanWithoutFallbackTerminatesRootTurnWhenPrimitiveFails`, `PrimitiveBackedPlanUsesExplicitFallbackWhenPrimitiveFails`, `PlanInterpreterUsesFirstSuccessfulConsumingRankedStep`, `PlanInterpreterReturnsFailureWhenNoStepConsumesOrStops`, `BuiltInCanMoveCheckFailureFallsThroughToSetVariableEffect`.
+- Temporal recursion guard: `CallPlanEffectFailsWithTraceWhenDepthGuardIsExceeded`, `PrimitiveFallbackCyclesUsePlanCallDepthGuard`.
+- Typed entity action state and legacy action plan variables/check writes: `CanonicalFacingPersistsOnActorActionStateAcrossPlanExecutions`, `CanonicalTargetPersistsOnActorActionStateWhenBlockingEntityIsFound`, `SpawnedActionPlanUsesCanonicalInitialFacingDefault`, `ActionPlanContextStoresTypedVariables`, `PlanVariableRefReadsTypedVariableFromContext`, `PlanInterpreterCommitsCheckVariableWritesBeforeEffect`, `PrototypeRegistryValidationAcceptsVariablesWrittenByChecksBeforeLaterReads`.
 - Descriptor materialization and structured inputs: `ActionPlanDescriptorKeepsBuiltInInputsAsData`, `ActionPlanDescriptorMaterializesExecutableBuiltIns`, `BuiltInPlanPartsExposeStructuredInputs`.
 - Primitive catalog completeness and field contracts: `PlanPrimitiveCatalogExposesAllCheckEffectAndValueKinds`, `PlanPrimitiveCatalogDescribesCheckFieldsAndVariableContracts`, `PlanPrimitiveCatalogDescribesEffectFieldsAndReferences`.
 - YAML loading: `YamlContentLoaderCreatesRegistryFromDeclarativeContent`, `YamlContentLoaderCanLoadRegistryFromFile`.

@@ -2,13 +2,25 @@ namespace GameGameGame.Core;
 
 public sealed record ActionPlanDescriptor(
     ActionPlanId Id,
-    IReadOnlyList<ActionPlanStepDescriptor> Steps)
+    IReadOnlyList<ActionPlanStepDescriptor> Steps,
+    ActionPlanPrimitiveDescriptor? Primitive = null)
 {
     public ActionPlanDefinition Materialize() =>
         new(
             Id,
-            Steps.Select(step => step.Materialize()).ToList());
+            Steps.Select(step => step.Materialize()).ToList(),
+            Primitive);
 }
+
+public enum ActionPlanPrimitiveKind
+{
+    MoveFacing,
+    PickupTarget
+}
+
+public sealed record ActionPlanPrimitiveDescriptor(
+    ActionPlanPrimitiveKind Kind,
+    ActionPlanId? FallbackPlanId = null);
 
 public sealed record ActionPlanStepDescriptor(
     string Label,

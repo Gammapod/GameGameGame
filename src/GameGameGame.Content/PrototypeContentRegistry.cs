@@ -120,6 +120,7 @@ public sealed class PrototypeContentRegistry(
             world,
             template with { CarriedEntities = null },
             options with { ModifyTemplate = null });
+        ApplyActionStateDefaults(world, parentResult.EntityId, actionStateDefaults);
         var actionPlans = new Dictionary<EntityId, IEntityActionPlan>(parentResult.ActionPlans);
         IEntityActionPlan? actionPlan = null;
 
@@ -302,6 +303,8 @@ public sealed class PrototypeContentRegistry(
         {
             TryValidate(errors, $"Action plan template {templateId} ({descriptor.Id})", () => descriptor.Materialize());
 
+            ValidatePrimitiveFallback(diagnostics, templateId, descriptor);
+
             foreach (var step in descriptor.Steps)
             {
                 ValidateCalledPlan(errors, templateId, descriptor, step, step.OnSuccess);
@@ -331,6 +334,22 @@ public sealed class PrototypeContentRegistry(
         }
 
         ValidateTemplateActionPlanVariables(errors, diagnostics);
+
+        void ValidatePrimitiveFallback(
+            List<ContentDiagnostic> validationDiagnostics,
+            ActionPlanTemplateId actionPlanTemplateId,
+            ActionPlanDescriptor descriptor)
+        {
+            if (descriptor.Primitive?.FallbackPlanId is { } fallbackPlanId && !planIds.Contains(fallbackPlanId))
+            {
+                AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingCalledPlan,
+                    $"Action plan {descriptor.Id} primitive {descriptor.Primitive.Kind} falls back to missing plan {fallbackPlanId}.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    referencedActionPlanId: fallbackPlanId));
+            }
+        }
     }
 
     private static void ValidateMovementEffectDescriptor(
@@ -489,6 +508,18 @@ public sealed class PrototypeContentRegistry(
             return;
         }
 
+        if (plan.Primitive is { } primitive)
+        {
+            ValidatePrimitiveSlotReads(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, primitive, GetPrimitiveSlotReads(primitive.Kind), slots);
+            ApplySlotWrites(GetPrimitiveSlotWrites(primitive.Kind), slots);
+
+            if (primitive.FallbackPlanId is { } fallbackPlanId
+                && plansById.TryGetValue(fallbackPlanId, out var fallbackPlan))
+            {
+                ValidatePlanSlots(diagnostics, subject, entityTemplateId, actionPlanTemplateId, fallbackPlan, slots, plansById, callStack);
+            }
+        }
+
         foreach (var step in plan.Steps)
         {
             foreach (var check in step.Checks)
@@ -502,6 +533,61 @@ public sealed class PrototypeContentRegistry(
         }
 
         callStack.Remove(plan.Id);
+    }
+
+    private static IReadOnlyList<PlanPrimitiveSlotDescriptor> GetPrimitiveSlotReads(ActionPlanPrimitiveKind kind) =>
+        kind switch
+        {
+            ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.PickupTarget => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            _ => []
+        };
+
+    private static IReadOnlyList<PlanPrimitiveSlotDescriptor> GetPrimitiveSlotWrites(ActionPlanPrimitiveKind kind) =>
+        kind switch
+        {
+            ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            _ => []
+        };
+
+    private static void ValidatePrimitiveSlotReads(
+        List<ContentDiagnostic> diagnostics,
+        string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        ActionPlanPrimitiveDescriptor primitive,
+        IReadOnlyList<PlanPrimitiveSlotDescriptor> reads,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots)
+    {
+        foreach (var read in reads)
+        {
+            if (!slots.TryGetValue(read.Slot, out var actualKind))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingPlanSlot,
+                    $"{subject} primitive {primitive.Kind} reads missing required slot {read.Slot}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    actionPlanSlot: read.Slot,
+                    expectedValueKind: read.ValueKind));
+                continue;
+            }
+
+            if (actualKind != read.ValueKind)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.PlanVariableTypeMismatch,
+                    $"{subject} primitive {primitive.Kind} slot {read.Slot} expected {read.ValueKind} but found {actualKind}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    actionPlanSlot: read.Slot,
+                    expectedValueKind: read.ValueKind,
+                    actualValueKind: actualKind));
+            }
+        }
     }
 
     private static void ValidateEffectSlots(
@@ -877,6 +963,19 @@ public sealed class PrototypeContentRegistry(
         if (defaults?.Target is { } target)
         {
             context.Set(ActionPlanSlot.Target, new EntityPlanValue(target));
+        }
+    }
+
+    private static void ApplyActionStateDefaults(WorldState world, EntityId entityId, ActorActionStateDefaults? defaults)
+    {
+        if (defaults?.Facing is { } facing)
+        {
+            world.SetActionFacing(entityId, facing);
+        }
+
+        if (defaults?.Target is { } target)
+        {
+            world.SetActionTarget(entityId, target);
         }
     }
 }

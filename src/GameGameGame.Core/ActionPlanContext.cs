@@ -34,6 +34,16 @@ public sealed class ActionPlanContext
 
     private readonly Dictionary<ActionPlanSlot, PlanValue> _slots = [];
 
+    private WorldState? _attachedWorld;
+
+    private EntityId? _attachedActorId;
+
+    public void AttachEntityActionState(WorldState world, EntityId actorId)
+    {
+        _attachedWorld = world;
+        _attachedActorId = actorId;
+    }
+
     public TraceNode Set(string name, PlanValue value)
     {
         Variables[name] = value;
@@ -44,6 +54,19 @@ public sealed class ActionPlanContext
     public TraceNode Set(ActionPlanSlot slot, PlanValue value)
     {
         _slots[slot] = value;
+
+        if (_attachedWorld is not null && _attachedActorId is { } actorId)
+        {
+            switch (slot, value)
+            {
+                case (ActionPlanSlot.Facing, DirectionPlanValue direction):
+                    _attachedWorld.SetActionFacing(actorId, direction.Value);
+                    break;
+                case (ActionPlanSlot.Target, EntityPlanValue entity):
+                    _attachedWorld.SetActionTarget(actorId, entity.Value);
+                    break;
+            }
+        }
 
         return TraceNode.Success($"Set slot {slot}", value.ToString());
     }
@@ -64,6 +87,12 @@ public sealed class ActionPlanContext
     public bool TryGet<TValue>(ActionPlanSlot slot, out TValue value)
         where TValue : PlanValue
     {
+        if (TryGetAttachedSlot(slot, out var attached) && attached is TValue attachedTyped)
+        {
+            value = attachedTyped;
+            return true;
+        }
+
         if (_slots.TryGetValue(slot, out var stored) && stored is TValue typed)
         {
             value = typed;
@@ -79,7 +108,7 @@ public sealed class ActionPlanContext
     {
         trace = new TraceNode($"Read slot {slot}", TraceStatus.Info);
 
-        if (!_slots.TryGetValue(slot, out var stored))
+        if (!TryGetAttachedSlot(slot, out var stored) && !_slots.TryGetValue(slot, out stored))
         {
             value = null!;
             trace.Status = TraceStatus.Failure;
@@ -99,6 +128,25 @@ public sealed class ActionPlanContext
         trace.Status = TraceStatus.Success;
         trace.Detail = typed.ToString();
         return true;
+    }
+
+    private bool TryGetAttachedSlot(ActionPlanSlot slot, out PlanValue value)
+    {
+        if (_attachedWorld is not null && _attachedActorId is { } actorId)
+        {
+            switch (slot)
+            {
+                case ActionPlanSlot.Facing when _attachedWorld.GetActionFacing(actorId) is { } facing:
+                    value = new DirectionPlanValue(facing);
+                    return true;
+                case ActionPlanSlot.Target when _attachedWorld.GetActionTarget(actorId) is { } target:
+                    value = new EntityPlanValue(target);
+                    return true;
+            }
+        }
+
+        value = null!;
+        return false;
     }
 
     private static string FormatValueKind<TValue>()

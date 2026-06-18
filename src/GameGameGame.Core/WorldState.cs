@@ -18,6 +18,31 @@ public sealed class WorldState
 
     public Dictionary<EntityId, PlaneId> InventoryPlanes { get; } = [];
 
+    public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
+
+    public EntityActionState GetOrCreateActionState(EntityId entityId)
+    {
+        if (!ActionStates.TryGetValue(entityId, out var state))
+        {
+            state = new EntityActionState();
+            ActionStates[entityId] = state;
+        }
+
+        return state;
+    }
+
+    public void SetActionFacing(EntityId entityId, Direction facing) =>
+        GetOrCreateActionState(entityId).Facing = facing;
+
+    public Direction? GetActionFacing(EntityId entityId) =>
+        ActionStates.TryGetValue(entityId, out var state) ? state.Facing : null;
+
+    public void SetActionTarget(EntityId entityId, EntityId targetId) =>
+        GetOrCreateActionState(entityId).Target = targetId;
+
+    public EntityId? GetActionTarget(EntityId entityId) =>
+        ActionStates.TryGetValue(entityId, out var state) ? state.Target : null;
+
     public NodeId AddNode(PlaneId planeId, GridCoord coord)
     {
         var nodeId = new NodeId($"{planeId}:{coord.X},{coord.Y}");

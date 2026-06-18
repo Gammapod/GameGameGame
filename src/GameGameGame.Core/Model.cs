@@ -54,6 +54,13 @@ public sealed record Entity(
     public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
 }
 
+public sealed class EntityActionState
+{
+    public Direction? Facing { get; set; }
+
+    public EntityId? Target { get; set; }
+}
+
 public sealed record Plane(
     PlaneId Id,
     string Name,

@@ -120,6 +120,68 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void CanonicalFacingPersistsOnActorActionStateAcrossPlanExecutions()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.West);
+        var context = new ActionPlanContext();
+        var reverse = new ActionPlanDefinition(
+            new ActionPlanId("reverse-facing"),
+            [
+                new ActionPlanStep(
+                    "reverse canonical facing",
+                    [],
+                    new ReverseDirectionEffect(consumesTurn: false, continuePlan: false),
+                    onFailure: null)
+            ]);
+        Direction? readFacing = null;
+        var reader = new ActionPlanDefinition(
+            new ActionPlanId("read-facing"),
+            [
+                new ActionPlanStep(
+                    "read canonical facing",
+                    [],
+                    new SlotReadingEffect(ActionPlanSlot.Facing, value => readFacing = value),
+                    onFailure: null)
+            ]);
+        var interpreter = new ActionPlanInterpreter(new MovementService());
+
+        var reverseResult = interpreter.Execute(world, TestWorld.PlayerId, reverse, context);
+        var readResult = interpreter.Execute(world, TestWorld.PlayerId, reader, context);
+
+        Assert.True(reverseResult.Succeeded);
+        Assert.True(readResult.Succeeded);
+        Assert.Equal(Direction.East, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Equal(Direction.East, readFacing);
+    }
+
+    [Fact]
+    public void CanonicalTargetPersistsOnActorActionStateWhenBlockingEntityIsFound()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("remember-blocker"),
+            [
+                new ActionPlanStepDescriptor(
+                    "find blocker",
+                    [PlanCheckDescriptor.BlockingEntity()],
+                    PlanEffectDescriptor.Wait(),
+                    OnFailure: null)
+            ]);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.True(TraceContains(result.Trace, "Set slot Target"));
+    }
+
+    [Fact]
     public void PlanVariableRefReadsTypedVariableFromContext()
     {
         var context = new ActionPlanContext();
@@ -272,6 +334,221 @@ public sealed class CoreActionPlanTests
         Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
         Assert.True(TraceContains(result.Trace, "Read slot Facing"));
         Assert.True(TraceContains(result.Trace, "Relocate player -> AdjacentMovementDestination { AnchorId = player, Direction = South }"));
+    }
+
+    [Fact]
+    public void PrimitiveBackedPlanWithoutFallbackTerminatesRootTurnWhenPrimitiveFails()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("move-into-wall"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.False(result.ContinuePlan);
+        Assert.True(TraceContains(result.Trace, "Primitive MoveFacing"));
+    }
+
+    [Fact]
+    public void PrimitiveMoveFacingMovesUsingPersistentActorFacing()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("move-facing"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.True(TraceContains(result.Trace, "Read slot Facing"));
+        Assert.True(TraceContains(result.Trace, "Primitive MoveFacing"));
+    }
+
+    [Fact]
+    public void PrimitiveMoveFacingStoresBlockingEntityAsPersistentTargetBeforeFallback()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var fallback = new ActionPlanDescriptor(
+            new ActionPlanId("wait"),
+            [new ActionPlanStepDescriptor("wait", [], PlanEffectDescriptor.Wait(), OnFailure: null)]);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("move-then-wait"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing, fallback.Id));
+        var registry = new Dictionary<ActionPlanId, ActionPlanDefinition>
+        {
+            [fallback.Id] = fallback.Materialize()
+        };
+
+        var result = new ActionPlanInterpreter(new MovementService(), registry).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.True(TraceContains(result.Trace, "Set slot Target"));
+        Assert.True(TraceContains(result.Trace, "Wait"));
+    }
+
+    [Fact]
+    public void PrimitiveBackedPlanUsesExplicitFallbackWhenPrimitiveFails()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var fallback = new ActionPlanDescriptor(
+            new ActionPlanId("wait"),
+            [
+                new ActionPlanStepDescriptor(
+                    "wait",
+                    [],
+                    PlanEffectDescriptor.Wait(),
+                    OnFailure: null)
+            ]);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("move-then-wait"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing, fallback.Id));
+        var registry = new Dictionary<ActionPlanId, ActionPlanDefinition>
+        {
+            [fallback.Id] = fallback.Materialize()
+        };
+
+        var result = new ActionPlanInterpreter(new MovementService(), registry).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.True(TraceContains(result.Trace, "Call plan wait"));
+        Assert.True(TraceContains(result.Trace, "Wait"));
+    }
+
+    [Fact]
+    public void PrimitiveFallbackCyclesUsePlanCallDepthGuard()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var first = new ActionPlanDescriptor(
+            new ActionPlanId("first"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing, new ActionPlanId("second")));
+        var second = new ActionPlanDescriptor(
+            new ActionPlanId("second"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing, new ActionPlanId("first")));
+        var registry = new Dictionary<ActionPlanId, ActionPlanDefinition>
+        {
+            [first.Id] = first.Materialize(),
+            [second.Id] = second.Materialize()
+        };
+
+        var result = new ActionPlanInterpreter(new MovementService(), registry, maxCallDepth: 2).Execute(
+            world,
+            TestWorld.PlayerId,
+            first.Materialize(),
+            new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.False(result.ConsumesTurn);
+        Assert.True(TraceContains(result.Trace, "Plan call depth exceeded"));
+    }
+
+    [Fact]
+    public void PrimitivePickupTargetPicksUpPersistentActorTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("pickup-target"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.True(TraceContains(result.Trace, "Primitive PickupTarget"));
+        Assert.True(TraceContains(result.Trace, "Read slot Target"));
+    }
+
+    [Fact]
+    public void PrimitiveMoveFacingCanFallbackToPickupTargetUsingBlockedEntityTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var pickup = new ActionPlanDescriptor(
+            new ActionPlanId("pickupTarget"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget));
+        var move = new ActionPlanDescriptor(
+            new ActionPlanId("moveThenPickup"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing, pickup.Id));
+        var registry = new Dictionary<ActionPlanId, ActionPlanDefinition>
+        {
+            [pickup.Id] = pickup.Materialize()
+        };
+
+        var result = new ActionPlanInterpreter(new MovementService(), registry).Execute(
+            world,
+            TestWorld.PlayerId,
+            move.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.True(TraceContains(result.Trace, "Set slot Target"));
+        Assert.True(TraceContains(result.Trace, "Primitive PickupTarget"));
+    }
+
+    [Fact]
+    public void PrimitivePickupTargetWithoutFallbackTerminatesRootTurnWhenPickupFails()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("pickup-target"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.False(result.ContinuePlan);
+        Assert.True(TraceContains(result.Trace, "Primitive PickupTarget"));
     }
 
     [Fact]

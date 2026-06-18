@@ -74,6 +74,80 @@ public sealed class AgentContentEditorApiTests
         Assert.Equal("UnsupportedEffectForAuthoring", result.Error!.Code);
     }
 
+    [Fact]
+    public void AgentContentEditorApiAuthorsPrimitiveBackedPlan()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var actorId = AssertSuccess(api.CreateEntityTemplate("Primitive Actor"));
+        var fallbackId = AssertSuccess(api.CreateActionPlan("Fallback Wait"));
+        var planId = AssertSuccess(api.CreateActionPlan("Primitive Move"));
+
+        AssertSuccess(api.SetInitialFacing(actorId, Direction.North));
+        AssertSuccess(api.SetActionPlanPrimitive(planId, ActionPlanPrimitiveKind.MoveFacing, new ActionPlanId(fallbackId.Value)));
+        AssertSuccess(api.SetDefaultActionPlan(actorId, planId));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("primitive:", snapshot.YamlPreview);
+        Assert.Contains("kind: MoveFacing", snapshot.YamlPreview);
+        Assert.Contains("fallbackPlanId: fallbackWait", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsMoveFacingToPickupTargetChain()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var actorId = AssertSuccess(api.CreateEntityTemplate("Primitive Collector"));
+        var pickupId = AssertSuccess(api.CreateActionPlan("Pickup Target"));
+        var moveId = AssertSuccess(api.CreateActionPlan("Move Facing"));
+
+        AssertSuccess(api.SetInitialFacing(actorId, Direction.North));
+        AssertSuccess(api.SetActionPlanPrimitive(pickupId, ActionPlanPrimitiveKind.PickupTarget));
+        AssertSuccess(api.SetActionPlanPrimitive(moveId, ActionPlanPrimitiveKind.MoveFacing, new ActionPlanId(pickupId.Value)));
+        AssertSuccess(api.SetDefaultActionPlan(actorId, moveId));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+        Assert.Contains("kind: MoveFacing", snapshot.YamlPreview);
+        Assert.Contains("fallbackPlanId: pickupTarget", snapshot.YamlPreview);
+        Assert.Contains("kind: PickupTarget", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsSimpleWanderingActorWithPrimitiveHelper()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var ratId = AssertSuccess(api.CreateEntityTemplate("Rat"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            ratId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Weight: 1,
+                CarryingCapacity: 3,
+                Glyph: 'r',
+                Color: PresentationColor.Green)));
+        AssertSuccess(api.SetInitialFacing(ratId, Direction.West));
+
+        var plans = AssertSuccess(api.CreateMoveFacingPickupTargetChain("Rat Wander", "Rat Pickup"));
+        AssertSuccess(api.SetDefaultActionPlan(ratId, plans.MoveFacingPlanId));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+        Assert.Contains("kind: MoveFacing", snapshot.YamlPreview);
+        Assert.Contains("kind: PickupTarget", snapshot.YamlPreview);
+        Assert.Contains("fallbackPlanId: ratPickup", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: CanMove", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: BlockingEntity", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: CallPlan", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: SetVariable", snapshot.YamlPreview);
+    }
+
     private static void AssertSuccess(AgentApiResult result)
     {
         Assert.True(result.IsSuccess, result.Error?.Message);

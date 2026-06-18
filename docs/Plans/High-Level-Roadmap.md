@@ -161,3 +161,39 @@ Status: Conceptualized, not yet planned.
 Concept: add new primitives and state needed for basic gameplay scenarios, potentially including entity creation, entity destruction, player/screen messages, per-action-plan cooldowns, moving toward arbitrary targets, and friendly/hostile entity lists.
 
 Generated content exercises have also surfaced possible future needs for multiple actions per turn and canonical multi-direction effects. These remain conceptualized, not yet planned.
+
+### Reaction action-plan slots and bump-triggered interactions
+
+Status: Conceptualized, not yet planned.
+
+Concept: entities may eventually expose action-plan slots beyond their normal turn behavior. The current/default turn plan should remain compatible with a future `onTurn` slot, while reaction slots may be invoked during another entity's root turn. The important future capability is that a successful interaction can trigger the target entity to run a reaction action plan; the exact trigger, including whether it is bump-specific, remains intentionally unsettled.
+
+Planning notes:
+
+- This depends on the behavior-primitive/fallback-chain remodeling but is not required for the first canonical chain slice.
+- Persistent entity action state, especially `Facing` and `Target`, should be considered separately from per-invocation action-plan context before reaction slots are implemented.
+- Cross-entity reaction chains will need explicit root actor/current actor/instigator semantics, trace causality, and temporal recursion guards.
+- This may overlap with future scheduler/speed work, but it should not be used as a shortcut for multiple scheduled actions per turn.
+- This may overlap with future action primitives and runtime states, especially any eventual reaction-trigger or interaction-target primitive.
+
+### Behavior model consolidation
+
+Status: Planned next architectural direction.
+
+Concept: add a new canonical behavior system beside the existing low-level action-plan compatibility model. The editor-facing model should present an entity's Action Plan as an ordered fallback chain of engine-defined Action Steps. Existing low-level `steps/checks/effects` remain legacy/advanced/internal compatibility rather than the canonical GUI model.
+
+Supporting document:
+
+- [Behavior Model Consolidation Plan](Behavior-Model-Consolidation-Plan.md)
+
+Archived foundation work:
+
+- [Behavior Primitive/Fallback Foundation Archive](../Archived/Behavior-Primitive-Fallback-Foundation.md)
+
+### Behavior chain trace formatter
+
+Status: Conceptualized, not yet planned.
+
+Concept: add a compact trace/log formatter for behavior fallback chains so tests, debugging, and future UI can inspect chain resolution without reading the full raw trace tree. Example output might summarize each attempted Action Step, whether it succeeded or failed, why fallback continued, and what entity/state was affected.
+
+Planning deferred until the canonical behavior chain runtime exists and its trace shape has stabilized.

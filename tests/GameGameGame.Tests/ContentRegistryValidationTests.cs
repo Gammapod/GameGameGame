@@ -64,6 +64,28 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsMissingPrimitiveFallbackPlan()
+    {
+        var missingPlanId = new ActionPlanId("missingFallback");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("primitiveMove"),
+                    [],
+                    new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing, missingPlanId)));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingCalledPlan);
+        Assert.Equal(PrototypeContent.WanderingActionPlanTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("primitiveMove"), diagnostic.ActionPlanId);
+        Assert.Equal(missingPlanId, diagnostic.ReferencedActionPlanId);
+        Assert.Null(diagnostic.StepIndex);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsInvalidMovementTargetDescriptor()
     {
         var registry = PrototypeContent.CreateRegistry()
@@ -190,6 +212,146 @@ public sealed class ContentRegistryValidationTests
         var result = registry.Validate();
 
         Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsMissingFacingForPrimitiveMoveFacing()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: moveFacing
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              moveFacing:
+                id: moveFacing
+                primitive:
+                  kind: MoveFacing
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+        Assert.Equal(new EntityTemplateId("slime"), diagnostic.EntityTemplateId);
+        Assert.Equal(new ActionPlanTemplateId("moveFacing"), diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("moveFacing"), diagnostic.ActionPlanId);
+        Assert.Null(diagnostic.StepIndex);
+        Assert.Equal(ActionPlanSlot.Facing, diagnostic.ActionPlanSlot);
+        Assert.Equal(PlanValueKind.Direction, diagnostic.ExpectedValueKind);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsPrimitiveMoveFacingWithFacingDefault()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: moveFacing
+                actionStateDefaults:
+                  facing: West
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              moveFacing:
+                id: moveFacing
+                primitive:
+                  kind: MoveFacing
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsMissingTargetForPrimitivePickupTarget()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: pickupTarget
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              pickupTarget:
+                id: pickupTarget
+                primitive:
+                  kind: PickupTarget
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+        Assert.Equal(new EntityTemplateId("slime"), diagnostic.EntityTemplateId);
+        Assert.Equal(new ActionPlanTemplateId("pickupTarget"), diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("pickupTarget"), diagnostic.ActionPlanId);
+        Assert.Equal(ActionPlanSlot.Target, diagnostic.ActionPlanSlot);
+        Assert.Equal(PlanValueKind.Entity, diagnostic.ExpectedValueKind);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsPrimitivePickupTargetAfterMoveFacingFallbackWritesTarget()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: moveFacing
+                actionStateDefaults:
+                  facing: North
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              moveFacing:
+                id: moveFacing
+                primitive:
+                  kind: MoveFacing
+                  fallbackPlanId: pickupTarget
+              pickupTarget:
+                id: pickupTarget
+                primitive:
+                  kind: PickupTarget
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
     }
 

@@ -37,6 +37,7 @@ Current stable authoring areas:
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
 - effects: `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`;
 - movement effects: `Teleport`, `Drop` are functional and supported, but their GUI is intentionally advanced/generic rather than polished/specialized.
+- primitive-backed `MoveFacing` and `PickupTarget` action-plan descriptors with explicit fallback references are supported through Core/content validation, editor services, and the agent API; GUI polish remains generic/minimal.
 
 ### Advanced but supported
 
@@ -100,6 +101,8 @@ The editor can currently:
 - edit movement target/destination fields for `Teleport` and `Drop`;
 - validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, and legacy/arbitrary variable fields;
 - author content through the first in-process `AgentContentEditorApi` facade over editor/content services;
+- create primitive-backed `MoveFacing` action-plan descriptors with optional fallback references through editor services and the agent API;
+- create a canonical `MoveFacing -> PickupTarget` fallback chain through editor services and the agent API without low-level check/effect authoring;
 - load/display legacy variable-based content and legacy `SetVariable` effects without exposing them for new canonical GUI authoring.
 
 The editor intentionally does not currently:
@@ -127,9 +130,10 @@ Initial planned primitives:
 
 | Primitive | Status | Required state | Default state | Followup behavior |
 |---|---|---|---|---|
-| `Wandering` | Planned | `Facing` | `West` | Followup when movement fails; sets `Target` to blocker when available and reverses `Facing` for next turn. |
+| `MoveFacing` | Supported | `Facing` | `West` | Reads persistent actor `Facing`, moves one step, writes `Target` to blocker on blocked movement, and follows explicit fallback or terminates the root turn. |
+| `Wandering` | Partial | `Facing` | `West` | First supported canonical chain is `MoveFacing -> PickupTarget`; reverse-facing and future `onBump` behavior are not included yet. |
 | `SeekTarget` | Planned | `Target` | `Self` | Followup when movement toward target fails for any reason. |
-| `PickupTarget` | Planned | `Target` | `Self` | Followup when pickup target fails. |
+| `PickupTarget` | Supported | `Target` | `Self` | Reads persistent actor `Target`, attempts pickup into the first canonical inventory coordinate, and follows explicit fallback or terminates the root turn when pickup fails. |
 | `BumpTarget` | Planned | `Target` | `Self` | First pass reproduces current `handleBlocker` fallback behavior. |
 
 ## Action-plan checks
@@ -156,10 +160,12 @@ Initial planned primitives:
 
 ## Actor action-state defaults
 
+Canonical actor action state is persistent entity runtime state. `Facing` and `Target` are stored on the actor's entity action state during execution, while legacy named action-plan variables remain compatibility machinery for older low-level plans.
+
 | State | Tier | Engine context | Content model | YAML | Validation | Editor service | GUI | Notes |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| Initial `Facing` | Stable | Yes | Yes | Yes | Yes | Yes | Yes | Canonical YAML is `actionStateDefaults.facing`. |
-| Initial `Target` | Planned | Yes | Yes | Yes | Yes | Partial | Planned | Supported by model/context. Expose through Actor State when a concrete content use case appears. |
+| Initial `Facing` | Stable | Yes | Yes | Yes | Yes | Yes | Yes | Canonical YAML is `actionStateDefaults.facing`; spawned actors initialize persistent entity action state. |
+| Initial `Target` | Planned | Yes | Yes | Yes | Yes | Partial | Planned | Supported by model/runtime entity action state. Expose through Actor State when a concrete content use case appears. |
 
 ## Movement primitive model
 

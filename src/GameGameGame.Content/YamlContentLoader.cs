@@ -127,11 +127,17 @@ public static class YamlContentLoader
         {
             result[new ActionPlanTemplateId(templateId)] = new ActionPlanDescriptor(
                 new ActionPlanId(Required(plan.Id, nameof(plan.Id))),
-                (plan.Steps ?? []).Select(MaterializeStep).ToList());
+                (plan.Steps ?? []).Select(MaterializeStep).ToList(),
+                plan.Primitive is null ? null : MaterializePrimitive(plan.Primitive));
         }
 
         return result;
     }
+
+    private static ActionPlanPrimitiveDescriptor MaterializePrimitive(ActionPlanPrimitiveDescriptorDto primitive) =>
+        new(
+            primitive.Kind,
+            primitive.FallbackPlanId is null ? null : new ActionPlanId(primitive.FallbackPlanId));
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -302,7 +308,16 @@ public static class YamlContentLoader
     {
         public string? Id { get; set; }
 
+        public ActionPlanPrimitiveDescriptorDto? Primitive { get; set; }
+
         public List<ActionPlanStepDescriptorDto>? Steps { get; set; }
+    }
+
+    private sealed class ActionPlanPrimitiveDescriptorDto
+    {
+        public ActionPlanPrimitiveKind Kind { get; set; }
+
+        public string? FallbackPlanId { get; set; }
     }
 
     private sealed class ActionPlanStepDescriptorDto

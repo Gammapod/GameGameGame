@@ -312,6 +312,14 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         foreach (var (planId, plan) in Document.ActionPlans)
         {
             var steps = plan.Steps ?? [];
+            if (plan.Primitive?.FallbackPlanId == id.Value)
+            {
+                references.Add(new ActionPlanReference(
+                    EntityTemplateId: null,
+                    ActionPlanTemplateId: new ActionPlanTemplateId(planId),
+                    StepIndex: null));
+            }
+
             for (var index = 0; index < steps.Count; index++)
             {
                 var step = steps[index];
@@ -327,6 +335,40 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         }
 
         return references;
+    }
+
+    public void SetActionPlanPrimitive(ActionPlanTemplateId planId, ActionPlanPrimitiveKind kind, ActionPlanId? fallbackPlanId = null)
+    {
+        var plan = GetActionPlanDto(planId);
+        plan.Primitive = new EditableContentDocument.ActionPlanPrimitiveDescriptorDto
+        {
+            Kind = kind,
+            FallbackPlanId = fallbackPlanId?.Value
+        };
+        plan.Steps = [];
+        onChanged?.Invoke();
+    }
+
+    public void ClearActionPlanPrimitive(ActionPlanTemplateId planId)
+    {
+        var plan = GetActionPlanDto(planId);
+        plan.Primitive = null;
+        plan.Steps ??= [];
+        onChanged?.Invoke();
+    }
+
+    public PrimitiveActionPlanChain CreateMoveFacingPickupTargetChain(string moveFacingPlanName, string pickupTargetPlanName)
+    {
+        var pickupTargetPlanId = CreateActionPlan(pickupTargetPlanName);
+        SetActionPlanPrimitive(pickupTargetPlanId, ActionPlanPrimitiveKind.PickupTarget);
+
+        var moveFacingPlanId = CreateActionPlan(moveFacingPlanName);
+        SetActionPlanPrimitive(
+            moveFacingPlanId,
+            ActionPlanPrimitiveKind.MoveFacing,
+            new ActionPlanId(pickupTargetPlanId.Value));
+
+        return new PrimitiveActionPlanChain(moveFacingPlanId, pickupTargetPlanId);
     }
 
     public ContentEditorOperationResult DeleteActionPlan(ActionPlanTemplateId id)
@@ -626,6 +668,10 @@ public sealed record ActionPlanReference(
     EntityTemplateId? EntityTemplateId,
     ActionPlanTemplateId? ActionPlanTemplateId,
     int? StepIndex);
+
+public sealed record PrimitiveActionPlanChain(
+    ActionPlanTemplateId MoveFacingPlanId,
+    ActionPlanTemplateId PickupTargetPlanId);
 
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
 

@@ -7,7 +7,8 @@ public readonly record struct ActionPlanId(string Value)
 
 public sealed record ActionPlanDefinition(
     ActionPlanId Id,
-    IReadOnlyList<ActionPlanStep> Steps);
+    IReadOnlyList<ActionPlanStep> Steps,
+    ActionPlanPrimitiveDescriptor? Primitive = null);
 
 public sealed record ActionPlanStep
 {
@@ -95,7 +96,13 @@ public sealed class ActionPlanInterpreter
         ActionPlanContext context,
         int callDepth)
     {
+        context.AttachEntityActionState(world, actorId);
         var root = new TraceNode($"Plan {plan.Id}", TraceStatus.Info);
+
+        if (plan.Primitive is not null)
+        {
+            return ExecutePrimitive(world, actorId, plan, context, callDepth, root);
+        }
 
         foreach (var step in plan.Steps)
         {
@@ -129,6 +136,119 @@ public sealed class ActionPlanInterpreter
         root.Status = TraceStatus.Failure;
         root.Detail = "no step consumed or stopped the plan";
         return new PlanExecutionResult(false, ConsumesTurn: false, ContinuePlan: false, root);
+    }
+
+    private PlanExecutionResult ExecutePrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanDefinition plan,
+        ActionPlanContext context,
+        int callDepth,
+        TraceNode root)
+    {
+        var primitive = plan.Primitive!;
+        var primitiveResult = ApplyPrimitive(world, actorId, context, primitive);
+        root.Add(primitiveResult.Trace);
+
+        if (primitiveResult.Succeeded)
+        {
+            root.Status = TraceStatus.Success;
+            return new PlanExecutionResult(true, primitiveResult.ConsumesTurn, primitiveResult.ContinuePlan, root);
+        }
+
+        if (primitive.FallbackPlanId is not { } fallbackPlanId)
+        {
+            root.Status = TraceStatus.Failure;
+            root.Detail = $"primitive {primitive.Kind} failed without fallback";
+            return new PlanExecutionResult(false, ConsumesTurn: true, ContinuePlan: false, root);
+        }
+
+        var fallbackTrace = new TraceNode($"Fallback plan {fallbackPlanId}", TraceStatus.Info);
+        root.Add(fallbackTrace);
+
+        var fallbackResult = ApplyCallPlan(
+            world,
+            actorId,
+            context,
+            new CallPlanEffect(fallbackPlanId),
+            callDepth);
+        fallbackTrace.Add(fallbackResult.Trace);
+        fallbackTrace.Status = fallbackResult.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+        root.Status = fallbackResult.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+
+        return new PlanExecutionResult(
+            fallbackResult.Succeeded,
+            fallbackResult.ConsumesTurn,
+            fallbackResult.ContinuePlan,
+            root);
+    }
+
+    private PlanEffectResult ApplyPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        ActionPlanPrimitiveDescriptor primitive)
+    {
+        return primitive.Kind switch
+        {
+            ActionPlanPrimitiveKind.MoveFacing => ApplyMoveFacingPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.PickupTarget => ApplyPickupTargetPrimitive(world, actorId, context),
+            _ => new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, TraceNode.Failure($"Primitive {primitive.Kind}", FailureReason.None, $"unsupported primitive {primitive.Kind}"))
+        };
+    }
+
+    private PlanEffectResult ApplyMoveFacingPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive MoveFacing", TraceStatus.Info);
+
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        IActionIntent action = new MoveAction(facing.Value);
+        var resolution = action.Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+
+        if (resolution.Succeeded)
+        {
+            trace.Status = TraceStatus.Success;
+            trace.Detail = resolution.Trace.Detail;
+            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+        }
+
+        if (_movement.GetBlockingEntity(world, actorId, facing.Value) is { } blocker)
+        {
+            trace.Add(context.Set(ActionPlanSlot.Target, new EntityPlanValue(blocker)));
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyPickupTargetPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive PickupTarget", TraceStatus.Info);
+        var effect = new PickupEffect(new GridCoord(0, 0));
+        var result = effect.Apply(world, actorId, context, _movement);
+        trace.Add(result.Trace);
+        trace.Status = result.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+        trace.Reason = result.Trace.Reason;
+        trace.Detail = result.Trace.Detail;
+
+        return new PlanEffectResult(result.Succeeded, result.ConsumesTurn, result.ContinuePlan, trace);
     }
 
     private PlanEffectResult ApplyEffect(
