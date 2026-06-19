@@ -4,13 +4,13 @@ This is the central manual for GameGameGame engine/editor capability parity. It 
 
 - engine/editor maintainers deciding how new Core features should be authored, validated, and exercised through editor tooling;
 - content creators and content-editing agents that need to know what the editor can safely author today;
-- agent API work, which should use the same canonical authoring model as the GUI and editor service.
+- agent API work, which should use the same canonical authoring model as the editor service and future frontend/editor surfaces.
 
 Update this document whenever an engine capability is added, removed, renamed, promoted to editor support, intentionally kept engine-only, or moved into legacy compatibility.
 
 ## Evolution policy
 
-The engine and editor should evolve together without forcing every new engine capability to become a polished GUI workflow immediately.
+The engine and editor service / agent API should evolve together without forcing every new engine capability to become a current Avalonia GUI workflow. The current Avalonia GUI is maintenance-mode/legacy-priority; future human-facing editor investment is expected to move toward an integrated game/editor frontend.
 
 Use staged support:
 
@@ -18,7 +18,8 @@ Use staged support:
 2. **Descriptor/YAML support**: content can serialize the capability without hand-written runtime code.
 3. **Validation support**: malformed content receives actionable diagnostics where possible.
 4. **Editor service support**: tooling and future agent APIs can author the capability through typed operations.
-5. **GUI support**: human-facing workflows can create/edit the capability.
+5. **Agent/headless API support**: agents, tests, scripts, and future frontends can author or inspect the capability through structured operations.
+6. **Frontend/editor UI support**: a human-facing surface can create/edit the capability. The current Avalonia GUI may provide legacy/maintenance support for existing workflows, but new capabilities do not require Avalonia GUI parity unless explicitly selected.
 
 New capabilities may pass through these stages over time. Prefer typed descriptors and canonical engine concepts over ad-hoc editor-only fields. Do not add editor-only concepts that Core cannot consume.
 
@@ -26,13 +27,13 @@ New capabilities may pass through these stages over time. Prefer typed descripto
 
 ### Stable authoring support
 
-Stable support is appropriate for GUI workflows and future agent API commands. These capabilities have canonical descriptors, validation, and editor-service support, and are intended for normal content authoring.
+Stable support is appropriate for editor-service workflows, agent/headless API commands, tests, and future frontend/editor surfaces. These capabilities have canonical descriptors, validation, and editor-service support, and are intended for normal content authoring. Current Avalonia GUI support may exist for some stable capabilities, but it is no longer a required parity target for new work.
 
 Current stable authoring areas:
 
 - entity templates and presentations;
 - inventory dimensions, weight, carrying capacity, and carried entity layout;
-- legacy low-level action plans and action-plan steps remain loadable and editable as compatibility when an existing legacy plan is selected, but are hidden from normal GUI authoring paths pending migration toward canonical ordered behavior-chain authoring;
+- legacy low-level action plans and action-plan steps remain loadable and editable as compatibility when an existing legacy plan is selected, but are hidden from current Avalonia GUI authoring paths where canonical ordered behavior-chain authoring is available;
 - actor initial `Facing` through `actionStateDefaults.facing`;
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
 - effects: `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`;
@@ -90,6 +91,15 @@ Guidance:
 | Intentional non-parity | The capability exists somewhere but is intentionally not exposed in another layer. |
 | No | The layer does not currently support the capability. |
 
+## Current Avalonia GUI status
+
+The Avalonia desktop editor is legacy-priority / maintenance-mode. It remains useful for existing browsing and editing workflows, and the capability tables below still record what it can currently display or author. However:
+
+- new engine/editor capabilities should prioritize Core runtime, descriptor/YAML support, validation, editor service operations, agent/headless API support, tests, and documentation;
+- Avalonia GUI support is optional unless explicitly selected in the active plan;
+- do not add or refactor Avalonia GUI workflows solely to preserve broad engine/editor parity;
+- future human-facing editor work is expected to target an integrated game/editor frontend rather than treating the current Avalonia UI as the long-term editor surface.
+
 ## Current editor capability summary
 
 The editor can currently:
@@ -128,6 +138,16 @@ The editor intentionally does not currently:
 ## Canonical behavior-chain action plans
 
 Canonical action-plan authoring is being remodeled around ordered behavior chains. The completed first slice is archived at `docs/Archived/Behavior-Model-Consolidation-First-Slice.md`; the completed follow-up behavior-system sprint is archived at `docs/Archived/Behavior-System-Next-Steps.md`. The earlier behavior-primitive linked-plan foundation is archived/superseded by this direction; it remains supported as transitional compatibility/prototype work.
+
+Current vocabulary/model assumptions:
+
+- **Action Plan**: the behavior definition assigned to an entity as its default behavior or invoked by another supported mechanism.
+- **Canonical behavior chain**: the preferred new authoring shape for normal behavior. It is an ordered list of engine-defined Action Steps on one Action Plan.
+- **Action Step**: one engine-defined behavior attempt inside a canonical behavior chain, such as `MoveFacing`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, or `CreateFacing`.
+- **Fallback / fallthrough**: in canonical behavior chains, fallback means continuing to the next ordered Action Step in the same Action Plan when the current step fails or cannot act. It does not mean creating linked fallback plans for new normal authoring.
+- **Primitive-backed linked plans**: transitional compatibility/prototype descriptors. They may remain loadable/supported where documented, but they are not the desired new authoring model.
+- **Legacy low-level steps/checks/effects**: compatibility authoring for existing plans. New normal workflows should prefer canonical behavior chains and engine-defined slots instead of arbitrary variable names.
+- **Canonical state slots**: engine-defined persistent actor state such as `Facing` and `Target`. Prefer these over string-keyed action-plan variables for new authoring.
 
 Target model:
 

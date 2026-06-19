@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide a stable, constrained API that agents can use to author content through the same engine/editor capability model used by the GUI.
+Provide a stable, constrained API that agents can use to author content through the same engine/editor capability model used by the editor service and future frontend/editor surfaces. The current Avalonia GUI is legacy-priority and should not define the agent API contract.
 
 The API should not expose legacy arbitrary-variable authoring. It should operate on canonical engine concepts:
 
@@ -21,7 +21,7 @@ Movement primitive parity is now sufficient to begin API planning:
 - Descriptor/YAML support exists for movement target/destination fields.
 - Content validation reports malformed movement descriptors.
 - Editor service can author full movement descriptors and movement fields.
-- GUI can exercise common movement primitive authoring paths.
+- The current Avalonia GUI can exercise common movement primitive authoring paths, but broad GUI parity is no longer required for future API work.
 - `CanDrop` is intentionally deferred until a concrete branching use case appears.
 
 ## API shape recommendation
