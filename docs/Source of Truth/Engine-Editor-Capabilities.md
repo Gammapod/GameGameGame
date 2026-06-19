@@ -121,6 +121,7 @@ The editor can currently:
 - create a transitional `MoveFacing -> PickupTarget` linked fallback chain through editor services and the agent API without low-level check/effect authoring;
 - author canonical ordered behavior chains through editor services and the agent API without low-level check/effect authoring or linked fallback plan descriptors, including a convenience helper for the common `MoveFacing -> PickupTarget` chain;
 - preview action plans through editor service and agent API commands before save/manual YAML inspection, including canonical plan shape, Action Step metadata, state hints such as `Facing=West` and `Target=Self`, validation diagnostics, and YAML preview text;
+- run first-slice headless scenarios through the agent API by selecting an editor-authored scenario-root entity template, spawning its inventory space as the scenario plane, scheduling all contained default-plan actors in deterministic row-major initiative order, and returning structured setup, rich behavior-chain turn trace, final-state, validation, runtime-observation, runtime-failure, and capability-gap report data; scenario reports are observational and should not treat expected in-simulation inability to act as a failed scenario;
 - view and edit canonical ordered behavior chains through the GUI Action Plans tab, including add/remove/reorder for catalog-backed Action Steps, plan-shape guidance, canonical-chain summaries, and default-state hints;
 - load/display legacy variable-based content and legacy `SetVariable` effects without exposing them for new canonical GUI authoring;
 - hide the legacy low-level steps/checks/effects GUI section unless the selected plan is already a legacy low-level plan.
@@ -257,7 +258,7 @@ Current policy:
 
 The movement primitive parity baseline was sufficient for the first in-process agent API facade. The current API/editor service parity baseline supports canonical ordered behavior-chain authoring for the first Action Steps and the first utility Action Step batch.
 
-Agent API currently has an in-process `AgentContentEditorApi` facade in the Editor project. It wraps editor/content services for document/session snapshots, validation, entity template updates, actor initial facing, canonical behavior-chain Action Step metadata and authoring, legacy low-level action plans/steps, transitional primitive-backed linked plans, canonical checks, and canonical/advanced supported effects. It rejects legacy `SetVariable` effect authoring.
+Agent API currently has an in-process `AgentContentEditorApi` facade in the Editor project. It wraps editor/content services for document/session snapshots, validation, entity template updates, actor initial facing, canonical behavior-chain Action Step metadata and authoring, legacy low-level action plans/steps, transitional primitive-backed linked plans, canonical checks, canonical/advanced supported effects, and first-slice scenario-root inventory simulation reports. It rejects legacy `SetVariable` effect authoring.
 
 Agent API should continue to:
 

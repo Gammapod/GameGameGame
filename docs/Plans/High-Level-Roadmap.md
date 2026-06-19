@@ -15,35 +15,93 @@ Related source of truth:
 
 ## Current strategic direction
 
-Prioritize the scenario feedback loop before adding broad new mechanics. The first utility Action Step batch is implemented, but generated exercises showed that authoring temporary scenarios, simulating turns, and reviewing compact behavior/state feedback is still too ad hoc. Direction, inventory, spawning, scheduler, and reaction decisions should be informed by scenario evidence instead of implemented speculatively.
+Prioritize an alpha-playable arbitrary scenario flow before adding broad new mechanics. Sprint 10 established enough scenario feedback infrastructure to start aiming at an alpha release target: the game can launch and be played in an arbitrary scenario, and a player entity can be inserted into scenarios. Direction, inventory, spawning, scheduler, and reaction decisions should still be informed by scenario evidence instead of implemented speculatively.
 
 The current Avalonia GUI is legacy-priority / maintenance-mode. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and future frontend readiness rather than maintaining broad Avalonia GUI parity. Long-term human-facing editor work is expected to move toward an integrated game/editor frontend.
 
+## Alpha release target: playable arbitrary scenarios
+
+Target statement:
+
+- The game can launch and be played in an arbitrary authored scenario.
+- A player entity is insertable into scenarios.
+
+This target promotes the following items out of backlog buckets and into the alpha roadmap. New mechanics such as richer movement, `Give`/`Take`, template spawning, reactions, scheduler/speed, and future frontend replacement are valuable for content richness, but are not upstream requirements for the first alpha launch/play loop unless a selected alpha scenario specifically depends on them.
+
+### Alpha roadmap
+
+1. **Scenario document / scenario package model**
+   - Define a minimal explicit scenario definition that references normal content templates rather than creating a separate gameplay language or relying on magic template/entity names.
+   - Required fields should include scenario identity/metadata, scenario-root entity/template or scenario space reference, player template/entity IDs, and player start placement.
+   - Keep scenario setup compatible with the Sprint 10 scenario-root inventory model where possible.
+   - A content package may eventually contain multiple scenarios; the alpha model should not require exactly one hardcoded `Game` and exactly one hardcoded `Player` entity, even if built-in prototype content keeps those names.
+
+2. **Player insertion contract**
+   - Define how a player entity template and runtime player entity ID are selected or overridden for a scenario.
+   - Define how the player is inserted into the scenario-root inventory/play space: location, inventory plane behavior, initial action state, and conflict diagnostics when the start cell is occupied or invalid.
+   - Preserve the existing direct player-input model initially; do not require AI/default-plan behavior or a player-controlled Action Step for alpha.
+   - Treat `PlayerInputStep` / action-choice discovery as a future player-control model, not an alpha prerequisite.
+
+3. **Scenario materialization service**
+   - Promote reusable scenario materialization out of `AgentContentEditorApi.RunScenario` into a service usable by tests, editor/agent APIs, and Console without duplicating spawn/setup logic.
+   - Materialize a scenario into `WorldState`, action-plan map, registry/presentation lookup, player entity ID, active play plane/container, and validation diagnostics.
+   - Keep generated/headless scenario reports as a validation surface for the same materialization path.
+   - Console should consume materialization results rather than hardcoded prototype IDs such as `PrototypeContent.PlayerId` or `PrototypeContent.GameInventoryPlaneId`.
+
+4. **Editor/agent authoring and validation support**
+   - Provide editor/agent operations to create, inspect, validate, and run/preview alpha scenario definitions.
+   - Validate missing scenario roots, invalid player starts, missing player template/presentation, duplicate/occupied starts, and unsupported scenario requests with actionable diagnostics.
+   - Keep scenario diagnostics categorized enough for agents to distinguish authoring/validation issues, unsupported capability gaps, expected runtime observations, and runtime engine errors.
+   - Continue avoiding checked-in prototype-content edits unless an explicit alpha fixture is selected.
+
+5. **Agent-friendly scenario report surface**
+   - Provide a concise text report surface for scenario runs, alongside structured data, so content-authoring agents can review setup, turns, observations, diagnostics, and final state without writing custom formatting code.
+   - Include high-signal turn-by-turn state changes where practical, such as movement, facing/target changes, created/destroyed entities, and inventory/containment changes.
+   - Keep the report shape lightweight until alpha scenarios reveal which sections are stable enough for future runlogs or golden comparisons.
+
+6. **Console arbitrary scenario launch**
+   - Let Console launch a selected scenario by path or simple scenario list instead of always using `PrototypeContent.CreateFirstSlice`.
+   - Replace hard-coded prototype entity IDs in play/render/inspect flows with scenario materialization outputs, especially player entity ID and active play plane/container.
+   - Keep controls minimal: movement, pickup/drop/inspect, turn advancement, and quit are enough for alpha.
+
+7. **Alpha scenario fixtures and smoke validation**
+   - Add one or more small authored alpha scenarios only after the scenario package model is stable enough to avoid churn.
+   - Add tests that load/materialize an alpha scenario, insert the player, run at least one player action/turn, and verify built-in content/scenario validation.
+   - Console smoke coverage is desirable but should remain focused on launch/play integration rather than re-testing Core movement.
+
+### Not required for first alpha, unless selected scenario content demands it
+
+- `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, `SeekTarget`, `AcquireNearestTarget`, `Give`, and `Take`.
+- `CreateFacing(templateId)` or other template-spawning mechanics.
+- Scheduler/speed/multiple actions per turn.
+- Saved runlogs/golden runlog tests.
+- Future integrated frontend replacement.
+- Avalonia GUI parity for scenario authoring.
+
 ## Active / likely next sprint
 
-### Generated scenario authoring and simulation feedback
+### Sprint 11 selection pending
 
-Status: Likely next sprint focus.
+Status: Sprint 10 completed; Sprint 11 priorities under discussion.
 
-Supporting document:
+Recently completed supporting document:
 
-- [Next Sprint Scenario Testing Plan](Next-Sprint-Scenario-Testing-Plan.md)
+- [Sprint 10: Scenario Feedback Loop](../Archived/Sprint-10-Scenario-Feedback-Loop.md)
 
-Goal: improve the ability to create temporary/generated content, simulate turns, inspect behavior traces and state summaries, and identify unsupported capability gaps before committing to new mechanics.
+Current decision point: Sprint 11 should prioritize the smallest alpha scenario package/materialization slice. A small scenario report polish task may be included only if it directly reduces risk for alpha materialization/player insertion.
 
-Loose high-level scope:
+Likely candidate focuses:
 
-- Add a headless scenario exercise helper around editor/content services and Core simulation.
-- Support creating temporary content, assigning canonical behavior chains, spawning a small world, running turns, and collecting compact trace summaries.
-- Prefer tests or generated temporary files over checked-in prototype content changes.
-- Preserve Core/Editor parity: scenario helpers should use supported editor service / agent API operations where possible.
+- Alpha scenario package/materialization: explicit scenario definition model, player insertion contract, shared materialization service, and editor/agent validation.
+- Scenario report polish: text report/template for agents, preview-plus-simulation in one command, richer inventory/containment state summaries, and cleanup/replacement of the older test-local runner.
+- Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` after alpha-critical launch/play dependencies are moving.
 
-Potential testable outcomes:
+Selection guidance:
 
-- A generated scenario can author entities, inventories, action plans, and initial action state without editing checked-in content.
-- A generated scenario can simulate multiple turns and return formatted behavior-chain traces and high-signal state summaries.
-- The first utility Action Step batch can be exercised in generated scenarios without manual YAML inspection.
-- Unsupported requests produce explicit capability-gap notes rather than silent YAML or simulation guesses.
+- Prefer alpha scenario package/materialization as the default Sprint 11 direction because the alpha release target is now the guiding milestone.
+- Prefer scenario/report polish first if content-authoring agents still need manual test harnesses or cannot quickly interpret reports.
+- Prefer movement/peer-interaction primitives if an alpha candidate scenario needs behavior not representable with persistent `Facing`, current `Target`, and existing canonical Action Steps.
+- Prefer inventory/containment work only after scenario exercises expose concrete transfer/containment needs.
 
 ## Prioritized backlog buckets
 
@@ -53,18 +111,22 @@ Status: Highest-priority backlog bucket.
 
 Priority order:
 
-1. Headless generated scenario runner / exercise helper.
-2. Compact world/state summary formatter for entity positions, facing, target, inventories, and other high-signal runtime state.
+1. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
+2. Lightweight scenario report template once first runner output reveals the useful fields.
 3. Plan preview + simulation in one API command.
-4. Capability-gap reporter for unsupported authoring/simulation requests.
-5. Lightweight scenario report template once first runner output reveals the useful fields.
-6. Generalized scenario runner upgrade sprint.
-7. Saved scenario runlogs.
-8. Golden runlog tests.
-9. Test inspector / runlog stepper with forward/back controls.
-10. Ability to run arbitrary scenarios/content from Console.
-11. Editor `Run in Console` button.
+4. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
+5. Capability-gap reporter improvements for unsupported authoring/simulation requests.
+6. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
+7. Generalized scenario runner upgrade sprint.
+8. Saved scenario runlogs.
+9. Golden runlog tests.
+10. Test inspector / runlog stepper with forward/back controls.
+11. Editor `Run in Console` button after Console scenario launch exists.
 12. Live in-editor preview window showing an entity performing its action plan.
+
+Completed baseline:
+
+- Sprint 10 added `AgentContentEditorApi.RunScenario`, scenario-root entity templates, inventory-plane scenario spaces, deterministic row-major contained-actor initiative, rich canonical behavior-chain traces, and observational runtime outcome reporting.
 
 Future generalized scenario runner wishlist:
 
@@ -86,34 +148,47 @@ Promotion trigger:
 
 - Promote follow-up items when the next scenario runner exposes repeated manual-inspection pain, unstable result comparison, or frequent unsupported authoring requests.
 
-### Bucket 2: Direction, movement, and canonical action semantics
+### Bucket 2: Foundational movement and peer interaction primitives
 
-Status: High-priority design bucket after initial scenario feedback.
+Status: High-priority content-foundation bucket after initial scenario feedback.
+
+Direction decision: keep `Facing` as the first primitive orientation model for local movement. Prefer small canonical Action Steps that transform or move relative to `Facing` before adding broad absolute-direction movement. Add goal-directed target movement after relative direction transforms are in place. Prioritize peer inventory transfer soon after movement basics so foundational content can experiment with entity-to-entity interactions.
 
 Priority order:
 
-1. Direction/movement philosophy decision.
-2. Explicit failure/turn-consumption policy for exhausted behavior chains.
-3. Consistent blocker/`Target` writing rules for failed directional steps, including whether `DropFacing` should write blockers.
-4. Direction transform concepts: `ReverseFacing`, `SetFacing`, `MoveOppositeFacing`, and perpendicular-direction helpers.
-5. `SeekTarget` / move toward target.
-6. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity `Target`.
-7. Canonical multi-direction effects.
-8. `BumpTarget` or generic interaction fallback steps.
-9. Player/screen messages if scenarios need action feedback beyond traces.
+1. `ReverseFacing`: reverse persistent actor `Facing` without moving.
+2. `TurnLeft`: rotate persistent actor `Facing` 90 degrees counter-clockwise without moving.
+3. `TurnRight`: rotate persistent actor `Facing` 90 degrees clockwise without moving.
+4. `Backstep`: move one cell opposite persistent actor `Facing` without changing `Facing`.
+5. `SeekTarget` / move toward target: choose a deterministic step toward persistent `Target` after target movement semantics are concrete.
+6. `AcquireNearestTarget`: select a nearby valid entity and write persistent `Target`, initially with simple deterministic same-plane rules.
+7. `Give`: move a carried entity into the inventory space of the persistent `Target` entity.
+8. `Take`: move an entity from the inventory space of an adjacent/target entity into the actor inventory.
+9. Explicit failure/turn-consumption policy for exhausted behavior chains, if scenario reports reveal author confusion beyond observational reporting.
+10. Consistent blocker/`Target` writing rules for failed directional steps, including whether `DropFacing` and `Backstep` should write blockers.
+11. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
+12. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
+13. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity `Target`.
+14. `BumpTarget` or generic interaction fallback steps.
+15. Player/screen messages if scenarios need action feedback beyond traces.
 
 Dependencies:
 
-- Scenario exercises should provide concrete movement and failure examples before implementation of another movement-heavy primitive batch.
+- Scenario exercises should provide concrete movement and failure examples for each primitive batch.
+- `ReverseFacing`, `TurnLeft`, `TurnRight`, and `Backstep` should come before `SeekTarget` so relative movement/facing semantics are established.
+- `SeekTarget` should come before patterned rook/bishop/knight-like movement so target pursuit tie-breaking and blocker behavior are proven first.
+- `Give`/`Take` depend on the inventory/containment model enough to require explicit scenario coverage, but they are now considered foundational peer-interaction primitives rather than distant conceptual work.
 - `TeleportTo` likely depends on a new location/destination state model.
 
 Promotion trigger:
 
-- Promote when generated scenarios repeatedly need behavior that cannot be represented with persistent `Facing`, current `Target`, and existing canonical Action Steps.
+- Promote the first direction-transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`) when Sprint 11 or later selects movement primitive expansion over scenario report polish.
+- Promote `SeekTarget` / `AcquireNearestTarget` when generated scenarios need autonomous aggressive/chasing behavior.
+- Promote `Give`/`Take` when generated scenarios need peer inventory transfer between adjacent or targeted entities.
 
 Likely decision artifact:
 
-- A short design note before implementing more movement/direction primitives.
+- A short design note before implementing each primitive batch, covering state reads/writes, turn consumption, blocker/`Target` behavior, editor/API support, and scenario coverage.
 
 ### Bucket 3: Inventory, containment, and transfer mechanics
 
@@ -123,14 +198,14 @@ Priority order:
 
 1. Weight mechanics simplification: replace carrying capacity as a primary mechanic with a simpler containment rule where an entity may exist inside another entity when contained weight is less than or equal to container weight.
 2. Clarify containment/inventory rules through generated scenarios.
-3. `Give`: move a carried entity into the inventory space of the `Target` entity.
-4. `Take`: move an entity from the inventory space of an adjacent/target entity into the actor inventory.
-5. Carried entity selection rules.
-6. Source inventory selection rules.
+3. Carried entity selection rules for `Give`.
+4. Source inventory selection rules for `Take`.
+5. Richer containment/inventory report summaries for generated scenarios.
 
 Dependencies:
 
-- Give/take and selection rules depend on the inventory/containment model.
+- `Give`/`Take` are promoted into Bucket 2 as foundational peer-interaction primitives; this bucket retains the deeper inventory/containment model and selection-rule follow-up work.
+- Give/take selection rules depend on the inventory/containment model.
 - Weight simplification should wait for clearer inventory/weight expectations from generated scenario tests.
 
 Promotion trigger:
@@ -157,27 +232,26 @@ Promotion trigger:
 
 - Promote when scenario exercises need repeatable spawning of authored templates rather than the current placeholder entity.
 
-### Bucket 5: Scenario/content packaging
+### Bucket 5: Scenario/content packaging beyond alpha
 
-Status: Deferred until the scenario runner clarifies boundaries.
+Status: Alpha-critical subset promoted into the alpha release roadmap. This bucket tracks follow-up packaging capabilities beyond the first playable arbitrary-scenario release.
 
 Priority order:
 
-1. Scenario documents and scenario families.
-2. Scenario metadata.
-3. World/setup data.
-4. Player/user entity start point.
-5. Console scenario loading by path or simple list.
-6. Loading one scenario inside another for setpieces or nested levels.
-7. Randomly generated levels.
+1. Scenario families and grouping once individual alpha scenario documents work.
+2. Richer scenario metadata beyond alpha launch needs.
+3. Richer world/setup data beyond scenario-root inventory spaces.
+4. Loading one scenario inside another for setpieces or nested levels.
+5. Randomly generated levels.
 
 Dependencies:
 
-- The headless generated scenario runner should clarify the boundary between reusable content definitions, scenario setup, runtime world state, and player start metadata.
+- Alpha scenario documents, player start metadata, and Console scenario loading are now tracked in the alpha roadmap.
+- The alpha scenario materialization path should clarify the boundary between reusable content definitions, scenario setup, runtime world state, and player start metadata before richer packaging is promoted.
 
 Promotion trigger:
 
-- Promote when generated temporary scenarios become useful enough that checked-in scenario fixtures or user-selectable scenario documents would reduce repeated setup work.
+- Promote beyond-alpha packaging when alpha scenario fixtures become repetitive enough that scenario families, nested scenarios, or richer metadata would reduce content-authoring friction.
 
 ### Bucket 6: Runtime architecture and simulation scale
 
@@ -242,7 +316,7 @@ Dependencies:
 
 Promotion trigger:
 
-- Promote when headless scenario workflows and agent APIs are stable enough that a frontend can consume them without duplicating content/editor logic.
+- Promote when alpha scenario materialization, headless scenario workflows, and agent APIs are stable enough that a frontend can consume them without duplicating content/editor logic.
 
 ### Bucket 9: Reactions and cross-entity behavior
 
@@ -268,7 +342,28 @@ Promotion trigger:
 
 - Promote when generated scenarios need target-driven reactions that cannot be modeled as the acting entity's normal behavior chain or simple interaction fallback.
 
-### Bucket 10: Long-horizon diegetic/meta systems
+### Bucket 10: Future player control and action choice model
+
+Status: Deferred until alpha scenario launch/play works with direct Console control.
+
+Concept:
+
+- A future `PlayerInputStep` could be assignable to an entity Action Plan.
+- When simulation reaches `PlayerInputStep`, the engine/frontend would pause for player input rather than automatically resolving the chain.
+- Subsequent Action Steps in the plan could describe available player choices, such as move, pickup, drop, or interact, instead of behaving as ordinary fallback attempts.
+- This would allow any entity to become player-controlled through authored behavior rather than through a special hardcoded player entity.
+
+Dependencies:
+
+- Requires alpha scenario materialization/player insertion to exist first so direct-control play has a stable baseline.
+- Requires action-choice discovery, frontend/Console input integration, and likely revised action-plan resolution semantics.
+- Should be designed with future integrated frontend needs in mind, not just the current Console.
+
+Promotion trigger:
+
+- Promote after alpha launch/play works and scenarios need authored player capability sets or controllable non-player entities.
+
+### Bucket 11: Long-horizon diegetic/meta systems
 
 Status: Long-horizon conceptual bucket.
 
@@ -287,6 +382,23 @@ Promotion trigger:
 - Promote only after core behavior authoring and inventory/containment systems are stable enough that action plans can be treated as gameplay objects without destabilizing foundational semantics.
 
 ## Recently completed / archived context
+
+### Sprint 10: Scenario feedback loop
+
+Status: Completed / archived.
+
+Archived supporting document:
+
+- [Sprint 10: Scenario Feedback Loop](../Archived/Sprint-10-Scenario-Feedback-Loop.md)
+
+Completed scope summary:
+
+- Added `AgentContentEditorApi.RunScenario` as the first production/editor-agent scenario runner surface.
+- Made editor-authored scenario-root entity templates usable as scenario spaces through their inventory planes.
+- Scheduled all contained default-plan actors using deterministic row-major initiative for scenario runs.
+- Returned structured setup, actor order, rich behavior-chain turn traces, final state, validation diagnostics, runtime observations, runtime failures, and capability gaps.
+- Established that expected in-simulation inability to act is an observation, not a failed scenario result.
+- Ran a content-editor scenario exercise and captured follow-up friction around report polish, initiative documentation, and future action semantics.
 
 ### Canonical behavior-chain usability and first utility batch
 

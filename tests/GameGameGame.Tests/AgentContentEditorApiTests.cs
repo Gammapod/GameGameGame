@@ -226,6 +226,97 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiRunsScenarioRootInventoryActorsInInitiativeOrder()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var scenarioRootId = AssertSuccess(api.CreateEntityTemplate("Scenario Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            scenarioRootId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 3,
+                InventoryHeight: 2,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+
+        var eastWalkerId = AssertSuccess(api.CreateEntityTemplate("East Walker"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            eastWalkerId,
+            new AgentEntityTemplateUpdate(Weight: 1, CarryingCapacity: 1, Glyph: 'e', Color: PresentationColor.Green)));
+        AssertSuccess(api.SetInitialFacing(eastWalkerId, Direction.East));
+        var eastPlanId = AssertSuccess(api.CreateActionPlan("East Walker Behavior"));
+        AssertSuccess(api.SetActionPlanBehavior(eastPlanId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(eastWalkerId, eastPlanId));
+
+        var southWalkerId = AssertSuccess(api.CreateEntityTemplate("South Walker"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            southWalkerId,
+            new AgentEntityTemplateUpdate(Weight: 1, CarryingCapacity: 1, Glyph: 's', Color: PresentationColor.Cyan)));
+        AssertSuccess(api.SetInitialFacing(southWalkerId, Direction.South));
+        var southPlanId = AssertSuccess(api.CreateActionPlan("South Walker Behavior"));
+        AssertSuccess(api.SetActionPlanBehavior(southPlanId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(southWalkerId, southPlanId));
+
+        AssertSuccess(api.PlaceCarriedEntity(scenarioRootId, new EntityId("eastWalker"), eastWalkerId, new GridCoord(0, 0)));
+        AssertSuccess(api.PlaceCarriedEntity(scenarioRootId, new EntityId("southWalker"), southWalkerId, new GridCoord(2, 0)));
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(scenarioRootId, TurnCount: 1)));
+
+        Assert.Equal([new EntityId("eastWalker"), new EntityId("southWalker")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Equal(["East Walker", "South Walker"], report.Turns.Select(turn => turn.ActorName).ToArray());
+        Assert.Contains("East Walker: scenarioRoot(1,0), facing East, target none", report.FinalStateLines);
+        Assert.Contains("South Walker: scenarioRoot(2,1), facing South, target none", report.FinalStateLines);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Empty(report.CapabilityGaps);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiScenarioReportShowsBehaviorStepsAndTreatsNoActionAsObservation()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var scenarioRootId = AssertSuccess(api.CreateEntityTemplate("Scenario Duel Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            scenarioRootId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 3,
+                InventoryHeight: 1,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+
+        var passiveId = AssertSuccess(api.CreateEntityTemplate("Passive Walker"));
+        AssertSuccess(api.UpdateEntityTemplate(passiveId, new AgentEntityTemplateUpdate(Weight: 1, CarryingCapacity: 1, Glyph: 'p', Color: PresentationColor.Green)));
+        AssertSuccess(api.SetInitialFacing(passiveId, Direction.East));
+        var passivePlanId = AssertSuccess(api.CreateActionPlan("Passive Walker Behavior"));
+        AssertSuccess(api.SetActionPlanBehavior(passivePlanId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(passiveId, passivePlanId));
+
+        var destroyerId = AssertSuccess(api.CreateEntityTemplate("Destroyer Walker"));
+        AssertSuccess(api.UpdateEntityTemplate(destroyerId, new AgentEntityTemplateUpdate(Weight: 1, CarryingCapacity: 1, Glyph: 'd', Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(destroyerId, Direction.West));
+        var destroyerPlanId = AssertSuccess(api.CreateActionPlan("Destroyer Walker Behavior"));
+        AssertSuccess(api.SetActionPlanBehavior(destroyerPlanId, [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.DestroyTarget]));
+        AssertSuccess(api.SetDefaultActionPlan(destroyerId, destroyerPlanId));
+
+        AssertSuccess(api.PlaceCarriedEntity(scenarioRootId, new EntityId("passive"), passiveId, new GridCoord(0, 0)));
+        AssertSuccess(api.PlaceCarriedEntity(scenarioRootId, new EntityId("destroyer"), destroyerId, new GridCoord(1, 0)));
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(scenarioRootId, TurnCount: 1)));
+
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Passive Walker", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. MoveFacing: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. MoveFacing: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. DestroyTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("   writes: Target=passive", report.Turns[1].TraceLines);
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Passive Walker:", StringComparison.Ordinal));
+        Assert.Contains("Destroyer Walker: scenarioRoot(1,0), facing West, target passive", report.FinalStateLines);
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsCanonicalBehaviorChainWithHelper()
     {
         var api = AgentContentEditorApi.CreateNew();

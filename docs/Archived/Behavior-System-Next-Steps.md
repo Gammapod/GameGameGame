@@ -1,6 +1,6 @@
 # Behavior System Next Steps
 
-Status: Completed / archived during sprint wrap-up. GUI clarity, first safe legacy hiding, behavior trace formatting, canonical plan preview, and the first utility Action Step batch were completed. Remaining follow-up priorities are tracked in `docs/Plans/High-Level-Roadmap.md` and the next sprint plan.
+Status: Completed / archived during sprint wrap-up. GUI clarity, first safe legacy hiding, behavior trace formatting, canonical plan preview, and the first utility Action Step batch were completed. Remaining follow-up priorities are tracked in `docs/Plans/High-Level-Roadmap.md` and the active numbered sprint plan.
 
 The first canonical behavior-chain slice is complete and archived in [Behavior Model Consolidation First Slice](../Archived/Behavior-Model-Consolidation-First-Slice.md). The current canonical behavior model supports ordered `MoveFacing` and `PickupTarget` Action Steps across Core, YAML, validation/default handling, editor services, agent API, and minimal GUI authoring.
 
