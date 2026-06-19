@@ -53,6 +53,15 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
     public AgentApiResult<AgentScenarioRunReport> RunScenario(AgentScenarioRunRequest request) =>
         Try("RunScenarioFailed", () => AgentScenarioRunner.Run(Session, request));
 
+    public AgentApiResult<AgentScenarioMaterializationReport> MaterializeScenario(AgentAlphaScenarioDefinition definition) =>
+        Try("MaterializeScenarioFailed", () => AlphaScenarioMaterializer.Materialize(Session, definition).ToAgentReport());
+
+    public AgentApiResult<AgentScenarioMaterializationReport> MaterializeScenario(string scenarioId) =>
+        Try("MaterializeScenarioFailed", () => AlphaScenarioMaterializer.Materialize(Session, ToAgentDefinition(Session.Editor.GetScenario(scenarioId))).ToAgentReport());
+
+    public AgentApiResult UpsertScenario(AgentAlphaScenarioDefinition definition) =>
+        Try("UpsertScenarioFailed", () => Session.Editor.UpsertScenario(ToContentDefinition(definition)));
+
     public AgentApiResult<EntityTemplateId> CreateEntityTemplate(string name) =>
         Try("CreateEntityTemplateFailed", () => Session.Editor.CreateEntityPreset(name));
 
@@ -200,6 +209,24 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
         }
     }
 
+    private static ScenarioDefinition ToContentDefinition(AgentAlphaScenarioDefinition definition) =>
+        new(
+            definition.ScenarioId,
+            definition.Name,
+            definition.ScenarioRootEntityTemplateId,
+            definition.PlayerEntityTemplateId,
+            definition.PlayerEntityId,
+            definition.PlayerStart);
+
+    private static AgentAlphaScenarioDefinition ToAgentDefinition(ScenarioDefinition definition) =>
+        new(
+            definition.ScenarioId,
+            definition.Name,
+            definition.ScenarioRootEntityTemplateId,
+            definition.PlayerEntityTemplateId,
+            definition.PlayerEntityId,
+            definition.PlayerStart);
+
     private static AgentApiResult<T> Try<T>(string code, Func<T> operation)
     {
         try
@@ -244,6 +271,28 @@ public sealed record AgentScenarioRunRequest(
     EntityTemplateId ScenarioRootEntityTemplateId,
     int TurnCount);
 
+public sealed record AgentAlphaScenarioDefinition(
+    string ScenarioId,
+    string Name,
+    EntityTemplateId ScenarioRootEntityTemplateId,
+    EntityTemplateId PlayerEntityTemplateId,
+    EntityId PlayerEntityId,
+    GridCoord PlayerStart);
+
+public sealed record AgentScenarioMaterializationReport(
+    string ScenarioId,
+    string Name,
+    EntityTemplateId ScenarioRootEntityTemplateId,
+    EntityId ScenarioRootEntityId,
+    EntityTemplateId? PlayerEntityTemplateId,
+    EntityId? PlayerEntityId,
+    PlaneId ScenarioPlaneId,
+    PlaneCoord? PlayerLocation,
+    IReadOnlyList<string> SetupLines,
+    IReadOnlyList<string> ValidationDiagnostics,
+    IReadOnlyList<string> RuntimeFailures,
+    IReadOnlyList<string> CapabilityGaps);
+
 public sealed record AgentScenarioActorSummary(
     EntityId EntityId,
     string Name,
@@ -271,9 +320,8 @@ public sealed record AgentScenarioRunReport(
 
 internal static class AgentScenarioRunner
 {
-    private static readonly EntityId ScenarioRootEntityId = new("scenarioRoot");
-    private static readonly PlaneId ScenarioHostPlaneId = new("scenarioHost");
-    private static readonly PlaneId ScenarioPlaneId = new("scenarioRoot");
+    private static readonly EntityId ScenarioRootEntityId = AlphaScenarioMaterializer.DefaultScenarioRootEntityId;
+    private static readonly PlaneId ScenarioPlaneId = AlphaScenarioMaterializer.DefaultScenarioPlaneId;
 
     public static AgentScenarioRunReport Run(ContentEditorSession session, AgentScenarioRunRequest request)
     {
@@ -282,29 +330,22 @@ internal static class AgentScenarioRunner
             throw new ArgumentOutOfRangeException(nameof(request), "Scenario turn count must be non-negative.");
         }
 
-        var validationDiagnostics = session.Editor.Validate().Errors
-            .Concat(session.Document.ValidateCanonicalAuthoring().Errors)
-            .Distinct()
-            .ToList();
-        var registry = session.Document.ToRegistry();
-        var world = new WorldState();
-        AddRectangularPlane(world, new Plane(ScenarioHostPlaneId, "Scenario Host", 1, 1));
-        var spawn = registry.SpawnEntity(
-            world,
+        var materialization = AlphaScenarioMaterializer.MaterializeRootOnly(
+            session,
+            "legacy-run",
+            "Legacy RunScenario",
             request.ScenarioRootEntityTemplateId,
-            new EntitySpawnOptions(
-                ScenarioRootEntityId,
-                new PlaneCoord(ScenarioHostPlaneId, new GridCoord(0, 0)),
-                InventoryPlaneId: ScenarioPlaneId,
-                InventoryPlaneName: "Scenario Space"));
+            ScenarioRootEntityId,
+            ScenarioPlaneId);
+        var validationDiagnostics = materialization.ValidationDiagnostics.ToList();
+        var world = materialization.World;
 
-        if (world.GetInventoryPlaneId(ScenarioRootEntityId) is not { } scenarioPlaneId)
+        if (!materialization.CanSimulate || materialization.ScenarioPlaneId is not { } scenarioPlaneId)
         {
-            validationDiagnostics.Add($"scenario root {request.ScenarioRootEntityTemplateId} has no usable inventory space.");
             return CreateReport(request, scenarioPlaneId: ScenarioPlaneId, world, [], [], [], validationDiagnostics, [], [], []);
         }
 
-        var actorOrder = GetScenarioActorsInInitiativeOrder(world, spawn.ActionPlans, scenarioPlaneId);
+        var actorOrder = GetScenarioActorsInInitiativeOrder(world, materialization.ActionPlans, scenarioPlaneId);
         var setupLines = CreateSetupLines(world, scenarioPlaneId, actorOrder);
         var turns = new List<AgentScenarioTurnReport>();
         var runtimeObservations = new List<string>();
@@ -316,7 +357,7 @@ internal static class AgentScenarioRunner
             for (var initiative = 0; initiative < actorOrder.Count; initiative++)
             {
                 var actor = actorOrder[initiative];
-                if (!world.Entities.TryGetValue(actor.EntityId, out var entity) || !spawn.ActionPlans.TryGetValue(actor.EntityId, out var actionPlan))
+                if (!world.Entities.TryGetValue(actor.EntityId, out var entity) || !materialization.ActionPlans.TryGetValue(actor.EntityId, out var actionPlan))
                 {
                     continue;
                 }
@@ -492,6 +533,233 @@ internal static class AgentScenarioRunner
                 yield return descendant;
             }
         }
+    }
+
+}
+
+public sealed record AlphaScenarioMaterializationResult(
+    string ScenarioId,
+    string Name,
+    EntityTemplateId ScenarioRootEntityTemplateId,
+    EntityId ScenarioRootEntityId,
+    EntityTemplateId? PlayerEntityTemplateId,
+    EntityId? PlayerEntityId,
+    PlaneId? ScenarioPlaneId,
+    PlaneCoord? PlayerLocation,
+    WorldState World,
+    IReadOnlyDictionary<EntityId, IEntityActionPlan> ActionPlans,
+    PrototypeContentRegistry? Registry,
+    IReadOnlyList<string> SetupLines,
+    IReadOnlyList<string> ValidationDiagnostics,
+    IReadOnlyList<string> RuntimeFailures,
+    IReadOnlyList<string> CapabilityGaps)
+{
+    public bool CanSimulate => ValidationDiagnostics.Count == 0 && RuntimeFailures.Count == 0 && ScenarioPlaneId is not null;
+
+    public AgentScenarioMaterializationReport ToAgentReport() =>
+        new(
+            ScenarioId,
+            Name,
+            ScenarioRootEntityTemplateId,
+            ScenarioRootEntityId,
+            PlayerEntityTemplateId,
+            PlayerEntityId,
+            ScenarioPlaneId ?? AlphaScenarioMaterializer.DefaultScenarioPlaneId,
+            PlayerLocation,
+            SetupLines,
+            ValidationDiagnostics,
+            RuntimeFailures,
+            CapabilityGaps);
+}
+
+public static class AlphaScenarioMaterializer
+{
+    public static readonly EntityId DefaultScenarioRootEntityId = new("scenarioRoot");
+    public static readonly PlaneId DefaultScenarioHostPlaneId = new("scenarioHost");
+    public static readonly PlaneId DefaultScenarioPlaneId = new("scenarioRoot");
+
+    public static AlphaScenarioMaterializationResult Materialize(ContentEditorSession session, AgentAlphaScenarioDefinition definition) =>
+        Materialize(
+            session,
+            definition.ScenarioId,
+            definition.Name,
+            definition.ScenarioRootEntityTemplateId,
+            DefaultScenarioRootEntityId,
+            DefaultScenarioPlaneId,
+            definition.PlayerEntityTemplateId,
+            definition.PlayerEntityId,
+            definition.PlayerStart);
+
+    internal static AlphaScenarioMaterializationResult MaterializeRootOnly(
+        ContentEditorSession session,
+        string scenarioId,
+        string name,
+        EntityTemplateId scenarioRootEntityTemplateId,
+        EntityId scenarioRootEntityId,
+        PlaneId scenarioPlaneId) =>
+        Materialize(
+            session,
+            scenarioId,
+            name,
+            scenarioRootEntityTemplateId,
+            scenarioRootEntityId,
+            scenarioPlaneId,
+            playerEntityTemplateId: null,
+            playerEntityId: null,
+            playerStart: null);
+
+    private static AlphaScenarioMaterializationResult Materialize(
+        ContentEditorSession session,
+        string scenarioId,
+        string name,
+        EntityTemplateId scenarioRootEntityTemplateId,
+        EntityId scenarioRootEntityId,
+        PlaneId scenarioPlaneId,
+        EntityTemplateId? playerEntityTemplateId,
+        EntityId? playerEntityId,
+        GridCoord? playerStart)
+    {
+        var validationDiagnostics = session.Editor.Validate().Errors
+            .Concat(session.Document.ValidateCanonicalAuthoring().Errors)
+            .Distinct()
+            .ToList();
+        var runtimeFailures = new List<string>();
+        var capabilityGaps = new List<string>();
+        var setupLines = new List<string>();
+        var world = new WorldState();
+        PrototypeContentRegistry? registry = null;
+        var actionPlans = new Dictionary<EntityId, IEntityActionPlan>();
+
+        try
+        {
+            registry = session.Document.ToRegistry();
+        }
+        catch (Exception ex)
+        {
+            validationDiagnostics.Add($"content registry could not be materialized: {ex.Message}");
+            return CreateResult(resultScenarioPlaneId: null, playerLocation: null);
+        }
+
+        if (!registry.EntityTemplates.ContainsKey(scenarioRootEntityTemplateId))
+        {
+            validationDiagnostics.Add($"missing scenario root template {scenarioRootEntityTemplateId}.");
+        }
+
+        if (playerEntityTemplateId is { } requiredPlayerTemplateId && !registry.EntityTemplates.ContainsKey(requiredPlayerTemplateId))
+        {
+            validationDiagnostics.Add($"missing player template {requiredPlayerTemplateId}.");
+        }
+
+        if (validationDiagnostics.Count > 0)
+        {
+            return CreateResult(resultScenarioPlaneId: null, playerLocation: null);
+        }
+
+        try
+        {
+            AddRectangularPlane(world, new Plane(DefaultScenarioHostPlaneId, "Scenario Host", 1, 1));
+            var rootSpawn = registry.SpawnEntity(
+                world,
+                scenarioRootEntityTemplateId,
+                new EntitySpawnOptions(
+                    scenarioRootEntityId,
+                    new PlaneCoord(DefaultScenarioHostPlaneId, new GridCoord(0, 0)),
+                    InventoryPlaneId: scenarioPlaneId,
+                    InventoryPlaneName: "Scenario Space"));
+            AddActionPlans(actionPlans, rootSpawn.ActionPlans);
+        }
+        catch (Exception ex)
+        {
+            validationDiagnostics.Add($"scenario root {scenarioRootEntityTemplateId} could not be spawned: {ex.Message}");
+            return CreateResult(scenarioPlaneId, playerLocation: null);
+        }
+
+        if (world.GetInventoryPlaneId(scenarioRootEntityId) is not { } activeScenarioPlaneId)
+        {
+            validationDiagnostics.Add($"scenario root {scenarioRootEntityTemplateId} has no usable inventory space.");
+            return CreateResult(scenarioPlaneId, playerLocation: null);
+        }
+
+        PlaneCoord? insertedPlayerLocation = null;
+        if (playerEntityTemplateId is { } concretePlayerTemplateId && playerEntityId is { } concretePlayerEntityId && playerStart is { } concretePlayerStart)
+        {
+            var requestedPlayerLocation = new PlaneCoord(activeScenarioPlaneId, concretePlayerStart);
+            if (!world.Planes.TryGetValue(activeScenarioPlaneId, out var activePlane) || !activePlane.Contains(concretePlayerStart) || !world.TryGetNodeId(requestedPlayerLocation, out _))
+            {
+                validationDiagnostics.Add($"player start {requestedPlayerLocation} is outside scenario plane {activeScenarioPlaneId}.");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+
+            if (world.Entities.ContainsKey(concretePlayerEntityId))
+            {
+                validationDiagnostics.Add($"player entity ID {concretePlayerEntityId} is already present in the materialized scenario.");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+
+            if (world.GetOccupant(requestedPlayerLocation) is { } occupant)
+            {
+                validationDiagnostics.Add($"player start {requestedPlayerLocation} is occupied by {occupant}.");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+
+            try
+            {
+                var playerSpawn = registry.SpawnEntity(
+                    world,
+                    concretePlayerTemplateId,
+                    new EntitySpawnOptions(concretePlayerEntityId, requestedPlayerLocation));
+                AddActionPlans(actionPlans, playerSpawn.ActionPlans);
+                insertedPlayerLocation = requestedPlayerLocation;
+            }
+            catch (Exception ex)
+            {
+                validationDiagnostics.Add($"player {concretePlayerEntityId} could not be inserted: {ex.Message}");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+        }
+
+        setupLines.Add($"Scenario: {scenarioId} ({name})");
+        setupLines.Add($"Scenario root: {scenarioRootEntityTemplateId} {scenarioRootEntityId} using plane {activeScenarioPlaneId}");
+        if (insertedPlayerLocation is { } playerLocation && playerEntityId is { } insertedPlayerEntityId)
+        {
+            var playerName = world.Entities.TryGetValue(insertedPlayerEntityId, out var player) ? player.Name : playerEntityTemplateId?.ToString() ?? insertedPlayerEntityId.ToString();
+            setupLines.Add($"Player: {playerName} {insertedPlayerEntityId} at {playerLocation}, {FormatActionState(world, insertedPlayerEntityId)}");
+        }
+
+        return CreateResult(activeScenarioPlaneId, insertedPlayerLocation);
+
+        AlphaScenarioMaterializationResult CreateResult(PlaneId? resultScenarioPlaneId, PlaneCoord? playerLocation) =>
+            new(
+                scenarioId,
+                name,
+                scenarioRootEntityTemplateId,
+                scenarioRootEntityId,
+                playerEntityTemplateId,
+                playerEntityId,
+                resultScenarioPlaneId,
+                playerLocation,
+                world,
+                actionPlans,
+                registry,
+                setupLines,
+                validationDiagnostics,
+                runtimeFailures,
+                capabilityGaps);
+    }
+
+    private static void AddActionPlans(Dictionary<EntityId, IEntityActionPlan> actionPlans, IReadOnlyDictionary<EntityId, IEntityActionPlan> additions)
+    {
+        foreach (var (entityId, actionPlan) in additions)
+        {
+            actionPlans[entityId] = actionPlan;
+        }
+    }
+
+    private static string FormatActionState(WorldState world, EntityId entityId)
+    {
+        var facing = world.GetActionFacing(entityId)?.ToString() ?? "none";
+        var target = world.GetActionTarget(entityId)?.ToString() ?? "none";
+        return $"facing {facing}, target {target}";
     }
 
     private static void AddRectangularPlane(WorldState world, Plane plane)

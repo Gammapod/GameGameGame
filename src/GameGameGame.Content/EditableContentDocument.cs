@@ -13,6 +13,8 @@ public sealed class EditableContentDocument
 
     public Dictionary<string, ActionPlanDescriptorDto> ActionPlans { get; set; } = [];
 
+    public Dictionary<string, ScenarioDefinitionDto> Scenarios { get; set; } = [];
+
     public static EditableContentDocument LoadYaml(string yaml)
     {
         var deserializer = new DeserializerBuilder()
@@ -188,7 +190,73 @@ public sealed class EditableContentDocument
             }
         }
 
+        foreach (var (scenarioId, scenario) in Scenarios)
+        {
+            AddScenarioDiagnostics(diagnostics, scenarioId, scenario);
+        }
+
         return new ContentValidationResult(diagnostics);
+    }
+
+    private void AddScenarioDiagnostics(
+        List<ContentDiagnostic> diagnostics,
+        string scenarioId,
+        ScenarioDefinitionDto scenario)
+    {
+        if (string.IsNullOrWhiteSpace(scenario.ScenarioRootEntityTemplateId) || !EntityTemplates.ContainsKey(scenario.ScenarioRootEntityTemplateId))
+        {
+            diagnostics.Add(ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidScenarioDefinition,
+                $"Scenario {scenarioId} references missing scenario root template {scenario.ScenarioRootEntityTemplateId}.",
+                entityTemplateId: string.IsNullOrWhiteSpace(scenario.ScenarioRootEntityTemplateId) ? null : new EntityTemplateId(scenario.ScenarioRootEntityTemplateId)));
+        }
+
+        if (string.IsNullOrWhiteSpace(scenario.PlayerEntityTemplateId) || !EntityTemplates.ContainsKey(scenario.PlayerEntityTemplateId))
+        {
+            diagnostics.Add(ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidScenarioDefinition,
+                $"Scenario {scenarioId} references missing player template {scenario.PlayerEntityTemplateId}.",
+                entityTemplateId: string.IsNullOrWhiteSpace(scenario.PlayerEntityTemplateId) ? null : new EntityTemplateId(scenario.PlayerEntityTemplateId)));
+        }
+
+        if (scenario.ScenarioRootEntityTemplateId is not null && EntityTemplates.TryGetValue(scenario.ScenarioRootEntityTemplateId, out var root))
+        {
+            var start = ToCoord(scenario.PlayerStart);
+            if (root.InventoryWidth <= 0 || root.InventoryHeight <= 0)
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidScenarioDefinition,
+                    $"Scenario {scenarioId} root template {scenario.ScenarioRootEntityTemplateId} has no usable inventory/play plane.",
+                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId)));
+            }
+            else if (start.X < 0 || start.Y < 0 || start.X >= root.InventoryWidth || start.Y >= root.InventoryHeight)
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidScenarioDefinition,
+                    $"Scenario {scenarioId} player start {start.X},{start.Y} is outside scenario root bounds {root.InventoryWidth}x{root.InventoryHeight}.",
+                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
+                    coord: start));
+            }
+            else if ((root.CarriedEntities ?? []).FirstOrDefault(carried => carried.Coord?.X == start.X && carried.Coord.Y == start.Y) is { } occupant)
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidScenarioDefinition,
+                    $"Scenario {scenarioId} player start {start.X},{start.Y} is occupied by carried entity {occupant.EntityId}.",
+                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
+                    carriedEntityId: string.IsNullOrWhiteSpace(occupant.EntityId) ? null : new EntityId(occupant.EntityId),
+                    coord: start));
+            }
+
+            if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityId)
+                && (root.CarriedEntities ?? []).Any(carried => carried.EntityId == scenario.PlayerEntityId))
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidScenarioDefinition,
+                    $"Scenario {scenarioId} player entity ID {scenario.PlayerEntityId} conflicts with an entity already carried by scenario root {scenario.ScenarioRootEntityTemplateId}.",
+                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
+                    relatedEntityId: new EntityId(scenario.PlayerEntityId)));
+            }
+        }
     }
 
     private static void AddActionPlanShapeDiagnostics(
@@ -260,6 +328,14 @@ public sealed class EditableContentDocument
 
         return id;
     }
+
+    public void UpsertScenario(ScenarioDefinition scenario) =>
+        Scenarios[scenario.ScenarioId] = ScenarioDefinitionDto.From(scenario);
+
+    public ScenarioDefinition GetScenario(string scenarioId) =>
+        Scenarios.TryGetValue(scenarioId, out var scenario)
+            ? scenario.ToDefinition(scenarioId)
+            : throw new KeyNotFoundException($"Scenario {scenarioId} does not exist.");
 
     private EntityTemplateId GenerateEntityTemplateId(string name)
     {
@@ -395,6 +471,37 @@ public sealed class EditableContentDocument
             Behavior = descriptor.Behavior is null ? null : ActionPlanBehaviorDescriptorDto.From(descriptor.Behavior),
             Steps = descriptor.Steps.Select(ActionPlanStepDescriptorDto.From).ToList()
         };
+    }
+
+    public sealed class ScenarioDefinitionDto
+    {
+        public string? Name { get; set; }
+
+        public string? ScenarioRootEntityTemplateId { get; set; }
+
+        public string? PlayerEntityTemplateId { get; set; }
+
+        public string? PlayerEntityId { get; set; }
+
+        public GridCoordDto? PlayerStart { get; set; }
+
+        public static ScenarioDefinitionDto From(ScenarioDefinition scenario) => new()
+        {
+            Name = scenario.Name,
+            ScenarioRootEntityTemplateId = scenario.ScenarioRootEntityTemplateId.Value,
+            PlayerEntityTemplateId = scenario.PlayerEntityTemplateId.Value,
+            PlayerEntityId = scenario.PlayerEntityId.Value,
+            PlayerStart = GridCoordDto.From(scenario.PlayerStart)
+        };
+
+        public ScenarioDefinition ToDefinition(string scenarioId) =>
+            new(
+                scenarioId,
+                Name ?? scenarioId,
+                new EntityTemplateId(ScenarioRootEntityTemplateId ?? string.Empty),
+                new EntityTemplateId(PlayerEntityTemplateId ?? string.Empty),
+                new EntityId(PlayerEntityId ?? string.Empty),
+                ToCoord(PlayerStart));
     }
 
     public sealed class ActionPlanBehaviorDescriptorDto

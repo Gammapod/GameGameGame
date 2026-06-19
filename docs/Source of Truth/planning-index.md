@@ -24,7 +24,7 @@ Do not read when:
    - Read selectively when a planned slice spans multiple layers.
 4. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
    - Current expected implementation slice and testable outcomes.
-   - As of this writing: Sprint 10 is complete and archived; Sprint 11 has not yet been selected.
+   - As of this writing: Sprint 11 is complete and archived; the beta release target is gameplay demo vignettes, and no Sprint 12 plan has been selected.
 5. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
 6. `docs/Archived/`
@@ -32,16 +32,16 @@ Do not read when:
 
 ## Current strategic priority
 
-Prioritize the alpha release target before broad new mechanics: the game can launch and be played in an arbitrary authored scenario, and a player entity can be inserted into scenarios. Sprint 10 established the first scenario-root inventory runner and richer behavior trace feedback; Sprint 11 should begin the smallest alpha scenario package/materialization slice, adding scenario-report polish only where it directly reduces alpha risk.
+Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios. Beta targets gameplay demo vignettes: several small authored scenarios that can be played, run headlessly, and used to discover which interactions are interesting before committing to a unified frontend/player-interaction model.
 
 ## Current highest-priority backlog buckets
 
-1. Alpha scenario package/materialization path, as described in `High-Level-Roadmap.md`.
+1. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`.
 2. Scenario/testing/tooling feedback loop.
 3. Foundational movement and peer interaction primitives.
-4. Inventory, containment, and transfer mechanics.
-5. Spawning, creation, and template materialization.
-6. Scenario/content packaging beyond alpha.
+4. Scenario/content packaging beyond alpha.
+5. Inventory, containment, and transfer mechanics.
+6. Spawning, creation, and template materialization.
 7. Runtime architecture and simulation scale.
 8. Behavior authoring reuse and organization.
 9. Future integrated game/editor frontend.

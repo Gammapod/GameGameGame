@@ -1,0 +1,41 @@
+entityTemplates:
+  alphaRoom:
+    name: Alpha Room
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 100
+    carryingCapacity: 100
+  alphaPlayer:
+    name: Alpha Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 5
+    actionStateDefaults:
+      facing: North
+  alphaRock:
+    name: Alpha Rock
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  alphaRoom:
+    glyph: '#'
+    color: Gray
+  alphaPlayer:
+    glyph: '@'
+    color: Yellow
+  alphaRock:
+    glyph: '*'
+    color: Earth
+actionPlans: {}
+scenarios:
+  alpha-smoke:
+    name: Alpha Smoke
+    scenarioRootEntityTemplateId: alphaRoom
+    playerEntityTemplateId: alphaPlayer
+    playerEntityId: alphaPlayer
+    playerStart:
+      x: 1
+      y: 1

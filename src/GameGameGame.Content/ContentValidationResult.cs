@@ -54,7 +54,8 @@ public enum ContentDiagnosticCode
     InventoryOutOfBounds,
     InventoryOverlap,
     DuplicateCarriedEntityId,
-    CarriedEntityWithoutUsableInventory
+    CarriedEntityWithoutUsableInventory,
+    InvalidScenarioDefinition
 }
 
 public sealed record ContentDiagnostic(

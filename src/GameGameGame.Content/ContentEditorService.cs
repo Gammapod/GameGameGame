@@ -21,6 +21,14 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public ContentValidationResult Validate() => Document.ToRegistry().Validate();
 
+    public void UpsertScenario(ScenarioDefinition scenario)
+    {
+        Document.UpsertScenario(scenario);
+        onChanged?.Invoke();
+    }
+
+    public ScenarioDefinition GetScenario(string scenarioId) => Document.GetScenario(scenarioId);
+
     public EntityTemplateId CreateEntityPreset(string name)
     {
         var id = Document.AddEntityTemplate(

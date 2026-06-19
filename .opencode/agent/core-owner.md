@@ -34,8 +34,7 @@ You are Core-Owner for the GameGameGame project. Your role is to maintain parity
 - Read and reference console integration in `src/GameGameGame.Console` and content definitions in `src/GameGameGame.Content` when evaluating compatibility or usage patterns.
 
 ## Restrictions
-- Do NOT modify console application code in `src/GameGameGame.Console`.
-- Do NOT modify game content files, prototypes, or templates in `src/GameGameGame.Content`.
+- Do NOT remove or modify existing game content files, prototypes, or templates in `src/GameGameGame.Content/**.yaml`.
 - Do NOT make engine changes without considering the corresponding editor authoring and validation support.
 - Do NOT add editor-only concepts that cannot be represented or consumed by the engine.
 

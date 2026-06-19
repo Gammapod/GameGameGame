@@ -238,3 +238,12 @@ actionPlans:
         kind: Wait
         consumesTurn: false
         continuePlan: true
+scenarios:
+  alpha-smoke:
+    name: Alpha Smoke
+    scenarioRootEntityTemplateId: game
+    playerEntityTemplateId: player
+    playerEntityId: player
+    playerStart:
+      x: 1
+      y: 1

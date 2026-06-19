@@ -317,6 +317,162 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiMaterializesAlphaScenarioWithPlayerInsertion()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var scenarioRootId = AssertSuccess(api.CreateEntityTemplate("Alpha Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            scenarioRootId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 4,
+                InventoryHeight: 3,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Alpha Player"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            playerTemplateId,
+            new AgentEntityTemplateUpdate(Weight: 1, CarryingCapacity: 5, Glyph: '@', Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.North));
+
+        var materialization = AssertSuccess(api.MaterializeScenario(new AgentAlphaScenarioDefinition(
+            ScenarioId: "alpha-smoke",
+            Name: "Alpha Smoke",
+            ScenarioRootEntityTemplateId: scenarioRootId,
+            PlayerEntityTemplateId: playerTemplateId,
+            PlayerEntityId: new EntityId("playerOne"),
+            PlayerStart: new GridCoord(2, 1))));
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal("alpha-smoke", materialization.ScenarioId);
+        Assert.Equal(new EntityId("scenarioRoot"), materialization.ScenarioRootEntityId);
+        Assert.Equal(new EntityId("playerOne"), materialization.PlayerEntityId);
+        Assert.Equal(new PlaneId("scenarioRoot"), materialization.ScenarioPlaneId);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(2, 1)), materialization.PlayerLocation);
+        Assert.Contains("Scenario: alpha-smoke (Alpha Smoke)", materialization.SetupLines);
+        Assert.Contains("Player: Alpha Player playerOne at scenarioRoot(2,1), facing North, target none", materialization.SetupLines);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiMaterializeScenarioReportsAuthoringDiagnostics()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var scenarioRootId = AssertSuccess(api.CreateEntityTemplate("Blocked Alpha Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            scenarioRootId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 2,
+                InventoryHeight: 1,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+        var blockerTemplateId = AssertSuccess(api.CreateEntityTemplate("Blocker"));
+        AssertSuccess(api.PlaceCarriedEntity(scenarioRootId, new EntityId("blocker"), blockerTemplateId, new GridCoord(0, 0)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Blocked Player"));
+
+        var missingRoot = AssertSuccess(api.MaterializeScenario(new AgentAlphaScenarioDefinition(
+            "missing-root",
+            "Missing Root",
+            new EntityTemplateId("missingRoot"),
+            playerTemplateId,
+            new EntityId("player"),
+            new GridCoord(0, 0))));
+        var missingPlayer = AssertSuccess(api.MaterializeScenario(new AgentAlphaScenarioDefinition(
+            "missing-player",
+            "Missing Player",
+            scenarioRootId,
+            new EntityTemplateId("missingPlayer"),
+            new EntityId("player"),
+            new GridCoord(0, 0))));
+        var invalidStart = AssertSuccess(api.MaterializeScenario(new AgentAlphaScenarioDefinition(
+            "invalid-start",
+            "Invalid Start",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("player"),
+            new GridCoord(3, 0))));
+        var occupiedStart = AssertSuccess(api.MaterializeScenario(new AgentAlphaScenarioDefinition(
+            "occupied-start",
+            "Occupied Start",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("player"),
+            new GridCoord(0, 0))));
+
+        Assert.Contains(missingRoot.ValidationDiagnostics, diagnostic => diagnostic.Contains("missing scenario root template missingRoot", StringComparison.Ordinal));
+        Assert.Contains(missingPlayer.ValidationDiagnostics, diagnostic => diagnostic.Contains("missing player template missingPlayer", StringComparison.Ordinal));
+        Assert.Contains(invalidStart.ValidationDiagnostics, diagnostic => diagnostic.Contains("player start scenarioRoot(3,0) is outside scenario plane", StringComparison.Ordinal));
+        Assert.Contains(occupiedStart.ValidationDiagnostics, diagnostic => diagnostic.Contains("player start scenarioRoot(0,0) is occupied by blocker", StringComparison.Ordinal));
+        Assert.Empty(missingRoot.RuntimeFailures);
+        Assert.Empty(missingPlayer.RuntimeFailures);
+        Assert.Empty(invalidStart.RuntimeFailures);
+        Assert.Empty(occupiedStart.RuntimeFailures);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiPersistsAndMaterializesAlphaScenarioDefinitionById()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var scenarioRootId = AssertSuccess(api.CreateEntityTemplate("Persisted Alpha Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            scenarioRootId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 3,
+                InventoryHeight: 2,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Persisted Player"));
+        AssertSuccess(api.UpdateEntityTemplate(playerTemplateId, new AgentEntityTemplateUpdate(Weight: 1, CarryingCapacity: 5, Glyph: '@', Color: PresentationColor.Yellow)));
+
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "persisted-alpha",
+            "Persisted Alpha",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("persistedPlayer"),
+            new GridCoord(1, 1))));
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.Contains("scenarios:", snapshot.YamlPreview);
+        Assert.Contains("persisted-alpha:", snapshot.YamlPreview);
+        Assert.Contains("scenarioRootEntityTemplateId: persistedAlphaRoom", snapshot.YamlPreview);
+        Assert.Contains("playerEntityTemplateId: persistedPlayer", snapshot.YamlPreview);
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("persisted-alpha"));
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal("persisted-alpha", materialization.ScenarioId);
+        Assert.Equal(new EntityId("persistedPlayer"), materialization.PlayerEntityId);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(1, 1)), materialization.PlayerLocation);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiValidatesPersistedAlphaScenarioDefinitions()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "broken-alpha",
+            "Broken Alpha",
+            new EntityTemplateId("missingRoom"),
+            new EntityTemplateId("missingPlayer"),
+            new EntityId("player"),
+            new GridCoord(0, 0))));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.False(snapshot.CanonicalValidation.IsValid);
+        Assert.Contains(snapshot.CanonicalValidation.Errors, error => error.Contains("Scenario broken-alpha references missing scenario root template missingRoom", StringComparison.Ordinal));
+        Assert.Contains(snapshot.CanonicalValidation.Errors, error => error.Contains("Scenario broken-alpha references missing player template missingPlayer", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsCanonicalBehaviorChainWithHelper()
     {
         var api = AgentContentEditorApi.CreateNew();

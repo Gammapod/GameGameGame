@@ -15,56 +15,58 @@ Related source of truth:
 
 ## Current strategic direction
 
-Prioritize an alpha-playable arbitrary scenario flow before adding broad new mechanics. Sprint 10 established enough scenario feedback infrastructure to start aiming at an alpha release target: the game can launch and be played in an arbitrary scenario, and a player entity can be inserted into scenarios. Direction, inventory, spawning, scheduler, and reaction decisions should still be informed by scenario evidence instead of implemented speculatively.
+Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Post-alpha planning should use this scenario/Console feedback loop to choose beta work based on playable evidence rather than broad speculative mechanics. Direction, inventory, spawning, scheduler, and reaction decisions should continue to be informed by scenario evidence.
 
 The current Avalonia GUI is legacy-priority / maintenance-mode. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and future frontend readiness rather than maintaining broad Avalonia GUI parity. Long-term human-facing editor work is expected to move toward an integrated game/editor frontend.
 
-## Alpha release target: playable arbitrary scenarios
+## Alpha MVP: playable arbitrary scenarios
+
+Status: Complete as of Sprint 11. The alpha path is represented end-to-end in tests: persisted scenario definition -> validation/materialization -> player insertion -> Console-launchable session -> player action.
 
 Target statement:
 
 - The game can launch and be played in an arbitrary authored scenario.
 - A player entity is insertable into scenarios.
 
-This target promotes the following items out of backlog buckets and into the alpha roadmap. New mechanics such as richer movement, `Give`/`Take`, template spawning, reactions, scheduler/speed, and future frontend replacement are valuable for content richness, but are not upstream requirements for the first alpha launch/play loop unless a selected alpha scenario specifically depends on them.
+This target promoted the following items out of backlog buckets and into the completed alpha roadmap. New mechanics such as richer movement, `Give`/`Take`, template spawning, reactions, scheduler/speed, and future frontend replacement remain valuable for content richness, but were not upstream requirements for the first alpha launch/play loop.
 
-### Alpha roadmap
+### Alpha roadmap completion
 
-1. **Scenario document / scenario package model**
+1. **Scenario document / scenario package model** - Complete
    - Define a minimal explicit scenario definition that references normal content templates rather than creating a separate gameplay language or relying on magic template/entity names.
    - Required fields should include scenario identity/metadata, scenario-root entity/template or scenario space reference, player template/entity IDs, and player start placement.
    - Keep scenario setup compatible with the Sprint 10 scenario-root inventory model where possible.
    - A content package may eventually contain multiple scenarios; the alpha model should not require exactly one hardcoded `Game` and exactly one hardcoded `Player` entity, even if built-in prototype content keeps those names.
 
-2. **Player insertion contract**
+2. **Player insertion contract** - Complete
    - Define how a player entity template and runtime player entity ID are selected or overridden for a scenario.
    - Define how the player is inserted into the scenario-root inventory/play space: location, inventory plane behavior, initial action state, and conflict diagnostics when the start cell is occupied or invalid.
    - Preserve the existing direct player-input model initially; do not require AI/default-plan behavior or a player-controlled Action Step for alpha.
    - Treat `PlayerInputStep` / action-choice discovery as a future player-control model, not an alpha prerequisite.
 
-3. **Scenario materialization service**
+3. **Scenario materialization service** - Complete
    - Promote reusable scenario materialization out of `AgentContentEditorApi.RunScenario` into a service usable by tests, editor/agent APIs, and Console without duplicating spawn/setup logic.
    - Materialize a scenario into `WorldState`, action-plan map, registry/presentation lookup, player entity ID, active play plane/container, and validation diagnostics.
    - Keep generated/headless scenario reports as a validation surface for the same materialization path.
    - Console should consume materialization results rather than hardcoded prototype IDs such as `PrototypeContent.PlayerId` or `PrototypeContent.GameInventoryPlaneId`.
 
-4. **Editor/agent authoring and validation support**
+4. **Editor/agent authoring and validation support** - Complete
    - Provide editor/agent operations to create, inspect, validate, and run/preview alpha scenario definitions.
    - Validate missing scenario roots, invalid player starts, missing player template/presentation, duplicate/occupied starts, and unsupported scenario requests with actionable diagnostics.
    - Keep scenario diagnostics categorized enough for agents to distinguish authoring/validation issues, unsupported capability gaps, expected runtime observations, and runtime engine errors.
    - Continue avoiding checked-in prototype-content edits unless an explicit alpha fixture is selected.
 
-5. **Agent-friendly scenario report surface**
+5. **Agent-friendly scenario report surface** - Complete for alpha MVP
    - Provide a concise text report surface for scenario runs, alongside structured data, so content-authoring agents can review setup, turns, observations, diagnostics, and final state without writing custom formatting code.
    - Include high-signal turn-by-turn state changes where practical, such as movement, facing/target changes, created/destroyed entities, and inventory/containment changes.
    - Keep the report shape lightweight until alpha scenarios reveal which sections are stable enough for future runlogs or golden comparisons.
 
-6. **Console arbitrary scenario launch**
+6. **Console arbitrary scenario launch** - Complete
    - Let Console launch a selected scenario by path or simple scenario list instead of always using `PrototypeContent.CreateFirstSlice`.
    - Replace hard-coded prototype entity IDs in play/render/inspect flows with scenario materialization outputs, especially player entity ID and active play plane/container.
    - Keep controls minimal: movement, pickup/drop/inspect, turn advancement, and quit are enough for alpha.
 
-7. **Alpha scenario fixtures and smoke validation**
+7. **Alpha scenario fixtures and smoke validation** - Complete
    - Add one or more small authored alpha scenarios only after the scenario package model is stable enough to avoid churn.
    - Add tests that load/materialize an alpha scenario, insert the player, run at least one player action/turn, and verify built-in content/scenario validation.
    - Console smoke coverage is desirable but should remain focused on launch/play integration rather than re-testing Core movement.
@@ -80,27 +82,43 @@ This target promotes the following items out of backlog buckets and into the alp
 
 ## Active / likely next sprint
 
-### Sprint 11 selection pending
+### Beta release target: gameplay demo vignettes
 
-Status: Sprint 10 completed; Sprint 11 priorities under discussion.
+Status: Selected direction after Sprint 11 alpha MVP completion; sprint-sized implementation slices still pending selection.
 
-Recently completed supporting document:
+Recently completed supporting documents:
 
 - [Sprint 10: Scenario Feedback Loop](../Archived/Sprint-10-Scenario-Feedback-Loop.md)
+- [Sprint 11: Alpha Scenario Materialization](../Archived/Sprint-11-Alpha-Scenario-Materialization.md)
 
-Current decision point: Sprint 11 should prioritize the smallest alpha scenario package/materialization slice. A small scenario report polish task may be included only if it directly reduces risk for alpha materialization/player insertion.
+Beta target statement:
+
+- The project can present several small authored gameplay vignettes, like pitch-deck slides, that demonstrate what the engine naturally makes possible.
+- Each vignette should be playable in Console, runnable headlessly for validation, and useful for deciding which interactions are interesting or engaging.
+- Beta should build enough primitives, fixtures, and scenario reports to inform the eventual unified frontend/player-interaction model.
+
+Long-term frontend direction:
+
+- A unified frontend remains desired eventually, potentially through SadConsole, Godot, Unity, Pico-8, or another frontend stack.
+- That frontend should support title/menu flow, content loading, play, and eventually content editing.
+- Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
+
+Current decision point: use the completed alpha MVP loop to choose the first beta vignette batch and the minimum primitives/tooling required to make those vignettes readable, playable, and useful for playtest feedback.
 
 Likely candidate focuses:
 
-- Alpha scenario package/materialization: explicit scenario definition model, player insertion contract, shared materialization service, and editor/agent validation.
-- Scenario report polish: text report/template for agents, preview-plus-simulation in one command, richer inventory/containment state summaries, and cleanup/replacement of the older test-local runner.
-- Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` after alpha-critical launch/play dependencies are moving.
+- Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
+- Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, preview-plus-simulation in one command, and cleanup/replacement of the older test-local runner.
+- Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.
+- Scenario/content package ergonomics: multiple fixture scenarios, scenario listing/selection, authoring helpers, and stronger validation/reporting around packages.
+- Frontend/editor loop follow-up: keep future unified frontend requirements visible, but defer implementation until beta vignette playtests clarify interaction and authoring needs.
 
 Selection guidance:
 
-- Prefer alpha scenario package/materialization as the default Sprint 11 direction because the alpha release target is now the guiding milestone.
-- Prefer scenario/report polish first if content-authoring agents still need manual test harnesses or cannot quickly interpret reports.
-- Prefer movement/peer-interaction primitives if an alpha candidate scenario needs behavior not representable with persistent `Facing`, current `Target`, and existing canonical Action Steps.
+- Prefer designing the first beta vignette set before adding broad primitives, so mechanics are pulled by demo needs.
+- Prefer scenario/report polish first if content-authoring agents still need manual test harnesses or cannot quickly interpret vignette behavior.
+- Prefer movement/peer-interaction primitives if beta candidate vignettes need behavior not representable with persistent `Facing`, current `Target`, and existing canonical Action Steps.
+- Prefer scenario/content package ergonomics if manually launching, selecting, or comparing vignettes becomes the immediate beta bottleneck.
 - Prefer inventory/containment work only after scenario exercises expose concrete transfer/containment needs.
 
 ## Prioritized backlog buckets
@@ -127,6 +145,7 @@ Priority order:
 Completed baseline:
 
 - Sprint 10 added `AgentContentEditorApi.RunScenario`, scenario-root entity templates, inventory-plane scenario spaces, deterministic row-major contained-actor initiative, rich canonical behavior-chain traces, and observational runtime outcome reporting.
+- Sprint 11 completed the alpha MVP scenario path: persisted `scenarios`, reusable scenario materialization, player insertion diagnostics, agent/editor scenario authoring/materialization, Console scenario launch by content path and scenario ID, and embedded alpha smoke coverage.
 
 Future generalized scenario runner wishlist:
 

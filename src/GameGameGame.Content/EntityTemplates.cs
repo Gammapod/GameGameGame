@@ -32,6 +32,14 @@ public sealed record EntityPresentation(char Glyph, PresentationColor Color)
     public EntityInspectionAppearance ToInspectionAppearance() => new(Glyph, Color);
 }
 
+public sealed record ScenarioDefinition(
+    string ScenarioId,
+    string Name,
+    EntityTemplateId ScenarioRootEntityTemplateId,
+    EntityTemplateId PlayerEntityTemplateId,
+    EntityId PlayerEntityId,
+    GridCoord PlayerStart);
+
 public sealed record CarriedEntityTemplate
 {
     public CarriedEntityTemplate(
