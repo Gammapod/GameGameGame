@@ -76,5 +76,10 @@ Record:
 
 Current handoff state:
 
-- No implementation has started from this plan yet.
-- The likely first slice remains a headless scenario exercise workflow using editor/content services and Core simulation, with compact trace output and explicit unsupported-gap notes.
+- Phase 1 has started in test infrastructure with `tests/GameGameGame.Tests/ScenarioRunReportTests.cs`.
+- The first narrow demo scenario runs `DropFacing` for one turn and emits a completed text report with setup, compact behavior-chain trace lines, final state, diagnostics, and capability gaps.
+- The runner now also has coverage for an editor/API-authored temporary setup: `AgentContentEditorApi` creates templates, carried inventory, initial facing, a canonical `DropFacing` behavior plan, and default plan assignment before the registry spawns runtime entities for the report.
+- Successful isolated report coverage now exists for every current canonical Action Step: `MoveFacing`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, and `CreateFacing`. The `MoveFacing` report runs for two turns.
+- Expected-failure report coverage now distinguishes content-authoring diagnostics, runtime execution failures, and unsupported capability gaps. Runtime failure diagnostics pull the specific failing trace detail when available.
+- Verification command: `dotnet test "tests\GameGameGame.Tests\GameGameGame.Tests.csproj"`.
+- Next unblocked slice: regroup on whether to promote the test-local runner/report shape into reusable editor/agent test helpers or keep adding scenario cases locally.

@@ -58,12 +58,23 @@ Priority order:
 3. Plan preview + simulation in one API command.
 4. Capability-gap reporter for unsupported authoring/simulation requests.
 5. Lightweight scenario report template once first runner output reveals the useful fields.
-6. Saved scenario runlogs.
-7. Golden runlog tests.
-8. Test inspector / runlog stepper with forward/back controls.
-9. Ability to run arbitrary scenarios/content from Console.
-10. Editor `Run in Console` button.
-11. Live in-editor preview window showing an entity performing its action plan.
+6. Generalized scenario runner upgrade sprint.
+7. Saved scenario runlogs.
+8. Golden runlog tests.
+9. Test inspector / runlog stepper with forward/back controls.
+10. Ability to run arbitrary scenarios/content from Console.
+11. Editor `Run in Console` button.
+12. Live in-editor preview window showing an entity performing its action plan.
+
+Future generalized scenario runner wishlist:
+
+- Promote the current test-local runner/report shape into reusable test/editor-agent helpers rather than duplicating C# setup across scenario tests.
+- Add a small typed scenario setup model for planes, runtime entity placements, watched entities, turn count, expected diagnostics, and capability-gap notes without becoming a separate content language.
+- Support editor/API-authored temporary content end-to-end: templates, carried inventory, initial action state, default plan assignment, behavior-chain authoring, validation, runtime spawn, simulation, and report generation.
+- Provide richer compact state summaries for positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
+- Add stable report sections suitable for saved runlogs and eventual golden comparisons once the format stops changing.
+- Allow scenario reports to include plan preview, validation diagnostics, simulation trace, state diff, and capability gaps in one result.
+- Keep Console/frontend playability as a later promotion step, after headless reports prove which scenario fields are useful.
 
 Dependencies:
 
