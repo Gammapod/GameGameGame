@@ -39,7 +39,31 @@ public static class ActionStepCatalog
             "Pickup Target",
             "Attempts to pick up the persistent Target into the first canonical inventory coordinate; when pickup fails, falls through to the next Action Step.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.DropFacing,
+            "Drop Facing",
+            "Drops the first carried entity from actor inventory onto the floor in the actor's persistent Facing direction.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.PushFacing,
+            "Push Facing",
+            "Attempts to push the blocking entity in the actor's persistent Facing direction, then moves the actor into the blocker original location; a successful push consumes the turn.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.DestroyTarget,
+            "Destroy Target",
+            "Destroys the persistent Target entity recursively, including its inventory space and contained entities.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.CreateFacing,
+            "Create Facing",
+            "Creates a placeholder rock-like entity on the floor in the actor's persistent Facing direction as a prototype for future spawning Action Steps.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)])
     ];
 
     public static ActionStepDescriptor Get(ActionPlanBehaviorStepKind kind) =>

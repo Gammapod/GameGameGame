@@ -99,4 +99,56 @@ public sealed class WorldState
 
         return InventoryPlanes.TryGetValue(entityId, out var planeId) ? planeId : null;
     }
+
+    public IReadOnlyList<EntityId> DestroyEntityRecursive(EntityId entityId)
+    {
+        var destroyed = new List<EntityId>();
+        DestroyEntityRecursive(entityId, destroyed, []);
+        return destroyed;
+    }
+
+    private void DestroyEntityRecursive(EntityId entityId, List<EntityId> destroyed, HashSet<EntityId> visited)
+    {
+        if (!visited.Add(entityId) || !Entities.TryGetValue(entityId, out var entity))
+        {
+            return;
+        }
+
+        if (InventoryPlanes.TryGetValue(entityId, out var inventoryPlaneId))
+        {
+            var contained = Occupancy
+                .Where(entry => Nodes.TryGetValue(entry.Key, out var node) && node.PlaneId == inventoryPlaneId)
+                .Select(entry => entry.Value)
+                .ToList();
+
+            foreach (var containedEntityId in contained)
+            {
+                DestroyEntityRecursive(containedEntityId, destroyed, visited);
+            }
+
+            RemovePlane(inventoryPlaneId);
+            InventoryPlanes.Remove(entityId);
+        }
+
+        Occupancy.Remove(entity.OccupiedNodeId);
+        Entities.Remove(entityId);
+        ActionStates.Remove(entityId);
+        destroyed.Add(entityId);
+    }
+
+    private void RemovePlane(PlaneId planeId)
+    {
+        var nodes = Nodes.Values
+            .Where(node => node.PlaneId == planeId)
+            .ToList();
+
+        foreach (var node in nodes)
+        {
+            Occupancy.Remove(node.Id);
+            Nodes.Remove(node.Id);
+            _nodeByCoord.Remove(new PlaneCoord(node.PlaneId, node.Coord));
+        }
+
+        Planes.Remove(planeId);
+    }
 }

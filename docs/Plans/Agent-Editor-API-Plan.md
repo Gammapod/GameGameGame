@@ -123,7 +123,7 @@ The next in-process API work should remodel canonical action-plan authoring arou
 
 ### Phase 1: Define the behavior primitive model
 
-Status: Satisfied by `Behavior-Primitive-Action-Plans.md`; keep open only for small clarifications discovered during implementation.
+Status: Satisfied by `../Archived/Behavior-Primitive-Action-Plans.md`; keep open only for small clarifications discovered during implementation.
 
 Testable outcomes:
 

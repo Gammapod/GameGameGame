@@ -20,7 +20,11 @@ public sealed record ActionPlanBehaviorDescriptor(
 public enum ActionPlanBehaviorStepKind
 {
     MoveFacing,
-    PickupTarget
+    PickupTarget,
+    DropFacing,
+    PushFacing,
+    DestroyTarget,
+    CreateFacing
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(
@@ -29,7 +33,11 @@ public sealed record ActionPlanBehaviorStepDescriptor(
 public enum ActionPlanPrimitiveKind
 {
     MoveFacing,
-    PickupTarget
+    PickupTarget,
+    DropFacing,
+    PushFacing,
+    DestroyTarget,
+    CreateFacing
 }
 
 public sealed record ActionPlanPrimitiveDescriptor(

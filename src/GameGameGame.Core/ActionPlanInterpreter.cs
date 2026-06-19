@@ -239,6 +239,10 @@ public sealed class ActionPlanInterpreter
         {
             ActionPlanPrimitiveKind.MoveFacing => ApplyMoveFacingPrimitive(world, actorId, context),
             ActionPlanPrimitiveKind.PickupTarget => ApplyPickupTargetPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.DropFacing => ApplyDropFacingPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.PushFacing => ApplyPushFacingPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.DestroyTarget => ApplyDestroyTargetPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.CreateFacing => ApplyCreateFacingPrimitive(world, actorId, context),
             _ => new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, TraceNode.Failure($"Primitive {primitive.Kind}", FailureReason.None, $"unsupported primitive {primitive.Kind}"))
         };
     }
@@ -253,6 +257,10 @@ public sealed class ActionPlanInterpreter
         {
             ActionPlanBehaviorStepKind.MoveFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing),
             ActionPlanBehaviorStepKind.PickupTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget),
+            ActionPlanBehaviorStepKind.DropFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DropFacing),
+            ActionPlanBehaviorStepKind.PushFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PushFacing),
+            ActionPlanBehaviorStepKind.DestroyTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DestroyTarget),
+            ActionPlanBehaviorStepKind.CreateFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.CreateFacing),
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -317,6 +325,184 @@ public sealed class ActionPlanInterpreter
         trace.Detail = result.Trace.Detail;
 
         return new PlanEffectResult(result.Succeeded, result.ConsumesTurn, result.ContinuePlan, trace);
+    }
+
+    private PlanEffectResult ApplyDropFacingPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive DropFacing", TraceStatus.Info);
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        var carried = FindFirstCarriedEntity(world, actorId);
+        if (carried is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"{actorId} carries no entity to drop";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var destination = new MovementDestination.AdjacentMovementDestination(actorId, facing.Value);
+        var evaluation = _movement.EvaluateRelocation(world, carried.Value, destination);
+        trace.Add(evaluation.Trace);
+        if (!evaluation.CanRelocate || evaluation.Destination is not { } resolvedDestination)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = evaluation.Trace.Reason;
+            trace.Detail = evaluation.Trace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        _movement.TryPlace(world, carried.Value, resolvedDestination);
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"dropped {carried.Value} to {resolvedDestination}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyPushFacingPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive PushFacing", TraceStatus.Info);
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        var blocker = _movement.GetBlockingEntity(world, actorId, facing.Value);
+        if (blocker is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"no blocking entity in {facing.Value}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var pushDestination = new MovementDestination.AdjacentMovementDestination(blocker.Value, facing.Value);
+        var pushEvaluation = _movement.EvaluateRelocation(world, blocker.Value, pushDestination);
+        trace.Add(pushEvaluation.Trace);
+        if (!pushEvaluation.CanRelocate || pushEvaluation.Destination is not { } resolvedPushDestination)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = pushEvaluation.Trace.Reason;
+            trace.Detail = pushEvaluation.Trace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        _movement.TryPlace(world, blocker.Value, resolvedPushDestination);
+        _movement.TryMove(world, actorId, facing.Value);
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"pushed {blocker.Value} {facing.Value}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    private static PlanEffectResult ApplyDestroyTargetPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive DestroyTarget", TraceStatus.Info);
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        if (target.Value == actorId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = "DestroyTarget cannot destroy self";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(target.Value))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {target.Value} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var destroyed = world.DestroyEntityRecursive(target.Value);
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"destroyed {string.Join(", ", destroyed)}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyCreateFacingPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive CreateFacing", TraceStatus.Info);
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        if (!_movement.TryGetMoveDestination(world, actorId, facing.Value, out var destination) || !_movement.CanPlace(world, destination))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.InvalidPlacement;
+            trace.Detail = $"cannot create placeholder entity at {destination}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var createdId = GeneratePlaceholderEntityId(world);
+        var nodeId = world.GetNodeId(destination);
+        world.Entities.Add(createdId, new Entity(createdId, "Placeholder Rock", nodeId, InventoryWidth: 0, InventoryHeight: 0, Weight: 3, CarryingCapacity: 3));
+        world.Occupancy.Add(nodeId, createdId);
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"created {createdId} at {destination}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    private static EntityId? FindFirstCarriedEntity(WorldState world, EntityId actorId)
+    {
+        var inventoryPlaneId = world.GetInventoryPlaneId(actorId);
+        if (inventoryPlaneId is null)
+        {
+            return null;
+        }
+
+        return world.Occupancy
+            .Where(entry => world.Nodes.TryGetValue(entry.Key, out var node) && node.PlaneId == inventoryPlaneId)
+            .OrderBy(entry => world.Nodes[entry.Key].Coord.Y)
+            .ThenBy(entry => world.Nodes[entry.Key].Coord.X)
+            .Select(entry => (EntityId?)entry.Value)
+            .FirstOrDefault();
+    }
+
+    private static EntityId GeneratePlaceholderEntityId(WorldState world)
+    {
+        var candidate = new EntityId("placeholderRock");
+        var suffix = 2;
+        while (world.Entities.ContainsKey(candidate))
+        {
+            candidate = new EntityId($"placeholderRock{suffix}");
+            suffix++;
+        }
+
+        return candidate;
     }
 
     private PlanEffectResult ApplyEffect(

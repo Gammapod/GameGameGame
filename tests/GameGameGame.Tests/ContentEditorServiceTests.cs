@@ -593,6 +593,50 @@ public sealed class ContentEditorServiceTests
 
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing && step.DisplayName == "Move Facing");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PickupTarget && step.DisplayName == "Pickup Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DropFacing && step.DisplayName == "Drop Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PushFacing && step.DisplayName == "Push Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DestroyTarget && step.DisplayName == "Destroy Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.CreateFacing && step.DisplayName == "Create Facing");
+    }
+
+    [Fact]
+    public void ContentEditorServicePreviewsCanonicalBehaviorPlan()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              rat:
+                name: Rat
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 3
+                defaultActionPlanId: ratBehavior
+                actionStateDefaults:
+                  facing: West
+            presentations:
+              rat:
+                glyph: r
+                color: Green
+            actionPlans:
+              ratBehavior:
+                id: ratBehavior
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                    - kind: PickupTarget
+            """));
+
+        var preview = editor.PreviewActionPlan(new ActionPlanTemplateId("ratBehavior"), new EntityTemplateId("rat"));
+
+        Assert.Equal("Canonical Behavior Chain", preview.Shape);
+        Assert.Equal(["Move Facing", "Pickup Target"], preview.ActionSteps.Select(step => step.DisplayName).ToArray());
+        Assert.Contains("Facing=West", preview.StateHints);
+        Assert.Contains("Target=Self (defaultable)", preview.StateHints);
+        Assert.Contains("Attempts to move", preview.ActionSteps[0].Hint);
+        Assert.True(preview.ValidationDiagnostics.Count == 0, string.Join(Environment.NewLine, preview.ValidationDiagnostics));
+        Assert.Contains("behavior:", preview.YamlPreview);
+        Assert.Contains(preview.Guidance, line => line.Contains("canonical behavior chain", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

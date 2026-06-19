@@ -2,7 +2,7 @@
 
 Status: Archived. This document records the completed primitive/fallback foundation work that led to the current behavior model consolidation direction. It is retained as implementation history, not as the active canonical behavior plan.
 
-Successor work completed in `docs/Archived/Behavior-Model-Consolidation-First-Slice.md`; upcoming behavior-system work is tracked in `docs/Plans/Behavior-System-Next-Steps.md`.
+Successor work completed in `docs/Archived/Behavior-Model-Consolidation-First-Slice.md`; follow-up behavior-system work is archived in `docs/Archived/Behavior-System-Next-Steps.md`.
 
 This document defines the intended canonical authoring model for action plans. The goal is to expose action plans as rearrangeable behavior primitives rather than as arbitrary scripts made from low-level checks, effects, and mutable variables.
 

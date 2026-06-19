@@ -230,12 +230,68 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 RefreshActionPlanSteps();
                 RefreshBehaviorSteps();
                 OnPropertyChanged(nameof(SelectedActionPlanShape));
+                OnPropertyChanged(nameof(SelectedActionPlanShapeDetail));
+                OnPropertyChanged(nameof(IsLegacyActionPlanCompatibilityVisible));
+                OnPropertyChanged(nameof(SelectedBehaviorChainSummary));
+                OnPropertyChanged(nameof(SelectedBehaviorChainDefaultStateHints));
                 RefreshSelectedDiagnostics();
             }
         }
     }
 
     public string SelectedActionPlanShape => SelectedActionPlan?.Shape ?? "No action plan selected";
+
+    public bool IsLegacyActionPlanCompatibilityVisible =>
+        SelectedActionPlan?.Shape == "Legacy / Advanced Low-Level Steps";
+
+    public string SelectedActionPlanShapeDetail => SelectedActionPlan?.Shape switch
+    {
+        "Canonical Behavior Chain" => "Recommended: this plan uses ordered engine-defined Action Steps. Keep authoring here for normal behavior work.",
+        "Transitional Primitive Plan" => "Compatibility: this plan uses primitive-backed fallback links. It still loads and runs, but canonical behavior chains are preferred for new authoring.",
+        "Legacy / Advanced Low-Level Steps" => "Advanced compatibility: this plan uses low-level steps/checks/effects. Keep only when canonical Action Steps cannot express the behavior yet.",
+        "Empty / Passive" => "Passive: this plan has no behavior. Add canonical Action Steps when the entity should act on its turn.",
+        null => "Select an action plan to inspect its authoring shape.",
+        _ => "Unknown plan shape. Validate the document before saving."
+    };
+
+    public string SelectedBehaviorChainSummary
+    {
+        get
+        {
+            if (SelectedActionPlan is null)
+            {
+                return "Select an action plan to inspect its canonical behavior chain.";
+            }
+
+            if (BehaviorSteps.Count == 0)
+            {
+                return "No canonical Action Steps. Use this section to author new behavior chains; legacy/advanced steps are below.";
+            }
+
+            return $"Canonical order: {string.Join(" -> ", BehaviorSteps.Select(step => step.DisplayName))}";
+        }
+    }
+
+    public string SelectedBehaviorChainDefaultStateHints
+    {
+        get
+        {
+            if (BehaviorSteps.Count == 0)
+            {
+                return "Default-state hints appear here when the selected plan has canonical Action Steps.";
+            }
+
+            var hints = BehaviorSteps
+                .SelectMany(step => ActionStepCatalog.Get(step.Kind).DefaultableState)
+                .Select(FormatDefaultStateHint)
+                .Distinct()
+                .ToList();
+
+            return hints.Count == 0
+                ? "No defaultable state is required by the current canonical Action Steps."
+                : $"Default-state hints: {string.Join("; ", hints)}";
+        }
+    }
 
     public ActionStepCatalogListItem? SelectedActionStepToAdd
     {
@@ -666,7 +722,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             return;
         }
 
-        var id = _session.Editor.CreateActionPlan(name);
+        var id = _session.Editor.CreatePassiveActionPlan(name);
         RefreshFromSession();
         SelectedActionPlan = ActionPlans.SingleOrDefault(item => item.Id == id);
         StatusMessage = $"Created action plan {name}.";
@@ -1270,8 +1326,13 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             ? null
             : ActionPlans.SingleOrDefault(item => item.Id == selectedActionPlanId.Value);
         OnPropertyChanged(nameof(SelectedActionPlan));
+        OnPropertyChanged(nameof(SelectedActionPlanShape));
+        OnPropertyChanged(nameof(SelectedActionPlanShapeDetail));
+        OnPropertyChanged(nameof(IsLegacyActionPlanCompatibilityVisible));
         RefreshActionPlanSteps();
         RefreshBehaviorSteps();
+        OnPropertyChanged(nameof(SelectedBehaviorChainSummary));
+        OnPropertyChanged(nameof(SelectedBehaviorChainDefaultStateHints));
 
         foreach (var message in _session.Editor.Validate().Errors)
         {
@@ -1407,6 +1468,9 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 FormatSlots("Defaults", metadata.DefaultableState),
                 FormatSlots("Writes", metadata.StateWrites)));
         }
+
+        OnPropertyChanged(nameof(SelectedBehaviorChainSummary));
+        OnPropertyChanged(nameof(SelectedBehaviorChainDefaultStateHints));
     }
 
     private ActionPlanDescriptor GetSelectedActionPlanDescriptor() =>
@@ -1756,6 +1820,14 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         slots.Count == 0
             ? $"{label}: none"
             : $"{label}: {string.Join(", ", slots.Select(slot => $"{slot.Slot}:{slot.ValueKind}"))}";
+
+    private static string FormatDefaultStateHint(PlanPrimitiveSlotDescriptor slot) =>
+        slot.Slot switch
+        {
+            ActionPlanSlot.Facing => "Facing defaults to West when materialized for authored MoveFacing behavior",
+            ActionPlanSlot.Target => "Target defaults to Self when PickupTarget needs a valid initial target slot",
+            _ => $"{slot.Slot} can be defaulted as {slot.ValueKind}"
+        };
 
     private static string GetActionPlanShape(ActionPlanDescriptor descriptor)
     {

@@ -32,13 +32,15 @@ Current stable authoring areas:
 
 - entity templates and presentations;
 - inventory dimensions, weight, carrying capacity, and carried entity layout;
-- legacy low-level action plans and action-plan steps, pending migration toward canonical ordered behavior-chain authoring;
+- legacy low-level action plans and action-plan steps remain loadable and editable as compatibility when an existing legacy plan is selected, but are hidden from normal GUI authoring paths pending migration toward canonical ordered behavior-chain authoring;
 - actor initial `Facing` through `actionStateDefaults.facing`;
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
 - effects: `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`;
 - movement effects: `Teleport`, `Drop` are functional and supported, but their GUI is intentionally advanced/generic rather than polished/specialized.
 - transitional primitive-backed `MoveFacing` and `PickupTarget` action-plan descriptors with explicit fallback references are supported through Core/content validation, editor services, and the agent API; GUI polish remains generic/minimal, and these linked descriptors are not the long-term canonical editor-facing model.
-- canonical ordered behavior-chain descriptors with `MoveFacing` and `PickupTarget` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and minimal GUI support.
+- canonical ordered behavior-chain descriptors with `MoveFacing`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, and `CreateFacing` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and GUI support that makes canonical chains visually primary over legacy low-level authoring.
+- compact canonical behavior-chain trace formatting is available in Core for tests, debugging, and future editor/agent diagnostics.
+- canonical action-plan preview is available through editor service and agent API commands, summarizing plan shape, ordered Action Steps, state hints/defaults, validation diagnostics, guidance, and YAML preview text.
 
 ### Advanced but supported
 
@@ -46,7 +48,7 @@ Advanced support is usable and validated but may evolve as the engine grows. Con
 
 Current advanced support:
 
-- low-level action-plan step/check/effect authoring while canonical ordered behavior-chain action plans are being implemented;
+- low-level action-plan step/check/effect authoring only as compatibility for selected existing legacy plans while canonical ordered behavior-chain action plans are being implemented;
 - primitive-backed linked action plans while canonical ordered behavior chains are being implemented;
 - `Teleport`, the general relocation/ur-primitive;
 - `Drop`, constrained relocation from actor-carried inventory to peer/world destination;
@@ -95,6 +97,7 @@ The editor can currently:
 - create/open/save/reload content documents;
 - edit entity templates, presentations, inventory dimensions, weights, capacities, and carried entities;
 - assign/clear default action plans;
+- create new GUI action plans as empty/passive plans so authors can add canonical behavior-chain Action Steps without first creating legacy low-level steps;
 - edit actor initial `Facing`;
 - create/edit/delete/reorder action plans and steps;
 - author `CanMove`, `BlockingEntity`, and `CanPickup` checks;
@@ -102,27 +105,29 @@ The editor can currently:
 - edit pickup inventory coordinates and call-plan references;
 - edit movement target/destination fields for `Teleport` and `Drop`;
 - validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, and legacy/arbitrary variable fields;
-- load and validate canonical ordered behavior-chain descriptors for `MoveFacing` and `PickupTarget` using Action Step catalog metadata;
+- load and validate canonical ordered behavior-chain descriptors for `MoveFacing`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, and `CreateFacing` using Action Step catalog metadata;
 - author content through the first in-process `AgentContentEditorApi` facade over editor/content services;
 - create transitional primitive-backed `MoveFacing` action-plan descriptors with optional fallback references through editor services and the agent API;
 - create a transitional `MoveFacing -> PickupTarget` linked fallback chain through editor services and the agent API without low-level check/effect authoring;
-- author canonical ordered `MoveFacing -> PickupTarget` behavior chains through editor services and the agent API without low-level check/effect authoring or linked fallback plan descriptors, including a convenience helper for that common chain;
-- view and minimally edit canonical ordered behavior chains through the GUI Action Plans tab, including add/remove/reorder for catalog-backed Action Steps;
-- load/display legacy variable-based content and legacy `SetVariable` effects without exposing them for new canonical GUI authoring.
+- author canonical ordered behavior chains through editor services and the agent API without low-level check/effect authoring or linked fallback plan descriptors, including a convenience helper for the common `MoveFacing -> PickupTarget` chain;
+- preview action plans through editor service and agent API commands before save/manual YAML inspection, including canonical plan shape, Action Step metadata, state hints such as `Facing=West` and `Target=Self`, validation diagnostics, and YAML preview text;
+- view and edit canonical ordered behavior chains through the GUI Action Plans tab, including add/remove/reorder for catalog-backed Action Steps, plan-shape guidance, canonical-chain summaries, and default-state hints;
+- load/display legacy variable-based content and legacy `SetVariable` effects without exposing them for new canonical GUI authoring;
+- hide the legacy low-level steps/checks/effects GUI section unless the selected plan is already a legacy low-level plan.
 
 The editor intentionally does not currently:
 
 - author arbitrary action-plan variables through GUI;
 - author `SetVariable` through GUI;
 - author `directionVariable`, `targetVariable`, or `variableName` fields through GUI;
-- provide polished/specialized GUI workflows for canonical behavior chains beyond the minimal Action Plans tab controls;
+- provide polished/specialized behavior-template workflows beyond the Action Plans tab controls;
 - author initial `Target` actor state through GUI;
 - expose `CanDrop`, which is deferred until a concrete branching use case appears;
 - provide an external agent transport/protocol layer yet.
 
 ## Canonical behavior-chain action plans
 
-Canonical action-plan authoring is being remodeled around ordered behavior chains. The completed first slice is archived at `docs/Archived/Behavior-Model-Consolidation-First-Slice.md`; upcoming cleanup and tracing work is tracked in `docs/Plans/Behavior-System-Next-Steps.md`. The earlier behavior-primitive linked-plan foundation is archived/superseded by this direction; it remains supported as transitional compatibility/prototype work.
+Canonical action-plan authoring is being remodeled around ordered behavior chains. The completed first slice is archived at `docs/Archived/Behavior-Model-Consolidation-First-Slice.md`; the completed follow-up behavior-system sprint is archived at `docs/Archived/Behavior-System-Next-Steps.md`. The earlier behavior-primitive linked-plan foundation is archived/superseded by this direction; it remains supported as transitional compatibility/prototype work.
 
 Target model:
 
@@ -139,11 +144,22 @@ Current and planned Action Step / primitive support:
 |---|---|---|---|---|
 | `MoveFacing` | Supported as transitional primitive-backed linked plan; supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Facing` | `West` | Reads persistent actor `Facing`, moves one step, writes `Target` to blocker on blocked movement, and falls through to the next ordered Action Step in the canonical chain. Transitional descriptors follow explicit fallback or terminate the root turn. |
 | `Wandering` | Superseded as named first-pass primitive | `Facing` | `West` | The first canonical authored behavior should be represented directly as an ordered chain such as `MoveFacing -> PickupTarget`, not as a separate `Wandering` primitive descriptor. Reverse-facing and future `onBump` behavior are not included yet. |
-| `SeekTarget` | Planned | `Target` | `Self` | Followup when movement toward target fails for any reason. |
 | `PickupTarget` | Supported as transitional primitive-backed linked plan; supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, attempts pickup into the first canonical inventory coordinate, and falls through to the next ordered Action Step when pickup fails. Transitional descriptors follow explicit fallback or terminate the root turn when pickup fails. |
-| `BumpTarget` | Planned | `Target` | `Self` | First pass reproduces current `handleBlocker` fallback behavior. |
+| `DropFacing` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Facing` | `West` | Drops the first carried entity from actor inventory onto the floor in the actor's `Facing` direction; succeeds and consumes the turn when placement succeeds, otherwise falls through. |
+| `PushFacing` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Facing` | `West` | Pushes the blocking entity one cell in `Facing`, then moves the actor into the blocker original cell; a successful push consumes the turn. Fails/falls through if there is no blocker or the pushed entity is blocked/out of bounds. |
+| `DestroyTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Recursively destroys persistent actor `Target`, including its inventory space and contained entities. The current first pass rejects self-destruction. |
+| `CreateFacing` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Facing` | `West` | Creates a placeholder rock-like entity in the actor's `Facing` direction when the destination is valid/open. This is a prototype for future spawning/projectile/clone steps and is expected to evolve. |
+| `SeekTarget` | Conceptualized | `Target` | `Self` | Deferred until movement-toward-target semantics and target acquisition needs are concrete. |
+| `BumpTarget` | Conceptualized | `Target` | `Self` | Deferred; may overlap with reaction slots, push, destroy, or future interaction steps. |
+| `TeleportTo` | Conceptualized | target location TBD | TBD | Deferred because it likely requires a new location/destination state slot rather than overloading entity `Target`. |
+| `Give` | Conceptualized | `Target` plus carried entity selection TBD | TBD | Deferred inventory-transfer primitive for moving carried entities into target inventory. |
+| `Take` | Conceptualized | `Target` plus source inventory selection TBD | TBD | Deferred inventory-transfer primitive for taking from adjacent/target inventory into actor inventory. |
 
 Canonical Action Step metadata is exposed by Core as the machine-readable source for editor/API discovery and validation. Initial metadata includes Action Step kind, display name, description/hint text, required state, defaultable state, state writes, and authoring tier.
+
+Canonical behavior-chain traces can be summarized through `BehaviorChainTraceFormatter`. The compact formatter reports the root plan outcome, each attempted Action Step, success/failure reason, whether fallback continued or stopped, canonical state reads/writes such as `Facing` and `Target`, and the terminal consumed-turn outcome.
+
+Canonical action-plan previews are exposed through `ContentEditorService.PreviewActionPlan` and `AgentContentEditorApi.PreviewActionPlan`. The preview is non-mutating and reports the selected plan shape, guidance, ordered canonical Action Steps and metadata when present, state hints/defaults, validation diagnostics relevant to the plan/entity, and YAML preview text. Preview commands should remain descriptive and must not introduce new engine semantics.
 
 Behavior-chain validation/default policy:
 
@@ -219,7 +235,7 @@ Current policy:
 
 ## Agent API readiness
 
-The movement primitive parity baseline was sufficient for the first in-process agent API facade. The current API/editor service parity baseline supports canonical ordered behavior-chain authoring for the first Action Steps.
+The movement primitive parity baseline was sufficient for the first in-process agent API facade. The current API/editor service parity baseline supports canonical ordered behavior-chain authoring for the first Action Steps and the first utility Action Step batch.
 
 Agent API currently has an in-process `AgentContentEditorApi` facade in the Editor project. It wraps editor/content services for document/session snapshots, validation, entity template updates, actor initial facing, canonical behavior-chain Action Step metadata and authoring, legacy low-level action plans/steps, transitional primitive-backed linked plans, canonical checks, and canonical/advanced supported effects. It rejects legacy `SetVariable` effect authoring.
 
@@ -227,7 +243,7 @@ Agent API should continue to:
 
 - wrap `ContentEditorService`, not edit YAML/DTOs directly;
 - expose stable and advanced supported capabilities through typed commands;
-- prefer typed commands for canonical ordered behavior-chain Action Steps for normal movement/pickup fallback-chain authoring;
+- prefer typed commands for canonical ordered behavior-chain Action Steps for normal movement, pickup, drop, push, destroy, and prototype create authoring;
 - avoid all legacy variable authoring;
 - return structured results and validation diagnostics;
 - reuse movement target/destination descriptors for `Teleport` and `Drop`;
@@ -239,9 +255,7 @@ See `Agent-Editor-API-Plan.md` for the implementation plan and next transport/pr
 
 Near-term work should focus on:
 
-1. finish GUI clarity for the current behavior-chain slice;
-2. clean up legacy behavior authoring while preserving runtime/content compatibility;
-3. add a compact behavior-chain trace formatter;
-4. plan new canonical Action Steps only after the cleanup and tracing foundations are clear.
+1. exercise generated content with the first utility Action Step batch (`DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`);
+2. reassess whether the next batch should prioritize `Wait`/`ReverseFacing`/`SeekTarget`-style behavior control or deferred transfer/location primitives.
 
 Behavior templates, scheduler/speed work, reaction slots, diegetic action-plan entities, and broad new gameplay primitives remain conceptualized until selected for a concrete content/design need.

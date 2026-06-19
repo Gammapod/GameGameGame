@@ -157,6 +157,10 @@ public sealed class AgentContentEditorApiTests
 
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing && step.DisplayName == "Move Facing");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PickupTarget && step.DisplayName == "Pickup Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DropFacing && step.DisplayName == "Drop Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PushFacing && step.DisplayName == "Push Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DestroyTarget && step.DisplayName == "Destroy Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.CreateFacing && step.DisplayName == "Create Facing");
     }
 
     [Fact]
@@ -193,6 +197,32 @@ public sealed class AgentContentEditorApiTests
         Assert.DoesNotContain("kind: CanMove", snapshot.YamlPreview);
         Assert.DoesNotContain("kind: CallPlan", snapshot.YamlPreview);
         Assert.DoesNotContain("kind: SetVariable", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiPreviewsCanonicalBehaviorPlan()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var ratId = AssertSuccess(api.CreateEntityTemplate("Preview Rat"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            ratId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Weight: 1,
+                CarryingCapacity: 3,
+                Glyph: 'r',
+                Color: PresentationColor.Green)));
+        var planId = AssertSuccess(api.CreateMoveFacingPickupTargetBehavior("Preview Rat Behavior"));
+        AssertSuccess(api.SetDefaultActionPlan(ratId, planId));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId, ratId));
+
+        Assert.Equal("Canonical Behavior Chain", preview.Shape);
+        Assert.Equal([ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget], preview.ActionSteps.Select(step => step.Kind).ToArray());
+        Assert.Contains("Facing=West", preview.StateHints);
+        Assert.Contains("Target=Self (defaultable)", preview.StateHints);
+        Assert.Empty(preview.ValidationDiagnostics);
     }
 
     [Fact]

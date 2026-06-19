@@ -1,129 +1,77 @@
 # High-Level Roadmap
 
-This roadmap tracks upcoming engine/editor parity work at a planning level. The first canonical behavior-chain slice is complete. The active direction is now to finish GUI clarity for that slice, then clean up legacy behavior authoring before adding many new primitives.
+This roadmap tracks upcoming engine/editor parity work at a planning level. Completed sprint planning documents are archived under `docs/Archived/`; the current capabilities source of truth remains `docs/Source of Truth/Engine-Editor-Capabilities.md`.
 
 ## Planned
 
-### Finish behavior-chain GUI clarity
+### Next sprint: generated scenario authoring and simulation feedback
 
-Status: Current finishing slice before closing the sprint.
-
-Supporting documents:
-
-- [Behavior System Next Steps](Behavior-System-Next-Steps.md)
-- [Behavior Model Consolidation First Slice](../Archived/Behavior-Model-Consolidation-First-Slice.md)
-
-Goal: make the existing minimal GUI behavior editor easier to understand before calling the sprint finished.
-
-Scope:
-
-- Make the canonical behavior-chain section visually primary.
-- Clearly label low-level `steps/checks/effects` as legacy/advanced compatibility.
-- Show selected action-plan shape: canonical behavior, transitional primitive, legacy low-level, or empty/passive.
-- Show concise default-state hints for current Action Steps, especially `Facing = West` and `Target = Self`.
-
-### Legacy behavior cleanup and behavior trace formatter
-
-Status: Upcoming planned work after the GUI finishing slice.
-
-Supporting documents:
-
-- [Behavior System Next Steps](Behavior-System-Next-Steps.md)
-- [Agent API Wishlist](Agent-API-Wishlist.md)
-- [Agent Editor API Plan](Agent-Editor-API-Plan.md)
-
-Goal: reduce legacy behavior authoring surface area, then add a compact behavior-chain trace formatter before expanding the Action Step catalog.
-
-Planned order:
-
-1. Legacy behavior cleanup plan and implementation where safe.
-2. Behavior trace formatter.
-3. New canonical Action Step planning.
-
-Legacy cleanup should not delete runtime/content compatibility until canonical replacements exist for important legacy patterns.
-
-### Completed: behavior model consolidation first slice
-
-Status: Completed / archived.
+Status: Likely next sprint focus.
 
 Supporting document:
 
+- [Next Sprint Scenario Testing Plan](Next-Sprint-Scenario-Testing-Plan.md)
+
+Goal: improve our ability to create temporary/generated content, simulate turns, inspect behavior traces, and evaluate whether newly added Action Steps support desired user experiences.
+
+Why this is the current priority:
+
+- The first utility Action Step batch is implemented, but generated exercises showed that we cannot test authored gameplay scenarios as comfortably or repeatedly as needed.
+- Direction/movement philosophy decisions should be informed by more scenario evidence instead of adding many directional variants immediately.
+- Existing preview and trace formatting are useful foundations, but they are not yet a full scenario exercise workflow.
+
+Loose high-level scope:
+
+- Add a headless scenario exercise helper around editor/content services and Core simulation.
+- Support creating temporary content, assigning canonical behavior chains, spawning a small world, running turns, and collecting compact trace summaries.
+- Prefer tests or generated temporary files over checked-in prototype content changes.
+- Preserve Core/Editor parity: any scenario authoring helper should use supported editor service / agent API operations where possible.
+
+Potential testable outcomes:
+
+- A generated scenario can author entities, inventories, action plans, and initial action state without editing checked-in content.
+- A generated scenario can simulate multiple turns and return formatted behavior-chain traces.
+- The first utility Action Step batch can be exercised in generated scenarios without manual YAML inspection.
+- Unsupported requests produce explicit capability-gap notes rather than silent YAML or simulation guesses.
+
+### Direction and movement philosophy decision
+
+Status: Design decision required before the next movement-heavy primitive batch.
+
+Open design questions surfaced by the sprint exercise:
+
+- Should canonical Action Steps always read persistent `Facing`, or should some support explicit direction parameters?
+- Should direction transforms be separate Action Steps, e.g. `ReverseFacing`, `SetFacing`, `MoveOppositeFacing`, or a more general direction-expression system?
+- Should failed directional steps write the blocking entity to `Target` consistently, including `DropFacing`?
+- Should all-failed behavior chains always consume the turn, or should no-fallback failure policies be authorable/visible?
+- How should template spawning fit into canonical steps: `CreateFacing(templateId)`, named spawn descriptors, clone descriptors, or separate specialized steps?
+
+Likely decision artifact:
+
+- a short design note before implementing more movement/direction primitives.
+
+Planning note: this is intentionally upstream of creating new movement-heavy Action Steps in earnest.
+
+### Completed this sprint: canonical behavior-chain usability and first utility batch
+
+Status: Completed / archived.
+
+Archived supporting documents:
+
+- [Behavior System Next Steps](../Archived/Behavior-System-Next-Steps.md)
 - [Behavior Model Consolidation First Slice](../Archived/Behavior-Model-Consolidation-First-Slice.md)
-
-Goal completed: make the editor-facing behavior model capable of representing an Action Plan as an ordered fallback chain of engine-defined Action Steps. The first canonical chain supports `MoveFacing -> PickupTarget` without requiring authors or agents to assemble low-level checks/effects or link separate primitive-backed fallback plan descriptors.
-
-Completed foundation scope:
-
-- Add an in-process API facade over existing editor/content services before choosing an external protocol. The first facade is implemented as `AgentContentEditorApi` in the Editor project.
-- Support document/session operations, validation, YAML preview/diff, entity template authoring, actor initial facing, action plans/steps, supported checks, and supported effects.
-- Keep authoring canonical: do not expose legacy arbitrary variables, legacy variable fields, or `SetVariable` as new authoring commands.
-- Return structured results and actionable diagnostics from mutating operations.
-- Add tests that use the API to generate movement-capable test content, validate it, and inspect the resulting YAML.
-- Add persistent entity action state for `Facing` and `Target`.
-- Add transitional primitive-backed descriptor/runtime support for `MoveFacing` and `PickupTarget`, including linked fallback references.
-- Add validation, editor service, and agent API support for primitive-backed plans and a `MoveFacing -> PickupTarget` helper.
-
-Completed sprint slice:
-
-- Add a canonical Action Plan / Fallback Chain descriptor that is an ordered list of engine-defined Action Steps.
-- Interpret that ordered list with fallback-by-order semantics.
-- Keep legacy low-level descriptors and transitional primitive-backed descriptors loadable and executable.
-- Add an Action Step catalog/metadata source for `MoveFacing` and `PickupTarget`.
-- Add validation and editor/agent API operations for authoring the first canonical chain without low-level check/effect construction.
-- Add minimal GUI support for viewing and editing catalog-backed behavior chains.
-- Run a content-editor-style generated-content exercise and record outcomes.
-
-#### Archived/superseded primitive remodeling notes
-
-Status: completed as transitional foundation, then archived/superseded by behavior model consolidation.
-
-The primitive-backed linked-plan foundation remains compatibility/prototype work and should keep loading/executing while the new canonical behavior chain is added. Details are preserved in:
-
-- [Behavior Primitive Action Plans](Behavior-Primitive-Action-Plans.md)
+- [Behavior Primitive Action Plans](../Archived/Behavior-Primitive-Action-Plans.md)
 - [Behavior Primitive/Fallback Foundation Archive](../Archived/Behavior-Primitive-Fallback-Foundation.md)
 
-Do not continue the older plan by adding more linked top-level primitive plans as the editor-facing model. New canonical work should follow `Behavior-System-Next-Steps.md`.
+Completed scope:
 
-#### Re-run generated-content exercises and revise roadmap
-
-Status: Completed for the first behavior-chain exercise pass.
-
-Purpose: confirm the new model improves authoring and identify remaining true engine gaps.
-
-Scope:
-
-- Re-run the barrel/trap/rat exercise using temporary/generated content.
-- Record which requests are supported by ordered behavior-chain authoring and which need new engine capabilities.
-- Decide whether additional canonical Action Steps or behavior templates should be planned.
-
-Testable outcomes:
-
-- Barrel can still be authored as a passive container.
-- Rat can be authored with an ordered `MoveFacing -> PickupTarget` behavior chain and initial/defaulted `Facing` without low-level step construction or linked fallback plan descriptors.
-- Rat taking two actions per turn remains classified as scheduler/speed engine work unless a speed capability has been added.
-- Trap bumping all four directions remains classified as a new behavior/action primitive or scheduler capability unless such a primitive has been added.
-- The roadmap is updated based on the exercise results.
-
-Exercise results:
-
-- A content-editor-style exercise found the docs and API surface sufficient to identify the preferred canonical behavior route.
-- Passive barrel/container content is supported with entity template inventory/capacity fields and no default action plan.
-- Rat behavior is supported through canonical `MoveFacing -> PickupTarget` behavior chains; a convenience helper now exists to avoid confusion with the older primitive-backed linked-chain helper.
-- Trap all-direction behavior remains unsupported and should be planned as a future engine/editor capability only after semantics are defined.
-- Rat two-actions-per-turn remains unsupported and should stay classified as future scheduler/speed work.
-
-Additional API follow-up after behavior remodeling:
-
-- Exercise the facade against temporary/generated content instead of checked-in prototype content.
-- Add dry-run or save-preview support so agents can inspect canonicalization before writing existing files.
-- Add convenience authoring helpers for common supported patterns discovered during exercises.
-- Keep newly discovered gameplay semantics, such as multiple actions per turn or all-direction trap behavior, out of the API until they are planned as engine capabilities.
-
-### New canonical Action Steps
-
-Status: Upcoming after legacy cleanup and behavior trace formatting.
-
-Candidate ideas include `Wait`, `ReverseFacing`, `BumpTarget`, and `SeekTarget`, but each should be planned with concrete semantics before implementation.
+- Made the canonical behavior-chain GUI visually primary.
+- Hid legacy low-level behavior authoring except when editing existing legacy low-level plans.
+- Created new GUI action plans as empty/passive instead of seeding legacy wait steps.
+- Added compact Core behavior-chain trace formatting.
+- Added canonical plan preview through editor service and agent API.
+- Added canonical utility Action Steps: `DropFacing`, `PushFacing`, `DestroyTarget`, and `CreateFacing`.
+- Ran a generated-content exercise with the content-editor agent and captured design gaps.
 
 ## Conceptualized, not yet planned
 
@@ -133,7 +81,7 @@ Status: Conceptualized, not yet planned.
 
 Concept: remove carrying capacity as a primary mechanic and replace it with a simpler containment rule where an entity may exist inside another entity when the contained entity's weight is less than or equal to the container entity's weight. This likely treats weight more like bulk or volume than physical mass.
 
-Planning deferred until the agent API can author and validate inventory/weight test content.
+Planning deferred until generated scenario tests provide clearer inventory/weight expectations.
 
 ### Runtime entity indexing and simulation efficiency
 
@@ -141,7 +89,7 @@ Status: Conceptualized, not yet planned.
 
 Concept: add runtime indexes so entity interactions can resolve more quickly while many entities are simulated. Likely indexes include entity ID, plane/world location, container ownership, and eventually relationship or template/tag lookups.
 
-Planning deferred until current authored scenarios and generated test content provide clearer performance targets.
+Planning deferred until authored scenarios and generated test content provide clearer performance targets.
 
 ### Diegetic action-plan entities
 
@@ -151,21 +99,95 @@ Concept: represent action plans diegetically as entities during gameplay. Each e
 
 Planning deferred because this depends on stable action-plan authoring, inventory/containment semantics, and likely runtime indexing.
 
-### New action primitives and runtime states
+### Deferred action primitives and runtime states
 
 Status: Conceptualized, not yet planned.
 
-Concept: add new primitives and state needed for basic gameplay scenarios, potentially including entity creation, entity destruction, player/screen messages, per-action-plan cooldowns, moving toward arbitrary targets, and friendly/hostile entity lists.
+Concept: add additional primitives and state needed for basic gameplay scenarios.
 
-Generated content exercises have also surfaced possible future needs for multiple actions per turn and canonical multi-direction effects. These remain conceptualized, not yet planned.
+Deferred brainstorm Action Steps from the current utility review:
 
-Specific near-term canonical Action Steps such as `Wait`, `ReverseFacing`, `BumpTarget`, and `SeekTarget` are listed as upcoming only after legacy cleanup and behavior trace formatting. Broader gameplay primitives remain conceptual until selected and planned.
+- `TeleportTo`: move to an arbitrary destination, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity `Target`.
+- `Give`: move a carried entity into the inventory space of the `Target` entity.
+- `Take`: move an entity from the inventory space of an adjacent/target entity into the actor's inventory.
+- `Wait`: explicit consumed no-op turn as a canonical Action Step.
+- `ReverseFacing`, `SetFacing`, `MoveOppositeFacing`, and perpendicular-direction helpers.
+- `BumpTarget` or other interaction fallback steps.
+- `SeekTarget` / move toward target.
+- `CreateFacing(templateId)` / `SpawnTemplateFacing` and more specific spawn/projectile/clone steps.
+- Player/screen messages.
+- Per-action-plan cooldowns or other runtime states.
+- Friendly/hostile entity lists and relationship queries.
+
+Generated content exercises have also surfaced possible future needs for multiple actions per turn, canonical multi-direction effects, and explicit behavior-chain failure turn-consumption policies. These remain conceptualized, not yet planned.
+
+Template/entity spawning is explicitly deferred. The current placeholder-rock `CreateFacing` prototype is sufficient as a foundation until scenario testing and direction philosophy clarify the next spawning API.
+
+### Preview and simulation inspection workflows
+
+Status: Conceptualized, not yet planned beyond the next-sprint generated scenario testing focus.
+
+Concept: improve the ability for editors, players, and agents to preview authored behavior before committing to content or starting a full play session.
+
+Brainstormed workflows:
+
+- live in-editor preview window showing an entity performing its action plan;
+- ability to run arbitrary scenarios/content from Console;
+- `Run in Console` button from the editor that launches a game window with loaded content;
+- saved test scenario runlogs that capture simulation state each turn;
+- test inspector tool for stepping through simulation/runlogs with forward/back controls.
+
+Planning deferred until the generated scenario helper clarifies what simulation state, trace summaries, and content/runtime bindings are most useful.
+
+### Scenario documents and scenario families
+
+Status: Conceptualized, not yet planned.
+
+Concept: treat each YAML file, or a family of YAML files, as an independently loadable game/scenario. Each scenario should eventually be able to define metadata, content definitions, world/setup data, and a user/player entity start point. Console could initially load a scenario by path or from a simple list, with possible later diegetic scenario selection.
+
+Future extensions may include loading one scenario inside another for setpieces or nested levels, and eventually randomly generated levels.
+
+Planning deferred until the generated scenario runner clarifies the boundary between reusable content definitions, scenario setup, runtime world state, and player start metadata.
+
+### DevOps/tooling backlog
+
+Status: Conceptualized, not yet planned.
+
+Concept: improve developer and agent feedback loops for authored scenarios and behavior-system changes.
+
+Deferred tooling ideas:
+
+- Compact world/state summary formatter: produce concise summaries of entity positions, facing, target, inventories, and other high-signal runtime state after each simulated turn or action.
+- Golden runlog tests: store expected scenario runlogs as fixtures and compare them in tests after the runlog format stabilizes.
+
+Dependency note: the world/state summary formatter should come before golden runlog tests, because stable summaries are likely part of the runlog format.
+
+Planning deferred until the next-sprint headless scenario runner establishes the first scenario execution/reporting shape.
+
+### Editor usability backlog
+
+Status: Conceptualized, not yet planned.
+
+Concept: make editor/API feedback clearer for authors and content-editing agents as behavior authoring grows.
+
+Deferred usability ideas:
+
+- Plan preview + simulation in one API command: combine canonical plan preview, one or more simulated turns, trace summaries, and state diffs into one inspectable result.
+- Capability-gap reporter: when requested behavior cannot be authored with current engine/editor capabilities, return structured gaps such as missing Action Step, missing direction override, missing template spawn, or missing state slot.
+
+Planning deferred until generated scenario exercises reveal the most common authoring failures and preview/simulation report needs.
+
+### Conceptual backlog sorting and prioritization
+
+Status: Needed soon, not yet planned as an implementation slice.
+
+Concept: review the growing conceptualized backlog, group related ideas, identify dependencies, and choose which items should become planned work versus remain deferred.
 
 ### Scheduler/speed and multiple actions per turn
 
 Status: Conceptualized, not yet planned.
 
-Concept: support entities taking more than one action per turn, variable speed, initiative, or action budgets. Rat two-actions-per-turn remains classified here after the generated-content exercise.
+Concept: support entities taking more than one action per turn, variable speed, initiative, or action budgets. Rat two-actions-per-turn remains classified here after generated-content exercises.
 
 ### Behavior/action-plan templates
 
@@ -183,7 +205,7 @@ Concept: entities may eventually expose action-plan slots beyond their normal tu
 
 Planning notes:
 
-- This depends on behavior-chain consolidation but is not required for the first canonical chain slice.
+- This depends on behavior-chain consolidation but is not required for the current canonical chain work.
 - Persistent entity action state, especially `Facing` and `Target`, should be considered separately from per-invocation action-plan context before reaction slots are implemented.
 - Cross-entity reaction chains will need explicit root actor/current actor/instigator semantics, trace causality, and temporal recursion guards.
 - This may overlap with future scheduler/speed work, but it should not be used as a shortcut for multiple scheduled actions per turn.

@@ -342,6 +342,20 @@ public sealed class CoreActionPlanTests
         Assert.Empty(pickupTarget.StateWrites);
     }
 
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.DropFacing, "Drop Facing")]
+    [InlineData(ActionPlanBehaviorStepKind.PushFacing, "Push Facing")]
+    [InlineData(ActionPlanBehaviorStepKind.DestroyTarget, "Destroy Target")]
+    [InlineData(ActionPlanBehaviorStepKind.CreateFacing, "Create Facing")]
+    public void ActionStepCatalogDescribesFirstUtilityBatch(ActionPlanBehaviorStepKind kind, string displayName)
+    {
+        var step = ActionStepCatalog.Get(kind);
+
+        Assert.Equal(displayName, step.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Stable, step.Tier);
+        Assert.NotEmpty(step.Description);
+    }
+
     [Fact]
     public void ActionPlanDescriptorMaterializesCanonicalBuiltInsWithoutVariableNames()
     {
@@ -1255,6 +1269,38 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void BehaviorChainTraceFormatterSummarizesFallbackStateAndTerminalOutcome()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("behavior-chain"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, context);
+
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.Collection(
+            summary,
+            line => Assert.Equal("Plan behavior-chain: Success; consumedTurn=True; continuePlan=False", line),
+            line => Assert.Equal("1. MoveFacing: Failure; reason=InvalidPlacement; fallback=continued", line),
+            line => Assert.Equal("   reads: Facing=West", line),
+            line => Assert.Equal("   writes: Target=rock", line),
+            line => Assert.Equal("2. PickupTarget: Success; fallback=stopped", line),
+            line => Assert.Equal("   reads: Target=rock", line),
+            line => Assert.Equal("Terminal: succeeded; consumed turn", line));
+    }
+
+    [Fact]
     public void BehaviorChainStopsAfterFirstSuccessfulActionStep()
     {
         var world = TestWorld.CreateWorld();
@@ -1277,6 +1323,89 @@ public sealed class CoreActionPlanTests
         Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(TestWorld.SlimeId));
         Assert.True(TraceContains(result.Trace, "Action Step MoveFacing"));
         Assert.False(TraceContains(result.Trace, "Action Step PickupTarget"));
+    }
+
+    [Fact]
+    public void DropFacingDropsFirstCarriedEntityInFacingDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("drop-facing"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DropFacing)]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceContains(result.Trace, "Action Step DropFacing"));
+    }
+
+    [Fact]
+    public void PushFacingMovesBlockerAndActorAndConsumesTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("push-facing"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PushFacing)]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.True(TraceContains(result.Trace, "Action Step PushFacing"));
+    }
+
+    [Fact]
+    public void DestroyTargetRecursivelyRemovesTargetInventoryAndContainedEntities()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("destroy-target"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget)]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.False(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.False(world.Entities.ContainsKey(TestWorld.RockId));
+        Assert.False(world.Planes.ContainsKey(TestWorld.SlimeInventoryPlaneId));
+        Assert.DoesNotContain(TestWorld.SlimeId, world.Occupancy.Values);
+        Assert.DoesNotContain(TestWorld.RockId, world.Occupancy.Values);
+        Assert.True(TraceContains(result.Trace, "Action Step DestroyTarget"));
+    }
+
+    [Fact]
+    public void CreateFacingCreatesPlaceholderRockEntityInFacingDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("create-facing"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.CreateFacing)]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        var created = world.GetOccupant(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+        Assert.NotNull(created);
+        Assert.Equal("Placeholder Rock", world.Entities[created!.Value].Name);
+        Assert.True(TraceContains(result.Trace, "Action Step CreateFacing"));
     }
 
     [Fact]

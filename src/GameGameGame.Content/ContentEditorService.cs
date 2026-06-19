@@ -280,6 +280,31 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public IReadOnlyList<ActionStepDescriptor> ListActionSteps() => ActionStepCatalog.Steps;
 
+    public ActionPlanPreview PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null)
+    {
+        var plan = ListActionPlans().Single(item => item.TemplateId == planId).Descriptor;
+        var validation = Validate();
+        var canonicalValidation = Document.ValidateCanonicalAuthoring();
+        var diagnostics = validation.ForActionPlan(planId)
+            .Concat(canonicalValidation.ForActionPlan(planId))
+            .Concat(entityTemplateId is { } templateId
+                ? validation.ForEntityTemplate(templateId).Concat(canonicalValidation.ForEntityTemplate(templateId))
+                : [])
+            .Select(diagnostic => diagnostic.Message)
+            .Distinct()
+            .ToList();
+
+        return new ActionPlanPreview(
+            planId,
+            entityTemplateId,
+            GetActionPlanShape(plan),
+            GetActionPlanGuidance(plan),
+            GetActionPlanPreviewSteps(plan),
+            GetActionPlanStateHints(plan, entityTemplateId),
+            diagnostics,
+            Document.SaveYaml());
+    }
+
     public ActionPlanTemplateId CreateActionPlan(string name)
     {
         var id = GenerateActionPlanTemplateId(name);
@@ -287,6 +312,16 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             new ActionPlanDescriptor(
                 new ActionPlanId(id.Value),
                 [new ActionPlanStepDescriptor("wait", [], PlanEffectDescriptor.Wait(), OnFailure: null)]));
+        onChanged?.Invoke();
+
+        return id;
+    }
+
+    public ActionPlanTemplateId CreatePassiveActionPlan(string name)
+    {
+        var id = GenerateActionPlanTemplateId(name);
+        Document.ActionPlans[id.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(
+            new ActionPlanDescriptor(new ActionPlanId(id.Value), []));
         onChanged?.Invoke();
 
         return id;
@@ -712,6 +747,98 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         }
     }
 
+    private static string GetActionPlanShape(ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior?.Steps.Count > 0)
+        {
+            return "Canonical Behavior Chain";
+        }
+
+        if (descriptor.Primitive is not null)
+        {
+            return "Transitional Primitive Plan";
+        }
+
+        if (descriptor.Steps.Count > 0)
+        {
+            return "Legacy / Advanced Low-Level Steps";
+        }
+
+        return "Empty / Passive";
+    }
+
+    private static IReadOnlyList<string> GetActionPlanGuidance(ActionPlanDescriptor descriptor) =>
+        GetActionPlanShape(descriptor) switch
+        {
+            "Canonical Behavior Chain" => ["Preferred canonical behavior chain. Author normal behavior as ordered engine-defined Action Steps."],
+            "Transitional Primitive Plan" => ["Compatibility primitive-backed fallback plan. Prefer canonical behavior chains for new authoring."],
+            "Legacy / Advanced Low-Level Steps" => ["Legacy/advanced low-level steps/checks/effects. Keep only where canonical Action Steps cannot express the behavior yet."],
+            "Empty / Passive" => ["Passive plan with no current behavior. Add canonical Action Steps when the entity should act."],
+            _ => ["Unknown action-plan shape. Validate before saving."]
+        };
+
+    private static IReadOnlyList<ActionPlanPreviewStep> GetActionPlanPreviewSteps(ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior?.Steps.Count > 0)
+        {
+            return descriptor.Behavior.Steps
+                .Select(step =>
+                {
+                    var metadata = ActionStepCatalog.Get(step.Kind);
+                    return new ActionPlanPreviewStep(
+                        step.Kind,
+                        metadata.DisplayName,
+                        metadata.Description,
+                        metadata.RequiredState,
+                        metadata.DefaultableState,
+                        metadata.StateWrites);
+                })
+                .ToList();
+        }
+
+        return [];
+    }
+
+    private IReadOnlyList<string> GetActionPlanStateHints(ActionPlanDescriptor descriptor, EntityTemplateId? entityTemplateId)
+    {
+        if (descriptor.Behavior?.Steps.Count is not > 0)
+        {
+            return [];
+        }
+
+        ActorActionStateDefaults? defaults = entityTemplateId is { } templateId
+            ? GetActionStateDefaults(templateId)
+            : null;
+        var hints = new List<string>();
+
+        foreach (var step in descriptor.Behavior.Steps)
+        {
+            var metadata = ActionStepCatalog.Get(step.Kind);
+            foreach (var state in metadata.DefaultableState)
+            {
+                var hint = FormatPreviewStateHint(state, defaults);
+                if (!hints.Contains(hint))
+                {
+                    hints.Add(hint);
+                }
+            }
+        }
+
+        return hints;
+    }
+
+    private static string FormatPreviewStateHint(PlanPrimitiveSlotDescriptor state, ActorActionStateDefaults? defaults) =>
+        state.Slot switch
+        {
+            ActionPlanSlot.Facing => defaults?.Facing is { } facing
+                ? $"Facing={facing}"
+                : "Facing=West (defaultable)",
+            ActionPlanSlot.Target => defaults?.Target is { } target
+                ? $"Target={target}"
+                : "Target=Self (defaultable)",
+            _ => $"{state.Slot} ({state.ValueKind})"
+        };
+
     private static IReadOnlyList<CarriedEntityTemplate>? DuplicateCarriedEntities(
         IReadOnlyList<CarriedEntityTemplate>? carriedEntities,
         string duplicateName)
@@ -797,6 +924,24 @@ public sealed record ActionPlanReference(
 public sealed record PrimitiveActionPlanChain(
     ActionPlanTemplateId MoveFacingPlanId,
     ActionPlanTemplateId PickupTargetPlanId);
+
+public sealed record ActionPlanPreview(
+    ActionPlanTemplateId PlanId,
+    EntityTemplateId? EntityTemplateId,
+    string Shape,
+    IReadOnlyList<string> Guidance,
+    IReadOnlyList<ActionPlanPreviewStep> ActionSteps,
+    IReadOnlyList<string> StateHints,
+    IReadOnlyList<string> ValidationDiagnostics,
+    string YamlPreview);
+
+public sealed record ActionPlanPreviewStep(
+    ActionPlanBehaviorStepKind Kind,
+    string DisplayName,
+    string Hint,
+    IReadOnlyList<PlanPrimitiveSlotDescriptor> RequiredState,
+    IReadOnlyList<PlanPrimitiveSlotDescriptor> DefaultableState,
+    IReadOnlyList<PlanPrimitiveSlotDescriptor> StateWrites);
 
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
 

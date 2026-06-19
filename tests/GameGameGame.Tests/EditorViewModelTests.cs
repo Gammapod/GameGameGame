@@ -396,6 +396,35 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
+    public void EditorViewModelShowsLegacyCompatibilityOnlyForLegacyLowLevelPlans()
+    {
+        var legacyPath = WriteTempContentFile(MultiStepActionPlanContentYaml);
+        var behaviorPath = WriteTempContentFile(BehaviorChainContentYaml);
+
+        try
+        {
+            var legacyEditor = new MainEditorViewModel();
+            legacyEditor.OpenFile(legacyPath);
+            legacyEditor.SelectedActionPlan = legacyEditor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            Assert.Equal("Legacy / Advanced Low-Level Steps", legacyEditor.SelectedActionPlanShape);
+            Assert.True(legacyEditor.IsLegacyActionPlanCompatibilityVisible);
+
+            var behaviorEditor = new MainEditorViewModel();
+            behaviorEditor.OpenFile(behaviorPath);
+            behaviorEditor.SelectedActionPlan = behaviorEditor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("ratBehavior"));
+
+            Assert.Equal("Canonical Behavior Chain", behaviorEditor.SelectedActionPlanShape);
+            Assert.False(behaviorEditor.IsLegacyActionPlanCompatibilityVisible);
+        }
+        finally
+        {
+            DeleteIfExists(legacyPath);
+            DeleteIfExists(behaviorPath);
+        }
+    }
+
+    [Fact]
     public void EditorViewModelAddsReordersAndRemovesBehaviorSteps()
     {
         var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
@@ -487,7 +516,9 @@ public sealed class EditorViewModelTests
 
             var plan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("newPlan"));
             Assert.Equal(plan, editor.SelectedActionPlan);
-            Assert.Single(editor.ActionPlanSteps);
+            Assert.Equal("Empty / Passive", editor.SelectedActionPlanShape);
+            Assert.False(editor.IsLegacyActionPlanCompatibilityVisible);
+            Assert.Empty(editor.ActionPlanSteps);
             Assert.Contains("newPlan", editor.YamlPreview);
             Assert.Contains(editor.YamlDiffLines, line => line.StartsWith("+") && line.Contains("newPlan"));
             Assert.Equal("Created action plan New Plan.", editor.StatusMessage);
