@@ -558,6 +558,177 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceCreatesCanonicalMoveFacingPickupTargetBehavior()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans: {}
+            """));
+
+        var planId = editor.CreateMoveFacingPickupTargetBehavior("Rat Behavior");
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var descriptor = registry.ActionPlanDescriptors[planId];
+
+        Assert.Equal(new ActionPlanTemplateId("ratBehavior"), planId);
+        Assert.Null(descriptor.Primitive);
+        Assert.Empty(descriptor.Steps);
+        Assert.Equal(
+            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget],
+            descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
+    }
+
+    [Fact]
+    public void ContentEditorServiceListsCanonicalActionStepMetadata()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans: {}
+            """));
+
+        var steps = editor.ListActionSteps();
+
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing && step.DisplayName == "Move Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PickupTarget && step.DisplayName == "Pickup Target");
+    }
+
+    [Fact]
+    public void ContentEditorServiceSetsCanonicalBehaviorChainAndClearsLegacyPlanShapes()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: wander
+                actionStateDefaults:
+                  facing: West
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              wander:
+                id: wander
+                primitive:
+                  kind: MoveFacing
+                  fallbackPlanId: pickup
+              pickup:
+                id: pickup
+                primitive:
+                  kind: PickupTarget
+            """));
+        var planId = new ActionPlanTemplateId("wander");
+
+        editor.SetActionPlanBehavior(
+            planId,
+            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget]);
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+        var descriptor = registry.ActionPlanDescriptors[planId];
+
+        Assert.True(registry.Validate().IsValid, string.Join(Environment.NewLine, registry.Validate().Errors));
+        Assert.Null(descriptor.Primitive);
+        Assert.Empty(descriptor.Steps);
+        Assert.Equal(
+            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget],
+            descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
+        Assert.Equal(Direction.West, registry.EntityTemplates[new EntityTemplateId("slime")].ActionStateDefaults!.Facing);
+    }
+
+    [Fact]
+    public void ContentEditorServiceMaterializesDefaultFacingWhenAssigningBehaviorPlan()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              wander:
+                id: wander
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+            """));
+        var slimeId = new EntityTemplateId("slime");
+
+        editor.SetDefaultActionPlan(slimeId, new ActionPlanTemplateId("wander"));
+        var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
+
+        Assert.Equal(Direction.West, registry.EntityTemplates[slimeId].ActionStateDefaults!.Facing);
+        Assert.True(registry.Validate().IsValid, string.Join(Environment.NewLine, registry.Validate().Errors));
+    }
+
+    [Fact]
+    public void ContentEditorServiceClearsBehaviorWhenLastActionStepIsRemoved()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              wander:
+                id: wander
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+            """));
+        var planId = new ActionPlanTemplateId("wander");
+
+        editor.RemoveActionPlanBehaviorStep(planId, index: 0);
+        var saved = editor.Document.SaveYaml();
+        var descriptor = EditableContentDocument.LoadYaml(saved).ToRegistry().ActionPlanDescriptors[planId];
+
+        Assert.Null(descriptor.Behavior);
+        Assert.DoesNotContain("behavior:", saved);
+    }
+
+    [Fact]
+    public void ContentEditorServiceAddsReordersAndRemovesCanonicalBehaviorSteps()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              wander:
+                id: wander
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """));
+        var planId = new ActionPlanTemplateId("wander");
+
+        editor.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.PickupTarget);
+        editor.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.MoveFacing);
+        editor.MoveActionPlanBehaviorStep(planId, fromIndex: 1, toIndex: 0);
+        editor.RemoveActionPlanBehaviorStep(planId, index: 1);
+        var descriptor = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry().ActionPlanDescriptors[planId];
+
+        var step = Assert.Single(descriptor.Behavior!.Steps);
+        Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing, step.Kind);
+        Assert.Null(descriptor.Primitive);
+        Assert.Empty(descriptor.Steps);
+    }
+
+    [Fact]
     public void ContentEditorServiceSetsTeleportActionPlanStepEffectDescriptor()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(

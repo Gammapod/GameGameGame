@@ -293,14 +293,27 @@ public sealed class MainWindow : Window
         actionPlans.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlan)) { Mode = BindingMode.TwoWay });
         panel.Children.Add(Wrap("Action Plan", actionPlans));
 
+        var planShape = new TextBlock();
+        planShape.Bind(TextBlock.TextProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanShape)) { StringFormat = "Plan shape: {0}" });
+        panel.Children.Add(Wrap("Selected Plan Shape", planShape));
+
         var planDiagnostics = new ListBox { MinHeight = 80 };
         planDiagnostics.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanDiagnostics)));
         panel.Children.Add(Wrap("Selected Plan Diagnostics", planDiagnostics));
 
+        panel.Children.Add(BuildBehaviorChainEditor());
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Legacy / Advanced Low-Level Steps: compatibility editor for old steps/checks/effects. Prefer the canonical behavior chain above for normal authoring.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Margin = new Thickness(0, 12, 0, 0)
+        });
+
         var steps = new ListBox { MinHeight = 140 };
         steps.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.ActionPlanSteps)));
         steps.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanStep)) { Mode = BindingMode.TwoWay });
-        panel.Children.Add(Wrap("Steps", steps));
+        panel.Children.Add(Wrap("Legacy / Advanced Steps", steps));
 
         var stepDiagnostics = new ListBox { MinHeight = 80 };
         stepDiagnostics.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.SelectedActionPlanStepDiagnostics)));
@@ -331,6 +344,60 @@ public sealed class MainWindow : Window
         panel.Children.Add(BuildStepEffectEditor());
 
         return Wrap("Action Plan Browser", panel);
+    }
+
+    private Control BuildBehaviorChainEditor()
+    {
+        var panel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Canonical behavior chain: ordered engine-defined Action Steps. First successful step resolves the turn; failed/impossible steps fall through. Empty chains are not saved. Adding a behavior step switches the selected plan away from legacy low-level steps and primitive fallback links.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+        });
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Defaults: MoveFacing can materialize Facing = West. PickupTarget can default Target = Self, so it is valid as a first step even when it is often a no-op until a useful target exists.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap
+        });
+
+        var behaviorSteps = new ListBox { MinHeight = 100 };
+        behaviorSteps.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.BehaviorSteps)));
+        behaviorSteps.Bind(ListBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedBehaviorStep)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Action Steps", behaviorSteps));
+
+        var hint = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        hint.Bind(TextBlock.TextProperty, new Binding(nameof(MainEditorViewModel.SelectedBehaviorStepHint)));
+        panel.Children.Add(Wrap("Selected Action Step Hint", hint));
+
+        var stepToAdd = new ComboBox();
+        stepToAdd.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(MainEditorViewModel.AvailableActionSteps)));
+        stepToAdd.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(MainEditorViewModel.SelectedActionStepToAdd)) { Mode = BindingMode.TwoWay });
+        panel.Children.Add(Wrap("Action Step To Add", stepToAdd));
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var addSelected = new Button { Content = "Add Selected" };
+        addSelected.Click += (_, _) => ViewModel?.AddSelectedBehaviorStepToSelectedActionPlan();
+        var addMove = new Button { Content = "Add MoveFacing" };
+        addMove.Click += (_, _) => ViewModel?.AddMoveFacingBehaviorStepToSelectedActionPlan();
+        var addPickup = new Button { Content = "Add PickupTarget" };
+        addPickup.Click += (_, _) => ViewModel?.AddPickupTargetBehaviorStepToSelectedActionPlan();
+        var moveUp = new Button { Content = "Move Up" };
+        moveUp.Click += (_, _) => ViewModel?.MoveSelectedBehaviorStepUp();
+        var moveDown = new Button { Content = "Move Down" };
+        moveDown.Click += (_, _) => ViewModel?.MoveSelectedBehaviorStepDown();
+        var remove = new Button { Content = "Remove" };
+        remove.Click += (_, _) => ViewModel?.RemoveSelectedBehaviorStep();
+        buttons.Children.Add(addSelected);
+        buttons.Children.Add(addMove);
+        buttons.Children.Add(addPickup);
+        buttons.Children.Add(moveUp);
+        buttons.Children.Add(moveDown);
+        buttons.Children.Add(remove);
+        panel.Children.Add(buttons);
+
+        return Wrap("Canonical Behavior Chain", panel);
     }
 
     private Control BuildStepCheckEditor()

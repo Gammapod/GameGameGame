@@ -48,6 +48,7 @@ public enum ContentDiagnosticCode
     MissingPlanVariable,
     MissingPlanSlot,
     InvalidMovementDescriptor,
+    InvalidActionPlanShape,
     ArbitraryPlanVariableField,
     PlanVariableTypeMismatch,
     InventoryOutOfBounds,

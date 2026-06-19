@@ -81,7 +81,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public void SetDefaultActionPlan(EntityTemplateId templateId, ActionPlanTemplateId actionPlanId)
     {
-        GetTemplateDto(templateId).DefaultActionPlanId = actionPlanId.Value;
+        var template = GetTemplateDto(templateId);
+        template.DefaultActionPlanId = actionPlanId.Value;
+        MaterializeBehaviorDefaults(template, GetActionPlanDto(actionPlanId).Behavior);
         onChanged?.Invoke();
     }
 
@@ -276,6 +278,8 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .ToList();
     }
 
+    public IReadOnlyList<ActionStepDescriptor> ListActionSteps() => ActionStepCatalog.Steps;
+
     public ActionPlanTemplateId CreateActionPlan(string name)
     {
         var id = GenerateActionPlanTemplateId(name);
@@ -345,6 +349,7 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             Kind = kind,
             FallbackPlanId = fallbackPlanId?.Value
         };
+        plan.Behavior = null;
         plan.Steps = [];
         onChanged?.Invoke();
     }
@@ -354,6 +359,70 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         var plan = GetActionPlanDto(planId);
         plan.Primitive = null;
         plan.Steps ??= [];
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehavior(ActionPlanTemplateId planId, IReadOnlyList<ActionPlanBehaviorStepKind> steps) =>
+        SetActionPlanBehavior(
+            planId,
+            steps.Select(step => new ActionPlanBehaviorStepDescriptor(step)).ToList());
+
+    public void SetActionPlanBehavior(ActionPlanTemplateId planId, IReadOnlyList<ActionPlanBehaviorStepDescriptor> steps)
+    {
+        foreach (var step in steps)
+        {
+            _ = ActionStepCatalog.Get(step.Kind);
+        }
+
+        var plan = GetActionPlanDto(planId);
+        if (steps.Count == 0)
+        {
+            ClearActionPlanBehavior(planId);
+            return;
+        }
+
+        plan.Primitive = null;
+        plan.Steps = [];
+        plan.Behavior = EditableContentDocument.ActionPlanBehaviorDescriptorDto.From(new ActionPlanBehaviorDescriptor(steps));
+        MaterializeBehaviorDefaultsForAssignedTemplates(planId, plan.Behavior);
+        onChanged?.Invoke();
+    }
+
+    public void ClearActionPlanBehavior(ActionPlanTemplateId planId)
+    {
+        var plan = GetActionPlanDto(planId);
+        plan.Behavior = null;
+        plan.Steps ??= [];
+        onChanged?.Invoke();
+    }
+
+    public void AddActionPlanBehaviorStep(ActionPlanTemplateId planId, ActionPlanBehaviorStepKind kind)
+    {
+        _ = ActionStepCatalog.Get(kind);
+        var steps = GetActionPlanBehaviorSteps(planId);
+        steps.Add(new EditableContentDocument.ActionPlanBehaviorStepDescriptorDto { Kind = kind });
+        MaterializeBehaviorDefaultsForAssignedTemplates(planId, GetActionPlanDto(planId).Behavior);
+        onChanged?.Invoke();
+    }
+
+    public void MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[fromIndex];
+        steps.RemoveAt(fromIndex);
+        steps.Insert(toIndex, step);
+        onChanged?.Invoke();
+    }
+
+    public void RemoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int index)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        steps.RemoveAt(index);
+        if (steps.Count == 0)
+        {
+            GetActionPlanDto(planId).Behavior = null;
+        }
+
         onChanged?.Invoke();
     }
 
@@ -369,6 +438,16 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             new ActionPlanId(pickupTargetPlanId.Value));
 
         return new PrimitiveActionPlanChain(moveFacingPlanId, pickupTargetPlanId);
+    }
+
+    public ActionPlanTemplateId CreateMoveFacingPickupTargetBehavior(string behaviorPlanName)
+    {
+        var planId = CreateActionPlan(behaviorPlanName);
+        SetActionPlanBehavior(
+            planId,
+            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget]);
+
+        return planId;
     }
 
     public ContentEditorOperationResult DeleteActionPlan(ActionPlanTemplateId id)
@@ -582,9 +661,55 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     private List<EditableContentDocument.ActionPlanStepDescriptorDto> GetActionPlanSteps(ActionPlanTemplateId id)
     {
         var plan = GetActionPlanDto(id);
+        plan.Primitive = null;
+        plan.Behavior = null;
         plan.Steps ??= [];
 
         return plan.Steps;
+    }
+
+    private List<EditableContentDocument.ActionPlanBehaviorStepDescriptorDto> GetActionPlanBehaviorSteps(ActionPlanTemplateId id)
+    {
+        var plan = GetActionPlanDto(id);
+        plan.Primitive = null;
+        plan.Steps = [];
+        plan.Behavior ??= new EditableContentDocument.ActionPlanBehaviorDescriptorDto { Steps = [] };
+        plan.Behavior.Steps ??= [];
+
+        return plan.Behavior.Steps;
+    }
+
+    private void MaterializeBehaviorDefaultsForAssignedTemplates(
+        ActionPlanTemplateId planId,
+        EditableContentDocument.ActionPlanBehaviorDescriptorDto? behavior)
+    {
+        foreach (var template in Document.EntityTemplates.Values.Where(template => template.DefaultActionPlanId == planId.Value))
+        {
+            MaterializeBehaviorDefaults(template, behavior);
+        }
+    }
+
+    private static void MaterializeBehaviorDefaults(
+        EditableContentDocument.EntityTemplateDto template,
+        EditableContentDocument.ActionPlanBehaviorDescriptorDto? behavior)
+    {
+        if (behavior?.Steps is null || behavior.Steps.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var step in behavior.Steps)
+        {
+            var metadata = ActionStepCatalog.Get(step.Kind);
+            foreach (var defaultable in metadata.DefaultableState)
+            {
+                if (defaultable.Slot == ActionPlanSlot.Facing && defaultable.ValueKind == PlanValueKind.Direction)
+                {
+                    template.ActionStateDefaults ??= new EditableContentDocument.ActorActionStateDefaultsDto();
+                    template.ActionStateDefaults.Facing ??= Direction.West;
+                }
+            }
+        }
     }
 
     private static IReadOnlyList<CarriedEntityTemplate>? DuplicateCarriedEntities(

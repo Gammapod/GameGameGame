@@ -24,6 +24,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private EntityPresetListItem? _selectedReplacementTemplate;
     private ActionPlanListItem? _selectedDefaultActionPlan;
     private ActionPlanListItem? _selectedActionPlan;
+    private ActionStepCatalogListItem? _selectedActionStepToAdd;
+    private ActionPlanBehaviorStepListItem? _selectedBehaviorStep;
     private ActionPlanStepListItem? _selectedActionPlanStep;
     private ActionPlanStepCheckListItem? _selectedActionPlanStepCheck;
     private string _actionPlanStepLabelInput = string.Empty;
@@ -71,6 +73,10 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     public ObservableCollection<ActionPlanListItem> ActionPlans { get; } = [];
 
     public ObservableCollection<ActionPlanStepListItem> ActionPlanSteps { get; } = [];
+
+    public ObservableCollection<ActionStepCatalogListItem> AvailableActionSteps { get; } = [];
+
+    public ObservableCollection<ActionPlanBehaviorStepListItem> BehaviorSteps { get; } = [];
 
     public ObservableCollection<ActionPlanStepCheckListItem> ActionPlanStepChecks { get; } = [];
 
@@ -222,10 +228,35 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             if (SetField(ref _selectedActionPlan, value))
             {
                 RefreshActionPlanSteps();
+                RefreshBehaviorSteps();
+                OnPropertyChanged(nameof(SelectedActionPlanShape));
                 RefreshSelectedDiagnostics();
             }
         }
     }
+
+    public string SelectedActionPlanShape => SelectedActionPlan?.Shape ?? "No action plan selected";
+
+    public ActionStepCatalogListItem? SelectedActionStepToAdd
+    {
+        get => _selectedActionStepToAdd;
+        set => SetField(ref _selectedActionStepToAdd, value);
+    }
+
+    public ActionPlanBehaviorStepListItem? SelectedBehaviorStep
+    {
+        get => _selectedBehaviorStep;
+        set
+        {
+            if (SetField(ref _selectedBehaviorStep, value))
+            {
+                OnPropertyChanged(nameof(SelectedBehaviorStepHint));
+                RefreshSelectedDiagnostics();
+            }
+        }
+    }
+
+    public string SelectedBehaviorStepHint => SelectedBehaviorStep?.Description ?? string.Empty;
 
     public ActionPlanStepListItem? SelectedActionPlanStep
     {
@@ -683,6 +714,95 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         StatusMessage = $"Deleted action plan {selectedId}.";
     }
 
+    public void AddMoveFacingBehaviorStepToSelectedActionPlan()
+    {
+        SelectedActionStepToAdd = AvailableActionSteps.SingleOrDefault(item => item.Kind == ActionPlanBehaviorStepKind.MoveFacing);
+        AddSelectedBehaviorStepToSelectedActionPlan();
+    }
+
+    public void AddPickupTargetBehaviorStepToSelectedActionPlan()
+    {
+        SelectedActionStepToAdd = AvailableActionSteps.SingleOrDefault(item => item.Kind == ActionPlanBehaviorStepKind.PickupTarget);
+        AddSelectedBehaviorStepToSelectedActionPlan();
+    }
+
+    public void AddSelectedBehaviorStepToSelectedActionPlan()
+    {
+        if (_session is null || SelectedActionPlan is null || SelectedActionStepToAdd is null)
+        {
+            return;
+        }
+
+        var planId = SelectedActionPlan.Id;
+        var nextIndex = BehaviorSteps.Count;
+        var stepKind = SelectedActionStepToAdd.Kind;
+        var displayName = SelectedActionStepToAdd.DisplayName;
+        _session.Editor.AddActionPlanBehaviorStep(planId, stepKind);
+        RefreshFromSession();
+        SelectedActionPlan = ActionPlans.SingleOrDefault(item => item.Id == planId);
+        SelectBehaviorStep(nextIndex);
+        StatusMessage = $"Added {displayName} action step.";
+    }
+
+    public void MoveSelectedBehaviorStepUp()
+    {
+        if (_session is null || SelectedActionPlan is null || SelectedBehaviorStep is null || SelectedBehaviorStep.Index == 0)
+        {
+            return;
+        }
+
+        var planId = SelectedActionPlan.Id;
+        var fromIndex = SelectedBehaviorStep.Index;
+        var toIndex = fromIndex - 1;
+        _session.Editor.MoveActionPlanBehaviorStep(planId, fromIndex, toIndex);
+        RefreshFromSession();
+        SelectedActionPlan = ActionPlans.SingleOrDefault(item => item.Id == planId);
+        SelectBehaviorStep(toIndex);
+        StatusMessage = "Moved action step up.";
+    }
+
+    public void MoveSelectedBehaviorStepDown()
+    {
+        if (_session is null || SelectedActionPlan is null || SelectedBehaviorStep is null || SelectedBehaviorStep.Index >= BehaviorSteps.Count - 1)
+        {
+            return;
+        }
+
+        var planId = SelectedActionPlan.Id;
+        var fromIndex = SelectedBehaviorStep.Index;
+        var toIndex = fromIndex + 1;
+        _session.Editor.MoveActionPlanBehaviorStep(planId, fromIndex, toIndex);
+        RefreshFromSession();
+        SelectedActionPlan = ActionPlans.SingleOrDefault(item => item.Id == planId);
+        SelectBehaviorStep(toIndex);
+        StatusMessage = "Moved action step down.";
+    }
+
+    public void RemoveSelectedBehaviorStep()
+    {
+        if (_session is null || SelectedActionPlan is null || SelectedBehaviorStep is null)
+        {
+            return;
+        }
+
+        var planId = SelectedActionPlan.Id;
+        var removedIndex = SelectedBehaviorStep.Index;
+        var removedName = SelectedBehaviorStep.DisplayName;
+        _session.Editor.RemoveActionPlanBehaviorStep(planId, removedIndex);
+        RefreshFromSession();
+        SelectedActionPlan = ActionPlans.SingleOrDefault(item => item.Id == planId);
+        if (BehaviorSteps.Count > 0)
+        {
+            SelectBehaviorStep(Math.Min(removedIndex, BehaviorSteps.Count - 1));
+        }
+        else
+        {
+            SelectedBehaviorStep = null;
+        }
+
+        StatusMessage = $"Removed {removedName} action step.";
+    }
+
     public void ApplySelectedActionPlanStepLabel()
     {
         if (_session is null || SelectedActionPlan is null || SelectedActionPlanStep is null)
@@ -1100,6 +1220,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         EntityPresets.Clear();
         ActionPlans.Clear();
         ActionPlanSteps.Clear();
+        BehaviorSteps.Clear();
+        AvailableActionSteps.Clear();
         ActionPlanStepChecks.Clear();
         CarriedEntities.Clear();
         InventoryGridCells.Clear();
@@ -1126,14 +1248,30 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
 
         foreach (var plan in _session.Editor.ListActionPlans())
         {
-            ActionPlans.Add(new ActionPlanListItem(plan.TemplateId, plan.Descriptor.Id.Value, plan.Descriptor.Steps.Count));
+            ActionPlans.Add(new ActionPlanListItem(
+                plan.TemplateId,
+                plan.Descriptor.Id.Value,
+                plan.Descriptor.Steps.Count,
+                plan.Descriptor.Behavior?.Steps.Count ?? 0,
+                GetActionPlanShape(plan.Descriptor)));
         }
+
+        foreach (var step in _session.Editor.ListActionSteps())
+        {
+            AvailableActionSteps.Add(new ActionStepCatalogListItem(
+                step.Kind,
+                step.DisplayName,
+                step.Description));
+        }
+
+        SelectedActionStepToAdd = AvailableActionSteps.FirstOrDefault();
 
         _selectedActionPlan = selectedActionPlanId is null
             ? null
             : ActionPlans.SingleOrDefault(item => item.Id == selectedActionPlanId.Value);
         OnPropertyChanged(nameof(SelectedActionPlan));
         RefreshActionPlanSteps();
+        RefreshBehaviorSteps();
 
         foreach (var message in _session.Editor.Validate().Errors)
         {
@@ -1204,6 +1342,14 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 SelectedActionPlanStepDiagnostics.Add(diagnostic.Message);
             }
         }
+
+        if (SelectedActionPlan is not null && SelectedBehaviorStep is not null)
+        {
+            foreach (var diagnostic in validation.ForActionPlanStep(SelectedActionPlan.Id, SelectedBehaviorStep.Index))
+            {
+                SelectedActionPlanStepDiagnostics.Add(diagnostic.Message);
+            }
+        }
     }
 
     private void RefreshActionPlanSteps()
@@ -1236,12 +1382,44 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         }
     }
 
+    private void RefreshBehaviorSteps()
+    {
+        BehaviorSteps.Clear();
+        SelectedBehaviorStep = null;
+
+        if (_session is null || SelectedActionPlan is null)
+        {
+            return;
+        }
+
+        var plan = _session.Editor.ListActionPlans().Single(item => item.TemplateId == SelectedActionPlan.Id);
+        var steps = plan.Descriptor.Behavior?.Steps ?? [];
+        for (var index = 0; index < steps.Count; index++)
+        {
+            var step = steps[index];
+            var metadata = ActionStepCatalog.Get(step.Kind);
+            BehaviorSteps.Add(new ActionPlanBehaviorStepListItem(
+                index,
+                step.Kind,
+                metadata.DisplayName,
+                metadata.Description,
+                FormatSlots("Requires", metadata.RequiredState),
+                FormatSlots("Defaults", metadata.DefaultableState),
+                FormatSlots("Writes", metadata.StateWrites)));
+        }
+    }
+
     private ActionPlanDescriptor GetSelectedActionPlanDescriptor() =>
         _session!.Editor.ListActionPlans().Single(item => item.TemplateId == SelectedActionPlan!.Id).Descriptor;
 
     private void SelectActionPlanStep(int index)
     {
         SelectedActionPlanStep = ActionPlanSteps.SingleOrDefault(item => item.Index == index);
+    }
+
+    private void SelectBehaviorStep(int index)
+    {
+        SelectedBehaviorStep = BehaviorSteps.SingleOrDefault(item => item.Index == index);
     }
 
     private void SelectActionPlanStepCheck(int index)
@@ -1574,6 +1752,31 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         return fields.Count == 0 ? check.Kind.ToString() : $"{check.Kind}({string.Join(", ", fields)})";
     }
 
+    private static string FormatSlots(string label, IReadOnlyList<PlanPrimitiveSlotDescriptor> slots) =>
+        slots.Count == 0
+            ? $"{label}: none"
+            : $"{label}: {string.Join(", ", slots.Select(slot => $"{slot.Slot}:{slot.ValueKind}"))}";
+
+    private static string GetActionPlanShape(ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior?.Steps.Count > 0)
+        {
+            return "Canonical Behavior Chain";
+        }
+
+        if (descriptor.Primitive is not null)
+        {
+            return "Transitional Primitive Plan";
+        }
+
+        if (descriptor.Steps.Count > 0)
+        {
+            return "Legacy / Advanced Low-Level Steps";
+        }
+
+        return "Empty / Passive";
+    }
+
     private static string FormatEffect(PlanEffectDescriptor effect)
     {
         var fields = new List<string>();
@@ -1673,9 +1876,33 @@ public sealed record EntityPresetListItem(
 public sealed record ActionPlanListItem(
     ActionPlanTemplateId Id,
     string RuntimeId,
-    int StepCount)
+    int StepCount,
+    int BehaviorStepCount,
+    string Shape)
 {
-    public override string ToString() => $"{Id} ({StepCount} steps)";
+    public override string ToString() => BehaviorStepCount > 0
+        ? $"{Id} ({BehaviorStepCount} action steps)"
+        : $"{Id} ({StepCount} steps)";
+}
+
+public sealed record ActionStepCatalogListItem(
+    ActionPlanBehaviorStepKind Kind,
+    string DisplayName,
+    string Description)
+{
+    public override string ToString() => DisplayName;
+}
+
+public sealed record ActionPlanBehaviorStepListItem(
+    int Index,
+    ActionPlanBehaviorStepKind Kind,
+    string DisplayName,
+    string Description,
+    string RequiredStateSummary,
+    string DefaultStateSummary,
+    string StateWritesSummary)
+{
+    public override string ToString() => $"{Index}: {DisplayName} | {RequiredStateSummary} | {DefaultStateSummary} | {StateWritesSummary}";
 }
 
 public sealed record ActionPlanStepListItem(

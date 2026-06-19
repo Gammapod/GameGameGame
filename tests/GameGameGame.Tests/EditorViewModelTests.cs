@@ -355,6 +355,101 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
+    public void EditorViewModelSelectingBehaviorPlanShowsCanonicalActionSteps()
+    {
+        var path = WriteTempContentFile(BehaviorChainContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("ratBehavior"));
+
+            Assert.Equal("Canonical Behavior Chain", editor.SelectedActionPlanShape);
+            Assert.Empty(editor.ActionPlanSteps);
+            Assert.Collection(
+                editor.BehaviorSteps,
+                step =>
+                {
+                    Assert.Equal(0, step.Index);
+                    Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing, step.Kind);
+                    Assert.Equal("Move Facing", step.DisplayName);
+                    Assert.Equal("Requires: Facing:Direction", step.RequiredStateSummary);
+                    Assert.Equal("Defaults: Facing:Direction", step.DefaultStateSummary);
+                    Assert.Equal("Writes: Target:Entity", step.StateWritesSummary);
+                },
+                step =>
+                {
+                    Assert.Equal(1, step.Index);
+                    Assert.Equal(ActionPlanBehaviorStepKind.PickupTarget, step.Kind);
+                    Assert.Equal("Pickup Target", step.DisplayName);
+                    Assert.Equal("Requires: Target:Entity", step.RequiredStateSummary);
+                    Assert.Equal("Defaults: Target:Entity", step.DefaultStateSummary);
+                    Assert.Equal("Writes: none", step.StateWritesSummary);
+                });
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelAddsReordersAndRemovesBehaviorSteps()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.AddPickupTargetBehaviorStepToSelectedActionPlan();
+            editor.AddMoveFacingBehaviorStepToSelectedActionPlan();
+            editor.MoveSelectedBehaviorStepUp();
+
+            Assert.Empty(editor.ActionPlanSteps);
+            Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing, editor.BehaviorSteps[0].Kind);
+            Assert.Equal(0, editor.SelectedBehaviorStep?.Index);
+            Assert.Contains("behavior:", editor.YamlPreview);
+            Assert.DoesNotContain("label: wait", editor.YamlPreview);
+
+            editor.RemoveSelectedBehaviorStep();
+
+            var remaining = Assert.Single(editor.BehaviorSteps);
+            Assert.Equal(ActionPlanBehaviorStepKind.PickupTarget, remaining.Kind);
+            Assert.Equal("Removed Move Facing action step.", editor.StatusMessage);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void EditorViewModelSelectingBehaviorStepShowsHint()
+    {
+        var path = WriteTempContentFile(BehaviorChainContentYaml);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("ratBehavior"));
+
+            editor.SelectedBehaviorStep = editor.BehaviorSteps[0];
+
+            Assert.Contains("Facing", editor.SelectedBehaviorStepHint);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void EditorViewModelReloadsSelectedActionPlanAfterRefresh()
     {
         var path = WriteTempContentFile(MultiStepActionPlanContentYaml);
@@ -1810,6 +1905,54 @@ public sealed class EditorViewModelTests
                   inventoryCoord:
                     x: 0
                     y: 0
+        """;
+
+    private const string BehaviorChainContentYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultActionPlanId: ratBehavior
+            actionStateDefaults:
+              facing: West
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          ratBehavior:
+            id: ratBehavior
+            behavior:
+              steps:
+                - kind: MoveFacing
+                - kind: PickupTarget
+        """;
+
+    private const string BehaviorChainMissingFacingYaml =
+        """
+        entityTemplates:
+          slime:
+            name: Slime
+            inventoryWidth: 1
+            inventoryHeight: 1
+            weight: 3
+            carryingCapacity: 20
+            defaultActionPlanId: ratBehavior
+        presentations:
+          slime:
+            glyph: s
+            color: Green
+        actionPlans:
+          ratBehavior:
+            id: ratBehavior
+            behavior:
+              steps:
+                - kind: MoveFacing
+                - kind: PickupTarget
         """;
 
     private const string MultiStepActionPlanContentYaml =

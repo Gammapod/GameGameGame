@@ -1,125 +1,116 @@
 # High-Level Roadmap
 
-This roadmap tracks upcoming engine/editor parity work at a planning level. The agent editor API is the next planned item. Later items are intentionally listed as conceptualized, not yet planned until the agent API has been used to generate and validate test content.
+This roadmap tracks upcoming engine/editor parity work at a planning level. The first canonical behavior-chain slice is complete. The active direction is now to finish GUI clarity for that slice, then clean up legacy behavior authoring before adding many new primitives.
 
 ## Planned
 
-### Agent editor API layer and behavior-primitive remodeling
+### Finish behavior-chain GUI clarity
 
-Status: Current priority / in-process work. The first in-process facade is implemented; the next priority is remodeling canonical action-plan authoring around behavior primitives before stabilizing or externalizing the API.
+Status: Current finishing slice before closing the sprint.
 
 Supporting documents:
 
+- [Behavior System Next Steps](Behavior-System-Next-Steps.md)
+- [Behavior Model Consolidation First Slice](../Archived/Behavior-Model-Consolidation-First-Slice.md)
+
+Goal: make the existing minimal GUI behavior editor easier to understand before calling the sprint finished.
+
+Scope:
+
+- Make the canonical behavior-chain section visually primary.
+- Clearly label low-level `steps/checks/effects` as legacy/advanced compatibility.
+- Show selected action-plan shape: canonical behavior, transitional primitive, legacy low-level, or empty/passive.
+- Show concise default-state hints for current Action Steps, especially `Facing = West` and `Target = Self`.
+
+### Legacy behavior cleanup and behavior trace formatter
+
+Status: Upcoming planned work after the GUI finishing slice.
+
+Supporting documents:
+
+- [Behavior System Next Steps](Behavior-System-Next-Steps.md)
 - [Agent API Wishlist](Agent-API-Wishlist.md)
 - [Agent Editor API Plan](Agent-Editor-API-Plan.md)
 
-Goal: create a stable, constrained agent-facing API over the editor/content services so agents can author content through the same capability model as the editor GUI. Canonical authoring should expose action plans as behavior primitives with typed configuration, required state, and followup ports, rather than exposing arbitrary low-level checks/effects/actions as the primary authoring model.
+Goal: reduce legacy behavior authoring surface area, then add a compact behavior-chain trace formatter before expanding the Action Step catalog.
 
-Completed first-slice scope:
+Planned order:
+
+1. Legacy behavior cleanup plan and implementation where safe.
+2. Behavior trace formatter.
+3. New canonical Action Step planning.
+
+Legacy cleanup should not delete runtime/content compatibility until canonical replacements exist for important legacy patterns.
+
+### Completed: behavior model consolidation first slice
+
+Status: Completed / archived.
+
+Supporting document:
+
+- [Behavior Model Consolidation First Slice](../Archived/Behavior-Model-Consolidation-First-Slice.md)
+
+Goal completed: make the editor-facing behavior model capable of representing an Action Plan as an ordered fallback chain of engine-defined Action Steps. The first canonical chain supports `MoveFacing -> PickupTarget` without requiring authors or agents to assemble low-level checks/effects or link separate primitive-backed fallback plan descriptors.
+
+Completed foundation scope:
 
 - Add an in-process API facade over existing editor/content services before choosing an external protocol. The first facade is implemented as `AgentContentEditorApi` in the Editor project.
 - Support document/session operations, validation, YAML preview/diff, entity template authoring, actor initial facing, action plans/steps, supported checks, and supported effects.
 - Keep authoring canonical: do not expose legacy arbitrary variables, legacy variable fields, or `SetVariable` as new authoring commands.
 - Return structured results and actionable diagnostics from mutating operations.
 - Add tests that use the API to generate movement-capable test content, validate it, and inspect the resulting YAML.
+- Add persistent entity action state for `Facing` and `Target`.
+- Add transitional primitive-backed descriptor/runtime support for `MoveFacing` and `PickupTarget`, including linked fallback references.
+- Add validation, editor service, and agent API support for primitive-backed plans and a `MoveFacing -> PickupTarget` helper.
 
-Current phased work:
+Completed sprint slice:
 
-#### Phase 1: Define the behavior primitive model
+- Add a canonical Action Plan / Fallback Chain descriptor that is an ordered list of engine-defined Action Steps.
+- Interpret that ordered list with fallback-by-order semantics.
+- Keep legacy low-level descriptors and transitional primitive-backed descriptors loadable and executable.
+- Add an Action Step catalog/metadata source for `MoveFacing` and `PickupTarget`.
+- Add validation and editor/agent API operations for authoring the first canonical chain without low-level check/effect construction.
+- Add minimal GUI support for viewing and editing catalog-backed behavior chains.
+- Run a content-editor-style generated-content exercise and record outcomes.
 
-Status: Satisfied by `Behavior-Primitive-Action-Plans.md`; keep open only for small clarifications discovered during implementation.
+#### Archived/superseded primitive remodeling notes
 
-Purpose: establish the canonical model before expanding the API surface.
+Status: completed as transitional foundation, then archived/superseded by behavior model consolidation.
 
-Scope:
+The primitive-backed linked-plan foundation remains compatibility/prototype work and should keep loading/executing while the new canonical behavior chain is added. Details are preserved in:
 
-- Define what a behavior primitive/action-plan primitive is.
-- Define required state, initializable state, implicit state writes, and followup ports.
-- Define `Wandering`, `SeekTarget`, `PickupTarget`, and `BumpTarget` as the first-pass primitive catalog.
-- Define how low-level checks/effects remain available as legacy/advanced/internal machinery.
+- [Behavior Primitive Action Plans](Behavior-Primitive-Action-Plans.md)
+- [Behavior Primitive/Fallback Foundation Archive](../Archived/Behavior-Primitive-Fallback-Foundation.md)
 
-Testable outcomes:
+Do not continue the older plan by adding more linked top-level primitive plans as the editor-facing model. New canonical work should follow `Behavior-System-Next-Steps.md`.
 
-- A checked-in design/update document describes behavior primitives, state requirements, followup ports, and the initial primitive catalog.
-- The capability manual distinguishes canonical behavior-primitive authoring from advanced/legacy low-level step/check/effect authoring.
-- The documented `Wandering` behavior explains that it requires `Facing`, attempts one move, sets `Target` to the blocker for followup, reverses `Facing` for the next turn when blocked, and resolves to one action.
-- The documented `SeekTarget` behavior explains that it requires `Target`, moves toward target using counter-clockwise tie-breaking, and uses the generic followup when movement fails for any reason.
+#### Re-run generated-content exercises and revise roadmap
 
-#### Phase 2: Add Core/content descriptor support
-
-Purpose: represent behavior primitives in content without requiring authors to assemble implementation steps.
-
-Scope:
-
-- Add a descriptor shape for primitive-backed action plans or behavior plans.
-- Preserve loading/runtime compatibility for existing step/check/effect descriptors.
-- Materialize or interpret the first primitive subset through engine-owned behavior semantics.
-
-Testable outcomes:
-
-- Unit tests can materialize primitive descriptors into executable runtime behavior.
-- A `Wandering` entity moves in its current `Facing` direction when unblocked.
-- When blocked, `Wandering` updates canonical `Target` to the blocker and reverses canonical `Facing` for the next turn.
-- A blocked `Wandering` plan can call its configured followup and still resolves to exactly one consumed action.
-- A `SeekTarget` entity moves toward `Target` using counter-clockwise tie-breaking and uses followup or `Wait` when movement fails.
-- `PickupTarget` reproduces the pickup portion of current `handleBlocker` behavior.
-- `BumpTarget` reproduces the current `handleBlocker` fallback behavior.
-- Existing step/check/effect YAML still loads and existing compatibility tests continue to pass.
-
-#### Phase 3: Add validation and editor/content parity
-
-Purpose: make behavior primitives safe and inspectable through content validation and editor services.
-
-Scope:
-
-- Validate required state for primitive-backed plans.
-- Validate followup references and followup port configuration.
-- Surface diagnostics for missing `Facing`, missing followup plans, unsupported primitive kinds, or malformed primitive configuration.
-- Keep arbitrary variable mutation and `SetVariable` out of canonical authoring.
-
-Testable outcomes:
-
-- Validation reports an actionable diagnostic when an entity assigned `Wandering` lacks initial `Facing` or another valid source of `Facing`.
-- Validation reports an actionable diagnostic when `Wandering.onBlocked` references a missing plan.
-- Canonical validation passes for a valid entity using `Wandering` with initial `Facing` and valid followup.
-- Canonical validation continues to flag arbitrary variable fields and `SetVariable` as non-canonical authoring.
-
-#### Phase 4: Adjust the agent/editor API around behavior primitives
-
-Purpose: expose the new canonical authoring model before external transport is added.
-
-Scope:
-
-- Add API commands for creating/selecting primitive-backed action plans.
-- Add API commands for configuring primitive followup ports.
-- Keep entity assignment and initial state authoring simple.
-- Demote low-level step/check/effect construction to advanced/internal API surface or keep it out of normal agent workflows.
-
-Testable outcomes:
-
-- Tests can create a `Wandering` primitive plan through the agent API without manually adding `CanMove`, `Move`, `BlockingEntity`, `ReverseDirection`, or `CallPlan` steps.
-- Tests can assign `Wandering` to an entity and set initial `Facing` through the agent API.
-- Tests can configure `Wandering.onBlocked` to call a chosen followup plan through the agent API.
-- The agent API rejects or clearly marks unsupported attempts to author arbitrary internal state mutation.
-- Generated YAML/content validates with zero canonical diagnostics for the supported primitive path.
-
-#### Phase 5: Re-run generated-content exercises and revise roadmap
+Status: Completed for the first behavior-chain exercise pass.
 
 Purpose: confirm the new model improves authoring and identify remaining true engine gaps.
 
 Scope:
 
 - Re-run the barrel/trap/rat exercise using temporary/generated content.
-- Record which requests are supported by primitive behavior authoring and which need new engine capabilities.
-- Decide whether additional primitive behaviors should be planned.
+- Record which requests are supported by ordered behavior-chain authoring and which need new engine capabilities.
+- Decide whether additional canonical Action Steps or behavior templates should be planned.
 
 Testable outcomes:
 
 - Barrel can still be authored as a passive container.
-- Rat can be authored as a `Wandering` entity with initial `Facing` and configured followup without low-level step construction.
+- Rat can be authored with an ordered `MoveFacing -> PickupTarget` behavior chain and initial/defaulted `Facing` without low-level step construction or linked fallback plan descriptors.
 - Rat taking two actions per turn remains classified as scheduler/speed engine work unless a speed capability has been added.
 - Trap bumping all four directions remains classified as a new behavior/action primitive or scheduler capability unless such a primitive has been added.
 - The roadmap is updated based on the exercise results.
+
+Exercise results:
+
+- A content-editor-style exercise found the docs and API surface sufficient to identify the preferred canonical behavior route.
+- Passive barrel/container content is supported with entity template inventory/capacity fields and no default action plan.
+- Rat behavior is supported through canonical `MoveFacing -> PickupTarget` behavior chains; a convenience helper now exists to avoid confusion with the older primitive-backed linked-chain helper.
+- Trap all-direction behavior remains unsupported and should be planned as a future engine/editor capability only after semantics are defined.
+- Rat two-actions-per-turn remains unsupported and should stay classified as future scheduler/speed work.
 
 Additional API follow-up after behavior remodeling:
 
@@ -127,6 +118,12 @@ Additional API follow-up after behavior remodeling:
 - Add dry-run or save-preview support so agents can inspect canonicalization before writing existing files.
 - Add convenience authoring helpers for common supported patterns discovered during exercises.
 - Keep newly discovered gameplay semantics, such as multiple actions per turn or all-direction trap behavior, out of the API until they are planned as engine capabilities.
+
+### New canonical Action Steps
+
+Status: Upcoming after legacy cleanup and behavior trace formatting.
+
+Candidate ideas include `Wait`, `ReverseFacing`, `BumpTarget`, and `SeekTarget`, but each should be planned with concrete semantics before implementation.
 
 ## Conceptualized, not yet planned
 
@@ -162,6 +159,22 @@ Concept: add new primitives and state needed for basic gameplay scenarios, poten
 
 Generated content exercises have also surfaced possible future needs for multiple actions per turn and canonical multi-direction effects. These remain conceptualized, not yet planned.
 
+Specific near-term canonical Action Steps such as `Wait`, `ReverseFacing`, `BumpTarget`, and `SeekTarget` are listed as upcoming only after legacy cleanup and behavior trace formatting. Broader gameplay primitives remain conceptual until selected and planned.
+
+### Scheduler/speed and multiple actions per turn
+
+Status: Conceptualized, not yet planned.
+
+Concept: support entities taking more than one action per turn, variable speed, initiative, or action budgets. Rat two-actions-per-turn remains classified here after the generated-content exercise.
+
+### Behavior/action-plan templates
+
+Status: Conceptualized, not yet planned.
+
+Concept: add quality-of-life workflows for reusable behavior templates, including apply-template, save-as-template, template editing, and template usage display.
+
+Planning deferred because current behavior-chain descriptors are sufficient for engine/editor parity, and templates are not currently required as a foundation for other capabilities.
+
 ### Reaction action-plan slots and bump-triggered interactions
 
 Status: Conceptualized, not yet planned.
@@ -170,30 +183,8 @@ Concept: entities may eventually expose action-plan slots beyond their normal tu
 
 Planning notes:
 
-- This depends on the behavior-primitive/fallback-chain remodeling but is not required for the first canonical chain slice.
+- This depends on behavior-chain consolidation but is not required for the first canonical chain slice.
 - Persistent entity action state, especially `Facing` and `Target`, should be considered separately from per-invocation action-plan context before reaction slots are implemented.
 - Cross-entity reaction chains will need explicit root actor/current actor/instigator semantics, trace causality, and temporal recursion guards.
 - This may overlap with future scheduler/speed work, but it should not be used as a shortcut for multiple scheduled actions per turn.
 - This may overlap with future action primitives and runtime states, especially any eventual reaction-trigger or interaction-target primitive.
-
-### Behavior model consolidation
-
-Status: Planned next architectural direction.
-
-Concept: add a new canonical behavior system beside the existing low-level action-plan compatibility model. The editor-facing model should present an entity's Action Plan as an ordered fallback chain of engine-defined Action Steps. Existing low-level `steps/checks/effects` remain legacy/advanced/internal compatibility rather than the canonical GUI model.
-
-Supporting document:
-
-- [Behavior Model Consolidation Plan](Behavior-Model-Consolidation-Plan.md)
-
-Archived foundation work:
-
-- [Behavior Primitive/Fallback Foundation Archive](../Archived/Behavior-Primitive-Fallback-Foundation.md)
-
-### Behavior chain trace formatter
-
-Status: Conceptualized, not yet planned.
-
-Concept: add a compact trace/log formatter for behavior fallback chains so tests, debugging, and future UI can inspect chain resolution without reading the full raw trace tree. Example output might summarize each attempted Action Step, whether it succeeded or failed, why fallback continued, and what entity/state was affected.
-
-Planning deferred until the canonical behavior chain runtime exists and its trace shape has stabilized.

@@ -216,7 +216,7 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
-    public void PrototypeRegistryValidationReportsMissingFacingForPrimitiveMoveFacing()
+    public void PrototypeRegistryValidationAcceptsDefaultableFacingForPrimitiveMoveFacing()
     {
         var registry = YamlContentLoader.LoadRegistry(
             """
@@ -241,14 +241,8 @@ public sealed class ContentRegistryValidationTests
 
         var result = registry.Validate();
 
-        Assert.False(result.IsValid);
-        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
-        Assert.Equal(new EntityTemplateId("slime"), diagnostic.EntityTemplateId);
-        Assert.Equal(new ActionPlanTemplateId("moveFacing"), diagnostic.ActionPlanTemplateId);
-        Assert.Equal(new ActionPlanId("moveFacing"), diagnostic.ActionPlanId);
-        Assert.Null(diagnostic.StepIndex);
-        Assert.Equal(ActionPlanSlot.Facing, diagnostic.ActionPlanSlot);
-        Assert.Equal(PlanValueKind.Direction, diagnostic.ExpectedValueKind);
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
     }
 
     [Fact]
@@ -284,7 +278,7 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
-    public void PrototypeRegistryValidationReportsMissingTargetForPrimitivePickupTarget()
+    public void PrototypeRegistryValidationAcceptsDefaultableTargetForPrimitivePickupTarget()
     {
         var registry = YamlContentLoader.LoadRegistry(
             """
@@ -309,13 +303,8 @@ public sealed class ContentRegistryValidationTests
 
         var result = registry.Validate();
 
-        Assert.False(result.IsValid);
-        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
-        Assert.Equal(new EntityTemplateId("slime"), diagnostic.EntityTemplateId);
-        Assert.Equal(new ActionPlanTemplateId("pickupTarget"), diagnostic.ActionPlanTemplateId);
-        Assert.Equal(new ActionPlanId("pickupTarget"), diagnostic.ActionPlanId);
-        Assert.Equal(ActionPlanSlot.Target, diagnostic.ActionPlanSlot);
-        Assert.Equal(PlanValueKind.Entity, diagnostic.ExpectedValueKind);
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
     }
 
     [Fact]
@@ -353,6 +342,151 @@ public sealed class ContentRegistryValidationTests
 
         Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsBehaviorChainPickupTargetAfterMoveFacingWritesTarget()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: behaviorChain
+                actionStateDefaults:
+                  facing: North
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              behaviorChain:
+                id: behaviorChain
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                    - kind: PickupTarget
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsDefaultableStateForBehaviorChain()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: behaviorChain
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              behaviorChain:
+                id: behaviorChain
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                    - kind: PickupTarget
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsPickupTargetAsFirstBehaviorStep()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: behaviorChain
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              behaviorChain:
+                id: behaviorChain
+                behavior:
+                  steps:
+                    - kind: PickupTarget
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsMixedActionPlanShapes()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              mixed:
+                id: mixed
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionPlanShape);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsEmptyBehaviorChain()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              emptyBehavior:
+                id: emptyBehavior
+                behavior:
+                  steps: []
+            """);
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == ContentDiagnosticCode.InvalidActionPlanShape
+            && diagnostic.Message.Contains("empty behavior chain"));
     }
 
     [Fact]

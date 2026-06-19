@@ -8,7 +8,7 @@ The behavior-primitive/fallback foundation work has been archived at:
 
 The active direction is now to build a separate canonical behavior system beside the legacy low-level action-plan model:
 
-- [Behavior Model Consolidation Plan](Behavior-Model-Consolidation-Plan.md)
+- [Behavior Model Consolidation First Slice](../Archived/Behavior-Model-Consolidation-First-Slice.md)
 
 Summary of completed foundation work:
 

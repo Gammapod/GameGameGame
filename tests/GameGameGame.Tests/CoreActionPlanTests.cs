@@ -309,6 +309,40 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void ActionStepCatalogExposesAllCanonicalActionStepKinds()
+    {
+        Assert.Equal(
+            Enum.GetValues<ActionPlanBehaviorStepKind>().Order(),
+            ActionStepCatalog.Steps.Select(step => step.Kind).Order());
+    }
+
+    [Fact]
+    public void ActionStepCatalogDescribesMoveFacingMetadata()
+    {
+        var moveFacing = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.MoveFacing);
+
+        Assert.Equal("Move Facing", moveFacing.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Stable, moveFacing.Tier);
+        Assert.Contains("blocked", moveFacing.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(moveFacing.RequiredState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(moveFacing.DefaultableState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(moveFacing.StateWrites, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+    }
+
+    [Fact]
+    public void ActionStepCatalogDescribesPickupTargetMetadata()
+    {
+        var pickupTarget = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.PickupTarget);
+
+        Assert.Equal("Pickup Target", pickupTarget.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Stable, pickupTarget.Tier);
+        Assert.Contains("pick up", pickupTarget.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(pickupTarget.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(pickupTarget.DefaultableState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Empty(pickupTarget.StateWrites);
+    }
+
+    [Fact]
     public void ActionPlanDescriptorMaterializesCanonicalBuiltInsWithoutVariableNames()
     {
         var world = TestWorld.CreateWorld();
@@ -1189,6 +1223,104 @@ public sealed class CoreActionPlanTests
         Assert.True(result.ConsumesTurn);
         Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(TestWorld.SlimeId));
         Assert.True(TraceContains(result.Trace, "Wait"));
+    }
+
+    [Fact]
+    public void BehaviorChainRunsMoveFacingThenPickupTargetWithoutLinkedFallbackPlan()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
+        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("behavior-chain"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, context);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Slime@world(1,1)", world.FormatEntityAddress(TestWorld.SlimeId));
+        Assert.Equal("Rock@slime(0,0)", world.FormatEntityAddress(TestWorld.RockId));
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.SlimeId));
+        Assert.True(TraceContains(result.Trace, "Action Step MoveFacing"));
+        Assert.True(TraceContains(result.Trace, "Action Step PickupTarget"));
+        Assert.False(TraceContains(result.Trace, "Fallback plan"));
+    }
+
+    [Fact]
+    public void BehaviorChainStopsAfterFirstSuccessfulActionStep()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var context = new ActionPlanContext();
+        context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("behavior-chain"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, context);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Slime@world(0,1)", world.FormatEntityAddress(TestWorld.SlimeId));
+        Assert.True(TraceContains(result.Trace, "Action Step MoveFacing"));
+        Assert.False(TraceContains(result.Trace, "Action Step PickupTarget"));
+    }
+
+    [Fact]
+    public void EmptyBehaviorChainResolvesAsNoTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("empty-behavior"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.SlimeId,
+            plan,
+            new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.False(result.ConsumesTurn);
+        Assert.False(result.ContinuePlan);
+        Assert.Equal(TraceStatus.Success, result.Trace.Status);
+        Assert.Contains("no action steps", result.Trace.Detail);
+    }
+
+    [Fact]
+    public void PickupTargetPrimitiveDefaultsMissingTargetToSelf()
+    {
+        var world = TestWorld.CreateWorld();
+        var context = new ActionPlanContext();
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("pickup-self"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget)
+            ]));
+
+        _ = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            TestWorld.SlimeId,
+            plan,
+            context);
+
+        Assert.True(context.TryGet<EntityPlanValue>(ActionPlanSlot.Target, out var target));
+        Assert.Equal(TestWorld.SlimeId, target.Value);
     }
 
     [Fact]

@@ -148,6 +148,83 @@ public sealed class AgentContentEditorApiTests
         Assert.DoesNotContain("kind: SetVariable", snapshot.YamlPreview);
     }
 
+    [Fact]
+    public void AgentContentEditorApiListsCanonicalActionStepMetadata()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+
+        var steps = AssertSuccess(api.ListActionSteps());
+
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing && step.DisplayName == "Move Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PickupTarget && step.DisplayName == "Pickup Target");
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalBehaviorChain()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var ratId = AssertSuccess(api.CreateEntityTemplate("Behavior Rat"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            ratId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Weight: 1,
+                CarryingCapacity: 3,
+                Glyph: 'r',
+                Color: PresentationColor.Green)));
+        AssertSuccess(api.SetInitialFacing(ratId, Direction.West));
+
+        var planId = AssertSuccess(api.CreateActionPlan("Rat Behavior"));
+        AssertSuccess(api.SetActionPlanBehavior(
+            planId,
+            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget]));
+        AssertSuccess(api.SetDefaultActionPlan(ratId, planId));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+        Assert.Contains("behavior:", snapshot.YamlPreview);
+        Assert.Contains("kind: MoveFacing", snapshot.YamlPreview);
+        Assert.Contains("kind: PickupTarget", snapshot.YamlPreview);
+        Assert.DoesNotContain("primitive:", snapshot.YamlPreview);
+        Assert.DoesNotContain("fallbackPlanId:", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: CanMove", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: CallPlan", snapshot.YamlPreview);
+        Assert.DoesNotContain("kind: SetVariable", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalBehaviorChainWithHelper()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var ratId = AssertSuccess(api.CreateEntityTemplate("Helper Rat"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            ratId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Weight: 1,
+                CarryingCapacity: 3,
+                Glyph: 'r',
+                Color: PresentationColor.Green)));
+
+        var planId = AssertSuccess(api.CreateMoveFacingPickupTargetBehavior("Helper Rat Behavior"));
+        AssertSuccess(api.SetDefaultActionPlan(ratId, planId));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+        Assert.Contains("behavior:", snapshot.YamlPreview);
+        Assert.Contains("kind: MoveFacing", snapshot.YamlPreview);
+        Assert.Contains("kind: PickupTarget", snapshot.YamlPreview);
+        Assert.Contains("facing: West", snapshot.YamlPreview);
+        Assert.DoesNotContain("primitive:", snapshot.YamlPreview);
+        Assert.DoesNotContain("fallbackPlanId:", snapshot.YamlPreview);
+    }
+
     private static void AssertSuccess(AgentApiResult result)
     {
         Assert.True(result.IsSuccess, result.Error?.Message);

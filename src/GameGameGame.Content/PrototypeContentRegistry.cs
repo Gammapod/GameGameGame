@@ -303,6 +303,7 @@ public sealed class PrototypeContentRegistry(
         {
             TryValidate(errors, $"Action plan template {templateId} ({descriptor.Id})", () => descriptor.Materialize());
 
+            ValidateActionPlanShape(diagnostics, templateId, descriptor);
             ValidatePrimitiveFallback(diagnostics, templateId, descriptor);
 
             foreach (var step in descriptor.Steps)
@@ -334,6 +335,35 @@ public sealed class PrototypeContentRegistry(
         }
 
         ValidateTemplateActionPlanVariables(errors, diagnostics);
+
+        static void ValidateActionPlanShape(
+            List<ContentDiagnostic> validationDiagnostics,
+            ActionPlanTemplateId actionPlanTemplateId,
+            ActionPlanDescriptor descriptor)
+        {
+            var activeShapes = 0;
+            activeShapes += descriptor.Behavior?.Steps.Count > 0 ? 1 : 0;
+            activeShapes += descriptor.Primitive is not null ? 1 : 0;
+            activeShapes += descriptor.Steps.Count > 0 ? 1 : 0;
+
+            if (activeShapes > 1)
+            {
+                AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionPlanShape,
+                    $"Action plan {descriptor.Id} declares multiple behavior shapes. Use only one of behavior, primitive, or low-level steps.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id));
+            }
+
+            if (descriptor.Behavior is { Steps.Count: 0 })
+            {
+                AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionPlanShape,
+                    $"Action plan {descriptor.Id} declares an empty behavior chain. Omit behavior or add at least one Action Step.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id));
+            }
+        }
 
         void ValidatePrimitiveFallback(
             List<ContentDiagnostic> validationDiagnostics,
@@ -510,6 +540,7 @@ public sealed class PrototypeContentRegistry(
 
         if (plan.Primitive is { } primitive)
         {
+            ApplyDefaultableState(GetPrimitiveSlotDefaultable(primitive.Kind), slots);
             ValidatePrimitiveSlotReads(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, primitive, GetPrimitiveSlotReads(primitive.Kind), slots);
             ApplySlotWrites(GetPrimitiveSlotWrites(primitive.Kind), slots);
 
@@ -517,6 +548,18 @@ public sealed class PrototypeContentRegistry(
                 && plansById.TryGetValue(fallbackPlanId, out var fallbackPlan))
             {
                 ValidatePlanSlots(diagnostics, subject, entityTemplateId, actionPlanTemplateId, fallbackPlan, slots, plansById, callStack);
+            }
+        }
+
+        if (plan.Behavior is { } behavior)
+        {
+            for (var index = 0; index < behavior.Steps.Count; index++)
+            {
+                var step = behavior.Steps[index];
+                var metadata = ActionStepCatalog.Get(step.Kind);
+                ApplyDefaultableState(metadata.DefaultableState, slots);
+                ValidateBehaviorStepSlotReads(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, index, metadata.RequiredState, slots);
+                ApplySlotWrites(metadata.StateWrites, slots);
             }
         }
 
@@ -547,6 +590,14 @@ public sealed class PrototypeContentRegistry(
         kind switch
         {
             ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            _ => []
+        };
+
+    private static IReadOnlyList<PlanPrimitiveSlotDescriptor> GetPrimitiveSlotDefaultable(ActionPlanPrimitiveKind kind) =>
+        kind switch
+        {
+            ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.PickupTarget => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
             _ => []
         };
 
@@ -583,6 +634,49 @@ public sealed class PrototypeContentRegistry(
                     entityTemplateId: entityTemplateId,
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: plan.Id,
+                    actionPlanSlot: read.Slot,
+                    expectedValueKind: read.ValueKind,
+                    actualValueKind: actualKind));
+            }
+        }
+    }
+
+    private static void ValidateBehaviorStepSlotReads(
+        List<ContentDiagnostic> diagnostics,
+        string subject,
+        EntityTemplateId? entityTemplateId,
+        ActionPlanTemplateId? actionPlanTemplateId,
+        ActionPlanDescriptor plan,
+        ActionPlanBehaviorStepDescriptor step,
+        int stepIndex,
+        IReadOnlyList<PlanPrimitiveSlotDescriptor> reads,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots)
+    {
+        foreach (var read in reads)
+        {
+            if (!slots.TryGetValue(read.Slot, out var actualKind))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingPlanSlot,
+                    $"{subject} action step {step.Kind} reads missing required slot {read.Slot}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    stepIndex: stepIndex,
+                    actionPlanSlot: read.Slot,
+                    expectedValueKind: read.ValueKind));
+                continue;
+            }
+
+            if (actualKind != read.ValueKind)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.PlanVariableTypeMismatch,
+                    $"{subject} action step {step.Kind} slot {read.Slot} expected {read.ValueKind} but found {actualKind}.",
+                    entityTemplateId: entityTemplateId,
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: plan.Id,
+                    stepIndex: stepIndex,
                     actionPlanSlot: read.Slot,
                     expectedValueKind: read.ValueKind,
                     actualValueKind: actualKind));
@@ -668,6 +762,16 @@ public sealed class PrototypeContentRegistry(
         foreach (var write in writes)
         {
             slots[write.Slot] = write.ValueKind;
+        }
+    }
+
+    private static void ApplyDefaultableState(
+        IReadOnlyList<PlanPrimitiveSlotDescriptor> defaults,
+        Dictionary<ActionPlanSlot, PlanValueKind> slots)
+    {
+        foreach (var defaultable in defaults)
+        {
+            slots.TryAdd(defaultable.Slot, defaultable.ValueKind);
         }
     }
 

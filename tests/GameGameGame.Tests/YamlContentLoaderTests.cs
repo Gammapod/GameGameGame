@@ -177,6 +177,35 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderRoundTripsCanonicalBehaviorChainDescriptor()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              behaviorChain:
+                id: behaviorChain
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                    - kind: PickupTarget
+            """);
+
+        var registry = document.ToRegistry();
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+
+        var descriptor = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain"));
+        Assert.Equal(
+            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget],
+            descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
+        Assert.Contains("behavior:", saved);
+        Assert.Contains("kind: MoveFacing", saved);
+        Assert.Equal(ActionPlanBehaviorStepKind.PickupTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[1].Kind);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCanonicalActorActionStateDefaults()
     {
         var registry = YamlContentLoader.LoadRegistry(

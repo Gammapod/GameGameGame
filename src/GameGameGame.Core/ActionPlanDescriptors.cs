@@ -3,14 +3,28 @@ namespace GameGameGame.Core;
 public sealed record ActionPlanDescriptor(
     ActionPlanId Id,
     IReadOnlyList<ActionPlanStepDescriptor> Steps,
-    ActionPlanPrimitiveDescriptor? Primitive = null)
+    ActionPlanPrimitiveDescriptor? Primitive = null,
+    ActionPlanBehaviorDescriptor? Behavior = null)
 {
     public ActionPlanDefinition Materialize() =>
         new(
             Id,
             Steps.Select(step => step.Materialize()).ToList(),
-            Primitive);
+            Primitive,
+            Behavior);
 }
+
+public sealed record ActionPlanBehaviorDescriptor(
+    IReadOnlyList<ActionPlanBehaviorStepDescriptor> Steps);
+
+public enum ActionPlanBehaviorStepKind
+{
+    MoveFacing,
+    PickupTarget
+}
+
+public sealed record ActionPlanBehaviorStepDescriptor(
+    ActionPlanBehaviorStepKind Kind);
 
 public enum ActionPlanPrimitiveKind
 {

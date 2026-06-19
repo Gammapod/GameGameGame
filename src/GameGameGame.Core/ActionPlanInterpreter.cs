@@ -8,7 +8,8 @@ public readonly record struct ActionPlanId(string Value)
 public sealed record ActionPlanDefinition(
     ActionPlanId Id,
     IReadOnlyList<ActionPlanStep> Steps,
-    ActionPlanPrimitiveDescriptor? Primitive = null);
+    ActionPlanPrimitiveDescriptor? Primitive = null,
+    ActionPlanBehaviorDescriptor? Behavior = null);
 
 public sealed record ActionPlanStep
 {
@@ -99,6 +100,11 @@ public sealed class ActionPlanInterpreter
         context.AttachEntityActionState(world, actorId);
         var root = new TraceNode($"Plan {plan.Id}", TraceStatus.Info);
 
+        if (plan.Behavior is not null)
+        {
+            return ExecuteBehavior(world, actorId, plan, context, root);
+        }
+
         if (plan.Primitive is not null)
         {
             return ExecutePrimitive(world, actorId, plan, context, callDepth, root);
@@ -136,6 +142,46 @@ public sealed class ActionPlanInterpreter
         root.Status = TraceStatus.Failure;
         root.Detail = "no step consumed or stopped the plan";
         return new PlanExecutionResult(false, ConsumesTurn: false, ContinuePlan: false, root);
+    }
+
+    private PlanExecutionResult ExecuteBehavior(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanDefinition plan,
+        ActionPlanContext context,
+        TraceNode root)
+    {
+        var steps = plan.Behavior!.Steps;
+
+        if (steps.Count == 0)
+        {
+            root.Status = TraceStatus.Success;
+            root.Detail = "behavior chain has no action steps";
+            return new PlanExecutionResult(false, ConsumesTurn: false, ContinuePlan: false, root);
+        }
+
+        for (var index = 0; index < steps.Count; index++)
+        {
+            var step = steps[index];
+            var stepTrace = new TraceNode($"Action Step {step.Kind}", TraceStatus.Info);
+            root.Add(stepTrace);
+
+            var stepResult = ApplyBehaviorStep(world, actorId, context, step);
+            stepTrace.Add(stepResult.Trace);
+            stepTrace.Status = stepResult.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+            stepTrace.Reason = stepResult.Trace.Reason;
+            stepTrace.Detail = stepResult.Trace.Detail;
+
+            if (stepResult.Succeeded)
+            {
+                root.Status = TraceStatus.Success;
+                return new PlanExecutionResult(true, stepResult.ConsumesTurn, stepResult.ContinuePlan, root);
+            }
+        }
+
+        root.Status = TraceStatus.Failure;
+        root.Detail = "behavior chain exhausted without a successful action step";
+        return new PlanExecutionResult(false, ConsumesTurn: true, ContinuePlan: false, root);
     }
 
     private PlanExecutionResult ExecutePrimitive(
@@ -197,6 +243,22 @@ public sealed class ActionPlanInterpreter
         };
     }
 
+    private PlanEffectResult ApplyBehaviorStep(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        ActionPlanBehaviorStepDescriptor step)
+    {
+        var primitive = step.Kind switch
+        {
+            ActionPlanBehaviorStepKind.MoveFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing),
+            ActionPlanBehaviorStepKind.PickupTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget),
+            _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
+        };
+
+        return ApplyPrimitive(world, actorId, context, primitive);
+    }
+
     private PlanEffectResult ApplyMoveFacingPrimitive(
         WorldState world,
         EntityId actorId,
@@ -241,6 +303,12 @@ public sealed class ActionPlanInterpreter
         ActionPlanContext context)
     {
         var trace = new TraceNode("Primitive PickupTarget", TraceStatus.Info);
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out _, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Add(context.Set(ActionPlanSlot.Target, new EntityPlanValue(actorId)));
+        }
+
         var effect = new PickupEffect(new GridCoord(0, 0));
         var result = effect.Apply(world, actorId, context, _movement);
         trace.Add(result.Trace);

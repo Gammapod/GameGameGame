@@ -165,6 +165,7 @@ public sealed class EditableContentDocument
 
         foreach (var (planId, plan) in ActionPlans)
         {
+            AddActionPlanShapeDiagnostics(diagnostics, planId, plan);
             var steps = plan.Steps ?? [];
             for (var stepIndex = 0; stepIndex < steps.Count; stepIndex++)
             {
@@ -188,6 +189,35 @@ public sealed class EditableContentDocument
         }
 
         return new ContentValidationResult(diagnostics);
+    }
+
+    private static void AddActionPlanShapeDiagnostics(
+        List<ContentDiagnostic> diagnostics,
+        string planId,
+        ActionPlanDescriptorDto plan)
+    {
+        var activeShapes = 0;
+        activeShapes += plan.Behavior?.Steps?.Count > 0 ? 1 : 0;
+        activeShapes += plan.Primitive is not null ? 1 : 0;
+        activeShapes += plan.Steps?.Count > 0 ? 1 : 0;
+
+        if (activeShapes > 1)
+        {
+            diagnostics.Add(ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionPlanShape,
+                $"Action plan {planId} declares multiple behavior shapes. Use only one of behavior, primitive, or low-level steps.",
+                actionPlanTemplateId: new ActionPlanTemplateId(planId),
+                actionPlanId: new ActionPlanId(planId)));
+        }
+
+        if (plan.Behavior is not null && (plan.Behavior.Steps is null || plan.Behavior.Steps.Count == 0))
+        {
+            diagnostics.Add(ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionPlanShape,
+                $"Action plan {planId} declares an empty behavior chain. Omit behavior or add at least one Action Step.",
+                actionPlanTemplateId: new ActionPlanTemplateId(planId),
+                actionPlanId: new ActionPlanId(planId)));
+        }
     }
 
     private static void AddEffectVariableFieldDiagnostics(
@@ -354,14 +384,42 @@ public sealed class EditableContentDocument
 
         public ActionPlanPrimitiveDescriptorDto? Primitive { get; set; }
 
+        public ActionPlanBehaviorDescriptorDto? Behavior { get; set; }
+
         public List<ActionPlanStepDescriptorDto>? Steps { get; set; }
 
         public static ActionPlanDescriptorDto From(ActionPlanDescriptor descriptor) => new()
         {
             Id = descriptor.Id.Value,
             Primitive = descriptor.Primitive is null ? null : ActionPlanPrimitiveDescriptorDto.From(descriptor.Primitive),
+            Behavior = descriptor.Behavior is null ? null : ActionPlanBehaviorDescriptorDto.From(descriptor.Behavior),
             Steps = descriptor.Steps.Select(ActionPlanStepDescriptorDto.From).ToList()
         };
+    }
+
+    public sealed class ActionPlanBehaviorDescriptorDto
+    {
+        public List<ActionPlanBehaviorStepDescriptorDto>? Steps { get; set; }
+
+        public static ActionPlanBehaviorDescriptorDto From(ActionPlanBehaviorDescriptor descriptor) => new()
+        {
+            Steps = descriptor.Steps.Select(ActionPlanBehaviorStepDescriptorDto.From).ToList()
+        };
+
+        public ActionPlanBehaviorDescriptor ToDescriptor() =>
+            new((Steps ?? []).Select(step => step.ToDescriptor()).ToList());
+    }
+
+    public sealed class ActionPlanBehaviorStepDescriptorDto
+    {
+        public ActionPlanBehaviorStepKind Kind { get; set; }
+
+        public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
+        {
+            Kind = descriptor.Kind
+        };
+
+        public ActionPlanBehaviorStepDescriptor ToDescriptor() => new(Kind);
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

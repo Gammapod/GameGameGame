@@ -1,8 +1,22 @@
-# Behavior Model Consolidation Plan
+# Behavior Model Consolidation First Slice
 
-Status: Planning / next architectural direction.
+Status: Archived / completed first slice.
 
-The current engine supports legacy low-level action plans and the first primitive-backed fallback-plan foundation. This document records the safer next direction: build a new canonical behavior system beside the legacy action-plan system rather than trying to force the old low-level `steps/checks/effects` editor model into the new fallback-chain model.
+This document records the completed first slice of behavior model consolidation: a canonical behavior-chain system beside the legacy action-plan system, rather than forcing the old low-level `steps/checks/effects` editor model into the new fallback-chain model.
+
+Completed sprint slice: implement the first vertical path for an ordered chain containing `MoveFacing` and `PickupTarget`, preserving legacy low-level action plans and transitional primitive-backed linked plans as compatibility paths.
+
+Implemented first slice:
+
+- canonical behavior-chain descriptors with ordered Action Steps;
+- Core interpretation for `MoveFacing -> PickupTarget` using fallback-by-order semantics;
+- Action Step catalog metadata for `MoveFacing` and `PickupTarget`;
+- YAML load/save support for behavior chains;
+- validation of required `Facing`/`Target` slots across ordered behavior steps using the Action Step catalog;
+- editor service and agent API operations to list Action Step metadata and set/add/remove/reorder canonical behavior-chain steps;
+- minimal GUI Action Plans tab support for viewing catalog-backed behavior chains, showing Action Step hints, and adding/removing/reordering canonical Action Steps;
+- C3 validation hardening: editor materializes default `Facing = West` where possible, validation accepts catalog-defaultable state such as `Target = Self`, mixed action-plan shapes are invalid, and editing tools clear empty behavior chains instead of saving them;
+- compatibility tests proving legacy low-level and transitional primitive-backed paths continue to load and execute.
 
 ## Terminology
 
@@ -99,12 +113,16 @@ The consolidation should preserve most existing invariants, but several should b
 
 ### Phase C1: Descriptor and runtime chain model
 
+Status: Implemented for first canonical Action Steps (`MoveFacing`, `PickupTarget`). Keep open for follow-up hardening only if descriptor shape changes during editor/API work.
+
 - Add a canonical Action Plan / Fallback Chain descriptor that is an ordered list of engine-defined Action Steps.
 - Interpret the list with fallback-by-order semantics.
 - Keep legacy low-level descriptors loadable and executable.
 - Add tests proving `MoveFacing -> PickupTarget` works from one ordered chain without linked fallback plan descriptors.
 
 ### Phase C2: Action Step catalog and metadata
+
+Status: Implemented for first canonical Action Steps (`MoveFacing`, `PickupTarget`). Continue extending this catalog whenever new canonical Action Steps are added.
 
 - Add a machine-readable Action Step catalog as the canonical source for editor/API-selectable steps.
 - Catalog entries should include at minimum: step kind, display name, short description/hint, required state, defaultable state, state writes, and whether the step is stable/canonical or advanced/legacy.
@@ -113,17 +131,23 @@ The consolidation should preserve most existing invariants, but several should b
 
 ### Phase C3: Content validation and defaults
 
+Status: Implemented for the first canonical Action Steps (`MoveFacing`, `PickupTarget`). Continue hardening as new Action Steps introduce new state/default contracts.
+
 - Validate required state implied by Action Steps.
 - Allow engine/editor default state where defined.
 - Report actionable diagnostics for impossible chains or missing required state without defaults.
 
 ### Phase C4: Editor service and agent API support
 
+Status: Implemented for first canonical Action Steps (`MoveFacing`, `PickupTarget`). Continue extending typed operations only with engine-backed Action Steps exposed by the catalog.
+
 - Add typed operations to set an entity's Action Plan list.
 - Add operations to add/remove/reorder Action Steps.
 - Expose Action Step metadata, including hints and implied state.
 
 ### Phase C5: GUI entity behavior editor
+
+Status: Implemented as a minimal Action Plans tab workflow for first canonical Action Steps (`MoveFacing`, `PickupTarget`). Future polish may move behavior-chain editing closer to the selected Entity tab.
 
 - Display the selected entity's Action Plan as an ordered list of Action Steps.
 - Support add/remove/reorder.

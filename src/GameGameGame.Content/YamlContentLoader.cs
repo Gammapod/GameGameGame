@@ -128,7 +128,8 @@ public static class YamlContentLoader
             result[new ActionPlanTemplateId(templateId)] = new ActionPlanDescriptor(
                 new ActionPlanId(Required(plan.Id, nameof(plan.Id))),
                 (plan.Steps ?? []).Select(MaterializeStep).ToList(),
-                plan.Primitive is null ? null : MaterializePrimitive(plan.Primitive));
+                plan.Primitive is null ? null : MaterializePrimitive(plan.Primitive),
+                plan.Behavior is null ? null : MaterializeBehavior(plan.Behavior));
         }
 
         return result;
@@ -138,6 +139,12 @@ public static class YamlContentLoader
         new(
             primitive.Kind,
             primitive.FallbackPlanId is null ? null : new ActionPlanId(primitive.FallbackPlanId));
+
+    private static ActionPlanBehaviorDescriptor MaterializeBehavior(ActionPlanBehaviorDescriptorDto behavior) =>
+        new((behavior.Steps ?? []).Select(MaterializeBehaviorStep).ToList());
+
+    private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(ActionPlanBehaviorStepDescriptorDto step) =>
+        new(step.Kind);
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -310,7 +317,19 @@ public static class YamlContentLoader
 
         public ActionPlanPrimitiveDescriptorDto? Primitive { get; set; }
 
+        public ActionPlanBehaviorDescriptorDto? Behavior { get; set; }
+
         public List<ActionPlanStepDescriptorDto>? Steps { get; set; }
+    }
+
+    private sealed class ActionPlanBehaviorDescriptorDto
+    {
+        public List<ActionPlanBehaviorStepDescriptorDto>? Steps { get; set; }
+    }
+
+    private sealed class ActionPlanBehaviorStepDescriptorDto
+    {
+        public ActionPlanBehaviorStepKind Kind { get; set; }
     }
 
     private sealed class ActionPlanPrimitiveDescriptorDto
