@@ -5,29 +5,34 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
     public bool TakeActorTurnThenAdvance(WorldState world, EntityId actorId, PlannedActionPlan actorPlan)
     {
         var root = new TraceNode($"Turn {world.TurnNumber + 1}", TraceStatus.Info);
-        var (acted, actorTrace) = ResolvePlanTrace(world, actorId, actorPlan);
-        root.Add(actorTrace);
+        var actions = new List<TurnActionReport>();
+        var actorResult = ResolvePlanTrace(world, actorId, actorPlan);
+        root.Add(actorResult.Trace);
+        actions.Add(CreateActionReport(world, actorId, actorResult));
 
-        AdvanceAfterPlayerTurn(world, root);
+        AdvanceAfterPlayerTurn(world, root, actions);
         root.Status = root.Children.Any(child => child.Status == TraceStatus.Failure)
             ? TraceStatus.Failure
             : TraceStatus.Success;
         world.RecordTrace(root);
+        world.RecordTurnReport(new SimulationTurnReport(world.TurnNumber, actions));
 
-        return acted;
+        return actorResult.Acted;
     }
 
     public void AdvanceAfterPlayerTurn(WorldState world)
     {
         var root = new TraceNode($"Turn {world.TurnNumber + 1}", TraceStatus.Info);
-        AdvanceAfterPlayerTurn(world, root);
+        var actions = new List<TurnActionReport>();
+        AdvanceAfterPlayerTurn(world, root, actions);
         root.Status = root.Children.Any(child => child.Status == TraceStatus.Failure)
             ? TraceStatus.Failure
             : TraceStatus.Success;
         world.RecordTrace(root);
+        world.RecordTurnReport(new SimulationTurnReport(world.TurnNumber, actions));
     }
 
-    private void AdvanceAfterPlayerTurn(WorldState world, TraceNode root)
+    private void AdvanceAfterPlayerTurn(WorldState world, TraceNode root, List<TurnActionReport> actions)
     {
         world.AdvanceTurn();
 
@@ -35,21 +40,22 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
         {
             if (world.Entities.ContainsKey(entityId))
             {
-                var (_, trace) = ResolvePlanTrace(world, entityId, actionPlan.PlanTurn(world, entityId, movement));
-                root.Add(trace);
+                var result = ResolvePlanTrace(world, entityId, actionPlan.PlanTurn(world, entityId, movement));
+                root.Add(result.Trace);
+                actions.Add(CreateActionReport(world, entityId, result));
             }
         }
     }
 
     public bool ResolvePlan(WorldState world, EntityId actorId, PlannedActionPlan plan)
     {
-        var (acted, trace) = ResolvePlanTrace(world, actorId, plan);
-        world.RecordTrace(trace);
+        var result = ResolvePlanTrace(world, actorId, plan);
+        world.RecordTrace(result.Trace);
 
-        return acted;
+        return result.Acted;
     }
 
-    private (bool Acted, TraceNode Trace) ResolvePlanTrace(WorldState world, EntityId actorId, PlannedActionPlan plan)
+    private TurnResolutionReport ResolvePlanTrace(WorldState world, EntityId actorId, PlannedActionPlan plan)
     {
         var actorName = world.Entities.TryGetValue(actorId, out var actor) ? actor.Name : actorId.ToString();
         var root = new TraceNode($"Resolve plan for {actorName}", TraceStatus.Info);
@@ -63,19 +69,33 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"resolved {option.GetType().Name}";
-                return (resolution.Succeeded, root);
+                return new TurnResolutionReport(resolution.Succeeded, resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
             }
 
             if (!resolution.ContinuePlan)
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"stopped at {option.GetType().Name}";
-                return (resolution.Succeeded, root);
+                return new TurnResolutionReport(resolution.Succeeded, resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
             }
         }
 
         root.Status = TraceStatus.Failure;
         root.Detail = "no planned action could execute";
-        return (false, root);
+        return new TurnResolutionReport(false, false, ConsumesTurn: false, ContinuePlan: false, root);
     }
+
+    private static TurnActionReport CreateActionReport(WorldState world, EntityId actorId, TurnResolutionReport resolution)
+    {
+        var actorName = world.Entities.TryGetValue(actorId, out var actor) ? actor.Name : actorId.ToString();
+        return new TurnActionReport(
+            actorId,
+            actorName,
+            resolution.Succeeded,
+            resolution.ConsumesTurn,
+            TurnActionSummaryFormatter.FormatTrace(resolution.Trace, resolution.Succeeded),
+            resolution.Trace);
+    }
+
+    private sealed record TurnResolutionReport(bool Acted, bool Succeeded, bool ConsumesTurn, bool ContinuePlan, TraceNode Trace);
 }
