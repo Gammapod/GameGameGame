@@ -1,0 +1,114 @@
+entityTemplates:
+  betaPushRoom:
+    name: Beta Push Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: successPusher
+      templateId: betaPusherSuccess
+      coord:
+        x: 1
+        y: 1
+    - entityId: successBlock
+      templateId: betaSuccessBlock
+      coord:
+        x: 2
+        y: 1
+    - entityId: blockedPusher
+      templateId: betaPusherBlocked
+      coord:
+        x: 1
+        y: 3
+    - entityId: blockedFrontBlock
+      templateId: betaBlockedFrontBlock
+      coord:
+        x: 2
+        y: 3
+    - entityId: blockedRearBlock
+      templateId: betaBlockedRearBlock
+      coord:
+        x: 3
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaPusherSuccess:
+    name: Successful Pusher
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: pushFacingOnly
+    actionStateDefaults:
+      facing: East
+  betaPusherBlocked:
+    name: Blocked Pusher
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: pushFacingOnly
+    actionStateDefaults:
+      facing: East
+  betaSuccessBlock:
+    name: Success Block
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+  betaBlockedFrontBlock:
+    name: Front Block
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+  betaBlockedRearBlock:
+    name: Rear Block
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+presentations:
+  betaPushRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaPusherSuccess:
+    glyph: '>'
+    color: Green
+  betaPusherBlocked:
+    glyph: '!'
+    color: Earth
+  betaSuccessBlock:
+    glyph: 'o'
+    color: Gray
+  betaBlockedFrontBlock:
+    glyph: 'o'
+    color: Gray
+  betaBlockedRearBlock:
+    glyph: 'o'
+    color: Gray
+actionPlans:
+  pushFacingOnly:
+    id: pushFacingOnly
+    behavior:
+      steps:
+      - kind: PushFacing
+scenarios:
+  beta-push-showcase:
+    name: Beta Push Showcase
+    scenarioRootEntityTemplateId: betaPushRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

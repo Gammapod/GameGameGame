@@ -26,7 +26,7 @@ Do not read when:
    - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
 5. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
    - Current expected implementation slice and testable outcomes.
-   - As of this writing: Sprint 11 is complete and archived; the beta release target is gameplay demo vignettes, and no Sprint 12 plan has been selected.
+   - As of this writing: `docs/Plans/Sprint-12-Beta-Primitive-Showcases.md` is active for the first beta primitive showcase scenarios.
 6. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
 7. `docs/Archived/`

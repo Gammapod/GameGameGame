@@ -1,0 +1,90 @@
+entityTemplates:
+  betaDestroyRoom:
+    name: Beta Destroy Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: clearingDestroyer
+      templateId: betaClearingDestroyer
+      coord:
+        x: 1
+        y: 1
+    - entityId: fragileWall
+      templateId: betaFragileWall
+      coord:
+        x: 2
+        y: 1
+    - entityId: selfDestroyAttempt
+      templateId: betaSelfDestroyAttempt
+      coord:
+        x: 1
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaClearingDestroyer:
+    name: Clearing Destroyer
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: bumpThenDestroy
+    actionStateDefaults:
+      facing: East
+  betaSelfDestroyAttempt:
+    name: Self Destroy Attempt
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: destroyTargetOnly
+  betaFragileWall:
+    name: Fragile Wall
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+presentations:
+  betaDestroyRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaClearingDestroyer:
+    glyph: 'x'
+    color: Yellow
+  betaSelfDestroyAttempt:
+    glyph: '?'
+    color: Earth
+  betaFragileWall:
+    glyph: '%'
+    color: Gray
+actionPlans:
+  bumpThenDestroy:
+    id: bumpThenDestroy
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: DestroyTarget
+  destroyTargetOnly:
+    id: destroyTargetOnly
+    behavior:
+      steps:
+      - kind: DestroyTarget
+scenarios:
+  beta-destroy-showcase:
+    name: Beta Destroy Showcase
+    scenarioRootEntityTemplateId: betaDestroyRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

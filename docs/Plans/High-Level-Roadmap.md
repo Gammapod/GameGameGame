@@ -95,6 +95,10 @@ Active beta planning document:
 
 - [Beta Content Exploration Plan](Beta-Content-Exploration-Plan.md)
 
+Active sprint plan:
+
+- [Sprint 12: Beta Primitive Showcases](Sprint-12-Beta-Primitive-Showcases.md)
+
 Beta target statement:
 
 - The project can present several small authored gameplay vignettes, like pitch-deck slides, that demonstrate what the engine naturally makes possible.
