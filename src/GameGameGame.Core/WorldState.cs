@@ -8,6 +8,8 @@ public sealed class WorldState
 
     public TraceNode? LastTrace { get; private set; }
 
+    public SimulationTurnReport? LastTurnReport { get; private set; }
+
     public Dictionary<EntityId, Entity> Entities { get; } = [];
 
     public Dictionary<PlaneId, Plane> Planes { get; } = [];
@@ -84,6 +86,8 @@ public sealed class WorldState
     public void AdvanceTurn() => TurnNumber++;
 
     public void RecordTrace(TraceNode trace) => LastTrace = trace;
+
+    public void RecordTurnReport(SimulationTurnReport report) => LastTurnReport = report;
 
     public void RegisterInventoryPlane(EntityId entityId, PlaneId planeId) => InventoryPlanes[entityId] = planeId;
 

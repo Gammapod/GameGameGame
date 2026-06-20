@@ -41,6 +41,7 @@ Current stable authoring areas:
 - transitional primitive-backed `MoveFacing` and `PickupTarget` action-plan descriptors with explicit fallback references are supported through Core/content validation, editor services, and the agent API; GUI polish remains generic/minimal, and these linked descriptors are not the long-term canonical editor-facing model.
 - canonical ordered behavior-chain descriptors with `MoveFacing`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, and `CreateFacing` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and GUI support that makes canonical chains visually primary over legacy low-level authoring.
 - compact canonical behavior-chain trace formatting is available in Core for tests, debugging, and future editor/agent diagnostics.
+- local turn-order reporting is available in Core for factual debugger/scenario output, including per-plane occupant ordering, actor/player/inert classification, and previous-action summaries from the latest simulated turn; Console renders this report for visible inspection inventory spaces.
 - canonical action-plan preview is available through editor service and agent API commands, summarizing plan shape, ordered Action Steps, state hints/defaults, validation diagnostics, guidance, and YAML preview text.
 
 ### Advanced but supported

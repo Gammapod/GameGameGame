@@ -26,7 +26,7 @@ Console.CursorVisible = false;
 
 while (running)
 {
-    Render(world, inspector, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, playerId, message);
+    Render(world, inspector, registry, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, playerId, game.ActionPlans, message);
 
     var key = Console.ReadKey(intercept: true).Key;
 
@@ -317,12 +317,14 @@ static GridCoord MoveCursor(GridCoord cursor, ConsoleKey key, Plane plane)
 static void Render(
     WorldState world,
     EntityInspectionService inspector,
+    PrototypeContentRegistry registry,
     InputMode mode,
     GridCoord worldCursor,
     GridCoord inventoryCursor,
     EntityId? selectedEntity,
     EntityId inspectedEntity,
     EntityId playerId,
+    IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
     string message)
 {
     Console.Clear();
@@ -330,6 +332,7 @@ static void Render(
     Console.WriteLine("GameGameGame prototype");
     Console.WriteLine("Arrow keys move/select. I inspect. P pickup. D drop. Enter confirms. Esc cancels/quits. Q quits.");
     Console.WriteLine($"Turn: {world.TurnNumber} | Mode: {mode}");
+    Console.WriteLine(message.PadRight(Console.WindowWidth - 1));
 
     if (selectedEntity is { } entityId)
     {
@@ -345,36 +348,26 @@ static void Render(
     var playerPlaneId = world.GetEntityLocation(playerId).PlaneId;
     var containerId = inspector.FindEntityContainingPlane(world, playerPlaneId) ?? playerId;
 
+    var currentContainerPanel = inspector.Inspect(world, containerId);
     DrawInspectionPanel(
-        inspector.Inspect(world, containerId),
+        currentContainerPanel,
         left: 0,
         top: 6,
         width: 38,
         title: "Current Container",
-        cursor: mode is InputMode.PickupSource or InputMode.DropDestination or InputMode.InspectSource ? worldCursor : null);
+        cursor: mode is InputMode.PickupSource or InputMode.DropDestination or InputMode.InspectSource ? worldCursor : null,
+        turnOrderReport: CreateLocalTurnOrderReport(world, currentContainerPanel, actionPlans, playerId, registry));
 
+    var selectedInspectionPanel = inspector.Inspect(world, inspectedEntity);
     DrawInspectionPanel(
-        inspector.Inspect(world, inspectedEntity),
+        selectedInspectionPanel,
         left: 40,
         top: 6,
         width: 38,
         title: "Selected Inspection",
-        cursor: mode is InputMode.PickupDestination or InputMode.DropSource ? inventoryCursor : null);
+        cursor: mode is InputMode.PickupDestination or InputMode.DropSource ? inventoryCursor : null,
+        turnOrderReport: CreateLocalTurnOrderReport(world, selectedInspectionPanel, actionPlans, playerId, registry));
 
-    Console.SetCursorPosition(0, 21);
-    Console.ForegroundColor = ConsoleColor.Gray;
-    foreach (var summaryEntityId in world.Entities.Keys.OrderBy(id => id.Value, StringComparer.Ordinal).Take(3))
-    {
-        Console.WriteLine(world.FormatEntityAddress(summaryEntityId).PadRight(Console.WindowWidth - 1));
-    }
-    Console.WriteLine(message.PadRight(Console.WindowWidth - 1));
-
-    if (world.LastTrace is { } trace)
-    {
-        Console.WriteLine("Last trace:".PadRight(Console.WindowWidth - 1));
-        var line = 0;
-        WriteTrace(trace, depth: 0, line, maxLines: 8);
-    }
 }
 
 static int WriteTrace(TraceNode trace, int depth, int line, int maxLines)
@@ -435,7 +428,29 @@ static TraceNode? FindFailure(TraceNode trace)
     return null;
 }
 
-static void DrawInspectionPanel(EntityInspectionPanel panel, int left, int top, int width, string title, GridCoord? cursor)
+static LocalTurnOrderReport? CreateLocalTurnOrderReport(
+    WorldState world,
+    EntityInspectionPanel panel,
+    IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+    EntityId playerId,
+    PrototypeContentRegistry registry) =>
+    panel.InventoryGrid is { } grid
+        ? LocalTurnOrderReport.Create(
+            world,
+            grid.PlaneId,
+            actionPlans,
+            playerId,
+            entityId => registry.GetPresentationForEntity(entityId).Glyph)
+        : null;
+
+static void DrawInspectionPanel(
+    EntityInspectionPanel panel,
+    int left,
+    int top,
+    int width,
+    string title,
+    GridCoord? cursor,
+    LocalTurnOrderReport? turnOrderReport)
 {
     Console.SetCursorPosition(left, top);
     Console.ForegroundColor = ConsoleColor.Gray;
@@ -481,6 +496,21 @@ static void DrawInspectionPanel(EntityInspectionPanel panel, int left, int top, 
 
             Console.ResetColor();
         }
+    }
+
+    if (turnOrderReport is null)
+    {
+        return;
+    }
+
+    var reportTop = top + grid.Height + 11;
+    var reportLine = 0;
+    foreach (var line in LocalTurnOrderReportFormatter.Format(turnOrderReport).Take(8))
+    {
+        Console.SetCursorPosition(left, reportTop + reportLine);
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.Write(TrimToWidth(line, width));
+        reportLine++;
     }
 }
 
