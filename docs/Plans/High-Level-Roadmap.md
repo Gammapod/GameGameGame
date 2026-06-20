@@ -90,14 +90,11 @@ Recently completed supporting documents:
 
 - [Sprint 10: Scenario Feedback Loop](../Archived/Sprint-10-Scenario-Feedback-Loop.md)
 - [Sprint 11: Alpha Scenario Materialization](../Archived/Sprint-11-Alpha-Scenario-Materialization.md)
+- [Sprint 12: Beta Primitive Showcases](../Archived/Sprint-12-Beta-Primitive-Showcases.md)
 
 Active beta planning document:
 
 - [Beta Content Exploration Plan](Beta-Content-Exploration-Plan.md)
-
-Active sprint plan:
-
-- [Sprint 12: Beta Primitive Showcases](Sprint-12-Beta-Primitive-Showcases.md)
 
 Beta target statement:
 
@@ -111,12 +108,12 @@ Long-term frontend direction:
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
 
-Current decision point: use the completed alpha MVP loop to choose the first beta vignette batch and the minimum primitives/tooling required to make those vignettes readable, playable, and useful for playtest feedback.
+Current decision point: Sprint 12 completed the first current-tool primitive showcase batch. The curated actor zoo is deferred. Next likely sprint selection should choose whether to promote the Gate 1 Direction Transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`) or address a high-priority support gap discovered by the showcases.
 
 Current beta content-exploration order:
 
-1. Explore and test scenarios that are authorable with current tools.
-2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes.
+1. Explore and test scenarios that are authorable with current tools. Completed for the first primitive-showcase batch in Sprint 12; actor zoo deferred.
+2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes. This is the next expected beta gate.
 3. Gate 2: `AcquireNearestTarget` + `SeekTarget`, then explore direct chase, collector, follower, and targeted interaction scenarios.
 4. Gate 3: target-distance / directional choice primitives, then explore fleeing, keep-away, kiting, and patterned pursuit.
 5. Gate 4: `Give` / `Take`, then explore passive containers, trade, stealing, feeding/offering, and transfer restrictions.
@@ -151,7 +148,7 @@ For each candidate vignette, record before implementation whether the intended e
 
 Likely candidate focuses:
 
-- Current-tool beta vignettes: primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`; pickup/drop/weight puzzles; blocker/target fallback-chain exercises; and a first curated actor zoo.
+- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. The first curated actor zoo is deferred until later beta phases, likely after direction transforms make it more informative.
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
 - Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, local turn-order/previous-action tables, compact per-turn state diffs, created/destroyed entity summaries, capability-gap sections, preview-plus-simulation in one command, actor-zoo/isolation report templates, and cleanup/replacement of the older test-local runner. Deferred tactical telegraphing should project each actor's next resolved behavior/fallback on a safe simulation snapshot; pull it forward when complex gameplay scenarios require tactical information beyond previous actions.
 - Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.
@@ -195,6 +192,7 @@ Completed baseline:
 
 - Sprint 10 added `AgentContentEditorApi.RunScenario`, scenario-root entity templates, inventory-plane scenario spaces, deterministic row-major contained-actor initiative, rich canonical behavior-chain traces, and observational runtime outcome reporting.
 - Sprint 11 completed the alpha MVP scenario path: persisted `scenarios`, reusable scenario materialization, player insertion diagnostics, agent/editor scenario authoring/materialization, Console scenario launch by content path and scenario ID, and embedded alpha smoke coverage.
+- Sprint 12 added beta current-tool content fixtures for push, destroy, create, drop, pickup/weight, and behavior-chain composition; consolidated beta fixture validation; and recorded GAP-001 for `CreateFacing` placeholder presentation/template binding.
 
 Future generalized scenario runner wishlist:
 

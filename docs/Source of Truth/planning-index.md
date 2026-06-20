@@ -28,7 +28,7 @@ Do not read when:
    - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
 6. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
    - Current expected implementation slice and testable outcomes.
-   - As of this writing: `docs/Plans/Sprint-12-Beta-Primitive-Showcases.md` is active for the first beta primitive showcase scenarios.
+   - As of this writing: Sprint 12 is complete and archived; no active numbered sprint plan has been selected. The next likely beta gate is the Direction Transform batch.
 7. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
 8. `docs/Archived/`

@@ -75,6 +75,8 @@ Suggested gap-log fields:
 
 ## Phase 0: current-tool vignettes
 
+Status: First primitive-showcase batch completed in Sprint 12. Curated actor zoo deferred.
+
 No new engine work should be required for this phase. Use currently supported entity templates, presentations, scenario roots, player insertion, Console launch, headless scenario runs, inventory dimensions/weight/capacity, initial `Facing`, and canonical behavior chains.
 
 Current canonical Action Steps available for phase 0:
@@ -116,6 +118,7 @@ Current canonical Action Steps available for phase 0:
 7. **Current actor zoo**
    - Curated one-room demonstrations for single-purpose actors: walker, pusher, destroyer, creator, dropper/carrier, and collector/pickup actor.
    - Prefer explicit scenarios at first, then automate isolation previews once repeated setup patterns are clear.
+   - Deferred after Sprint 12; revisit after Direction Transform scenarios add richer actor behavior.
 
 ### Phase 0 reporting requests to watch for
 
