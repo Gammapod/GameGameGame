@@ -1,0 +1,103 @@
+entityTemplates:
+  betaBackstepRoom:
+    name: Beta Backstep Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: successBackstepper
+      templateId: betaSuccessBackstepper
+      coord:
+        x: 1
+        y: 1
+    - entityId: blockedBackstepper
+      templateId: betaBlockedBackstepper
+      coord:
+        x: 3
+        y: 1
+    - entityId: backstepBlocker
+      templateId: betaBackstepBlocker
+      coord:
+        x: 3
+        y: 2
+    - entityId: edgeBackstepper
+      templateId: betaEdgeBackstepper
+      coord:
+        x: 5
+        y: 4
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaSuccessBackstepper:
+    name: Successful Backstepper
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: backstepOnly
+    actionStateDefaults:
+      facing: North
+  betaBlockedBackstepper:
+    name: Blocked Backstepper
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: backstepOnly
+    actionStateDefaults:
+      facing: North
+  betaEdgeBackstepper:
+    name: Edge Backstepper
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: backstepOnly
+    actionStateDefaults:
+      facing: North
+  betaBackstepBlocker:
+    name: Backstep Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+presentations:
+  betaBackstepRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaSuccessBackstepper:
+    glyph: 'B'
+    color: Green
+  betaBlockedBackstepper:
+    glyph: '!'
+    color: Earth
+  betaEdgeBackstepper:
+    glyph: 'E'
+    color: Cyan
+  betaBackstepBlocker:
+    glyph: 'o'
+    color: Gray
+actionPlans:
+  backstepOnly:
+    id: backstepOnly
+    behavior:
+      steps:
+      - kind: Backstep
+scenarios:
+  beta-backstep-showcase:
+    name: Beta Backstep Showcase
+    scenarioRootEntityTemplateId: betaBackstepRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

@@ -156,11 +156,15 @@ public sealed class AgentContentEditorApiTests
         var steps = AssertSuccess(api.ListActionSteps());
 
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing && step.DisplayName == "Move Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.Backstep && step.DisplayName == "Backstep");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PickupTarget && step.DisplayName == "Pickup Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DropFacing && step.DisplayName == "Drop Facing");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PushFacing && step.DisplayName == "Push Facing");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DestroyTarget && step.DisplayName == "Destroy Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.CreateFacing && step.DisplayName == "Create Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnLeft && step.DisplayName == "Turn Left");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnRight && step.DisplayName == "Turn Right");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ReverseFacing && step.DisplayName == "Reverse Facing");
     }
 
     [Fact]

@@ -1,0 +1,99 @@
+entityTemplates:
+  betaTurnRoom:
+    name: Beta Turn Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: leftTurner
+      templateId: betaLeftTurner
+      coord:
+        x: 1
+        y: 1
+    - entityId: rightTurner
+      templateId: betaRightTurner
+      coord:
+        x: 3
+        y: 1
+    - entityId: reverser
+      templateId: betaReverser
+      coord:
+        x: 5
+        y: 1
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaLeftTurner:
+    name: Left Turner
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: turnLeftOnly
+    actionStateDefaults:
+      facing: North
+  betaRightTurner:
+    name: Right Turner
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: turnRightOnly
+    actionStateDefaults:
+      facing: North
+  betaReverser:
+    name: Reverser
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: reverseFacingOnly
+    actionStateDefaults:
+      facing: East
+presentations:
+  betaTurnRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaLeftTurner:
+    glyph: '<'
+    color: Green
+  betaRightTurner:
+    glyph: '>'
+    color: Green
+  betaReverser:
+    glyph: 'R'
+    color: Cyan
+actionPlans:
+  turnLeftOnly:
+    id: turnLeftOnly
+    behavior:
+      steps:
+      - kind: TurnLeft
+  turnRightOnly:
+    id: turnRightOnly
+    behavior:
+      steps:
+      - kind: TurnRight
+  reverseFacingOnly:
+    id: reverseFacingOnly
+    behavior:
+      steps:
+      - kind: ReverseFacing
+scenarios:
+  beta-turn-showcase:
+    name: Beta Turn Showcase
+    scenarioRootEntityTemplateId: betaTurnRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

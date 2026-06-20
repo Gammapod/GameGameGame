@@ -24,7 +24,11 @@ public enum ActionPlanBehaviorStepKind
     DropFacing,
     PushFacing,
     DestroyTarget,
-    CreateFacing
+    CreateFacing,
+    TurnLeft,
+    TurnRight,
+    ReverseFacing,
+    Backstep
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(
@@ -37,7 +41,11 @@ public enum ActionPlanPrimitiveKind
     DropFacing,
     PushFacing,
     DestroyTarget,
-    CreateFacing
+    CreateFacing,
+    TurnLeft,
+    TurnRight,
+    ReverseFacing,
+    Backstep
 }
 
 public sealed record ActionPlanPrimitiveDescriptor(

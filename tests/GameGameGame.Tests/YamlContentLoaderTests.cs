@@ -189,7 +189,11 @@ public sealed class YamlContentLoaderTests
                 behavior:
                   steps:
                     - kind: MoveFacing
+                    - kind: Backstep
                     - kind: PickupTarget
+                    - kind: TurnLeft
+                    - kind: TurnRight
+                    - kind: ReverseFacing
             """);
 
         var registry = document.ToRegistry();
@@ -198,11 +202,20 @@ public sealed class YamlContentLoaderTests
 
         var descriptor = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain"));
         Assert.Equal(
-            [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.PickupTarget],
+            [
+                ActionPlanBehaviorStepKind.MoveFacing,
+                ActionPlanBehaviorStepKind.Backstep,
+                ActionPlanBehaviorStepKind.PickupTarget,
+                ActionPlanBehaviorStepKind.TurnLeft,
+                ActionPlanBehaviorStepKind.TurnRight,
+                ActionPlanBehaviorStepKind.ReverseFacing
+            ],
             descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
         Assert.Contains("behavior:", saved);
         Assert.Contains("kind: MoveFacing", saved);
-        Assert.Equal(ActionPlanBehaviorStepKind.PickupTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[1].Kind);
+        Assert.Contains("kind: Backstep", saved);
+        Assert.Contains("kind: ReverseFacing", saved);
+        Assert.Equal(ActionPlanBehaviorStepKind.ReverseFacing, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[5].Kind);
     }
 
     [Fact]

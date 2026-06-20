@@ -582,7 +582,11 @@ public sealed class PrototypeContentRegistry(
         kind switch
         {
             ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.Backstep => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             ActionPlanPrimitiveKind.PickupTarget => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            ActionPlanPrimitiveKind.TurnLeft => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.TurnRight => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.ReverseFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             _ => []
         };
 
@@ -590,6 +594,10 @@ public sealed class PrototypeContentRegistry(
         kind switch
         {
             ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            ActionPlanPrimitiveKind.Backstep => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            ActionPlanPrimitiveKind.TurnLeft => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.TurnRight => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.ReverseFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             _ => []
         };
 
@@ -597,7 +605,11 @@ public sealed class PrototypeContentRegistry(
         kind switch
         {
             ActionPlanPrimitiveKind.MoveFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.Backstep => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             ActionPlanPrimitiveKind.PickupTarget => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            ActionPlanPrimitiveKind.TurnLeft => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.TurnRight => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            ActionPlanPrimitiveKind.ReverseFacing => [new PlanPrimitiveSlotDescriptor(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             _ => []
         };
 

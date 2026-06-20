@@ -108,7 +108,7 @@ Long-term frontend direction:
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
 
-Current decision point: Sprint 12 completed the first current-tool primitive showcase batch. The curated actor zoo is deferred. Next likely sprint selection should choose whether to promote the Gate 1 Direction Transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`) or address a high-priority support gap discovered by the showcases.
+Current decision point: Sprint 13 has selected the Gate 1 Direction Transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`) as the active sprint focus, with five planned direction showcases and explicit coordination with the core owner before each missing primitive is needed.
 
 Current beta content-exploration order:
 

@@ -24,6 +24,7 @@ public static class BehaviorChainTraceFormatter
 
             AddStateLine(lines, "reads", FindStateReads(step));
             AddStateLine(lines, "writes", FindStateWrites(step));
+            AddStateLine(lines, "results", FindResults(step));
         }
 
         lines.Add($"Terminal: {FormatTerminalStatus(result)}; {FormatTurnStatus(result)}");
@@ -59,6 +60,13 @@ public static class BehaviorChainTraceFormatter
         Descendants(node)
             .Where(trace => trace.Label.StartsWith("Set slot ", StringComparison.Ordinal) && trace.Status == TraceStatus.Success)
             .Select(trace => $"{trace.Label[9..]}={trace.Detail}")
+            .Distinct()
+            .ToList();
+
+    private static IReadOnlyList<string> FindResults(TraceNode node) =>
+        Descendants(node)
+            .Where(trace => trace.Label == "Primitive Backstep" && trace.Status == TraceStatus.Success && !string.IsNullOrWhiteSpace(trace.Detail))
+            .Select(trace => trace.Detail!)
             .Distinct()
             .ToList();
 

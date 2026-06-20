@@ -370,6 +370,9 @@ public sealed class ContentRegistryValidationTests
                   steps:
                     - kind: MoveFacing
                     - kind: PickupTarget
+                    - kind: TurnLeft
+                    - kind: TurnRight
+                    - kind: ReverseFacing
             """);
 
         var result = registry.Validate();
@@ -402,6 +405,70 @@ public sealed class ContentRegistryValidationTests
                   steps:
                     - kind: MoveFacing
                     - kind: PickupTarget
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsDefaultableFacingForTurnActionSteps()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: turnBehavior
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              turnBehavior:
+                id: turnBehavior
+                behavior:
+                  steps:
+                    - kind: TurnLeft
+                    - kind: TurnRight
+                    - kind: ReverseFacing
+            """);
+
+        var result = registry.Validate();
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationAcceptsDefaultableFacingForBackstep()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              slime:
+                name: Slime
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 3
+                carryingCapacity: 20
+                defaultActionPlanId: backstepBehavior
+            presentations:
+              slime:
+                glyph: s
+                color: Green
+            actionPlans:
+              backstepBehavior:
+                id: backstepBehavior
+                behavior:
+                  steps:
+                    - kind: Backstep
             """);
 
         var result = registry.Validate();

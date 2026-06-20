@@ -8,6 +8,149 @@ namespace GameGameGame.Tests;
 public sealed class BetaContentFixtureTests
 {
     [Fact]
+    public void TurnShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DirectionTransforms", "TurnShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-turn-showcase"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaTurnRoom"), TurnCount: 1)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("leftTurner"), new EntityId("rightTurner"), new EntityId("reverser")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. TurnLeft: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("reads: Facing=North", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Facing=West", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. TurnRight: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("reads: Facing=North", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Facing=East", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. ReverseFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("reads: Facing=East", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("writes: Facing=West", StringComparison.Ordinal));
+        Assert.Contains("Left Turner: scenarioRoot(1,1), facing West, target none", report.FinalStateLines);
+        Assert.Contains("Right Turner: scenarioRoot(3,1), facing East, target none", report.FinalStateLines);
+        Assert.Contains("Reverser: scenarioRoot(5,1), facing West, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void BackstepShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DirectionTransforms", "BackstepShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-backstep-showcase"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaBackstepRoom"), TurnCount: 1)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("successBackstepper"), new EntityId("blockedBackstepper"), new EntityId("edgeBackstepper")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. Backstep: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("reads: Facing=North", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved South; preserved Facing=North", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. Backstep: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Target=backstepBlocker", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. Backstep: Failure", StringComparison.Ordinal));
+        Assert.DoesNotContain(report.Turns[2].TraceLines, line => line.Contains("writes: Target=", StringComparison.Ordinal));
+        Assert.Contains("Successful Backstepper: scenarioRoot(1,2), facing North, target none", report.FinalStateLines);
+        Assert.Contains("Blocked Backstepper: scenarioRoot(3,1), facing North, target backstepBlocker", report.FinalStateLines);
+        Assert.Contains("Backstep Blocker: scenarioRoot(3,2), facing none, target none", report.FinalStateLines);
+        Assert.Contains("Edge Backstepper: scenarioRoot(5,4), facing North, target none", report.FinalStateLines);
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Blocked Backstepper could not act", StringComparison.Ordinal));
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Edge Backstepper could not act", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WallBounceShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DirectionTransforms", "WallBounceShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-wall-bounce"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaWallBounceRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("wallBouncer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. MoveFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("reads: Facing=East", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. MoveFacing: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Target=bounceWall", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. ReverseFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("reads: Facing=East", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Facing=West", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. MoveFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("reads: Facing=West", StringComparison.Ordinal));
+        Assert.Contains("Wall Bouncer: scenarioRoot(2,2), facing West, target bounceWall", report.FinalStateLines);
+        Assert.Contains("Bounce Wall: scenarioRoot(4,2), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void PatrolTurnShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DirectionTransforms", "PatrolTurnShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-patrol-turn"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 5)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaPatrolTurnRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("rightPatroller"), new EntityId("leftPatroller")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. MoveFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("reads: Facing=East", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. MoveFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("reads: Facing=East", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. MoveFacing: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("writes: Target=rightPatrolWall", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. TurnRight: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("writes: Facing=South", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.StartsWith("1. MoveFacing: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.Contains("writes: Target=leftPatrolWall", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.StartsWith("2. TurnLeft: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.Contains("writes: Facing=North", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[4].TraceLines, line => line.StartsWith("1. MoveFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[4].TraceLines, line => line.Contains("reads: Facing=South", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[5].TraceLines, line => line.StartsWith("1. MoveFacing: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[5].TraceLines, line => line.Contains("reads: Facing=North", StringComparison.Ordinal));
+        Assert.Contains("Right-Turn Patroller: scenarioRoot(2,2), facing South, target rightPatrolWall", report.FinalStateLines);
+        Assert.Contains("Left-Turn Patroller: scenarioRoot(6,2), facing North, target leftPatrolWall", report.FinalStateLines);
+        Assert.Contains("Right Patrol Wall: scenarioRoot(3,1), facing none, target none", report.FinalStateLines);
+        Assert.Contains("Left Patrol Wall: scenarioRoot(7,3), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
     public void PushFacingShowcaseValidatesMaterializesAndRuns()
     {
         var api = OpenBetaContent("CurrentTools", "PushFacingShowcase.yaml");

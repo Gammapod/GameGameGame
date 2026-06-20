@@ -238,11 +238,15 @@ public sealed class ActionPlanInterpreter
         return primitive.Kind switch
         {
             ActionPlanPrimitiveKind.MoveFacing => ApplyMoveFacingPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.Backstep => ApplyBackstepPrimitive(world, actorId, context),
             ActionPlanPrimitiveKind.PickupTarget => ApplyPickupTargetPrimitive(world, actorId, context),
             ActionPlanPrimitiveKind.DropFacing => ApplyDropFacingPrimitive(world, actorId, context),
             ActionPlanPrimitiveKind.PushFacing => ApplyPushFacingPrimitive(world, actorId, context),
             ActionPlanPrimitiveKind.DestroyTarget => ApplyDestroyTargetPrimitive(world, actorId, context),
             ActionPlanPrimitiveKind.CreateFacing => ApplyCreateFacingPrimitive(world, actorId, context),
+            ActionPlanPrimitiveKind.TurnLeft => ApplyTurnFacingPrimitive(context, ActionPlanPrimitiveKind.TurnLeft),
+            ActionPlanPrimitiveKind.TurnRight => ApplyTurnFacingPrimitive(context, ActionPlanPrimitiveKind.TurnRight),
+            ActionPlanPrimitiveKind.ReverseFacing => ApplyTurnFacingPrimitive(context, ActionPlanPrimitiveKind.ReverseFacing),
             _ => new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, TraceNode.Failure($"Primitive {primitive.Kind}", FailureReason.None, $"unsupported primitive {primitive.Kind}"))
         };
     }
@@ -256,11 +260,15 @@ public sealed class ActionPlanInterpreter
         var primitive = step.Kind switch
         {
             ActionPlanBehaviorStepKind.MoveFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing),
+            ActionPlanBehaviorStepKind.Backstep => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.Backstep),
             ActionPlanBehaviorStepKind.PickupTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget),
             ActionPlanBehaviorStepKind.DropFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DropFacing),
             ActionPlanBehaviorStepKind.PushFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PushFacing),
             ActionPlanBehaviorStepKind.DestroyTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DestroyTarget),
             ActionPlanBehaviorStepKind.CreateFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.CreateFacing),
+            ActionPlanBehaviorStepKind.TurnLeft => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.TurnLeft),
+            ActionPlanBehaviorStepKind.TurnRight => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.TurnRight),
+            ActionPlanBehaviorStepKind.ReverseFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.ReverseFacing),
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -295,6 +303,46 @@ public sealed class ActionPlanInterpreter
         }
 
         if (_movement.GetBlockingEntity(world, actorId, facing.Value) is { } blocker)
+        {
+            trace.Add(context.Set(ActionPlanSlot.Target, new EntityPlanValue(blocker)));
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyBackstepPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive Backstep", TraceStatus.Info);
+
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        var movementDirection = Reverse(facing.Value);
+        IActionIntent action = new MoveAction(movementDirection);
+        var resolution = action.Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+
+        if (resolution.Succeeded)
+        {
+            trace.Add(TraceNode.Success("Preserve Facing", facing.Value.ToString()));
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"moved {movementDirection}; preserved Facing={facing.Value}";
+            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+        }
+
+        if (_movement.GetBlockingEntity(world, actorId, movementDirection) is { } blocker)
         {
             trace.Add(context.Set(ActionPlanSlot.Target, new EntityPlanValue(blocker)));
         }
@@ -475,6 +523,64 @@ public sealed class ActionPlanInterpreter
         trace.Detail = $"created {createdId} at {destination}";
         return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
     }
+
+    private static PlanEffectResult ApplyTurnFacingPrimitive(
+        ActionPlanContext context,
+        ActionPlanPrimitiveKind kind)
+    {
+        var trace = new TraceNode($"Primitive {kind}", TraceStatus.Info);
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        var turned = kind switch
+        {
+            ActionPlanPrimitiveKind.TurnLeft => TurnLeft(facing.Value),
+            ActionPlanPrimitiveKind.TurnRight => TurnRight(facing.Value),
+            ActionPlanPrimitiveKind.ReverseFacing => Reverse(facing.Value),
+            _ => facing.Value
+        };
+
+        trace.Add(context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(turned)));
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"Facing {facing.Value} -> {turned}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    private static Direction TurnLeft(Direction direction) =>
+        direction switch
+        {
+            Direction.North => Direction.West,
+            Direction.West => Direction.South,
+            Direction.South => Direction.East,
+            Direction.East => Direction.North,
+            _ => direction
+        };
+
+    private static Direction TurnRight(Direction direction) =>
+        direction switch
+        {
+            Direction.North => Direction.East,
+            Direction.East => Direction.South,
+            Direction.South => Direction.West,
+            Direction.West => Direction.North,
+            _ => direction
+        };
+
+    private static Direction Reverse(Direction direction) =>
+        direction switch
+        {
+            Direction.North => Direction.South,
+            Direction.South => Direction.North,
+            Direction.East => Direction.West,
+            Direction.West => Direction.East,
+            _ => direction
+        };
 
     private static EntityId? FindFirstCarriedEntity(WorldState world, EntityId actorId)
     {

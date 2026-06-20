@@ -132,6 +132,8 @@ Current canonical Action Steps available for phase 0:
 
 ## Gate 1: direction transform batch
 
+Status: Selected for Sprint 13. See `docs/Plans/Sprint-13-Gate-1-Direction-Showcases.md` for the active showcase plan and core-owner coordination cadence.
+
 Request and implement before the next vignette phase:
 
 - `ReverseFacing`
@@ -339,6 +341,49 @@ Each Action Step should eventually have a small demonstration scenario or genera
 - what report output should make obvious.
 
 Start with explicit authored showcase scenarios. Add generated previews only after the repeated setup shape is clear.
+
+## Sprint 12 primitive brainstorm notes
+
+Status: Possibilities and testing insights only. These are not planned features, promotion requests, or capability-gap entries unless later scenario evidence justifies them. Keep `Engine-Editor-Capabilities.md` as the implemented-capability source of truth and `High-Level-Roadmap.md` as the roadmap/backlog authority.
+
+The first current-tool primitive showcases suggested several possible future Action Step families:
+
+### Forced movement family
+
+Related Sprint 12 showcase: `beta-push-showcase`.
+
+- `ShoveFacing` / shove action: force an adjacent or blocking entity to move without the actor moving into the vacated cell.
+- `PullFacing` / pull action: move the actor while dragging another entity into the actor's previous cell.
+- `DragFacing` / drag action: move the actor and an adjacent entity sideways together.
+- More general long-term possibility: a configurable forced-movement primitive that can move another entity according to a derived movement plan rather than only actor `Facing`.
+- Example composition to test later: `MoveToward(destination)` tries a quick direct step, writes the blocking entity and intended direction on failure, `ForceMovePerpendicularToIntent(blocker)` attempts to clear the blocker sideways, `PathfindToward(destination)` falls back to routing around the obstruction, and `ChangeTarget` picks another goal if no viable path exists.
+- Design insight: richer forced-movement chains may need distinct state slots for primary target/destination, blocking entity, and intended movement direction. Overloading canonical `Target` for all three would make these chains hard to express.
+
+### Target alteration family
+
+Related Sprint 12 showcase: `beta-destroy-showcase`.
+
+- `DisableTarget` / kill-actor action: instead of destroying the target entity, remove or clear its action plan so it remains in the world as an inert entity.
+- This could model killing, stunning, deactivating machines, or neutralizing hazards without committing to a health/damage model yet.
+- Design question: decide whether this is a permanent runtime mutation, a status/state effect, or eventually a diegetic action-plan/entity interaction.
+
+### Creation and duplication family
+
+Related Sprint 12 showcase: `beta-create-showcase`.
+
+- `CloneTargetFacing` / duplicate action: create a copy of the current `Target` in the actor's facing direction.
+- Safer first interpretation may be template duplication, where the new entity is materialized from the target's content template rather than deep-copying all runtime state.
+- Richer instance cloning would require identity, inventory, action-state, and nested-entity copy rules.
+- This likely depends on the same template/presentation binding work as `CreateFacing(templateId)` / `SpawnTemplateFacing`.
+
+### Target movement and fallback-routing family
+
+Related Sprint 12 showcase: `beta-behavior-chain-composition`.
+
+- `MoveTowardTarget` / `SeekTarget`: choose a neighboring step that lowers distance to the target. This matches the planned Gate 2 `SeekTarget` direction, but the brainstorm emphasizes a simple non-smart greedy movement version.
+- `PathfindTowardTarget` / move around blockers: calculate a valid path to the target and move one cell along it. Prefer recalculating each turn for an initial version unless scenario scale proves cached paths are necessary.
+- `ChangeTarget` / alternate-target selection: if no viable path exists to the current target or destination, find a different target. This overlaps with future target-acquisition work but frames retargeting as fallback from failed routing.
+- Design insight: these steps would become most legible when failed movement reports preserve both the original goal and the blocker/intent that caused fallback.
 
 ## Negative capability-gap vignettes
 

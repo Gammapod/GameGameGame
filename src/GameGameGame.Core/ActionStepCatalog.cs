@@ -63,7 +63,35 @@ public static class ActionStepCatalog
             "Create Facing",
             "Creates a placeholder rock-like entity on the floor in the actor's persistent Facing direction as a prototype for future spawning Action Steps.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)])
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.TurnLeft,
+            "Turn Left",
+            "Turns the actor's persistent Facing direction 90 degrees counter-clockwise without moving any entity.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.TurnRight,
+            "Turn Right",
+            "Turns the actor's persistent Facing direction 90 degrees clockwise without moving any entity.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.ReverseFacing,
+            "Reverse Facing",
+            "Turns the actor's persistent Facing direction to the opposite direction without moving any entity.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.Backstep,
+            "Backstep",
+            "Attempts to move the actor one tile opposite its persistent Facing direction while preserving Facing; when blocked by an entity, writes that entity to Target and falls through to the next Action Step.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
     ];
 
     public static ActionStepDescriptor Get(ActionPlanBehaviorStepKind kind) =>

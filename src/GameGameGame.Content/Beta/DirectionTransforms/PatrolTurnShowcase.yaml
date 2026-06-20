@@ -1,0 +1,107 @@
+entityTemplates:
+  betaPatrolTurnRoom:
+    name: Beta Patrol Turn Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 6
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: rightPatroller
+      templateId: betaRightPatroller
+      coord:
+        x: 1
+        y: 1
+    - entityId: rightPatrolWall
+      templateId: betaRightPatrolWall
+      coord:
+        x: 3
+        y: 1
+    - entityId: leftPatroller
+      templateId: betaLeftPatroller
+      coord:
+        x: 5
+        y: 3
+    - entityId: leftPatrolWall
+      templateId: betaLeftPatrolWall
+      coord:
+        x: 7
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaRightPatroller:
+    name: Right-Turn Patroller
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: moveThenTurnRight
+    actionStateDefaults:
+      facing: East
+  betaLeftPatroller:
+    name: Left-Turn Patroller
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: moveThenTurnLeft
+    actionStateDefaults:
+      facing: East
+  betaRightPatrolWall:
+    name: Right Patrol Wall
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+  betaLeftPatrolWall:
+    name: Left Patrol Wall
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+presentations:
+  betaPatrolTurnRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaRightPatroller:
+    glyph: 'R'
+    color: Green
+  betaLeftPatroller:
+    glyph: 'L'
+    color: Cyan
+  betaRightPatrolWall:
+    glyph: '#'
+    color: Gray
+  betaLeftPatrolWall:
+    glyph: '#'
+    color: Gray
+actionPlans:
+  moveThenTurnRight:
+    id: moveThenTurnRight
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: TurnRight
+  moveThenTurnLeft:
+    id: moveThenTurnLeft
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: TurnLeft
+scenarios:
+  beta-patrol-turn:
+    name: Beta Patrol Turn
+    scenarioRootEntityTemplateId: betaPatrolTurnRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 5

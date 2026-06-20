@@ -330,6 +330,21 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void ActionStepCatalogDescribesBackstepMetadata()
+    {
+        var backstep = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.Backstep);
+
+        Assert.Equal("Backstep", backstep.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Stable, backstep.Tier);
+        Assert.Contains("opposite", backstep.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("preserving", backstep.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(backstep.RequiredState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(backstep.DefaultableState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(backstep.StateWrites, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.DoesNotContain(backstep.StateWrites, state => state.Slot == ActionPlanSlot.Facing);
+    }
+
+    [Fact]
     public void ActionStepCatalogDescribesPickupTargetMetadata()
     {
         var pickupTarget = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.PickupTarget);
@@ -347,6 +362,9 @@ public sealed class CoreActionPlanTests
     [InlineData(ActionPlanBehaviorStepKind.PushFacing, "Push Facing")]
     [InlineData(ActionPlanBehaviorStepKind.DestroyTarget, "Destroy Target")]
     [InlineData(ActionPlanBehaviorStepKind.CreateFacing, "Create Facing")]
+    [InlineData(ActionPlanBehaviorStepKind.TurnLeft, "Turn Left")]
+    [InlineData(ActionPlanBehaviorStepKind.TurnRight, "Turn Right")]
+    [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, "Reverse Facing")]
     public void ActionStepCatalogDescribesFirstUtilityBatch(ActionPlanBehaviorStepKind kind, string displayName)
     {
         var step = ActionStepCatalog.Get(kind);
@@ -354,6 +372,38 @@ public sealed class CoreActionPlanTests
         Assert.Equal(displayName, step.DisplayName);
         Assert.Equal(ActionStepAuthoringTier.Stable, step.Tier);
         Assert.NotEmpty(step.Description);
+    }
+
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.TurnLeft, Direction.North, Direction.West)]
+    [InlineData(ActionPlanBehaviorStepKind.TurnLeft, Direction.West, Direction.South)]
+    [InlineData(ActionPlanBehaviorStepKind.TurnRight, Direction.North, Direction.East)]
+    [InlineData(ActionPlanBehaviorStepKind.TurnRight, Direction.East, Direction.South)]
+    [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, Direction.North, Direction.South)]
+    [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, Direction.East, Direction.West)]
+    public void ActionStepCatalogDescribesTurnFacingMetadata(ActionPlanBehaviorStepKind kind, Direction from, Direction to)
+    {
+        var step = ActionStepCatalog.Get(kind);
+
+        Assert.Contains(step.RequiredState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(step.DefaultableState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+        Assert.Contains(step.StateWrites, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+
+        var world = TestWorld.CreateWorld();
+        var start = world.GetEntityLocation(TestWorld.PlayerId);
+        world.SetActionFacing(TestWorld.PlayerId, from);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("turn-facing"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(kind)]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(to, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Equal(start, world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
     }
 
     [Fact]
@@ -1326,6 +1376,84 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void BackstepMovesOppositeFacingConsumesTurnAndPreservesFacing()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("backstep"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep)]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.North, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. Backstep: Success; fallback=stopped");
+        Assert.Contains(summary, line => line == "   reads: Facing=North");
+        Assert.Contains(summary, line => line == "   results: moved South; preserved Facing=North");
+        Assert.True(TraceContains(result.Trace, "Move South"));
+        Assert.True(TraceContains(result.Trace, "Preserve Facing"));
+    }
+
+    [Fact]
+    public void BackstepBlockedByEntityWritesTargetAndFallsThrough()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("backstep-then-wait"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.South, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. Backstep: Failure; reason=InvalidPlacement; fallback=continued");
+        Assert.Contains(summary, line => line == "   reads: Facing=South");
+        Assert.Contains(summary, line => line == "   writes: Target=slime");
+        Assert.True(TraceContains(result.Trace, "Action Step PickupTarget"));
+    }
+
+    [Fact]
+    public void BackstepOutOfBoundsFailsWithoutMeaningfulTargetWrite()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0))));
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("backstep-out-of-bounds"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep)]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(0,0)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.South, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. Backstep: Failure; reason=MoveOutOfBounds; fallback=stopped");
+        Assert.Contains(summary, line => line == "   reads: Facing=South");
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void DropFacingDropsFirstCarriedEntityInFacingDirection()
     {
         var world = TestWorld.CreateWorld();
@@ -1406,6 +1534,29 @@ public sealed class CoreActionPlanTests
         Assert.NotNull(created);
         Assert.Equal("Placeholder Rock", world.Entities[created!.Value].Name);
         Assert.True(TraceContains(result.Trace, "Action Step CreateFacing"));
+    }
+
+    [Fact]
+    public void TurnFacingTraceFormatterSummarizesFacingReadAndWrite()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("turn-left"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TurnLeft)]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.Collection(
+            summary,
+            line => Assert.Equal("Plan turn-left: Success; consumedTurn=True; continuePlan=False", line),
+            line => Assert.Equal("1. TurnLeft: Success; fallback=stopped", line),
+            line => Assert.Equal("   reads: Facing=North", line),
+            line => Assert.Equal("   writes: Facing=West", line),
+            line => Assert.Equal("Terminal: succeeded; consumed turn", line));
     }
 
     [Fact]
