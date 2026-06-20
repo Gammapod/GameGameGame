@@ -22,12 +22,14 @@ Do not read when:
 3. `docs/Source of Truth/vertical-slice-map.md`
    - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
    - Read selectively when a planned slice spans multiple layers.
-4. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
+4. `docs/Plans/Beta-Content-Exploration-Plan.md`
+   - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
+5. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
    - Current expected implementation slice and testable outcomes.
    - As of this writing: Sprint 11 is complete and archived; the beta release target is gameplay demo vignettes, and no Sprint 12 plan has been selected.
-5. `docs/Plans/Sprint-Retrospective.md`
+6. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
-6. `docs/Archived/`
+7. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
 
 ## Current strategic priority
@@ -36,7 +38,7 @@ Alpha MVP is complete: the game can launch and be played in an authored scenario
 
 ## Current highest-priority backlog buckets
 
-1. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`.
+1. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md` and `docs/Plans/Beta-Content-Exploration-Plan.md`.
 2. Scenario/testing/tooling feedback loop.
 3. Foundational movement and peer interaction primitives.
 4. Scenario/content packaging beyond alpha.

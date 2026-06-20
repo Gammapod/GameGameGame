@@ -91,6 +91,10 @@ Recently completed supporting documents:
 - [Sprint 10: Scenario Feedback Loop](../Archived/Sprint-10-Scenario-Feedback-Loop.md)
 - [Sprint 11: Alpha Scenario Materialization](../Archived/Sprint-11-Alpha-Scenario-Materialization.md)
 
+Active beta planning document:
+
+- [Beta Content Exploration Plan](Beta-Content-Exploration-Plan.md)
+
 Beta target statement:
 
 - The project can present several small authored gameplay vignettes, like pitch-deck slides, that demonstrate what the engine naturally makes possible.
@@ -105,12 +109,50 @@ Long-term frontend direction:
 
 Current decision point: use the completed alpha MVP loop to choose the first beta vignette batch and the minimum primitives/tooling required to make those vignettes readable, playable, and useful for playtest feedback.
 
+Current beta content-exploration order:
+
+1. Explore and test scenarios that are authorable with current tools.
+2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes.
+3. Gate 2: `AcquireNearestTarget` + `SeekTarget`, then explore direct chase, collector, follower, and targeted interaction scenarios.
+4. Gate 3: target-distance / directional choice primitives, then explore fleeing, keep-away, kiting, and patterned pursuit.
+5. Gate 4: `Give` / `Take`, then explore passive containers, trade, stealing, feeding/offering, and transfer restrictions.
+6. Gate 5: template spawning, then explore authored spawners, projectiles, traps/bombs, builders, and clone/summon prototypes.
+7. Gate 6: reaction system, then explore traps, doors/buttons/pressure plates, chain reactions, contact combat, and environmental puzzle systems.
+
+Beta content exploration goals:
+
+1. **Movement-pattern vignettes**
+   - Direct chase: an entity pursues the player by moving toward them.
+   - Keep-away: an entity tries to remain at or near a chosen distance from the player.
+   - Fleeing: an entity runs away from the player.
+   - Pattern-constrained pursuit: an entity chases the player but can only move diagonally or by another constrained movement pattern.
+   - Expected capability pressure: likely needs `AcquireNearestTarget`, `SeekTarget`, target-distance evaluation, and eventually patterned movement variants. Start with the smallest deterministic target-selection/movement semantics that can prove the vignette.
+
+2. **In/out, containment, and transfer vignettes**
+   - Enter/exit: an entity can be entered by moving into it, and exited by moving off the edge of its inventory/play space.
+   - Trade/passive container: an entity can be freely traded with, like a passive chest.
+   - Restricted transfer: another entity prevents give/take interactions or otherwise blocks transfer.
+   - Expected capability pressure: likely needs clearer containment/plane-transition semantics, `Give`/`Take`, source/target carried-entity selection rules, and author-facing diagnostics for denied transfer. Treat enter/exit as potentially deeper than ordinary pickup/drop because it changes the active play space.
+
+3. **Gameplay scenario suites**
+   - Combat vignettes: adjacent attacks, ranged attacks, throwing inventory, and alternative health/damage models.
+   - Puzzle vignettes: block pushing, trap avoidance, interactive puzzle elements, and chain reactions.
+   - Expected capability pressure: combat should explicitly compare possible health models before implementation, such as HP as an entity property, HP as an inventory item/entity, or HP/status bestowed by an action plan/state model. Puzzle vignettes should distinguish content-only compositions of existing primitives from new engine capabilities such as reactions, trigger volumes, or chain-reaction scheduling.
+
+For each candidate vignette, record before implementation whether the intended experiment is:
+
+- **content-only** with existing capabilities;
+- **new Action Step / primitive** using existing engine state models;
+- **new engine capability** requiring new state, containment, reaction, scheduler, or frontend/player-interaction semantics.
+
 Likely candidate focuses:
 
+- Current-tool beta vignettes: primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`; pickup/drop/weight puzzles; blocker/target fallback-chain exercises; and a first curated actor zoo.
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
-- Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, preview-plus-simulation in one command, and cleanup/replacement of the older test-local runner.
+- Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, compact per-turn state diffs, created/destroyed entity summaries, capability-gap sections, preview-plus-simulation in one command, actor-zoo/isolation report templates, and cleanup/replacement of the older test-local runner.
 - Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.
 - Scenario/content package ergonomics: multiple fixture scenarios, scenario listing/selection, authoring helpers, and stronger validation/reporting around packages.
+- Capability-gap logging: record intentionally blocked or negative vignettes and promote feature requests when repeated scenario pressure or one high-value flagship scenario justifies it.
 - Frontend/editor loop follow-up: keep future unified frontend requirements visible, but defer implementation until beta vignette playtests clarify interaction and authoring needs.
 
 Selection guidance:
@@ -131,16 +173,19 @@ Priority order:
 
 1. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
 2. Lightweight scenario report template once first runner output reveals the useful fields.
-3. Plan preview + simulation in one API command.
-4. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
-5. Capability-gap reporter improvements for unsupported authoring/simulation requests.
-6. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
-7. Generalized scenario runner upgrade sprint.
-8. Saved scenario runlogs.
-9. Golden runlog tests.
-10. Test inspector / runlog stepper with forward/back controls.
-11. Editor `Run in Console` button after Console scenario launch exists.
-12. Live in-editor preview window showing an entity performing its action plan.
+3. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
+4. Plan preview + simulation in one API command.
+5. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
+6. Curated actor-zoo report template for one-room behavior demonstrations.
+7. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
+8. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
+9. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
+10. Generalized scenario runner upgrade sprint.
+11. Saved scenario runlogs.
+12. Golden runlog tests.
+13. Test inspector / runlog stepper with forward/back controls.
+14. Editor `Run in Console` button after Console scenario launch exists.
+15. Live in-editor preview window showing an entity performing its action plan.
 
 Completed baseline:
 
@@ -155,6 +200,7 @@ Future generalized scenario runner wishlist:
 - Provide richer compact state summaries for positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
 - Add stable report sections suitable for saved runlogs and eventual golden comparisons once the format stops changing.
 - Allow scenario reports to include plan preview, validation diagnostics, simulation trace, state diff, and capability gaps in one result.
+- Support primitive showcase and actor-zoo workflows once explicit authored scenarios reveal which setup variants are broadly useful.
 - Keep Console/frontend playability as a later promotion step, after headless reports prove which scenario fields are useful.
 
 Dependencies:
@@ -257,20 +303,23 @@ Status: Alpha-critical subset promoted into the alpha release roadmap. This buck
 
 Priority order:
 
-1. Scenario families and grouping once individual alpha scenario documents work.
-2. Richer scenario metadata beyond alpha launch needs.
-3. Richer world/setup data beyond scenario-root inventory spaces.
-4. Loading one scenario inside another for setpieces or nested levels.
-5. Randomly generated levels.
+1. Beta content file organization: introduce folders or multiple content documents when fixture count makes single-file navigation, scenario selection, or validation noisy.
+2. Scenario families and grouping once individual alpha scenario documents work.
+3. Richer scenario metadata beyond alpha launch needs.
+4. Richer world/setup data beyond scenario-root inventory spaces.
+5. Loading one scenario inside another for setpieces or nested levels.
+6. Randomly generated levels.
 
 Dependencies:
 
 - Alpha scenario documents, player start metadata, and Console scenario loading are now tracked in the alpha roadmap.
 - The alpha scenario materialization path should clarify the boundary between reusable content definitions, scenario setup, runtime world state, and player start metadata before richer packaging is promoted.
+- Content-file organization is owned by the content editor/content-authoring role and should be shaped by actual beta fixture growth rather than preemptive structure.
 
 Promotion trigger:
 
 - Promote beyond-alpha packaging when alpha scenario fixtures become repetitive enough that scenario families, nested scenarios, or richer metadata would reduce content-authoring friction.
+- Promote content-folder/file reorganization when beta vignettes become hard to browse, validate, select, or compare in their current layout.
 
 ### Bucket 6: Runtime architecture and simulation scale
 
