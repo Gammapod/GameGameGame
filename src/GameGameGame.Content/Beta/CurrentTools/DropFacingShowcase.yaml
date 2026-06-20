@@ -1,0 +1,133 @@
+entityTemplates:
+  betaDropRoom:
+    name: Beta Drop Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: successDropper
+      templateId: betaSuccessDropper
+      coord:
+        x: 1
+        y: 1
+    - entityId: emptyDropper
+      templateId: betaEmptyDropper
+      coord:
+        x: 5
+        y: 1
+    - entityId: blockedDropper
+      templateId: betaBlockedDropper
+      coord:
+        x: 1
+        y: 3
+    - entityId: dropBlocker
+      templateId: betaDropBlocker
+      coord:
+        x: 2
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaSuccessDropper:
+    name: Successful Dropper
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: dropFacingOnly
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: successDropItem
+      templateId: betaSuccessDropItem
+      coord:
+        x: 0
+        y: 0
+  betaBlockedDropper:
+    name: Blocked Dropper
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: dropFacingOnly
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: blockedDropItem
+      templateId: betaBlockedDropItem
+      coord:
+        x: 0
+        y: 0
+  betaEmptyDropper:
+    name: Empty Dropper
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: dropFacingOnly
+    actionStateDefaults:
+      facing: East
+  betaSuccessDropItem:
+    name: Dropped Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+  betaBlockedDropItem:
+    name: Carried Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+  betaDropBlocker:
+    name: Drop Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+presentations:
+  betaDropRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaSuccessDropper:
+    glyph: 'd'
+    color: Green
+  betaBlockedDropper:
+    glyph: '!'
+    color: Earth
+  betaEmptyDropper:
+    glyph: 'e'
+    color: Cyan
+  betaSuccessDropItem:
+    glyph: '*'
+    color: White
+  betaBlockedDropItem:
+    glyph: '*'
+    color: Gray
+  betaDropBlocker:
+    glyph: 'o'
+    color: Gray
+actionPlans:
+  dropFacingOnly:
+    id: dropFacingOnly
+    behavior:
+      steps:
+      - kind: DropFacing
+scenarios:
+  beta-drop-showcase:
+    name: Beta Drop Showcase
+    scenarioRootEntityTemplateId: betaDropRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

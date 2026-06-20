@@ -11,6 +11,7 @@ Read when:
 Related plans:
 
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
+- `docs/Plans/Beta-Capability-Gap-Log.md`
 - `docs/Plans/High-Level-Roadmap.md`
 - `docs/Source of Truth/Engine-Editor-Capabilities.md`
 
@@ -62,3 +63,8 @@ Initial constraints:
 - Capability-gap notes for any blocked desired behavior.
 - Reporting/tooling requests if scenario behavior is hard to interpret.
 - A recommendation on whether to continue current-tool primitive showcases or promote the Direction Transform gate.
+
+## Current sprint notes
+
+- `PushFacing` and `DestroyTarget` showcases are Console-playable and headlessly validated.
+- `CreateFacing` is headlessly validated, but successful creation currently exposes GAP-001: runtime placeholder entities lack content-template/presentation assignment and can crash Console rendering/inspection after creation. Until this is fixed, successful `CreateFacing` should be treated as headless-only for manual review.

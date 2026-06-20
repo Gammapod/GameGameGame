@@ -1,0 +1,144 @@
+entityTemplates:
+  betaChainRoom:
+    name: Beta Behavior Chain Composition Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: chainPusher
+      templateId: betaChainPusher
+      coord:
+        x: 1
+        y: 1
+    - entityId: chainPushBlock
+      templateId: betaChainPushBlock
+      coord:
+        x: 2
+        y: 1
+    - entityId: chainDestroyer
+      templateId: betaChainDestroyer
+      coord:
+        x: 1
+        y: 2
+    - entityId: chainFragileWall
+      templateId: betaChainFragileWall
+      coord:
+        x: 2
+        y: 2
+    - entityId: chainCollector
+      templateId: betaChainCollector
+      coord:
+        x: 1
+        y: 3
+    - entityId: chainCollectible
+      templateId: betaChainCollectible
+      coord:
+        x: 2
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaChainPusher:
+    name: Chain Pusher
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: moveThenPush
+    actionStateDefaults:
+      facing: East
+  betaChainDestroyer:
+    name: Chain Destroyer
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: moveThenDestroy
+    actionStateDefaults:
+      facing: East
+  betaChainCollector:
+    name: Chain Collector
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 3
+    defaultActionPlanId: moveThenPickup
+    actionStateDefaults:
+      facing: East
+  betaChainPushBlock:
+    name: Chain Push Block
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+  betaChainFragileWall:
+    name: Chain Fragile Wall
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+  betaChainCollectible:
+    name: Chain Collectible
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaChainRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaChainPusher:
+    glyph: 'p'
+    color: Green
+  betaChainDestroyer:
+    glyph: 'x'
+    color: Yellow
+  betaChainCollector:
+    glyph: 'c'
+    color: Cyan
+  betaChainPushBlock:
+    glyph: 'o'
+    color: Gray
+  betaChainFragileWall:
+    glyph: '%'
+    color: Gray
+  betaChainCollectible:
+    glyph: '*'
+    color: White
+actionPlans:
+  moveThenPush:
+    id: moveThenPush
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PushFacing
+  moveThenDestroy:
+    id: moveThenDestroy
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: DestroyTarget
+  moveThenPickup:
+    id: moveThenPickup
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PickupTarget
+scenarios:
+  beta-behavior-chain-composition:
+    name: Beta Behavior Chain Composition
+    scenarioRootEntityTemplateId: betaChainRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

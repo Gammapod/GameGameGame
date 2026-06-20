@@ -1,0 +1,129 @@
+entityTemplates:
+  betaWeightRoom:
+    name: Beta Pickup Drop Weight Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: lightTester
+      templateId: betaLightPickupTester
+      coord:
+        x: 1
+        y: 1
+    - entityId: lightPebble
+      templateId: betaLightPebble
+      coord:
+        x: 2
+        y: 1
+    - entityId: heavyTester
+      templateId: betaHeavyPickupTester
+      coord:
+        x: 1
+        y: 3
+    - entityId: heavyBoulder
+      templateId: betaHeavyBoulder
+      coord:
+        x: 2
+        y: 3
+    - entityId: manualPebble
+      templateId: betaManualPebble
+      coord:
+        x: 6
+        y: 1
+    - entityId: manualBoulder
+      templateId: betaManualBoulder
+      coord:
+        x: 6
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 3
+    actionStateDefaults:
+      facing: West
+  betaLightPickupTester:
+    name: Light Pickup Tester
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 3
+    defaultActionPlanId: moveThenPickup
+    actionStateDefaults:
+      facing: East
+  betaHeavyPickupTester:
+    name: Heavy Pickup Tester
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 3
+    defaultActionPlanId: moveThenPickup
+    actionStateDefaults:
+      facing: East
+  betaLightPebble:
+    name: Light Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+  betaHeavyBoulder:
+    name: Heavy Boulder
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+  betaManualPebble:
+    name: Manual Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+  betaManualBoulder:
+    name: Manual Boulder
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+presentations:
+  betaWeightRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaLightPickupTester:
+    glyph: 'l'
+    color: Green
+  betaHeavyPickupTester:
+    glyph: 'h'
+    color: Earth
+  betaLightPebble:
+    glyph: '*'
+    color: White
+  betaHeavyBoulder:
+    glyph: 'O'
+    color: Gray
+  betaManualPebble:
+    glyph: '*'
+    color: Cyan
+  betaManualBoulder:
+    glyph: 'O'
+    color: Earth
+actionPlans:
+  moveThenPickup:
+    id: moveThenPickup
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PickupTarget
+scenarios:
+  beta-pickup-drop-weight:
+    name: Beta Pickup Drop Weight
+    scenarioRootEntityTemplateId: betaWeightRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

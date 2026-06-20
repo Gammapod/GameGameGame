@@ -24,12 +24,14 @@ Do not read when:
    - Read selectively when a planned slice spans multiple layers.
 4. `docs/Plans/Beta-Content-Exploration-Plan.md`
    - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
-5. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
+5. `docs/Plans/Beta-Capability-Gap-Log.md`
+   - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
+6. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
    - Current expected implementation slice and testable outcomes.
    - As of this writing: `docs/Plans/Sprint-12-Beta-Primitive-Showcases.md` is active for the first beta primitive showcase scenarios.
-6. `docs/Plans/Sprint-Retrospective.md`
+7. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
-7. `docs/Archived/`
+8. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
 
 ## Current strategic priority
@@ -38,7 +40,7 @@ Alpha MVP is complete: the game can launch and be played in an authored scenario
 
 ## Current highest-priority backlog buckets
 
-1. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md` and `docs/Plans/Beta-Content-Exploration-Plan.md`.
+1. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`, `docs/Plans/Beta-Content-Exploration-Plan.md`, and `docs/Plans/Beta-Capability-Gap-Log.md`.
 2. Scenario/testing/tooling feedback loop.
 3. Foundational movement and peer interaction primitives.
 4. Scenario/content packaging beyond alpha.

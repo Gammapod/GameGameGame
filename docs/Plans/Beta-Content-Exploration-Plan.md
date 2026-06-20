@@ -12,6 +12,7 @@ Related source of truth:
 
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` is the single source of truth for implemented and authorable engine/editor capabilities.
 - `docs/Plans/High-Level-Roadmap.md` remains the strategic roadmap and backlog authority.
+- `docs/Plans/Beta-Capability-Gap-Log.md` records gaps discovered during beta scenario exploration.
 
 ## Beta exploration intent
 

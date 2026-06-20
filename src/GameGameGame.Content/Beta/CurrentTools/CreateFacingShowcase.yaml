@@ -1,0 +1,86 @@
+entityTemplates:
+  betaCreateRoom:
+    name: Beta Create Showcase Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: openCreator
+      templateId: betaOpenCreator
+      coord:
+        x: 1
+        y: 1
+    - entityId: blockedCreator
+      templateId: betaBlockedCreator
+      coord:
+        x: 1
+        y: 3
+    - entityId: occupiedCell
+      templateId: betaOccupiedCell
+      coord:
+        x: 2
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaOpenCreator:
+    name: Open Creator
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: createFacingOnly
+    actionStateDefaults:
+      facing: East
+  betaBlockedCreator:
+    name: Blocked Creator
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: createFacingOnly
+    actionStateDefaults:
+      facing: East
+  betaOccupiedCell:
+    name: Occupied Cell Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+presentations:
+  betaCreateRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaOpenCreator:
+    glyph: '+'
+    color: Green
+  betaBlockedCreator:
+    glyph: '!'
+    color: Earth
+  betaOccupiedCell:
+    glyph: 'o'
+    color: Gray
+actionPlans:
+  createFacingOnly:
+    id: createFacingOnly
+    behavior:
+      steps:
+      - kind: CreateFacing
+scenarios:
+  beta-create-showcase:
+    name: Beta Create Showcase
+    scenarioRootEntityTemplateId: betaCreateRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2
