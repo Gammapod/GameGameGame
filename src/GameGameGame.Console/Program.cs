@@ -1,6 +1,12 @@
 using GameGameGame.Core;
 using GameGameGame.Content;
 using GameGameGame.ConsoleApp;
+using GameGameGame.Editor;
+
+if (args.Length > 0 && args[0] == "record-scenario")
+{
+    return RecordScenarioCommand(args);
+}
 
 var game = args.Length >= 2
     ? ConsoleScenarioLauncher.CreateFromFile(args[0], args[1])
@@ -62,6 +68,81 @@ while (running)
 Console.ResetColor();
 Console.CursorVisible = true;
 Console.Clear();
+
+return 0;
+
+int RecordScenarioCommand(string[] commandArgs)
+{
+    if (commandArgs.Length < 4)
+    {
+        Console.Error.WriteLine("Usage: record-scenario <content-file> <scenario-id> --turns <N> --output <directory>");
+        return 2;
+    }
+
+    var contentFile = commandArgs[1];
+    var scenarioId = commandArgs[2];
+    var turns = 1;
+    var outputDirectory = commandArgs[3];
+
+    for (var index = 3; index < commandArgs.Length; index++)
+    {
+        switch (commandArgs[index])
+        {
+            case "--turns" when index + 1 < commandArgs.Length && int.TryParse(commandArgs[index + 1], out var parsedTurns):
+                turns = parsedTurns;
+                index++;
+                break;
+            case "--output" when index + 1 < commandArgs.Length:
+                outputDirectory = commandArgs[index + 1];
+                index++;
+                break;
+            case "--turns":
+            case "--output":
+                Console.Error.WriteLine($"Missing value for {commandArgs[index]}.");
+                return 2;
+        }
+    }
+
+    Directory.CreateDirectory(outputDirectory);
+    var apiResult = AgentContentEditorApi.OpenFile(contentFile);
+    if (!apiResult.IsSuccess)
+    {
+        Console.Error.WriteLine(apiResult.Error!.Message);
+        return 1;
+    }
+
+    var reportResult = apiResult.Value!.RecordScenario(new AgentScenarioRecordingRequest(scenarioId, turns, outputDirectory));
+    if (!reportResult.IsSuccess)
+    {
+        Console.Error.WriteLine(reportResult.Error!.Message);
+        return 1;
+    }
+
+    var report = reportResult.Value!;
+    foreach (var diagnostic in report.ValidationDiagnostics.Concat(report.RuntimeFailures).Concat(report.CapabilityGaps))
+    {
+        Console.Error.WriteLine(diagnostic);
+    }
+
+    if (report.ValidationDiagnostics.Count > 0 || report.RuntimeFailures.Count > 0)
+    {
+        return 1;
+    }
+
+    Console.WriteLine($"Recorded {report.ScenarioId} ({report.Name})");
+    Console.WriteLine($"Frames: {report.Frames.Count}");
+    foreach (var frame in report.Frames)
+    {
+        Console.WriteLine($"  {frame.FrameIndex}: turn {frame.TurnNumber} -> {frame.PngPath}");
+    }
+
+    if (report.GifPath is { } gifPath)
+    {
+        Console.WriteLine($"GIF: {gifPath}");
+    }
+
+    return 0;
+}
 
 void HandlePlayInput(ConsoleKey key)
 {

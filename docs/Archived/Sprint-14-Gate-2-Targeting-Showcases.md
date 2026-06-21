@@ -1,6 +1,6 @@
 # Sprint 14: Gate 2 Targeting Showcases
 
-Status: Active sprint plan; Gate 2 primitives implemented; first acquisition showcase authored and headlessly validated.
+Status: Completed / archived during Sprint 14 wrap-up.
 
 Related plans and source of truth:
 

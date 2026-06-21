@@ -1,0 +1,100 @@
+using GameGameGame.Editor;
+
+namespace GameGameGame.Tests;
+
+[Trait(TestSuites.TraitName, TestSuites.Editor)]
+public sealed class ScenarioRecordingTests : IDisposable
+{
+    private readonly string tempRoot = Path.Combine(Path.GetTempPath(), $"GameGameGameScenarioRecordingTests-{Guid.NewGuid():N}");
+
+    [Fact]
+    public void AgentContentEditorApiRecordsPersistedScenarioInitialStateAndFullTurns()
+    {
+        var api = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+        var outputDirectory = CreateOutputDirectory();
+
+        var report = AssertSuccess(api.RecordScenario(new AgentScenarioRecordingRequest(
+            ScenarioId: "beta-direct-chase",
+            TurnCount: 2,
+            OutputDirectory: outputDirectory)));
+
+        Assert.Equal("beta-direct-chase", report.ScenarioId);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal(3, report.Frames.Count);
+        Assert.Equal([0, 1, 2], report.Frames.Select(frame => frame.TurnNumber).ToArray());
+        Assert.Equal([0, 1, 2], report.Frames.Select(frame => frame.FrameIndex).ToArray());
+        Assert.All(report.Frames, frame =>
+        {
+            Assert.EndsWith(".png", frame.PngPath, StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith(outputDirectory, frame.PngPath, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(frame.PngPath), $"Expected PNG frame at {frame.PngPath}.");
+        });
+        Assert.NotNull(report.GifPath);
+        Assert.EndsWith(".gif", report.GifPath!, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(outputDirectory, report.GifPath!, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(report.GifPath!), $"Expected GIF recording at {report.GifPath}.");
+    }
+
+    [Fact]
+    public void AgentContentEditorApiRecordScenarioReportsAuthoringDiagnosticsWithoutArtifacts()
+    {
+        var api = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+        var outputDirectory = CreateOutputDirectory();
+
+        var report = AssertSuccess(api.RecordScenario(new AgentScenarioRecordingRequest(
+            ScenarioId: "missing-scenario",
+            TurnCount: 1,
+            OutputDirectory: outputDirectory)));
+
+        Assert.Equal("missing-scenario", report.ScenarioId);
+        Assert.Contains(report.ValidationDiagnostics, diagnostic => diagnostic.Contains("missing-scenario", StringComparison.Ordinal));
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Empty(report.Frames);
+        Assert.Null(report.GifPath);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(tempRoot))
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    private string CreateOutputDirectory()
+    {
+        var outputDirectory = Path.Combine(tempRoot, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+        return outputDirectory;
+    }
+
+    private static AgentContentEditorApi OpenBetaContent(string group, string fileName)
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));
+        return AssertSuccess(AgentContentEditorApi.OpenFile(path));
+    }
+
+    private static string FindRepositoryFile(string relativePath)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return Path.GetFullPath(relativePath);
+    }
+
+    private static T AssertSuccess<T>(AgentApiResult<T> result)
+    {
+        Assert.True(result.IsSuccess, result.Error?.Message);
+        return result.Value!;
+    }
+}

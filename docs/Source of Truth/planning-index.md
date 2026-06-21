@@ -28,7 +28,7 @@ Do not read when:
    - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
 6. Active or planned numbered sprint plan under `docs/Plans/`, when one exists
    - Current expected implementation slice and testable outcomes.
-   - Active sprint: `docs/Plans/Sprint-13-Gate-1-Direction-Showcases.md` formalizes the Direction Transform showcase batch.
+   - Active sprint: `docs/Plans/Sprint-15-Debug-Scenario-Recorder.md` formalizes the debug scenario recording/rendering slice.
 7. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
 8. `docs/Archived/`
@@ -40,8 +40,8 @@ Alpha MVP is complete: the game can launch and be played in an authored scenario
 
 ## Current highest-priority backlog buckets
 
-1. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`, `docs/Plans/Beta-Content-Exploration-Plan.md`, and `docs/Plans/Beta-Capability-Gap-Log.md`.
-2. Scenario/testing/tooling feedback loop.
+1. Scenario/testing/tooling feedback loop, currently the Sprint 15 debug scenario recorder.
+2. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`, `docs/Plans/Beta-Content-Exploration-Plan.md`, and `docs/Plans/Beta-Capability-Gap-Log.md`.
 3. Foundational movement and peer interaction primitives.
 4. Scenario/content packaging beyond alpha.
 5. Inventory, containment, and transfer mechanics.

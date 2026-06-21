@@ -91,6 +91,7 @@ Recently completed supporting documents:
 - [Sprint 10: Scenario Feedback Loop](../Archived/Sprint-10-Scenario-Feedback-Loop.md)
 - [Sprint 11: Alpha Scenario Materialization](../Archived/Sprint-11-Alpha-Scenario-Materialization.md)
 - [Sprint 12: Beta Primitive Showcases](../Archived/Sprint-12-Beta-Primitive-Showcases.md)
+- [Sprint 14: Gate 2 Targeting Showcases](../Archived/Sprint-14-Gate-2-Targeting-Showcases.md)
 
 Active beta planning document:
 
@@ -108,13 +109,13 @@ Long-term frontend direction:
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
 
-Current decision point: Sprint 14 has selected the Gate 2 targeting batch (`AcquireNearestTarget`, `SeekTarget`) as the active sprint focus, with four planned targeting showcases and `beta-follower` tentatively deferred unless a differentiated use case appears. See `docs/Plans/Sprint-14-Gate-2-Targeting-Showcases.md` for the active showcase plan and core-owner primitive request.
+Current decision point: Sprint 15 has selected the debug scenario recorder as the active sprint focus. This promotes scenario/testing/tooling feedback ahead of the next beta mechanics gate so authored vignettes can be reviewed as visual debug artifacts. See `docs/Plans/Sprint-15-Debug-Scenario-Recorder.md` for the active plan.
 
 Current beta content-exploration order:
 
 1. Explore and test scenarios that are authorable with current tools. Completed for the first primitive-showcase batch in Sprint 12; actor zoo deferred.
-2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes. This is the next expected beta gate.
-3. Gate 2: `AcquireNearestTarget` + `SeekTarget`, then explore direct chase, collector, follower, and targeted interaction scenarios.
+2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes. Completed in Sprint 13.
+3. Gate 2: `AcquireNearestTarget` + `SeekTarget`, then explore direct chase, collector, follower, and targeted interaction scenarios. Completed in Sprint 14 for acquire, direct chase, targeted destroyer, and collector; follower remains deferred until it has a differentiated use case.
 4. Gate 3: target-distance / directional choice primitives, then explore fleeing, keep-away, kiting, and patterned pursuit.
 5. Gate 4: `Give` / `Take`, then explore passive containers, trade, stealing, feeding/offering, and transfer restrictions.
 6. Gate 5: template spawning, then explore authored spawners, projectiles, traps/bombs, builders, and clone/summon prototypes.
@@ -148,7 +149,7 @@ For each candidate vignette, record before implementation whether the intended e
 
 Likely candidate focuses:
 
-- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. Sprint 13 completed focused direction-transform showcases for turning, backstep, wall-bounce, and patrol-turn behavior; the first curated actor zoo remains deferred until a broader gallery becomes useful.
+- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. Sprint 13 completed focused direction-transform showcases for turning, backstep, wall-bounce, and patrol-turn behavior. Sprint 14 completed targeting showcases for acquisition, direct chase, targeted destruction, and autonomous collection; the first curated actor zoo and follower scenario remain deferred until a broader gallery or differentiated use case becomes useful.
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
 - Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, local turn-order/previous-action tables, compact per-turn state diffs, created/destroyed entity summaries, capability-gap sections, preview-plus-simulation in one command, actor-zoo/isolation report templates, and cleanup/replacement of the older test-local runner. Deferred tactical telegraphing should project each actor's next resolved behavior/fallback on a safe simulation snapshot; pull it forward when complex gameplay scenarios require tactical information beyond previous actions.
 - Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.
@@ -172,21 +173,24 @@ Status: Highest-priority backlog bucket.
 
 Priority order:
 
-1. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
-2. Lightweight scenario report template once first runner output reveals the useful fields.
-3. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
-4. Plan preview + simulation in one API command.
-5. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
-6. Curated actor-zoo report template for one-room behavior demonstrations.
-7. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
-8. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
-9. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
-10. Generalized scenario runner upgrade sprint.
-11. Saved scenario runlogs.
-12. Golden runlog tests.
-13. Test inspector / runlog stepper with forward/back controls.
-14. Editor `Run in Console` button after Console scenario launch exists.
-15. Live in-editor preview window showing an entity performing its action plan.
+1. Headless debug scenario recorder: `RecordScenario`-style sibling workflow, dotnet-accessible command, PNG frames, GIF output, and visual state debugging for scenario turns.
+2. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
+3. Lightweight scenario report template once first runner output reveals the useful fields.
+4. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
+5. Plan preview + simulation in one API command.
+6. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
+7. Curated actor-zoo report template for one-room behavior demonstrations.
+8. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
+9. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
+10. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
+11. Generalized scenario runner upgrade sprint.
+12. Per-initiative debug recording frames and active-actor/focus display for dense simulations.
+13. Alternate debug-render styles, such as 2x2 color blocks, larger bordered glyph tiles, and configurable themes/layouts.
+14. Saved scenario runlogs.
+15. Golden runlog tests.
+16. Test inspector / runlog stepper with forward/back controls.
+17. Editor `Run in Console` button after Console scenario launch exists.
+18. Live in-editor preview window showing an entity performing its action plan.
 
 Completed baseline:
 
