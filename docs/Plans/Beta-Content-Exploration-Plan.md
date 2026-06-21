@@ -73,6 +73,33 @@ Suggested gap-log fields:
 - requested priority;
 - classification.
 
+### Lightweight editor-to-core-owner change-request workflow
+
+Use this workflow for editor-discovered planned needs or recurring capability gaps that are not already selected sprint implementation work. The goal is to minimize development time, complexity, and token use while still letting the core-owner quickly assess whether a request is worth promoting.
+
+1. **Editor identifies the need**
+   - Notice a planned need, recurring authoring friction, or capability gap.
+   - State the goal in content terms, not implementation terms.
+   - Provide only the minimal context needed: scenario/vignette, desired behavior, current workaround/blocker, and why the request matters.
+
+2. **Editor sends a viability request to core-owner**
+   - Ask for technical viability first, not a TDD plan and not implementation details.
+   - Split the request into:
+     - **Necessary changes**: the smallest changes that would unblock the content goal;
+     - **Nice-to-haves**: reusable, polished, or workflow-improving additions that would be helpful but are not required.
+
+3. **Core-owner assesses viability**
+   - For each Necessary and Nice-to-Have, classify technical viability and risk/complexity.
+   - Do not start implementation planning until the viability decision is clear.
+
+4. **Decision rule**
+   - If any Necessary is complex or high-risk, deny the change request for now and report the blocker/risk.
+   - If all Necessaries are simple, proceed to a TDD plan for the essentials.
+   - If all Necessaries are simple and all Nice-to-Haves are also simple, proceed to a TDD plan for the full feature.
+   - If Necessaries are simple but any Nice-to-Have is complex or high-risk, stop and explain the tradeoff to the user for a decision.
+
+This workflow is intentionally lighter than normal selected sprint-work implementation. It should prevent agents from over-designing speculative features while still capturing enough context for useful core-owner assessment.
+
 ## Phase 0: current-tool vignettes
 
 Status: First primitive-showcase batch completed in Sprint 12. Curated actor zoo deferred.

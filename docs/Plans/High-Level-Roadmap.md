@@ -197,11 +197,13 @@ Completed baseline:
 Future generalized scenario runner wishlist:
 
 - Promote the current test-local runner/report shape into reusable test/editor-agent helpers rather than duplicating C# setup across scenario tests.
+- Add an agent/headless API command that runs a persisted scenario by scenario ID, including player insertion/materialization, instead of only root-template simulation.
+- Make root-only versus persisted-scenario simulation terminology explicit in commands/reports/docs.
 - Add a small typed scenario setup model for planes, runtime entity placements, watched entities, turn count, expected diagnostics, and capability-gap notes without becoming a separate content language.
 - Support editor/API-authored temporary content end-to-end: templates, carried inventory, initial action state, default plan assignment, behavior-chain authoring, validation, runtime spawn, simulation, and report generation.
-- Provide richer compact state summaries for positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
+- Provide richer compact state summaries for positions, facing, target, inventories/containment including carried inventory coordinates, created/destroyed entities, and changed state per turn.
 - Add stable report sections suitable for saved runlogs and eventual golden comparisons once the format stops changing.
-- Allow scenario reports to include plan preview, validation diagnostics, simulation trace, state diff, and capability gaps in one result.
+- Allow scenario reports to include plan preview, validation diagnostics, simulation trace, state diff, inventory/containment summary, and capability gaps in one result.
 - Support primitive showcase and actor-zoo workflows once explicit authored scenarios reveal which setup variants are broadly useful.
 - Keep Console/frontend playability as a later promotion step, after headless reports prove which scenario fields are useful.
 
@@ -229,15 +231,16 @@ Priority order:
 4. `Backstep`: move one cell opposite persistent actor `Facing` without changing `Facing`.
 5. `SeekTarget` / move toward target: choose a deterministic step toward persistent `Target` after target movement semantics are concrete.
 6. `AcquireNearestTarget`: select a nearby valid entity and write persistent `Target`, initially with simple deterministic same-plane rules.
-7. `Give`: move a carried entity into the inventory space of the persistent `Target` entity.
-8. `Take`: move an entity from the inventory space of an adjacent/target entity into the actor inventory.
-9. Explicit failure/turn-consumption policy for exhausted behavior chains, if scenario reports reveal author confusion beyond observational reporting.
-10. Consistent blocker/`Target` writing rules for failed directional steps, including whether `DropFacing` and `Backstep` should write blockers.
-11. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
-12. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
-13. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity `Target`.
-14. `BumpTarget` or generic interaction fallback steps.
-15. Player/screen messages if scenarios need action feedback beyond traces.
+7. Authorable target filters for `AcquireNearestTarget`, such as template/category/player/item filters, after sparse-layout workarounds become limiting.
+8. `Give`: move a carried entity into the inventory space of the persistent `Target` entity.
+9. `Take`: move an entity from the inventory space of an adjacent/target entity into the actor inventory.
+10. Explicit failure/turn-consumption policy for exhausted behavior chains, if scenario reports reveal author confusion beyond observational reporting.
+11. Consistent blocker/`Target` writing rules for failed directional steps, including whether `DropFacing` and `Backstep` should write blockers.
+12. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
+13. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
+14. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity `Target`.
+15. `BumpTarget` or generic interaction fallback steps.
+16. Player/screen messages if scenarios need action feedback beyond traces.
 
 Dependencies:
 
@@ -308,9 +311,10 @@ Priority order:
 1. Beta content file organization: introduce folders or multiple content documents when fixture count makes single-file navigation, scenario selection, or validation noisy.
 2. Scenario families and grouping once individual alpha scenario documents work.
 3. Richer scenario metadata beyond alpha launch needs.
-4. Richer world/setup data beyond scenario-root inventory spaces.
-5. Loading one scenario inside another for setpieces or nested levels.
-6. Randomly generated levels.
+4. Scenario-level initial action-state overrides for specific materialized entities, especially initial `Target`, once vignettes need locked-on or non-nearest target setup.
+5. Richer world/setup data beyond scenario-root inventory spaces.
+6. Loading one scenario inside another for setpieces or nested levels.
+7. Randomly generated levels.
 
 Dependencies:
 
