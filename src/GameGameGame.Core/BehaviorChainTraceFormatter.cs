@@ -70,7 +70,7 @@ public static class BehaviorChainTraceFormatter
 
     private static IReadOnlyList<string> FindResults(TraceNode node) =>
         Descendants(node)
-            .Where(trace => trace.Label is "Primitive Backstep" or "Primitive PickupTarget" or "Primitive AcquireNearestTarget" or "Primitive SeekTarget" && !string.IsNullOrWhiteSpace(trace.Detail))
+            .Where(trace => trace.Label is "Primitive Backstep" or "Primitive PickupTarget" or "Primitive AcquireNearestTarget" or "Primitive SeekTarget" or "Primitive FleeTarget" && !string.IsNullOrWhiteSpace(trace.Detail))
             .Select(trace => trace.Detail!)
             .Distinct()
             .ToList();

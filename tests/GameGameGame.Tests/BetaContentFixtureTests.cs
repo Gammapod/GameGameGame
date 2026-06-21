@@ -294,6 +294,36 @@ public sealed class BetaContentFixtureTests
     }
 
     [Fact]
+    public void FleeTargetShowcaseValidatesMaterializesRunsAndRecords()
+    {
+        var api = OpenBetaContent("DistanceMovement", "FleeTargetShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-flee-target"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 4)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaFleeTargetRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("fleeingPrey")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=fleeBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. FleeTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved North away from fleeBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. FleeTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. FleeTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Fleeing Prey: scenarioRoot(6,0), facing East, target fleeBeacon", report.FinalStateLines);
+        Assert.Contains("Flee Beacon: scenarioRoot(4,2), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
     public void PushFacingShowcaseValidatesMaterializesAndRuns()
     {
         var api = OpenBetaContent("CurrentTools", "PushFacingShowcase.yaml");

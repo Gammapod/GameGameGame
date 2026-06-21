@@ -194,6 +194,7 @@ public sealed class YamlContentLoaderTests
                     - kind: TurnLeft
                     - kind: TurnRight
                     - kind: ReverseFacing
+                    - kind: FleeTarget
             """);
 
         var registry = document.ToRegistry();
@@ -208,14 +209,16 @@ public sealed class YamlContentLoaderTests
                 ActionPlanBehaviorStepKind.PickupTarget,
                 ActionPlanBehaviorStepKind.TurnLeft,
                 ActionPlanBehaviorStepKind.TurnRight,
-                ActionPlanBehaviorStepKind.ReverseFacing
+                ActionPlanBehaviorStepKind.ReverseFacing,
+                ActionPlanBehaviorStepKind.FleeTarget
             ],
             descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
         Assert.Contains("behavior:", saved);
         Assert.Contains("kind: MoveFacing", saved);
         Assert.Contains("kind: Backstep", saved);
         Assert.Contains("kind: ReverseFacing", saved);
-        Assert.Equal(ActionPlanBehaviorStepKind.ReverseFacing, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[5].Kind);
+        Assert.Contains("kind: FleeTarget", saved);
+        Assert.Equal(ActionPlanBehaviorStepKind.FleeTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[6].Kind);
     }
 
     [Fact]

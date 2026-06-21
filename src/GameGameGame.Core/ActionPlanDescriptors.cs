@@ -30,7 +30,8 @@ public enum ActionPlanBehaviorStepKind
     ReverseFacing,
     Backstep,
     AcquireNearestTarget,
-    SeekTarget
+    SeekTarget,
+    FleeTarget
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(

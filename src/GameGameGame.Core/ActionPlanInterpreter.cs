@@ -276,6 +276,7 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.ReverseFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.ReverseFacing),
             ActionPlanBehaviorStepKind.AcquireNearestTarget => null,
             ActionPlanBehaviorStepKind.SeekTarget => null,
+            ActionPlanBehaviorStepKind.FleeTarget => null,
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -283,6 +284,7 @@ public sealed class ActionPlanInterpreter
         {
             ActionPlanBehaviorStepKind.AcquireNearestTarget => ApplyAcquireNearestTarget(world, actorId, context),
             ActionPlanBehaviorStepKind.SeekTarget => ApplySeekTarget(world, actorId, context),
+            ActionPlanBehaviorStepKind.FleeTarget => ApplyFleeTarget(world, actorId, context),
             _ => ApplyPrimitive(world, actorId, context, primitive!)
         };
     }
@@ -423,6 +425,96 @@ public sealed class ActionPlanInterpreter
         trace.Status = TraceStatus.Success;
         trace.Detail = $"moved {step.Direction} toward {target.Value}; distance {currentDistance}->{step.Distance}";
         return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyFleeTarget(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive FleeTarget", TraceStatus.Info);
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        if (target.Value == actorId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetIsActor;
+            trace.Detail = "FleeTarget cannot flee self";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(target.Value))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {target.Value} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorMissing;
+            trace.Detail = $"actor {actorId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        var targetLocation = world.GetEntityLocation(target.Value);
+        if (actorLocation.PlaneId != targetLocation.PlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"target {target.Value} is off-plane at {targetLocation}; actor is on {actorLocation.PlaneId}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var currentDistance = ManhattanDistance(actorLocation.Coord, targetLocation.Coord);
+        var candidates = SeekDirections()
+            .Select(direction => new
+            {
+                Direction = direction,
+                Destination = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction)),
+                Distance = ManhattanDistance(actorLocation.Coord.Offset(direction), targetLocation.Coord)
+            })
+            .Where(candidate => candidate.Distance > currentDistance)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"no cardinal step increases distance from target {target.Value}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        foreach (var step in candidates)
+        {
+            var evaluation = _movement.EvaluateRelocation(world, actorId, MovementDestination.Plane(step.Destination));
+            trace.Add(evaluation.Trace);
+            if (!evaluation.CanRelocate || evaluation.Destination is null)
+            {
+                trace.Add(TraceNode.Failure("Reject flee step", evaluation.Trace.Reason, $"{step.Direction} blocked: {evaluation.Trace.Detail}; distance {currentDistance}->{step.Distance}"));
+                continue;
+            }
+
+            trace.Add(TraceNode.Success("Select flee step", $"{step.Direction} to {step.Destination}; distance {currentDistance}->{step.Distance}; tieBreak=North,South,West,East"));
+            _movement.TryPlace(world, actorId, step.Destination);
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"moved {step.Direction} away from {target.Value}; distance {currentDistance}->{step.Distance}";
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        }
+
+        var lastFailure = trace.Children.LastOrDefault(child => child.Label == "Reject flee step");
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = lastFailure?.Reason ?? FailureReason.InvalidPlacement;
+        trace.Detail = $"no valid distance-increasing flee step from target {target.Value}; distance={currentDistance}";
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
     }
 
     private PlanEffectResult ApplyMoveFacingPrimitive(
