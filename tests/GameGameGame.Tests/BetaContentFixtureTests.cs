@@ -151,6 +151,149 @@ public sealed class BetaContentFixtureTests
     }
 
     [Fact]
+    public void AcquireTargetShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Targeting", "AcquireTargetShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-acquire-target-showcase"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 5)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaAcquireTargetRoom"), TurnCount: 1)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("targetAcquirer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=westTieTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("distance=2", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("tieBreak=row-major", StringComparison.Ordinal));
+        Assert.Contains("Target Acquirer: scenarioRoot(4,2), facing West, target westTieTarget", report.FinalStateLines);
+        Assert.Contains("Target Beacon: scenarioRoot(3,1), facing none, target none", report.FinalStateLines);
+        Assert.Contains("Target Beacon: scenarioRoot(5,1), facing none, target none", report.FinalStateLines);
+        Assert.Contains("Target Beacon: scenarioRoot(7,3), facing none, target none", report.FinalStateLines);
+    }
+
+    [Fact]
+    public void DirectChaseShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-direct-chase"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 4)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaDirectChaseRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("directChaser")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=directChaseTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved East toward directChaseTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Direct Chaser: scenarioRoot(4,2), facing East, target directChaseTarget", report.FinalStateLines);
+        Assert.Contains("Direct Chase Target: scenarioRoot(6,2), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void TargetedDestroyerShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Targeting", "TargetedDestroyerShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-targeted-destroyer"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 4)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaTargetedDestroyerRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("targetedDestroyer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=destructibleTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. SeekTarget: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("3. DestroyTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Targeted Destroyer: scenarioRoot(3,2), facing East, target destructibleTarget", report.FinalStateLines);
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Destructible Target:", StringComparison.Ordinal));
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void CollectorShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Targeting", "CollectorShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-collector"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(6, 2)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaCollectorRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("collector")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=collectibleGem", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. SeekTarget: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("3. PickupTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Collector: scenarioRoot(3,2), facing East, target collectibleGem", report.FinalStateLines);
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Collectible Gem:", StringComparison.Ordinal));
+        Assert.Empty(report.RuntimeObservations);
+
+        var session = OpenBetaContentSession("Targeting", "CollectorShowcase.yaml");
+        var playableMaterialization = AlphaScenarioMaterializer.Materialize(session, session.Editor.GetScenario("beta-collector") is { } scenario
+            ? new AgentAlphaScenarioDefinition(
+                scenario.ScenarioId,
+                scenario.Name,
+                scenario.ScenarioRootEntityTemplateId,
+                scenario.PlayerEntityTemplateId,
+                scenario.PlayerEntityId,
+                scenario.PlayerStart)
+            : throw new InvalidOperationException("Missing beta-collector scenario."));
+        Assert.True(playableMaterialization.CanSimulate, string.Join(Environment.NewLine, playableMaterialization.ValidationDiagnostics.Concat(playableMaterialization.RuntimeFailures)));
+
+        var turnService = new TurnService(new MovementService(), playableMaterialization.ActionPlans);
+        for (var i = 0; i < 6; i++)
+        {
+            turnService.AdvanceAfterPlayerTurn(playableMaterialization.World);
+        }
+
+        Assert.Equal(new PlaneCoord(new PlaneId("collector"), new GridCoord(0, 0)), playableMaterialization.World.GetEntityLocation(new EntityId("collectibleGem")));
+        Assert.Equal(new PlaneCoord(new PlaneId("collector"), new GridCoord(1, 0)), playableMaterialization.World.GetEntityLocation(new EntityId("betaPlayer")));
+        Assert.Equal(new EntityId("betaPlayer"), playableMaterialization.World.GetActionTarget(new EntityId("collector")));
+    }
+
+    [Fact]
     public void PushFacingShowcaseValidatesMaterializesAndRuns()
     {
         var api = OpenBetaContent("CurrentTools", "PushFacingShowcase.yaml");
@@ -340,6 +483,15 @@ public sealed class BetaContentFixtureTests
     {
         var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));
         return AssertSuccess(AgentContentEditorApi.OpenFile(path));
+    }
+
+    private static ContentEditorSession OpenBetaContentSession(string group, string fileName)
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));
+        var result = ContentEditorSession.OpenFile(path);
+        Assert.NotNull(result.Session);
+        Assert.Null(result.ErrorMessage);
+        return result.Session!;
     }
 
     private static string FindRepositoryFile(string relativePath)

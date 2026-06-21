@@ -108,7 +108,7 @@ Long-term frontend direction:
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
 
-Current decision point: Sprint 13 has selected the Gate 1 Direction Transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`) as the active sprint focus, with five planned direction showcases and explicit coordination with the core owner before each missing primitive is needed.
+Current decision point: Sprint 14 has selected the Gate 2 targeting batch (`AcquireNearestTarget`, `SeekTarget`) as the active sprint focus, with four planned targeting showcases and `beta-follower` tentatively deferred unless a differentiated use case appears. See `docs/Plans/Sprint-14-Gate-2-Targeting-Showcases.md` for the active showcase plan and core-owner primitive request.
 
 Current beta content-exploration order:
 
@@ -148,7 +148,7 @@ For each candidate vignette, record before implementation whether the intended e
 
 Likely candidate focuses:
 
-- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. The first curated actor zoo is deferred until later beta phases, likely after direction transforms make it more informative.
+- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. Sprint 13 completed focused direction-transform showcases for turning, backstep, wall-bounce, and patrol-turn behavior; the first curated actor zoo remains deferred until a broader gallery becomes useful.
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
 - Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, local turn-order/previous-action tables, compact per-turn state diffs, created/destroyed entity summaries, capability-gap sections, preview-plus-simulation in one command, actor-zoo/isolation report templates, and cleanup/replacement of the older test-local runner. Deferred tactical telegraphing should project each actor's next resolved behavior/fallback on a safe simulation snapshot; pull it forward when complex gameplay scenarios require tactical information beyond previous actions.
 - Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.

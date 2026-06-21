@@ -28,7 +28,9 @@ public enum ActionPlanBehaviorStepKind
     TurnLeft,
     TurnRight,
     ReverseFacing,
-    Backstep
+    Backstep,
+    AcquireNearestTarget,
+    SeekTarget
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(

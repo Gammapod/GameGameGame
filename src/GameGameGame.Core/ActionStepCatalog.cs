@@ -37,7 +37,7 @@ public static class ActionStepCatalog
         new(
             ActionPlanBehaviorStepKind.PickupTarget,
             "Pickup Target",
-            "Attempts to pick up the persistent Target into the first canonical inventory coordinate; when pickup fails, falls through to the next Action Step.",
+            "Attempts to pick up the persistent Target into the first available actor inventory coordinate in deterministic row-major order; when pickup fails, falls through to the next Action Step.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
         new(
@@ -91,7 +91,18 @@ public static class ActionStepCatalog
             "Attempts to move the actor one tile opposite its persistent Facing direction while preserving Facing; when blocked by an entity, writes that entity to Target and falls through to the next Action Step.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
+            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.AcquireNearestTarget,
+            "Acquire Nearest Target",
+            "Selects the nearest same-plane entity other than self by Manhattan distance, breaking ties by row-major coordinate order, writes it to Target, and continues to the next Action Step.",
+            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.SeekTarget,
+            "Seek Target",
+            "Reads the persistent Target and greedily moves one cardinal step that reduces Manhattan distance, breaking ties North, South, West, East; preserves Target on failure/contact.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
     ];
 
     public static ActionStepDescriptor Get(ActionPlanBehaviorStepKind kind) =>

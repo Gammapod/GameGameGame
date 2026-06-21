@@ -170,6 +170,8 @@ Design questions for the gate:
 
 ## Gate 2: `AcquireNearestTarget` + `SeekTarget`
 
+Status: Selected for Sprint 14. See `docs/Plans/Sprint-14-Gate-2-Targeting-Showcases.md` for the active showcase plan and core-owner primitive request.
+
 Request and implement after direction transforms have been explored:
 
 - `AcquireNearestTarget`

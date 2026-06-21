@@ -1,0 +1,79 @@
+entityTemplates:
+  betaAcquireTargetRoom:
+    name: Beta Acquire Target Showcase Room
+    inventoryWidth: 10
+    inventoryHeight: 6
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: targetAcquirer
+      templateId: betaTargetAcquirer
+      coord:
+        x: 4
+        y: 2
+    - entityId: westTieTarget
+      templateId: betaTargetBeacon
+      coord:
+        x: 3
+        y: 1
+    - entityId: eastTieTarget
+      templateId: betaTargetBeacon
+      coord:
+        x: 5
+        y: 1
+    - entityId: farTarget
+      templateId: betaTargetBeacon
+      coord:
+        x: 7
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaTargetAcquirer:
+    name: Target Acquirer
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: acquireNearestOnly
+    actionStateDefaults:
+      facing: West
+  betaTargetBeacon:
+    name: Target Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaAcquireTargetRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaTargetAcquirer:
+    glyph: 'A'
+    color: Green
+  betaTargetBeacon:
+    glyph: '*'
+    color: Cyan
+actionPlans:
+  acquireNearestOnly:
+    id: acquireNearestOnly
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+scenarios:
+  beta-acquire-target-showcase:
+    name: Beta Acquire Target Showcase
+    scenarioRootEntityTemplateId: betaAcquireTargetRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 5

@@ -1,0 +1,71 @@
+entityTemplates:
+  betaCollectorRoom:
+    name: Beta Collector Room
+    inventoryWidth: 10
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: collector
+      templateId: betaCollector
+      coord:
+        x: 1
+        y: 2
+    - entityId: collectibleGem
+      templateId: betaCollectibleGem
+      coord:
+        x: 4
+        y: 2
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaCollector:
+    name: Collector
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: acquireSeekPickup
+    actionStateDefaults:
+      facing: East
+  betaCollectibleGem:
+    name: Collectible Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaCollectorRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaCollector:
+    glyph: 'C'
+    color: Green
+  betaCollectibleGem:
+    glyph: '*'
+    color: Cyan
+actionPlans:
+  acquireSeekPickup:
+    id: acquireSeekPickup
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: SeekTarget
+      - kind: PickupTarget
+scenarios:
+  beta-collector:
+    name: Beta Collector
+    scenarioRootEntityTemplateId: betaCollectorRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 6
+      y: 2

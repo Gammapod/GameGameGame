@@ -1,0 +1,71 @@
+entityTemplates:
+  betaTargetedDestroyerRoom:
+    name: Beta Targeted Destroyer Room
+    inventoryWidth: 10
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: targetedDestroyer
+      templateId: betaTargetedDestroyer
+      coord:
+        x: 1
+        y: 2
+    - entityId: destructibleTarget
+      templateId: betaDestructibleTarget
+      coord:
+        x: 4
+        y: 2
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaTargetedDestroyer:
+    name: Targeted Destroyer
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: acquireSeekDestroy
+    actionStateDefaults:
+      facing: East
+  betaDestructibleTarget:
+    name: Destructible Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaTargetedDestroyerRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaTargetedDestroyer:
+    glyph: 'D'
+    color: Green
+  betaDestructibleTarget:
+    glyph: 'x'
+    color: Earth
+actionPlans:
+  acquireSeekDestroy:
+    id: acquireSeekDestroy
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: SeekTarget
+      - kind: DestroyTarget
+scenarios:
+  beta-targeted-destroyer:
+    name: Beta Targeted Destroyer
+    scenarioRootEntityTemplateId: betaTargetedDestroyerRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 4

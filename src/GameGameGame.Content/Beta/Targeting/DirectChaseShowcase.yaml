@@ -1,0 +1,70 @@
+entityTemplates:
+  betaDirectChaseRoom:
+    name: Beta Direct Chase Room
+    inventoryWidth: 10
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: directChaser
+      templateId: betaDirectChaser
+      coord:
+        x: 1
+        y: 2
+    - entityId: directChaseTarget
+      templateId: betaDirectChaseTarget
+      coord:
+        x: 6
+        y: 2
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaDirectChaser:
+    name: Direct Chaser
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: acquireThenSeek
+    actionStateDefaults:
+      facing: East
+  betaDirectChaseTarget:
+    name: Direct Chase Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaDirectChaseRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaDirectChaser:
+    glyph: 'C'
+    color: Green
+  betaDirectChaseTarget:
+    glyph: 'T'
+    color: Cyan
+actionPlans:
+  acquireThenSeek:
+    id: acquireThenSeek
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: SeekTarget
+scenarios:
+  beta-direct-chase:
+    name: Beta Direct Chase
+    scenarioRootEntityTemplateId: betaDirectChaseRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 4

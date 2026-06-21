@@ -365,6 +365,8 @@ public sealed class CoreActionPlanTests
     [InlineData(ActionPlanBehaviorStepKind.TurnLeft, "Turn Left")]
     [InlineData(ActionPlanBehaviorStepKind.TurnRight, "Turn Right")]
     [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, "Reverse Facing")]
+    [InlineData(ActionPlanBehaviorStepKind.AcquireNearestTarget, "Acquire Nearest Target")]
+    [InlineData(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target")]
     public void ActionStepCatalogDescribesFirstUtilityBatch(ActionPlanBehaviorStepKind kind, string displayName)
     {
         var step = ActionStepCatalog.Get(kind);
@@ -594,6 +596,41 @@ public sealed class CoreActionPlanTests
         Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.SlimeId));
         Assert.True(TraceContains(result.Trace, "Primitive PickupTarget"));
         Assert.True(TraceContains(result.Trace, "Read slot Target"));
+    }
+
+    [Fact]
+    public void PrimitivePickupTargetUsesFirstAvailableInventoryCoordinateRowMajor()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 20 };
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        var descriptor = new ActionPlanDescriptor(
+            new ActionPlanId("pickup-target"),
+            [],
+            new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget));
+        var interpreter = new ActionPlanInterpreter(movement);
+
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
+        var first = interpreter.Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var second = interpreter.Execute(
+            world,
+            TestWorld.PlayerId,
+            descriptor.Materialize(),
+            new ActionPlanContext());
+
+        Assert.True(first.Succeeded);
+        Assert.True(second.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.True(TraceContains(second.Trace, "Pickup slime -> player(0,0)"));
+        Assert.True(TraceDetailContains(second.Trace, "first available inventory coordinate (1,0)"));
     }
 
     [Fact]
@@ -1347,6 +1384,7 @@ public sealed class CoreActionPlanTests
             line => Assert.Equal("   writes: Target=rock", line),
             line => Assert.Equal("2. PickupTarget: Success; fallback=stopped", line),
             line => Assert.Equal("   reads: Target=rock", line),
+            line => Assert.Equal("   results: picked up rock into first available inventory coordinate (0,0)", line),
             line => Assert.Equal("Terminal: succeeded; consumed turn", line));
     }
 
@@ -1450,6 +1488,127 @@ public sealed class CoreActionPlanTests
         Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
         Assert.Contains(summary, line => line == "1. Backstep: Failure; reason=MoveOutOfBounds; fallback=stopped");
         Assert.Contains(summary, line => line == "   reads: Facing=South");
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AcquireNearestTargetSelectsNearestSamePlaneTargetAndWritesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 3))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("acquire-nearest"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.AcquireNearestTarget)]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "   writes: Target=slime");
+        Assert.Contains(summary, line => line.Contains("distance=1", StringComparison.Ordinal));
+        Assert.Contains(summary, line => line.Contains("tieBreak=row-major", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AcquireNearestTargetFallsThroughWithoutOverwritingWhenNoCandidateExists()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("acquire-none"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.AcquireNearestTarget)]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line.Contains("no same-plane target found", StringComparison.Ordinal));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AcquireNearestTargetContinuesToSeekTargetInSameTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 1))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("acquire-then-seek"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.AcquireNearestTarget),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.SeekTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.SlimeId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.Contains(summary, line => line == "1. AcquireNearestTarget: Success; fallback=continued");
+        Assert.Contains(summary, line => line == "2. SeekTarget: Success; fallback=stopped");
+        Assert.Contains(summary, line => line.Contains("moved East toward rock", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SeekTargetAdjacentFallsThroughAndPreservesTargetForDestroyTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("seek-then-destroy"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.SeekTarget),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.False(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. SeekTarget: Failure; reason=TargetNotAdjacent; fallback=continued");
+        Assert.Contains(summary, line => line == "2. DestroyTarget: Success; fallback=stopped");
+    }
+
+    [Fact]
+    public void SeekTargetBlockedByIncidentalEntityPreservesGoalTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 4))));
+        world.SetActionTarget(TestWorld.SlimeId, TestWorld.RockId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("seek-blocked"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.SeekTarget)]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.SlimeId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.Contains(summary, line => line == "1. SeekTarget: Failure; reason=InvalidPlacement; fallback=stopped");
         Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
     }
 
@@ -1695,6 +1854,12 @@ public sealed class CoreActionPlanTests
     private static bool TraceContains(TraceNode trace, string label)
     {
         return trace.Label == label || trace.Children.Any(child => TraceContains(child, label));
+    }
+
+    private static bool TraceDetailContains(TraceNode trace, string detail)
+    {
+        return trace.Detail?.Contains(detail, StringComparison.Ordinal) == true
+            || trace.Children.Any(child => TraceDetailContains(child, detail));
     }
 
     private sealed record TestPlanCheck(

@@ -174,8 +174,13 @@ public sealed class ActionPlanInterpreter
 
             if (stepResult.Succeeded)
             {
-                root.Status = TraceStatus.Success;
-                return new PlanExecutionResult(true, stepResult.ConsumesTurn, stepResult.ContinuePlan, root);
+                if (stepResult.ConsumesTurn || !stepResult.ContinuePlan || index == steps.Count - 1)
+                {
+                    root.Status = TraceStatus.Success;
+                    return new PlanExecutionResult(true, stepResult.ConsumesTurn, stepResult.ContinuePlan, root);
+                }
+
+                continue;
             }
         }
 
@@ -269,10 +274,155 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.TurnLeft => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.TurnLeft),
             ActionPlanBehaviorStepKind.TurnRight => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.TurnRight),
             ActionPlanBehaviorStepKind.ReverseFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.ReverseFacing),
+            ActionPlanBehaviorStepKind.AcquireNearestTarget => null,
+            ActionPlanBehaviorStepKind.SeekTarget => null,
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
-        return ApplyPrimitive(world, actorId, context, primitive);
+        return step.Kind switch
+        {
+            ActionPlanBehaviorStepKind.AcquireNearestTarget => ApplyAcquireNearestTarget(world, actorId, context),
+            ActionPlanBehaviorStepKind.SeekTarget => ApplySeekTarget(world, actorId, context),
+            _ => ApplyPrimitive(world, actorId, context, primitive!)
+        };
+    }
+
+    private PlanEffectResult ApplyAcquireNearestTarget(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive AcquireNearestTarget", TraceStatus.Info);
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorMissing;
+            trace.Detail = $"actor {actorId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        trace.Add(TraceNode.Success("Read actor position", actorLocation.ToString()));
+
+        var selected = world.Occupancy
+            .Select(entry => (EntityId: entry.Value, Node: world.Nodes[entry.Key]))
+            .Where(entry => entry.EntityId != actorId && entry.Node.PlaneId == actorLocation.PlaneId)
+            .Select(entry => new
+            {
+                entry.EntityId,
+                entry.Node.Coord,
+                Distance = ManhattanDistance(actorLocation.Coord, entry.Node.Coord)
+            })
+            .OrderBy(entry => entry.Distance)
+            .ThenBy(entry => entry.Coord.Y)
+            .ThenBy(entry => entry.Coord.X)
+            .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+        if (selected is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"no same-plane target found on {actorLocation.PlaneId}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(context.Set(ActionPlanSlot.Target, new EntityPlanValue(selected.EntityId)));
+        var selectedEntity = world.Entities[selected.EntityId];
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"selected {selected.EntityId} ({selectedEntity.Name}) at {actorLocation.PlaneId}{selected.Coord}; distance={selected.Distance}; tieBreak=row-major";
+        return new PlanEffectResult(true, ConsumesTurn: false, ContinuePlan: true, trace);
+    }
+
+    private PlanEffectResult ApplySeekTarget(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive SeekTarget", TraceStatus.Info);
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        if (target.Value == actorId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetIsActor;
+            trace.Detail = "SeekTarget cannot seek self";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(target.Value))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {target.Value} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorMissing;
+            trace.Detail = $"actor {actorId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        var targetLocation = world.GetEntityLocation(target.Value);
+        if (actorLocation.PlaneId != targetLocation.PlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"target {target.Value} is off-plane at {targetLocation}; actor is on {actorLocation.PlaneId}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var currentDistance = ManhattanDistance(actorLocation.Coord, targetLocation.Coord);
+        var step = SeekDirections()
+            .Select(direction => new
+            {
+                Direction = direction,
+                Destination = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction)),
+                Distance = ManhattanDistance(actorLocation.Coord.Offset(direction), targetLocation.Coord)
+            })
+            .Where(candidate => candidate.Distance < currentDistance)
+            .FirstOrDefault();
+
+        if (step is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"no cardinal step reduces distance to target {target.Value}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(TraceNode.Success("Select seek step", $"{step.Direction} to {step.Destination}; distance {currentDistance}->{step.Distance}; tieBreak=North,South,West,East"));
+
+        if (step.Destination == targetLocation)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetNotAdjacent;
+            trace.Detail = $"target {target.Value} is adjacent at {targetLocation}; preserving Target for followup";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var evaluation = _movement.EvaluateRelocation(world, actorId, MovementDestination.Plane(step.Destination));
+        trace.Add(evaluation.Trace);
+        if (!evaluation.CanRelocate || evaluation.Destination is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = evaluation.Trace.Reason;
+            trace.Detail = $"seek step {step.Direction} blocked: {evaluation.Trace.Detail}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        _movement.TryPlace(world, actorId, step.Destination);
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"moved {step.Direction} toward {target.Value}; distance {currentDistance}->{step.Distance}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
     }
 
     private PlanEffectResult ApplyMoveFacingPrimitive(
@@ -365,14 +515,78 @@ public sealed class ActionPlanInterpreter
             trace.Add(context.Set(ActionPlanSlot.Target, new EntityPlanValue(actorId)));
         }
 
-        var effect = new PickupEffect(new GridCoord(0, 0));
-        var result = effect.Apply(world, actorId, context, _movement);
-        trace.Add(result.Trace);
-        trace.Status = result.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
-        trace.Reason = result.Trace.Reason;
-        trace.Detail = result.Trace.Detail;
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
 
-        return new PlanEffectResult(result.Succeeded, result.ConsumesTurn, result.ContinuePlan, trace);
+        trace.Add(readTrace);
+
+        if (!world.Entities.TryGetValue(actorId, out var actor))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorMissing;
+            trace.Detail = $"actor {actorId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorHasNoInventory;
+            trace.Detail = $"{actor.Name} has no inventory plane";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        if (!actor.HasUsableInventory)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorInventoryUnusable;
+            trace.Detail = $"{actor.Name} inventory dimensions are {actor.InventoryWidth}x{actor.InventoryHeight}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        if (!world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.InvalidInventoryDestination;
+            trace.Detail = $"inventory plane {inventoryPlaneId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        ActionResolution? lastFailure = null;
+        for (var y = 0; y < inventoryPlane.Height; y++)
+        {
+            for (var x = 0; x < inventoryPlane.Width; x++)
+            {
+                var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
+                IActionIntent action = new PickupAction(target.Value, destination);
+                var result = action.Resolve(world, actorId, _movement);
+                trace.Add(result.Trace);
+
+                if (result.Succeeded)
+                {
+                    trace.Status = TraceStatus.Success;
+                    trace.Detail = $"picked up {target.Value} into first available inventory coordinate {destination.Coord}";
+                    return new PlanEffectResult(true, result.ConsumesTurn, result.ContinuePlan, trace);
+                }
+
+                lastFailure = result;
+            }
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement;
+        trace.Detail = $"no inventory coordinate can accept {target.Value}";
+        if (!string.IsNullOrWhiteSpace(lastFailure?.Trace.Detail))
+        {
+            trace.Detail += $"; last failure: {lastFailure.Trace.Detail}";
+        }
+
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
     }
 
     private PlanEffectResult ApplyDropFacingPrimitive(
@@ -581,6 +795,12 @@ public sealed class ActionPlanInterpreter
             Direction.West => Direction.East,
             _ => direction
         };
+
+    private static int ManhattanDistance(GridCoord first, GridCoord second) =>
+        Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
+
+    private static IReadOnlyList<Direction> SeekDirections() =>
+        [Direction.North, Direction.South, Direction.West, Direction.East];
 
     private static EntityId? FindFirstCarriedEntity(WorldState world, EntityId actorId)
     {
