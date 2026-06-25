@@ -6,5 +6,6 @@ public static class TestSuites
     public const string Core = "Core";
     public const string Content = "Content";
     public const string Console = "Console";
+    public const string Headless = "Headless";
     public const string Editor = "Editor";
 }

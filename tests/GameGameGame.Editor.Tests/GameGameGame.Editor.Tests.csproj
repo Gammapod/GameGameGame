@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,15 +19,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="AgentContentEditorApiTests.cs" />
-    <Compile Remove="EditorViewModelTests.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\GameGameGame.Core\GameGameGame.Core.csproj" />
     <ProjectReference Include="..\..\src\GameGameGame.Content\GameGameGame.Content.csproj" />
     <ProjectReference Include="..\..\src\GameGameGame.Headless\GameGameGame.Headless.csproj" />
-    <ProjectReference Include="..\..\src\GameGameGame.Console\GameGameGame.Console.csproj" />
+    <ProjectReference Include="..\..\src\GameGameGame.Editor\GameGameGame.Editor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\GameGameGame.Tests\AgentContentEditorApiTests.cs" Link="AgentContentEditorApiTests.cs" />
+    <Compile Include="..\GameGameGame.Tests\EditorViewModelTests.cs" Link="EditorViewModelTests.cs" />
+    <Compile Include="..\GameGameGame.Tests\TestSuites.cs" Link="TestSuites.cs" />
+    <Compile Include="..\GameGameGame.Tests\TestWorld.cs" Link="TestWorld.cs" />
   </ItemGroup>
 
 </Project>

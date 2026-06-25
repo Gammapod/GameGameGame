@@ -39,4 +39,31 @@ public sealed class AlphaScenarioFixtureTests
         Assert.True(acted);
         Assert.Equal(new PlaneCoord(session.ActivePlaneId, new GridCoord(1, 0)), session.World.GetEntityLocation(session.PlayerEntityId));
     }
+
+    [Fact]
+    public void ScenarioMaterializerSupportsRootOnlyScenarioCompatibility()
+    {
+        var document = new EditableContentDocument();
+        var roomId = document.AddEntityTemplate(
+            "Root Only Room",
+            new EntityTemplate("Root Only Room", InventoryWidth: 2, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+
+        var materialization = ScenarioMaterializer.MaterializeRootOnly(
+            document,
+            "root-only",
+            "Root Only",
+            roomId,
+            ScenarioMaterializer.DefaultScenarioRootEntityId,
+            ScenarioMaterializer.DefaultScenarioPlaneId);
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.False(materialization.CanPlay);
+        Assert.Null(materialization.PlayerEntityId);
+        Assert.Null(materialization.PlayerLocation);
+        Assert.Equal(ScenarioMaterializer.DefaultScenarioPlaneId, materialization.ScenarioPlaneId);
+        Assert.Equal(ScenarioMaterializer.DefaultScenarioRootEntityId, materialization.ScenarioRootEntityId);
+        Assert.Equal(ScenarioMaterializer.DefaultScenarioPlaneId, materialization.World.GetInventoryPlaneId(materialization.ScenarioRootEntityId));
+        Assert.Contains("Scenario: root-only (Root Only)", materialization.SetupLines);
+    }
 }

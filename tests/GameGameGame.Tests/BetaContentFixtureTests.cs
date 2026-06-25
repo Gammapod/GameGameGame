@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
-using GameGameGame.Editor;
+using GameGameGame.Headless;
+using HeadlessScenarioRunReport = GameGameGame.Headless.ScenarioRunReport;
 
 namespace GameGameGame.Tests;
 
@@ -21,7 +22,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaTurnRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaTurnRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -55,7 +56,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaBackstepRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaBackstepRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -89,7 +90,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaWallBounceRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaWallBounceRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -122,7 +123,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 5)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaPatrolTurnRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaPatrolTurnRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -164,7 +165,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 5)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaAcquireTargetRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaAcquireTargetRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -193,7 +194,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 4)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaDirectChaseRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaDirectChaseRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -225,7 +226,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 4)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaTargetedDestroyerRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaTargetedDestroyerRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -255,7 +256,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(6, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaCollectorRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaCollectorRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -270,17 +271,8 @@ public sealed class BetaContentFixtureTests
         Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Collectible Gem:", StringComparison.Ordinal));
         Assert.Empty(report.RuntimeObservations);
 
-        var session = OpenBetaContentSession("Targeting", "CollectorShowcase.yaml");
-        var playableMaterialization = AlphaScenarioMaterializer.Materialize(session, session.Editor.GetScenario("beta-collector") is { } scenario
-            ? new AgentAlphaScenarioDefinition(
-                scenario.ScenarioId,
-                scenario.Name,
-                scenario.ScenarioRootEntityTemplateId,
-                scenario.PlayerEntityTemplateId,
-                scenario.PlayerEntityId,
-                scenario.PlayerStart)
-            : throw new InvalidOperationException("Missing beta-collector scenario."));
-        Assert.True(playableMaterialization.CanSimulate, string.Join(Environment.NewLine, playableMaterialization.ValidationDiagnostics.Concat(playableMaterialization.RuntimeFailures)));
+        var playableMaterialization = ScenarioMaterializer.Materialize(api.Document, "beta-collector");
+        Assert.True(playableMaterialization.CanPlay, string.Join(Environment.NewLine, playableMaterialization.ValidationDiagnostics.Concat(playableMaterialization.RuntimeFailures)));
 
         var turnService = new TurnService(new MovementService(), playableMaterialization.ActionPlans);
         for (var i = 0; i < 6; i++)
@@ -307,7 +299,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 4)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaFleeTargetRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaFleeTargetRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -337,7 +329,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(18, 6)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaDistanceTwoRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaDistanceTwoRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -378,7 +370,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 6)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaStrafeClockwiseRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaStrafeClockwiseRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -409,7 +401,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 6)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaStrafeAnticlockwiseRoom"), TurnCount: 3)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaStrafeAnticlockwiseRoom"), TurnCount: 3)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -440,7 +432,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(23, 6)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaKitingOrbiterRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaKitingOrbiterRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -477,7 +469,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(4, 0)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaKitingOrbiterFallbackLane"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaKitingOrbiterFallbackLane"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -517,7 +509,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaPushRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaPushRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -546,7 +538,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaDestroyRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaDestroyRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -575,7 +567,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaCreateRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaCreateRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -604,7 +596,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaDropRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaDropRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -637,7 +629,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaWeightRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaWeightRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -671,7 +663,7 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(materialization.RuntimeFailures);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
 
-        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaChainRoom"), TurnCount: 1)));
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaChainRoom"), TurnCount: 1)));
 
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
@@ -689,19 +681,10 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(report.RuntimeObservations);
     }
 
-    private static AgentContentEditorApi OpenBetaContent(string group, string fileName)
+    private static BetaContentApi OpenBetaContent(string group, string fileName)
     {
         var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));
-        return AssertSuccess(AgentContentEditorApi.OpenFile(path));
-    }
-
-    private static ContentEditorSession OpenBetaContentSession(string group, string fileName)
-    {
-        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));
-        var result = ContentEditorSession.OpenFile(path);
-        Assert.NotNull(result.Session);
-        Assert.Null(result.ErrorMessage);
-        return result.Session!;
+        return new BetaContentApi(EditableContentDocument.LoadYaml(File.ReadAllText(path)));
     }
 
     private static string FindRepositoryFile(string relativePath)
@@ -721,9 +704,23 @@ public sealed class BetaContentFixtureTests
         return Path.GetFullPath(relativePath);
     }
 
-    private static T AssertSuccess<T>(AgentApiResult<T> result)
+    private static T AssertSuccess<T>(T result) => result;
+
+    private sealed class BetaContentApi(EditableContentDocument document)
     {
-        Assert.True(result.IsSuccess, result.Error?.Message);
-        return result.Value!;
+        public EditableContentDocument Document { get; } = document;
+
+        public BetaDocumentSnapshot GetDocumentSnapshot() =>
+            new(Document.ToRegistry().Validate(), Document.ValidateCanonicalAuthoring());
+
+        public ScenarioMaterializationResult MaterializeScenario(string scenarioId) =>
+            ScenarioMaterializer.Materialize(Document, scenarioId);
+
+        public HeadlessScenarioRunReport RunScenario(ScenarioRunRequest request) =>
+            ScenarioRunService.Run(Document, request);
     }
+
+    private sealed record BetaDocumentSnapshot(
+        ContentValidationResult Validation,
+        ContentValidationResult CanonicalValidation);
 }

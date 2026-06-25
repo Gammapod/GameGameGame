@@ -2,13 +2,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GameGameGame.Content\GameGameGame.Content.csproj" />
+    <ProjectReference Include="..\GameGameGame.Headless\GameGameGame.Headless.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.7" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.7" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.7" />
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
   </ItemGroup>
 
   <PropertyGroup>

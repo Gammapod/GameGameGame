@@ -1,7 +1,6 @@
 using System.Text;
 using GameGameGame.Content;
 using GameGameGame.Core;
-using GameGameGame.Editor;
 
 namespace GameGameGame.Tests;
 
@@ -10,35 +9,29 @@ public sealed class ScenarioRunReportTests
     [Fact]
     public void ScenarioRunnerCanUseEditorAuthoredTemporaryContentForReport()
     {
-        var api = AgentContentEditorApi.CreateNew();
-        var actorTemplateId = AssertSuccess(api.CreateEntityTemplate("Scenario Actor"));
-        var rockTemplateId = AssertSuccess(api.CreateEntityTemplate("Scenario Rock"));
-        AssertSuccess(api.UpdateEntityTemplate(
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var actorTemplateId = editor.CreateEntityPreset("Scenario Actor");
+        var rockTemplateId = editor.CreateEntityPreset("Scenario Rock");
+        editor.UpdateEntityPreset(
             actorTemplateId,
-            new AgentEntityTemplateUpdate(
-                InventoryWidth: 3,
-                InventoryHeight: 2,
-                Weight: 10,
-                CarryingCapacity: 5,
-                Glyph: '@',
-                Color: PresentationColor.White)));
-        AssertSuccess(api.UpdateEntityTemplate(
+            new EntityTemplate("Scenario Actor", InventoryWidth: 3, InventoryHeight: 2, Weight: 10, CarryingCapacity: 5),
+            new EntityPresentation('@', PresentationColor.White));
+        editor.UpdateEntityPreset(
             rockTemplateId,
-            new AgentEntityTemplateUpdate(
-                Weight: 3,
-                CarryingCapacity: 3,
-                Glyph: '*',
-                Color: PresentationColor.Gray)));
-        AssertSuccess(api.SetInitialFacing(actorTemplateId, Direction.East));
-        AssertSuccess(api.PlaceCarriedEntity(actorTemplateId, new EntityId("carriedRock"), rockTemplateId, new GridCoord(0, 0)));
-        var planTemplateId = AssertSuccess(api.CreateActionPlan("Drop Facing"));
-        AssertSuccess(api.SetActionPlanBehavior(planTemplateId, [ActionPlanBehaviorStepKind.DropFacing]));
-        AssertSuccess(api.SetDefaultActionPlan(actorTemplateId, planTemplateId));
-        var snapshot = api.GetDocumentSnapshot();
-        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
-        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+            new EntityTemplate("Scenario Rock", InventoryWidth: 0, InventoryHeight: 0, Weight: 3, CarryingCapacity: 3),
+            new EntityPresentation('*', PresentationColor.Gray));
+        editor.SetInitialFacing(actorTemplateId, Direction.East);
+        editor.PlaceCarriedEntity(actorTemplateId, new EntityId("carriedRock"), rockTemplateId, new GridCoord(0, 0));
+        var planTemplateId = editor.CreateActionPlan("Drop Facing");
+        editor.SetActionPlanBehavior(planTemplateId, [ActionPlanBehaviorStepKind.DropFacing]);
+        editor.SetDefaultActionPlan(actorTemplateId, planTemplateId);
+        var validation = editor.Validate();
+        var canonicalValidation = document.ValidateCanonicalAuthoring();
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.True(canonicalValidation.IsValid, string.Join(Environment.NewLine, canonicalValidation.Errors));
 
-        var registry = api.Session.Document.ToRegistry();
+        var registry = document.ToRegistry();
         var world = CreateScenarioWorld();
         var actorId = new EntityId("actor");
         registry.SpawnEntity(
@@ -253,9 +246,10 @@ public sealed class ScenarioRunReportTests
     [Fact]
     public void ScenarioRunnerReportsContentAuthoringValidationFailure()
     {
-        var api = AgentContentEditorApi.CreateNew();
-        var invalidActorId = AssertSuccess(api.CreateEntityTemplate("Invalid Actor"));
-        api.Session.Document.EntityTemplates[invalidActorId.Value].DefaultActionPlanId = "missingPlan";
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var invalidActorId = editor.CreateEntityPreset("Invalid Actor");
+        document.EntityTemplates[invalidActorId.Value].DefaultActionPlanId = "missingPlan";
         var world = TestWorld.CreateWorld();
         var scenario = new HeadlessScenario(
             "invalid_content_missing_default_plan",
@@ -344,16 +338,6 @@ public sealed class ScenarioRunReportTests
             [],
             Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(stepKind)]));
 
-    private static void AssertSuccess(AgentApiResult result)
-    {
-        Assert.True(result.IsSuccess, result.Error?.Message);
-    }
-
-    private static T AssertSuccess<T>(AgentApiResult<T> result)
-    {
-        Assert.True(result.IsSuccess, result.Error?.Message);
-        return result.Value!;
-    }
 }
 
 internal sealed record HeadlessScenario(

@@ -1,7 +1,7 @@
 using GameGameGame.Core;
 using GameGameGame.Content;
 using GameGameGame.ConsoleApp;
-using GameGameGame.Editor;
+using GameGameGame.Headless;
 
 if (args.Length > 0 && args[0] == "record-scenario")
 {
@@ -104,21 +104,18 @@ int RecordScenarioCommand(string[] commandArgs)
     }
 
     Directory.CreateDirectory(outputDirectory);
-    var apiResult = AgentContentEditorApi.OpenFile(contentFile);
-    if (!apiResult.IsSuccess)
+    EditableContentDocument document;
+    try
     {
-        Console.Error.WriteLine(apiResult.Error!.Message);
+        document = EditableContentDocument.LoadYaml(File.ReadAllText(contentFile));
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(ex.Message);
         return 1;
     }
 
-    var reportResult = apiResult.Value!.RecordScenario(new AgentScenarioRecordingRequest(scenarioId, turns, outputDirectory));
-    if (!reportResult.IsSuccess)
-    {
-        Console.Error.WriteLine(reportResult.Error!.Message);
-        return 1;
-    }
-
-    var report = reportResult.Value!;
+    var report = ScenarioRecordingService.Record(document, new ScenarioRecordingRequest(scenarioId, turns, outputDirectory));
     foreach (var diagnostic in report.ValidationDiagnostics.Concat(report.RuntimeFailures).Concat(report.CapabilityGaps))
     {
         Console.Error.WriteLine(diagnostic);

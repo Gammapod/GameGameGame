@@ -7,8 +7,8 @@ public sealed record ScenarioMaterializationResult(
     string Name,
     EntityTemplateId ScenarioRootEntityTemplateId,
     EntityId ScenarioRootEntityId,
-    EntityTemplateId PlayerEntityTemplateId,
-    EntityId PlayerEntityId,
+    EntityTemplateId? PlayerEntityTemplateId,
+    EntityId? PlayerEntityId,
     PlaneId? ScenarioPlaneId,
     PlaneCoord? PlayerLocation,
     WorldState World,
@@ -32,28 +32,82 @@ public static class ScenarioMaterializer
         Materialize(document, document.GetScenario(scenarioId));
 
     public static ScenarioMaterializationResult Materialize(EditableContentDocument document, ScenarioDefinition scenario)
+        => Materialize(
+            document,
+            scenario.ScenarioId,
+            scenario.Name,
+            scenario.ScenarioRootEntityTemplateId,
+            DefaultScenarioRootEntityId,
+            DefaultScenarioPlaneId,
+            scenario.PlayerEntityTemplateId,
+            scenario.PlayerEntityId,
+            scenario.PlayerStart);
+
+    public static ScenarioMaterializationResult MaterializeRootOnly(
+        EditableContentDocument document,
+        string scenarioId,
+        string name,
+        EntityTemplateId scenarioRootEntityTemplateId,
+        EntityId scenarioRootEntityId,
+        PlaneId scenarioPlaneId)
+        => Materialize(
+            document,
+            scenarioId,
+            name,
+            scenarioRootEntityTemplateId,
+            scenarioRootEntityId,
+            scenarioPlaneId,
+            playerEntityTemplateId: null,
+            playerEntityId: null,
+            playerStart: null);
+
+    private static ScenarioMaterializationResult Materialize(
+        EditableContentDocument document,
+        string scenarioId,
+        string name,
+        EntityTemplateId scenarioRootEntityTemplateId,
+        EntityId scenarioRootEntityId,
+        PlaneId scenarioPlaneId,
+        EntityTemplateId? playerEntityTemplateId,
+        EntityId? playerEntityId,
+        GridCoord? playerStart)
     {
         var validationDiagnostics = document.ValidateCanonicalAuthoring().Errors.ToList();
         var runtimeFailures = new List<string>();
         var capabilityGaps = new List<string>();
         var setupLines = new List<string>();
         var world = new WorldState();
-        var registry = document.ToRegistry();
+        var registry = new PrototypeContentRegistry(
+            new Dictionary<EntityTemplateId, EntityTemplate>(),
+            new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(),
+            new Dictionary<EntityTemplateId, EntityPresentation>());
         var actionPlans = new Dictionary<EntityId, IEntityActionPlan>();
 
-        if (!registry.EntityTemplates.ContainsKey(scenario.ScenarioRootEntityTemplateId))
+        try
         {
-            validationDiagnostics.Add($"missing scenario root template {scenario.ScenarioRootEntityTemplateId}.");
+            registry = document.ToRegistry();
+            validationDiagnostics.AddRange(registry.Validate().Errors);
+            validationDiagnostics = validationDiagnostics.Distinct().ToList();
+        }
+        catch (Exception ex)
+        {
+            validationDiagnostics.Add($"content registry could not be materialized: {ex.Message}");
+            return CreateResult(resultScenarioPlaneId: null, playerLocation: null);
         }
 
-        if (!registry.EntityTemplates.ContainsKey(scenario.PlayerEntityTemplateId))
+        if (!registry.EntityTemplates.ContainsKey(scenarioRootEntityTemplateId))
         {
-            validationDiagnostics.Add($"missing player template {scenario.PlayerEntityTemplateId}.");
+            validationDiagnostics.Add($"missing scenario root template {scenarioRootEntityTemplateId}.");
+        }
+
+        if (playerEntityTemplateId is { } requiredPlayerTemplateId && !registry.EntityTemplates.ContainsKey(requiredPlayerTemplateId))
+        {
+            validationDiagnostics.Add($"missing player template {requiredPlayerTemplateId}.");
         }
 
         if (validationDiagnostics.Count > 0)
         {
-            return CreateResult(scenarioPlaneId: null, playerLocation: null);
+            return CreateResult(resultScenarioPlaneId: null, playerLocation: null);
         }
 
         try
@@ -61,74 +115,85 @@ public static class ScenarioMaterializer
             AddRectangularPlane(world, new Plane(DefaultScenarioHostPlaneId, "Scenario Host", 1, 1));
             var rootSpawn = registry.SpawnEntity(
                 world,
-                scenario.ScenarioRootEntityTemplateId,
+                scenarioRootEntityTemplateId,
                 new EntitySpawnOptions(
-                    DefaultScenarioRootEntityId,
+                    scenarioRootEntityId,
                     new PlaneCoord(DefaultScenarioHostPlaneId, new GridCoord(0, 0)),
-                    InventoryPlaneId: DefaultScenarioPlaneId,
+                    InventoryPlaneId: scenarioPlaneId,
                     InventoryPlaneName: "Scenario Space"));
             AddActionPlans(actionPlans, rootSpawn.ActionPlans);
         }
         catch (Exception ex)
         {
-            validationDiagnostics.Add($"scenario root {scenario.ScenarioRootEntityTemplateId} could not be spawned: {ex.Message}");
-            return CreateResult(DefaultScenarioPlaneId, playerLocation: null);
+            validationDiagnostics.Add($"scenario root {scenarioRootEntityTemplateId} could not be spawned: {ex.Message}");
+            return CreateResult(scenarioPlaneId, playerLocation: null);
         }
 
-        if (world.GetInventoryPlaneId(DefaultScenarioRootEntityId) is not { } activeScenarioPlaneId)
+        if (world.GetInventoryPlaneId(scenarioRootEntityId) is not { } activeScenarioPlaneId)
         {
-            validationDiagnostics.Add($"scenario root {scenario.ScenarioRootEntityTemplateId} has no usable inventory space.");
-            return CreateResult(DefaultScenarioPlaneId, playerLocation: null);
+            validationDiagnostics.Add($"scenario root {scenarioRootEntityTemplateId} has no usable inventory space.");
+            return CreateResult(scenarioPlaneId, playerLocation: null);
         }
 
-        var requestedPlayerLocation = new PlaneCoord(activeScenarioPlaneId, scenario.PlayerStart);
-        if (!world.Planes.TryGetValue(activeScenarioPlaneId, out var activePlane) || !activePlane.Contains(scenario.PlayerStart) || !world.TryGetNodeId(requestedPlayerLocation, out _))
+        PlaneCoord? insertedPlayerLocation = null;
+        if (playerEntityTemplateId is { } concretePlayerTemplateId && playerEntityId is { } concretePlayerEntityId && playerStart is { } concretePlayerStart)
         {
-            validationDiagnostics.Add($"player start {requestedPlayerLocation} is outside scenario plane {activeScenarioPlaneId}.");
-            return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            var requestedPlayerLocation = new PlaneCoord(activeScenarioPlaneId, concretePlayerStart);
+            if (!world.Planes.TryGetValue(activeScenarioPlaneId, out var activePlane) || !activePlane.Contains(concretePlayerStart) || !world.TryGetNodeId(requestedPlayerLocation, out _))
+            {
+                validationDiagnostics.Add($"player start {requestedPlayerLocation} is outside scenario plane {activeScenarioPlaneId}.");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+
+            if (world.Entities.ContainsKey(concretePlayerEntityId))
+            {
+                validationDiagnostics.Add($"player entity ID {concretePlayerEntityId} is already present in the materialized scenario.");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+
+            if (world.GetOccupant(requestedPlayerLocation) is { } occupant)
+            {
+                validationDiagnostics.Add($"player start {requestedPlayerLocation} is occupied by {occupant}.");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
+
+            try
+            {
+                var playerSpawn = registry.SpawnEntity(
+                    world,
+                    concretePlayerTemplateId,
+                    new EntitySpawnOptions(concretePlayerEntityId, requestedPlayerLocation));
+                AddActionPlans(actionPlans, playerSpawn.ActionPlans);
+                insertedPlayerLocation = requestedPlayerLocation;
+            }
+            catch (Exception ex)
+            {
+                validationDiagnostics.Add($"player {concretePlayerEntityId} could not be inserted: {ex.Message}");
+                return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            }
         }
 
-        if (world.Entities.ContainsKey(scenario.PlayerEntityId))
+        setupLines.Add($"Scenario: {scenarioId} ({name})");
+        setupLines.Add($"Scenario root: {scenarioRootEntityTemplateId} {scenarioRootEntityId} using plane {activeScenarioPlaneId}");
+        if (insertedPlayerLocation is { } playerLocation && playerEntityId is { } insertedPlayerEntityId)
         {
-            validationDiagnostics.Add($"player entity ID {scenario.PlayerEntityId} is already present in the materialized scenario.");
-            return CreateResult(activeScenarioPlaneId, playerLocation: null);
+            var playerName = world.Entities.TryGetValue(insertedPlayerEntityId, out var player)
+                ? player.Name
+                : playerEntityTemplateId?.ToString() ?? insertedPlayerEntityId.ToString();
+            setupLines.Add($"Player: {playerName} {insertedPlayerEntityId} at {playerLocation}, {FormatActionState(world, insertedPlayerEntityId)}");
         }
 
-        if (world.GetOccupant(requestedPlayerLocation) is { } occupant)
-        {
-            validationDiagnostics.Add($"player start {requestedPlayerLocation} is occupied by {occupant}.");
-            return CreateResult(activeScenarioPlaneId, playerLocation: null);
-        }
+        return CreateResult(activeScenarioPlaneId, insertedPlayerLocation);
 
-        try
-        {
-            var playerSpawn = registry.SpawnEntity(
-                world,
-                scenario.PlayerEntityTemplateId,
-                new EntitySpawnOptions(scenario.PlayerEntityId, requestedPlayerLocation));
-            AddActionPlans(actionPlans, playerSpawn.ActionPlans);
-        }
-        catch (Exception ex)
-        {
-            validationDiagnostics.Add($"player {scenario.PlayerEntityId} could not be inserted: {ex.Message}");
-            return CreateResult(activeScenarioPlaneId, playerLocation: null);
-        }
-
-        setupLines.Add($"Scenario: {scenario.ScenarioId} ({scenario.Name})");
-        setupLines.Add($"Scenario root: {scenario.ScenarioRootEntityTemplateId} {DefaultScenarioRootEntityId} using plane {activeScenarioPlaneId}");
-        setupLines.Add($"Player: {world.Entities[scenario.PlayerEntityId].Name} {scenario.PlayerEntityId} at {requestedPlayerLocation}, {FormatActionState(world, scenario.PlayerEntityId)}");
-
-        return CreateResult(activeScenarioPlaneId, requestedPlayerLocation);
-
-        ScenarioMaterializationResult CreateResult(PlaneId? scenarioPlaneId, PlaneCoord? playerLocation) =>
+        ScenarioMaterializationResult CreateResult(PlaneId? resultScenarioPlaneId, PlaneCoord? playerLocation) =>
             new(
-                scenario.ScenarioId,
-                scenario.Name,
-                scenario.ScenarioRootEntityTemplateId,
-                DefaultScenarioRootEntityId,
-                scenario.PlayerEntityTemplateId,
-                scenario.PlayerEntityId,
-                scenarioPlaneId,
+                scenarioId,
+                name,
+                scenarioRootEntityTemplateId,
+                scenarioRootEntityId,
+                playerEntityTemplateId,
+                playerEntityId,
+                resultScenarioPlaneId,
                 playerLocation,
                 world,
                 actionPlans,

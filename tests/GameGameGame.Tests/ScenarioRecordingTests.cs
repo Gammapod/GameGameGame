@@ -1,22 +1,23 @@
-using GameGameGame.Editor;
+using GameGameGame.Content;
+using GameGameGame.Headless;
 
 namespace GameGameGame.Tests;
 
-[Trait(TestSuites.TraitName, TestSuites.Editor)]
+[Trait(TestSuites.TraitName, TestSuites.Headless)]
 public sealed class ScenarioRecordingTests : IDisposable
 {
     private readonly string tempRoot = Path.Combine(Path.GetTempPath(), $"GameGameGameScenarioRecordingTests-{Guid.NewGuid():N}");
 
     [Fact]
-    public void AgentContentEditorApiRecordsPersistedScenarioInitialStateAndFullTurns()
+    public void ScenarioRecordingServiceRecordsPersistedScenarioInitialStateAndFullTurns()
     {
-        var api = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+        var document = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
         var outputDirectory = CreateOutputDirectory();
 
-        var report = AssertSuccess(api.RecordScenario(new AgentScenarioRecordingRequest(
+        var report = ScenarioRecordingService.Record(document, new ScenarioRecordingRequest(
             ScenarioId: "beta-direct-chase",
             TurnCount: 2,
-            OutputDirectory: outputDirectory)));
+            OutputDirectory: outputDirectory));
 
         Assert.Equal("beta-direct-chase", report.ScenarioId);
         Assert.Empty(report.ValidationDiagnostics);
@@ -37,15 +38,15 @@ public sealed class ScenarioRecordingTests : IDisposable
     }
 
     [Fact]
-    public void AgentContentEditorApiRecordScenarioReportsAuthoringDiagnosticsWithoutArtifacts()
+    public void ScenarioRecordingServiceReportsAuthoringDiagnosticsWithoutArtifacts()
     {
-        var api = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+        var document = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
         var outputDirectory = CreateOutputDirectory();
 
-        var report = AssertSuccess(api.RecordScenario(new AgentScenarioRecordingRequest(
+        var report = ScenarioRecordingService.Record(document, new ScenarioRecordingRequest(
             ScenarioId: "missing-scenario",
             TurnCount: 1,
-            OutputDirectory: outputDirectory)));
+            OutputDirectory: outputDirectory));
 
         Assert.Equal("missing-scenario", report.ScenarioId);
         Assert.Contains(report.ValidationDiagnostics, diagnostic => diagnostic.Contains("missing-scenario", StringComparison.Ordinal));
@@ -69,10 +70,10 @@ public sealed class ScenarioRecordingTests : IDisposable
         return outputDirectory;
     }
 
-    private static AgentContentEditorApi OpenBetaContent(string group, string fileName)
+    private static EditableContentDocument OpenBetaContent(string group, string fileName)
     {
         var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));
-        return AssertSuccess(AgentContentEditorApi.OpenFile(path));
+        return EditableContentDocument.LoadYaml(File.ReadAllText(path));
     }
 
     private static string FindRepositoryFile(string relativePath)
@@ -90,11 +91,5 @@ public sealed class ScenarioRecordingTests : IDisposable
         }
 
         return Path.GetFullPath(relativePath);
-    }
-
-    private static T AssertSuccess<T>(AgentApiResult<T> result)
-    {
-        Assert.True(result.IsSuccess, result.Error?.Message);
-        return result.Value!;
     }
 }

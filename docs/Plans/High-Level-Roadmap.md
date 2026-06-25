@@ -95,10 +95,15 @@ Recently completed supporting documents:
 - [Sprint 14: Gate 2 Targeting Showcases](../Archived/Sprint-14-Gate-2-Targeting-Showcases.md)
 - [Sprint 15: Debug Scenario Recorder](../Archived/Sprint-15-Debug-Scenario-Recorder.md)
 - [Sprint 16: Gate 3 Distance Movement Showcases](../Archived/Sprint-16-Gate-3-Distance-Movement.md)
+- [Sprint 17: Scenario Tooling Decoupling](Sprint-17-Scenario-Tooling-Decoupling.md)
 
 Active beta planning document:
 
 - [Beta Content Exploration Plan](Beta-Content-Exploration-Plan.md)
+
+Planned next sprint:
+
+- Gate 4 `Give` / `Take` peer inventory-transfer slice.
 
 Beta target statement:
 
@@ -111,8 +116,9 @@ Long-term frontend direction:
 - A unified frontend remains desired eventually, potentially through SadConsole, Godot, Unity, Pico-8, or another frontend stack.
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
+- The current Avalonia editor is legacy-priority and should not remain a dependency of Console, scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting Avalonia assumptions.
 
-Current decision point: Sprint 16 completed the Gate 3 distance-movement showcase set. Next sprint selection should choose between Gate 4 peer inventory transfer (`Give`/`Take`), scenario/report workflow polish around persisted scenario runs and richer summaries, or another beta vignette/content-ergonomics slice based on review of the Sprint 16 recordings.
+Current decision point: Sprint 17 completed the scenario/tooling dependency cleanup needed before Gate 4. Scenario materialization now lives in `GameGameGame.Content`, scenario run/record services live in `GameGameGame.Headless`, Console no longer depends on `GameGameGame.Editor`, and normal Core/Content/Headless test runs no longer build Avalonia. Gate 4 `Give`/`Take` is the next planned mechanics gate unless scenario-review evidence changes the priority.
 
 Current beta content-exploration order:
 
@@ -202,10 +208,11 @@ Completed baseline:
 - Sprint 12 added beta current-tool content fixtures for push, destroy, create, drop, pickup/weight, and behavior-chain composition; consolidated beta fixture validation; and recorded GAP-001 for `CreateFacing` placeholder presentation/template binding.
 - Sprint 15 added the persisted-scenario debug recorder with PNG/GIF artifacts and visual facing/target markers for reviewing authored scenario simulations.
 - Sprint 16 added Gate 3 distance-movement primitives and beta fixtures: `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, and kiting/orbiter fallback composition, each validated headlessly and recorded as GIF artifacts.
+- Sprint 17 moved scenario materialization/run/record workflows out of the legacy Editor dependency path: `GameGameGame.Content` owns canonical scenario materialization, `GameGameGame.Headless` owns scenario run/record services and debug rendering, Console no longer references Editor, and normal non-Editor tests validate scenario tooling without building Avalonia.
 
 Future generalized scenario runner wishlist:
 
-- Promote the current test-local runner/report shape into reusable test/editor-agent helpers rather than duplicating C# setup across scenario tests.
+- Replace or retire the older test-local `MinimalScenarioRunner` after the shared headless runner/report format is stable enough for the remaining report-text tests.
 - Add an agent/headless API command that runs a persisted scenario by scenario ID, including player insertion/materialization, instead of only root-template simulation.
 - Make root-only versus persisted-scenario simulation terminology explicit in commands/reports/docs.
 - Add a small typed scenario setup model for planes, runtime entity placements, watched entities, turn count, expected diagnostics, and capability-gap notes without becoming a separate content language.
@@ -366,15 +373,17 @@ Status: Lower-priority editor/content quality-of-life bucket.
 
 Priority order:
 
-1. Behavior/action-plan templates.
-2. Apply-template workflow.
-3. Save-as-template workflow.
-4. Template editing.
-5. Template usage display.
+1. Shared typed action-plan shape classifier for canonical behavior chains, transitional primitive plans, legacy low-level steps, empty/passive plans, and invalid mixed shapes.
+2. Behavior/action-plan templates.
+3. Apply-template workflow.
+4. Save-as-template workflow.
+5. Template editing.
+6. Template usage display.
 
 Dependencies:
 
 - Current behavior-chain descriptors are sufficient for engine/editor parity, and templates are not currently required as a foundation for other capabilities.
+- The typed shape classifier is a cleanup follow-up from Sprint 17; promote it when duplicated shape detection in Content, Editor adapters, or reports causes confusion or blocks further tooling polish.
 
 Promotion trigger:
 

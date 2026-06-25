@@ -13,10 +13,13 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` is the single source of truth for implemented and authorable engine/editor capabilities.
 - `docs/Plans/High-Level-Roadmap.md` remains the strategic roadmap and backlog authority.
 - `docs/Plans/Beta-Capability-Gap-Log.md` records gaps discovered during beta scenario exploration.
+- `docs/Plans/Sprint-17-Scenario-Tooling-Decoupling.md` records the completed tooling cleanup before Gate 4 `Give`/`Take`.
 
 ## Beta exploration intent
 
 Beta should produce several small authored gameplay vignettes, like pitch-deck slides, that are playable in Console, runnable headlessly, and useful for deciding which interactions are interesting enough to promote.
+
+Sprint 17 completed the scenario/tooling decoupling needed before Gate 4 `Give`/`Take`: future beta content work should use UI-agnostic Content/Headless services rather than deepening dependencies on the legacy Avalonia editor. Headless/tooling services should remain compatible with a future integrated game/editor frontend.
 
 This plan orders vignettes by what content tools can author now, then by explicit engine/action gates. Each phase should produce:
 
