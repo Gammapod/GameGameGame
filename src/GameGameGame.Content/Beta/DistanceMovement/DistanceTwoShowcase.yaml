@@ -1,0 +1,90 @@
+entityTemplates:
+  betaDistanceTwoRoom:
+    name: Beta Distance Two Room
+    inventoryWidth: 19
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: tooCloseMaintainer
+      templateId: betaDistanceTwoMaintainer
+      coord:
+        x: 2
+        y: 2
+    - entityId: tooCloseBeacon
+      templateId: betaDistanceTwoBeacon
+      coord:
+        x: 2
+        y: 3
+    - entityId: tooFarMaintainer
+      templateId: betaDistanceTwoMaintainer
+      coord:
+        x: 8
+        y: 2
+    - entityId: tooFarBeacon
+      templateId: betaDistanceTwoBeacon
+      coord:
+        x: 8
+        y: 6
+    - entityId: idealMaintainer
+      templateId: betaDistanceTwoMaintainer
+      coord:
+        x: 14
+        y: 2
+    - entityId: idealBeacon
+      templateId: betaDistanceTwoBeacon
+      coord:
+        x: 16
+        y: 2
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaDistanceTwoMaintainer:
+    name: Distance-Two Maintainer
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: acquireThenMaintainDistanceTwo
+    actionStateDefaults:
+      facing: East
+  betaDistanceTwoBeacon:
+    name: Distance-Two Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaDistanceTwoRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaDistanceTwoMaintainer:
+    glyph: 'D'
+    color: Green
+  betaDistanceTwoBeacon:
+    glyph: 'T'
+    color: Cyan
+actionPlans:
+  acquireThenMaintainDistanceTwo:
+    id: acquireThenMaintainDistanceTwo
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: MaintainChebyshevDistanceTwo
+scenarios:
+  beta-distance-two:
+    name: Beta Distance Two
+    scenarioRootEntityTemplateId: betaDistanceTwoRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 18
+      y: 6

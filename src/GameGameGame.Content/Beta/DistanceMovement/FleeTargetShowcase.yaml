@@ -1,0 +1,70 @@
+entityTemplates:
+  betaFleeTargetRoom:
+    name: Beta Flee Target Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: fleeingPrey
+      templateId: betaFleeingPrey
+      coord:
+        x: 5
+        y: 2
+    - entityId: fleeBeacon
+      templateId: betaFleeBeacon
+      coord:
+        x: 4
+        y: 2
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaFleeingPrey:
+    name: Fleeing Prey
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: acquireThenFlee
+    actionStateDefaults:
+      facing: East
+  betaFleeBeacon:
+    name: Flee Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaFleeTargetRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaFleeingPrey:
+    glyph: 'f'
+    color: Green
+  betaFleeBeacon:
+    glyph: 'T'
+    color: Cyan
+actionPlans:
+  acquireThenFlee:
+    id: acquireThenFlee
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: FleeTarget
+scenarios:
+  beta-flee-target:
+    name: Beta Flee Target
+    scenarioRootEntityTemplateId: betaFleeTargetRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 4

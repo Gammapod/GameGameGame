@@ -8,7 +8,7 @@ Related plans and source of truth:
 - `docs/Plans/High-Level-Roadmap.md`
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
 - `docs/Plans/Beta-Capability-Gap-Log.md`
-- `docs/Plans/Sprint-13-Gate-1-Direction-Showcases.md`
+- `docs/Archived/Sprint-13-Gate-1-Direction-Showcases.md`
 
 ## Sprint goal
 

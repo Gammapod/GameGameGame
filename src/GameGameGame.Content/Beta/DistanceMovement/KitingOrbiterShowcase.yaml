@@ -1,0 +1,132 @@
+entityTemplates:
+  betaKitingOrbiterRoom:
+    name: Beta Kiting Orbiter Room
+    inventoryWidth: 24
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: closeOrbiter
+      templateId: betaKitingOrbiter
+      coord:
+        x: 2
+        y: 2
+    - entityId: closeOrbiterTarget
+      templateId: betaOrbitTarget
+      coord:
+        x: 2
+        y: 3
+    - entityId: clockwiseOrbiter
+      templateId: betaKitingOrbiter
+      coord:
+        x: 10
+        y: 3
+    - entityId: clockwiseOrbiterTarget
+      templateId: betaOrbitTarget
+      coord:
+        x: 8
+        y: 3
+    - entityId: anticlockwiseFallbackOrbiter
+      templateId: betaKitingOrbiter
+      coord:
+        x: 17
+        y: 0
+    - entityId: anticlockwiseFallbackTarget
+      templateId: betaOrbitTarget
+      coord:
+        x: 15
+        y: 0
+  betaKitingOrbiterFallbackLane:
+    name: Beta Kiting Orbiter Fallback Lane
+    inventoryWidth: 8
+    inventoryHeight: 1
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: fleeFallbackOrbiter
+      templateId: betaKitingOrbiter
+      coord:
+        x: 2
+        y: 0
+    - entityId: fleeFallbackTarget
+      templateId: betaOrbitTarget
+      coord:
+        x: 0
+        y: 0
+    - entityId: seekFallbackTarget
+      templateId: betaOrbitTarget
+      coord:
+        x: 5
+        y: 0
+    - entityId: seekFallbackOrbiter
+      templateId: betaKitingOrbiter
+      coord:
+        x: 7
+        y: 0
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaKitingOrbiter:
+    name: Kiting Orbiter
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: kitingOrbiterBehavior
+    actionStateDefaults:
+      facing: West
+  betaOrbitTarget:
+    name: Orbit Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaKitingOrbiterRoom:
+    glyph: '#'
+    color: Gray
+  betaKitingOrbiterFallbackLane:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaKitingOrbiter:
+    glyph: 'O'
+    color: Green
+  betaOrbitTarget:
+    glyph: 'T'
+    color: Cyan
+actionPlans:
+  kitingOrbiterBehavior:
+    id: kitingOrbiterBehavior
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: MaintainChebyshevDistanceTwo
+      - kind: StrafeClockwise
+      - kind: StrafeAnticlockwise
+      - kind: FleeTarget
+      - kind: SeekTarget
+scenarios:
+  beta-kiting-orbiter:
+    name: Beta Kiting Orbiter
+    scenarioRootEntityTemplateId: betaKitingOrbiterRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 23
+      y: 6
+  beta-kiting-orbiter-fallback-lane:
+    name: Beta Kiting Orbiter Fallback Lane
+    scenarioRootEntityTemplateId: betaKitingOrbiterFallbackLane
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 4
+      y: 0

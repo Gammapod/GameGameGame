@@ -195,6 +195,9 @@ public sealed class YamlContentLoaderTests
                     - kind: TurnRight
                     - kind: ReverseFacing
                     - kind: FleeTarget
+                    - kind: MaintainChebyshevDistanceTwo
+                    - kind: StrafeClockwise
+                    - kind: StrafeAnticlockwise
             """);
 
         var registry = document.ToRegistry();
@@ -210,7 +213,10 @@ public sealed class YamlContentLoaderTests
                 ActionPlanBehaviorStepKind.TurnLeft,
                 ActionPlanBehaviorStepKind.TurnRight,
                 ActionPlanBehaviorStepKind.ReverseFacing,
-                ActionPlanBehaviorStepKind.FleeTarget
+                ActionPlanBehaviorStepKind.FleeTarget,
+                ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo,
+                ActionPlanBehaviorStepKind.StrafeClockwise,
+                ActionPlanBehaviorStepKind.StrafeAnticlockwise
             ],
             descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
         Assert.Contains("behavior:", saved);
@@ -218,7 +224,13 @@ public sealed class YamlContentLoaderTests
         Assert.Contains("kind: Backstep", saved);
         Assert.Contains("kind: ReverseFacing", saved);
         Assert.Contains("kind: FleeTarget", saved);
+        Assert.Contains("kind: MaintainChebyshevDistanceTwo", saved);
+        Assert.Contains("kind: StrafeClockwise", saved);
+        Assert.Contains("kind: StrafeAnticlockwise", saved);
         Assert.Equal(ActionPlanBehaviorStepKind.FleeTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[6].Kind);
+        Assert.Equal(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[7].Kind);
+        Assert.Equal(ActionPlanBehaviorStepKind.StrafeClockwise, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[8].Kind);
+        Assert.Equal(ActionPlanBehaviorStepKind.StrafeAnticlockwise, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[9].Kind);
     }
 
     [Fact]

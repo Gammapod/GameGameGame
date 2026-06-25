@@ -368,6 +368,9 @@ public sealed class CoreActionPlanTests
     [InlineData(ActionPlanBehaviorStepKind.AcquireNearestTarget, "Acquire Nearest Target")]
     [InlineData(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target")]
     [InlineData(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target")]
+    [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, "Maintain Chebyshev Distance Two")]
+    [InlineData(ActionPlanBehaviorStepKind.StrafeClockwise, "Strafe Clockwise")]
+    [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise, "Strafe Anticlockwise")]
     public void ActionStepCatalogDescribesFirstUtilityBatch(ActionPlanBehaviorStepKind kind, string displayName)
     {
         var step = ActionStepCatalog.Get(kind);
@@ -1706,6 +1709,221 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void MaintainChebyshevDistanceTwoBacksAwayWhenTooCloseAndPreservesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("maintain-chebyshev-distance-two", ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 3)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. MaintainChebyshevDistanceTwo: Success; fallback=stopped");
+        Assert.Contains(summary, line => line == "   reads: Target=slime");
+        Assert.Contains(summary, line => line.Contains("mode=flee/back-away; moved South relative to slime; Chebyshev distance 1->2", StringComparison.Ordinal));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MaintainChebyshevDistanceTwoClosesWhenTooFarAndPreservesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 2))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("maintain-chebyshev-distance-two-close", ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line.Contains("mode=seek/close; moved West relative to slime; Chebyshev distance 3->2", StringComparison.Ordinal));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MaintainChebyshevDistanceTwoFallsThroughAtExactDistance()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 3))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("maintain-chebyshev-distance-two-exact"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.FleeTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. MaintainChebyshevDistanceTwo: Failure; fallback=continued");
+        Assert.Contains(summary, line => line.Contains("mode=ideal-distance fallthrough; target slime; distance=2", StringComparison.Ordinal));
+        Assert.Contains(summary, line => line == "2. FleeTarget: Success; fallback=stopped");
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MaintainChebyshevDistanceTwoFallsThroughWhenNoValidImprovingMoveExists()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0))));
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("maintain-chebyshev-distance-two-trapped", ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line.StartsWith("1. MaintainChebyshevDistanceTwo: Failure; reason=", StringComparison.Ordinal));
+        Assert.Contains(summary, line => line.Contains("mode=flee/back-away; no valid Chebyshev distance-2 step", StringComparison.Ordinal));
+        Assert.True(TraceDetailContains(result.Trace, "North blocked"));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StrafeClockwiseMovesPerpendicularToSeekPrimaryAndPreservesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("strafe-clockwise", ActionPlanBehaviorStepKind.StrafeClockwise);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. StrafeClockwise: Success; fallback=stopped");
+        Assert.Contains(summary, line => line == "   reads: Target=slime");
+        Assert.Contains(summary, line => line.Contains("primary=North; moved East strafing clockwise around slime", StringComparison.Ordinal));
+        Assert.True(TraceDetailContains(result.Trace, "primary=North; strafe=East"));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StrafeAnticlockwiseMovesOppositePerpendicularAndPreservesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("strafe-anticlockwise", ActionPlanBehaviorStepKind.StrafeAnticlockwise);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. StrafeAnticlockwise: Success; fallback=stopped");
+        Assert.Contains(summary, line => line.Contains("primary=North; moved West strafing anticlockwise around slime", StringComparison.Ordinal));
+        Assert.True(TraceDetailContains(result.Trace, "primary=North; strafe=West"));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StrafeClockwiseUsesSeekTargetPrimaryTieBreakOnDiagonal()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("strafe-clockwise-diagonal", ActionPlanBehaviorStepKind.StrafeClockwise);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.True(TraceDetailContains(result.Trace, "primary=North; strafe=East"));
+    }
+
+    [Fact]
+    public void StrafeClockwiseAdjacentTargetCanMovePerpendicularWithoutContactFailure()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("strafe-adjacent-then-destroy"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.StrafeClockwise),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.True(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. StrafeClockwise: Success; fallback=stopped");
+        Assert.DoesNotContain(summary, line => line.StartsWith("2. DestroyTarget", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StrafeClockwiseBlockedSelectedDestinationFallsThroughAndPreservesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("strafe-clockwise-blocked", ActionPlanBehaviorStepKind.StrafeClockwise);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. StrafeClockwise: Failure; reason=InvalidPlacement; fallback=stopped");
+        Assert.Contains(summary, line => line.Contains("primary=North; strafe=East blocked", StringComparison.Ordinal));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StrafeAnticlockwiseInvalidTargetFallsThroughAndPreservesTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.PlayerId);
+        var plan = CreateBehaviorPlan("strafe-anticlockwise-self", ActionPlanBehaviorStepKind.StrafeAnticlockwise);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(TestWorld.PlayerId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.Contains(summary, line => line == "1. StrafeAnticlockwise: Failure; reason=TargetIsActor; fallback=stopped");
+        Assert.Contains(summary, line => line.Contains("StrafeAnticlockwise cannot target self", StringComparison.Ordinal));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void DropFacingDropsFirstCarriedEntityInFacingDirection()
     {
         var world = TestWorld.CreateWorld();
@@ -1954,6 +2172,12 @@ public sealed class CoreActionPlanTests
         return trace.Detail?.Contains(detail, StringComparison.Ordinal) == true
             || trace.Children.Any(child => TraceDetailContains(child, detail));
     }
+
+    private static ActionPlanDefinition CreateBehaviorPlan(string id, ActionPlanBehaviorStepKind stepKind) =>
+        new(
+            new ActionPlanId(id),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(stepKind)]));
 
     private sealed record TestPlanCheck(
         string Label,

@@ -108,6 +108,24 @@ public static class ActionStepCatalog
             "Flee Target",
             "Reads the persistent Target and greedily moves one cardinal step that increases Manhattan distance, breaking ties North, South, West, East; preserves Target on success/failure.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo,
+            "Maintain Chebyshev Distance Two",
+            "Reads the persistent Target and moves one cardinal step toward Chebyshev distance 2, backing away when too close and closing when too far; falls through at exact distance 2 and preserves Target.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.StrafeClockwise,
+            "Strafe Clockwise",
+            "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the clockwise perpendicular cardinal move; preserves Target on success/failure.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.StrafeAnticlockwise,
+            "Strafe Anticlockwise",
+            "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the anticlockwise perpendicular cardinal move; preserves Target on success/failure.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
     ];
 

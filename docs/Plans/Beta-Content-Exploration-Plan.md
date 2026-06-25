@@ -159,7 +159,7 @@ Current canonical Action Steps available for phase 0:
 
 ## Gate 1: direction transform batch
 
-Status: Selected for Sprint 13. See `docs/Plans/Sprint-13-Gate-1-Direction-Showcases.md` for the active showcase plan and core-owner coordination cadence.
+Status: Completed in Sprint 13. See `docs/Archived/Sprint-13-Gate-1-Direction-Showcases.md` for the archived showcase plan and core-owner coordination cadence.
 
 Request and implement before the next vignette phase:
 
@@ -197,7 +197,7 @@ Design questions for the gate:
 
 ## Gate 2: `AcquireNearestTarget` + `SeekTarget`
 
-Status: Selected for Sprint 14. See `docs/Plans/Sprint-14-Gate-2-Targeting-Showcases.md` for the active showcase plan and core-owner primitive request.
+Status: Completed in Sprint 14. See `docs/Archived/Sprint-14-Gate-2-Targeting-Showcases.md` for the archived showcase plan and core-owner primitive request.
 
 Request and implement after direction transforms have been explored:
 
@@ -232,25 +232,31 @@ Keep the first semantics small and deterministic:
 
 ## Gate 3: target-distance / directional choice primitives
 
-Request only after target acquisition and seeking expose concrete needs. Candidate capabilities:
+Status: Completed in Sprint 16 for the first distance-movement slice. See `docs/Archived/Sprint-16-Gate-3-Distance-Movement.md` for the archived showcase plan.
 
-- `MoveAwayFromTarget`
-- `StepTowardTarget`
-- `StepAwayFromTarget`
-- `MaintainDistance`
+Implemented Sprint 16 capabilities:
+
+- `FleeTarget`
+- `MaintainChebyshevDistanceTwo`
+- `StrafeClockwise`
+- `StrafeAnticlockwise`
+
+Deferred / future candidate capabilities:
+
+- configurable `MaintainDistance` / richer distance bands;
 - distance checks/evaluation;
 - patterned movement variants such as cardinal-only, diagonal-only, rook-like, bishop-like, or knight-like movement.
 
 ### Gate 3 unlocked vignettes
 
 1. **Fleeing**
-   - Actor acquires player and moves away.
+   - Completed first slice in Sprint 16 with `FleeTarget`.
 
 2. **Keep-away**
-   - Actor attempts to remain near a chosen distance band.
+   - Completed hard-coded distance-two first slice in Sprint 16 with `MaintainChebyshevDistanceTwo`; configurable distance bands remain deferred.
 
 3. **Kiting enemy**
-   - Actor approaches when far and retreats when close.
+   - Completed first composition in Sprint 16 through `MaintainChebyshevDistanceTwo -> StrafeClockwise -> StrafeAnticlockwise -> FleeTarget -> SeekTarget`.
 
 4. **Pattern-constrained pursuit**
    - Chaser follows restricted movement patterns.

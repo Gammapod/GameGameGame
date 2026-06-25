@@ -324,6 +324,186 @@ public sealed class BetaContentFixtureTests
     }
 
     [Fact]
+    public void DistanceTwoShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DistanceMovement", "DistanceTwoShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-distance-two"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(18, 6)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaDistanceTwoRoom"), TurnCount: 1)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("tooCloseMaintainer"), new EntityId("tooFarMaintainer"), new EntityId("idealMaintainer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=tooCloseBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Success", StringComparison.Ordinal));
+
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Target=tooFarBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Success", StringComparison.Ordinal));
+
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("writes: Target=idealBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Failure", StringComparison.Ordinal));
+
+        Assert.Contains("Distance-Two Maintainer: scenarioRoot(2,1), facing East, target tooCloseBeacon", report.FinalStateLines);
+        Assert.Contains("Distance-Two Maintainer: scenarioRoot(8,3), facing East, target tooFarBeacon", report.FinalStateLines);
+        Assert.Contains("Distance-Two Maintainer: scenarioRoot(14,2), facing East, target idealBeacon", report.FinalStateLines);
+        Assert.Contains("Distance-Two Beacon: scenarioRoot(2,3), facing none, target none", report.FinalStateLines);
+        Assert.Contains("Distance-Two Beacon: scenarioRoot(8,6), facing none, target none", report.FinalStateLines);
+        Assert.Contains("Distance-Two Beacon: scenarioRoot(16,2), facing none, target none", report.FinalStateLines);
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Distance-Two Maintainer could not act", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StrafeClockwiseShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DistanceMovement", "StrafeClockwiseShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-strafe-clockwise"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 6)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaStrafeClockwiseRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("clockwiseStrafer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=clockwiseStrafeBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. StrafeClockwise: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("primary=West", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved North strafing clockwise", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. StrafeClockwise: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. StrafeClockwise: Success", StringComparison.Ordinal));
+        Assert.Contains("Clockwise Strafer: scenarioRoot(3,2), facing West, target clockwiseStrafeBeacon", report.FinalStateLines);
+        Assert.Contains("Strafe Beacon: scenarioRoot(3,3), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void StrafeAnticlockwiseShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DistanceMovement", "StrafeAnticlockwiseShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-strafe-anticlockwise"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 6)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaStrafeAnticlockwiseRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("anticlockwiseStrafer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("1. AcquireNearestTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=anticlockwiseStrafeBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. StrafeAnticlockwise: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("primary=West", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved South strafing anticlockwise", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. StrafeAnticlockwise: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. StrafeAnticlockwise: Success", StringComparison.Ordinal));
+        Assert.Contains("Anticlockwise Strafer: scenarioRoot(3,4), facing West, target anticlockwiseStrafeBeacon", report.FinalStateLines);
+        Assert.Contains("Strafe Beacon: scenarioRoot(3,3), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void KitingOrbiterShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DistanceMovement", "KitingOrbiterShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-kiting-orbiter"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(23, 6)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaKitingOrbiterRoom"), TurnCount: 1)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("anticlockwiseFallbackOrbiter"), new EntityId("closeOrbiter"), new EntityId("clockwiseOrbiter")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=anticlockwiseFallbackTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("3. StrafeClockwise: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("4. StrafeAnticlockwise: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved South strafing anticlockwise", StringComparison.Ordinal));
+
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Target=closeOrbiterTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Success", StringComparison.Ordinal));
+        Assert.DoesNotContain(report.Turns[1].TraceLines, line => line.StartsWith("3. StrafeClockwise:", StringComparison.Ordinal));
+
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("writes: Target=clockwiseOrbiterTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("3. StrafeClockwise: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("moved North strafing clockwise", StringComparison.Ordinal));
+
+        Assert.Contains("Kiting Orbiter: scenarioRoot(17,1), facing West, target anticlockwiseFallbackTarget", report.FinalStateLines);
+        Assert.Contains("Kiting Orbiter: scenarioRoot(2,1), facing West, target closeOrbiterTarget", report.FinalStateLines);
+        Assert.Contains("Kiting Orbiter: scenarioRoot(10,2), facing West, target clockwiseOrbiterTarget", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void KitingOrbiterFallbackLaneValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("DistanceMovement", "KitingOrbiterShowcase.yaml");
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-kiting-orbiter-fallback-lane"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(4, 0)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new AgentScenarioRunRequest(new EntityTemplateId("betaKitingOrbiterFallbackLane"), TurnCount: 1)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("fleeFallbackOrbiter"), new EntityId("seekFallbackOrbiter")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("writes: Target=fleeFallbackTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("3. StrafeClockwise: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("4. StrafeAnticlockwise: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("5. FleeTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[0].TraceLines, line => line.Contains("moved East away from fleeFallbackTarget", StringComparison.Ordinal));
+
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Target=seekFallbackTarget", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("3. StrafeClockwise: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("4. StrafeAnticlockwise: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("5. FleeTarget: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("6. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("moved West toward seekFallbackTarget", StringComparison.Ordinal));
+
+        Assert.Contains("Kiting Orbiter: scenarioRoot(3,0), facing West, target fleeFallbackTarget", report.FinalStateLines);
+        Assert.Contains("Kiting Orbiter: scenarioRoot(6,0), facing West, target seekFallbackTarget", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
     public void PushFacingShowcaseValidatesMaterializesAndRuns()
     {
         var api = OpenBetaContent("CurrentTools", "PushFacingShowcase.yaml");

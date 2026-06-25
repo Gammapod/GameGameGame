@@ -1,6 +1,6 @@
 # Sprint 15: Debug Scenario Recorder
 
-Status: Planned / active sprint plan.
+Status: Completed / archived during Sprint 16 wrap-up.
 
 Related plans and source of truth:
 

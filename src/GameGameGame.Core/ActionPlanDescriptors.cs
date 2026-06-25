@@ -31,7 +31,10 @@ public enum ActionPlanBehaviorStepKind
     Backstep,
     AcquireNearestTarget,
     SeekTarget,
-    FleeTarget
+    FleeTarget,
+    MaintainChebyshevDistanceTwo,
+    StrafeClockwise,
+    StrafeAnticlockwise
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(

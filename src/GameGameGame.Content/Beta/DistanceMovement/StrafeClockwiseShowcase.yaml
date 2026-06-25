@@ -1,0 +1,70 @@
+entityTemplates:
+  betaStrafeClockwiseRoom:
+    name: Beta Strafe Clockwise Room
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: clockwiseStrafer
+      templateId: betaClockwiseStrafer
+      coord:
+        x: 5
+        y: 3
+    - entityId: clockwiseStrafeBeacon
+      templateId: betaStrafeBeacon
+      coord:
+        x: 3
+        y: 3
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaClockwiseStrafer:
+    name: Clockwise Strafer
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: acquireThenStrafeClockwise
+    actionStateDefaults:
+      facing: West
+  betaStrafeBeacon:
+    name: Strafe Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaStrafeClockwiseRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaClockwiseStrafer:
+    glyph: 'C'
+    color: Green
+  betaStrafeBeacon:
+    glyph: 'T'
+    color: Cyan
+actionPlans:
+  acquireThenStrafeClockwise:
+    id: acquireThenStrafeClockwise
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: StrafeClockwise
+scenarios:
+  beta-strafe-clockwise:
+    name: Beta Strafe Clockwise
+    scenarioRootEntityTemplateId: betaStrafeClockwiseRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 6

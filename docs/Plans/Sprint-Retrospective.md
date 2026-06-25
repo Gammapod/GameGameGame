@@ -4,6 +4,12 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What went well
 
+- Sprint 16 moved smoothly because each showcase had a clear content goal, a small primitive request, immediate content proof, headless validation, and a recorded GIF artifact.
+- Requesting both strafing primitives together was more efficient than one-at-a-time requests because their semantics, tests, docs, and catalog support were nearly identical.
+- Keeping action plans linear while embedding distance/directional checks inside primitives worked well for authoring. The final kiting-orbiter chain stayed readable despite expressing several fallback behaviors.
+- The Sprint 15 recorder paid off immediately in Sprint 16: every showcase could produce a visual artifact without adding bespoke inspection tooling.
+- The content-owner/core-owner cadence remained effective: concise primitive requests with state reads/writes, tie-breaks, fallback behavior, and scenario intent gave the core-owner enough context to implement complete vertical slices.
+
 - Sprint 10 promoted scenario feedback into a production editor/agent API instead of leaving it as test-only infrastructure.
 - The scenario-root inventory model matched existing engine/content concepts and avoided inventing a separate scenario language.
 - Asking the content-editor perspective to author a scenario without prescribed Action Steps provided useful documentation/tooling validation.
@@ -15,6 +21,11 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What was difficult
 
+- Sprint 16 still had to work around unfiltered `AcquireNearestTarget`. Sparse layouts, far-away player starts, and the `beta-kiting-orbiter-fallback-lane` companion scenario were needed so helper/blocker entities did not become unintended targets.
+- The deepest kiting-orbiter fallback proof took more design effort than the single-primitive showcases. Demonstrating clockwise fallback, anticlockwise fallback, flee fallback, and seek fallback in one readable room was awkward with unfiltered target acquisition, so the proof was split into a main room plus a one-row fallback lane.
+- Some fixture assertions had to be adjusted to match actual compact trace wording. The strafing tests initially expected a separate `strafe=...` line in the report text, while the scenario report exposed the human summary `moved ... strafing ...`; lower-level tests still cover the structured trace details.
+- Generated debug artifacts can easily appear in the workspace if an output path is not kept outside the repository. During wrap-up, stray `debug/` artifacts had to be removed from the worktree.
+
 - Scenario reports improved, but content-authoring agents still need more concise report text/state summaries to avoid inspecting structured data manually.
 - Initiative ordering is intentionally temporary and deterministic for scenario-root inventory spaces, but future local/global initiative semantics remain undesigned.
 - The older test-local `MinimalScenarioRunner` now overlaps with `AgentContentEditorApi.RunScenario` and needs a cleanup/replacement decision.
@@ -24,6 +35,12 @@ Status: Living retrospective notes from the current wrap-up.
 - `CreateFacing` is useful as a prototype but too limited for realistic content because it cannot select a template.
 
 ## Process improvements
+
+- For future showcase sprints, keep using the pattern: primitive request -> authored YAML -> fixture test -> `record-scenario` GIF -> sprint-plan note.
+- When two primitives are symmetric variants, request them together to reduce duplicated coordination and documentation effort.
+- For complex fallback-chain showcases, consider planning both a player-facing/readable scenario and a small mechanical proof scenario from the start.
+- Always record scenario GIFs to an external temp/artifact directory, not a repository-local `debug/` folder, unless the artifact is intentionally being checked in.
+- Scenario fixture tests should assert report wording at the same level the scenario report actually exposes, and leave lower-level trace-detail assertions to Core tests.
 
 - Continue naming sprint plans sequentially, starting with Sprint 10, and archive completed sprint plans under `docs/Archived/` during wrap-up.
 - Prefer scenario exercises that ask the content-editor perspective for intent-level behavior, not implementation-specific Action Step instructions, when validating authoring/documentation quality.

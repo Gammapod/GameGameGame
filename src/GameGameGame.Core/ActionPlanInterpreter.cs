@@ -277,6 +277,9 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.AcquireNearestTarget => null,
             ActionPlanBehaviorStepKind.SeekTarget => null,
             ActionPlanBehaviorStepKind.FleeTarget => null,
+            ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo => null,
+            ActionPlanBehaviorStepKind.StrafeClockwise => null,
+            ActionPlanBehaviorStepKind.StrafeAnticlockwise => null,
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -285,6 +288,9 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.AcquireNearestTarget => ApplyAcquireNearestTarget(world, actorId, context),
             ActionPlanBehaviorStepKind.SeekTarget => ApplySeekTarget(world, actorId, context),
             ActionPlanBehaviorStepKind.FleeTarget => ApplyFleeTarget(world, actorId, context),
+            ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo => ApplyMaintainChebyshevDistanceTwo(world, actorId, context),
+            ActionPlanBehaviorStepKind.StrafeClockwise => ApplyStrafeTarget(world, actorId, context, clockwise: true),
+            ActionPlanBehaviorStepKind.StrafeAnticlockwise => ApplyStrafeTarget(world, actorId, context, clockwise: false),
             _ => ApplyPrimitive(world, actorId, context, primitive!)
         };
     }
@@ -515,6 +521,192 @@ public sealed class ActionPlanInterpreter
         trace.Reason = lastFailure?.Reason ?? FailureReason.InvalidPlacement;
         trace.Detail = $"no valid distance-increasing flee step from target {target.Value}; distance={currentDistance}";
         return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyMaintainChebyshevDistanceTwo(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive MaintainChebyshevDistanceTwo", TraceStatus.Info);
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        if (target.Value == actorId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetIsActor;
+            trace.Detail = "MaintainChebyshevDistanceTwo cannot target self";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(target.Value))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {target.Value} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorMissing;
+            trace.Detail = $"actor {actorId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        var targetLocation = world.GetEntityLocation(target.Value);
+        if (actorLocation.PlaneId != targetLocation.PlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"target {target.Value} is off-plane at {targetLocation}; actor is on {actorLocation.PlaneId}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        const int idealDistance = 2;
+        var currentDistance = ChebyshevDistance(actorLocation.Coord, targetLocation.Coord);
+        if (currentDistance == idealDistance)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"mode=ideal-distance fallthrough; target {target.Value}; distance={currentDistance}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var mode = currentDistance < idealDistance ? "flee/back-away" : "seek/close";
+        var candidates = SeekDirections()
+            .Select(direction => new
+            {
+                Direction = direction,
+                Destination = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction)),
+                Distance = ChebyshevDistance(actorLocation.Coord.Offset(direction), targetLocation.Coord)
+            })
+            .Where(candidate => Math.Abs(candidate.Distance - idealDistance) < Math.Abs(currentDistance - idealDistance))
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"mode={mode}; no cardinal step improves Chebyshev distance to 2 from target {target.Value}; distance={currentDistance}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        foreach (var step in candidates)
+        {
+            var evaluation = _movement.EvaluateRelocation(world, actorId, MovementDestination.Plane(step.Destination));
+            trace.Add(evaluation.Trace);
+            if (!evaluation.CanRelocate || evaluation.Destination is null)
+            {
+                trace.Add(TraceNode.Failure("Reject distance-two step", evaluation.Trace.Reason, $"mode={mode}; {step.Direction} blocked: {evaluation.Trace.Detail}; distance {currentDistance}->{step.Distance}"));
+                continue;
+            }
+
+            trace.Add(TraceNode.Success("Select distance-two step", $"mode={mode}; {step.Direction} to {step.Destination}; distance {currentDistance}->{step.Distance}; tieBreak=North,South,West,East"));
+            _movement.TryPlace(world, actorId, step.Destination);
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"mode={mode}; moved {step.Direction} relative to {target.Value}; Chebyshev distance {currentDistance}->{step.Distance}";
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        }
+
+        var lastFailure = trace.Children.LastOrDefault(child => child.Label == "Reject distance-two step");
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = lastFailure?.Reason ?? FailureReason.InvalidPlacement;
+        trace.Detail = $"mode={mode}; no valid Chebyshev distance-2 step from target {target.Value}; distance={currentDistance}";
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyStrafeTarget(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        bool clockwise)
+    {
+        var stepName = clockwise ? "StrafeClockwise" : "StrafeAnticlockwise";
+        var trace = new TraceNode($"Primitive {stepName}", TraceStatus.Info);
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        if (target.Value == actorId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetIsActor;
+            trace.Detail = $"{stepName} cannot target self";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(target.Value))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {target.Value} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorMissing;
+            trace.Detail = $"actor {actorId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        var targetLocation = world.GetEntityLocation(target.Value);
+        if (actorLocation.PlaneId != targetLocation.PlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"target {target.Value} is off-plane at {targetLocation}; actor is on {actorLocation.PlaneId}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var currentDistance = ManhattanDistance(actorLocation.Coord, targetLocation.Coord);
+        var primary = SeekDirections()
+            .Select(direction => new
+            {
+                Direction = direction,
+                Distance = ManhattanDistance(actorLocation.Coord.Offset(direction), targetLocation.Coord)
+            })
+            .Where(candidate => candidate.Distance < currentDistance)
+            .FirstOrDefault();
+
+        if (primary is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"no primary seek direction reduces distance to target {target.Value}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var strafeDirection = clockwise ? Clockwise(primary.Direction) : Anticlockwise(primary.Direction);
+        var strafeDestination = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(strafeDirection));
+        trace.Add(TraceNode.Success("Select strafe step", $"primary={primary.Direction}; strafe={strafeDirection} to {strafeDestination}; tieBreak=North,South,West,East"));
+
+        var evaluation = _movement.EvaluateRelocation(world, actorId, MovementDestination.Plane(strafeDestination));
+        trace.Add(evaluation.Trace);
+        if (!evaluation.CanRelocate || evaluation.Destination is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = evaluation.Trace.Reason;
+            trace.Detail = $"primary={primary.Direction}; strafe={strafeDirection} blocked: {evaluation.Trace.Detail}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        _movement.TryPlace(world, actorId, strafeDestination);
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"primary={primary.Direction}; moved {strafeDirection} strafing {(clockwise ? "clockwise" : "anticlockwise")} around {target.Value}";
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
     }
 
     private PlanEffectResult ApplyMoveFacingPrimitive(
@@ -888,8 +1080,31 @@ public sealed class ActionPlanInterpreter
             _ => direction
         };
 
+    private static Direction Clockwise(Direction direction) =>
+        direction switch
+        {
+            Direction.North => Direction.East,
+            Direction.East => Direction.South,
+            Direction.South => Direction.West,
+            Direction.West => Direction.North,
+            _ => direction
+        };
+
+    private static Direction Anticlockwise(Direction direction) =>
+        direction switch
+        {
+            Direction.North => Direction.West,
+            Direction.West => Direction.South,
+            Direction.South => Direction.East,
+            Direction.East => Direction.North,
+            _ => direction
+        };
+
     private static int ManhattanDistance(GridCoord first, GridCoord second) =>
         Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
+
+    private static int ChebyshevDistance(GridCoord first, GridCoord second) =>
+        Math.Max(Math.Abs(first.X - second.X), Math.Abs(first.Y - second.Y));
 
     private static IReadOnlyList<Direction> SeekDirections() =>
         [Direction.North, Direction.South, Direction.West, Direction.East];

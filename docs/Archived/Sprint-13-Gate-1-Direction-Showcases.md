@@ -1,6 +1,6 @@
 # Sprint 13: Gate 1 Direction Showcases
 
-Status: Planned / active sprint plan.
+Status: Completed / archived during Sprint 16 wrap-up.
 
 Related plans and source of truth:
 
