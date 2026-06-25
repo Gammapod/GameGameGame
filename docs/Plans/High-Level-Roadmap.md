@@ -10,7 +10,9 @@ Read when:
 
 Related source of truth:
 
-- `docs/Source of Truth/Engine-Editor-Capabilities.md` describes what is currently implemented and authorable.
+- `docs/Source of Truth/invariants.md` records stable behavior contracts and test traces for TDD planning.
+- `docs/Source of Truth/Engine-Editor-Capabilities.md` describes maintainer-facing implemented support tiers and layer coverage.
+- `docs/Source of Truth/Content-Authoring-Manual.md` describes what content authors and content-editing agents can safely author today.
 - `docs/Source of Truth/planning-index.md` describes planning-document navigation and reading order.
 
 ## Current strategic direction

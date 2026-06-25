@@ -23,6 +23,10 @@ This document records minimal functional requirements that should influence test
 - Actions must produce structured traces for failed checks and resolutions.
 - Action Plan resolution must distinguish failure that follows an explicit fallback from terminal resolution that ends the current root actor's turn.
 - Spatial recursion may exist, but temporal recursion must be explicitly guarded.
+- Canonical behavior chains execute ordered Action Steps in one Action Plan without requiring linked fallback plans.
+- Canonical behavior chains continue after a failed/non-consuming step and stop after the first successful turn-consuming step.
+- Canonical behavior-chain traces must report attempted steps, state reads/writes, fallback continuation/stopping, and terminal turn outcome.
+- Canonical Action Steps must preserve their documented state contracts for `Facing`, `Target`, movement, target selection, fallthrough, and deterministic tie-breaks.
 
 ## Action Plan Data
 
@@ -30,6 +34,8 @@ This document records minimal functional requirements that should influence test
 - Legacy action plan variables are typed, persist in invocation context, and can be written by checks before later reads while compatibility support remains.
 - Canonical behavior descriptors and legacy action-plan descriptors preserve structured built-in inputs and materialize executable plans.
 - The Action Step/primitive catalog describes every exposed primitive, value kind, implied state contract, and field contract.
+- An Action Plan descriptor has exactly one active authored shape for canonical behavior, transitional primitive, legacy low-level steps, or empty/passive state; mixed authored shapes are invalid.
+- Empty canonical behavior chains are invalid for authored content and resolve as no turn if encountered at runtime.
 
 ## Content Pipeline
 
@@ -37,6 +43,16 @@ This document records minimal functional requirements that should influence test
 - Editable content documents round-trip through materialization and saved YAML.
 - Content editor operations preserve declared IDs, presentations, carried layouts, Action Plans/behavior assignments, legacy action plans, and validation results.
 - Built-in content must load and validate, but tests should not pin valid design choices such as balance values, glyphs, positions, or action plan behavior.
+- Persisted scenario definitions materialize through the shared content materialization path, reference normal content templates, insert the selected player at the requested start, and report authoring diagnostics before simulation.
+- Console scenario launch consumes scenario materialization outputs rather than hardcoded prototype player or plane IDs.
+- Root-only scenario materialization remains compatibility behavior while supported and must be distinguishable from persisted scenario/player materialization.
+
+## Scenario Tooling
+
+- Headless scenario runs use shared Content/Core services and schedule contained actors deterministically for scenario-root inventory spaces.
+- Scenario reports treat expected in-simulation inability to act as runtime observation, not as an engine/runtime failure.
+- Scenario run reports expose setup, actor order, turn traces, final state, validation diagnostics, runtime observations, runtime failures, and capability gaps.
+- Scenario recording captures the initial state plus one frame after each full simulated turn, writes PNG frames and a GIF for valid recordings, and produces diagnostics without artifacts for invalid authoring requests.
 
 ## Test Coverage Map
 
@@ -53,10 +69,16 @@ This document records minimal functional requirements that should influence test
 - Structured traces: `ActionPlanContextVariableUpdatesAreTraced`, `CallPlanEffectRunsNestedPlanWithSharedContextAndTrace`, `PickupFailsWhenTargetTotalWeightWouldExceedCapacity`.
 - Fallback/terminal action plan failure and turn behavior: `PrimitiveBackedPlanWithoutFallbackTerminatesRootTurnWhenPrimitiveFails`, `PrimitiveBackedPlanUsesExplicitFallbackWhenPrimitiveFails`, `PlanInterpreterUsesFirstSuccessfulConsumingRankedStep`, `PlanInterpreterReturnsFailureWhenNoStepConsumesOrStops`, `BuiltInCanMoveCheckFailureFallsThroughToSetVariableEffect`.
 - Temporal recursion guard: `CallPlanEffectFailsWithTraceWhenDepthGuardIsExceeded`, `PrimitiveFallbackCyclesUsePlanCallDepthGuard`.
+- Canonical behavior-chain execution and traces: `BehaviorChainRunsMoveFacingThenPickupTargetWithoutLinkedFallbackPlan`, `BehaviorChainStopsAfterFirstSuccessfulActionStep`, `BehaviorChainTraceFormatterSummarizesFallbackStateAndTerminalOutcome`.
+- Canonical Action Step state contracts and deterministic movement/targeting: `BackstepMovesOppositeFacingConsumesTurnAndPreservesFacing`, `BackstepBlockedByEntityWritesTargetAndFallsThrough`, `BackstepOutOfBoundsFailsWithoutMeaningfulTargetWrite`, `AcquireNearestTargetSelectsNearestSamePlaneTargetAndWritesTarget`, `AcquireNearestTargetFallsThroughWithoutOverwritingWhenNoCandidateExists`, `AcquireNearestTargetContinuesToSeekTargetInSameTurn`, `SeekTargetAdjacentFallsThroughAndPreservesTargetForDestroyTarget`, `SeekTargetBlockedByIncidentalEntityPreservesGoalTarget`, `FleeTargetMovesAwayFromTargetAndPreservesTarget`, `FleeTargetFallsThroughWhenNoValidIncreasingMoveExists`, `MaintainChebyshevDistanceTwoBacksAwayWhenTooCloseAndPreservesTarget`, `MaintainChebyshevDistanceTwoFallsThroughAtExactDistance`, `StrafeClockwiseMovesPerpendicularToSeekPrimaryAndPreservesTarget`, `StrafeAnticlockwiseMovesOppositePerpendicularAndPreservesTarget`, `StrafeClockwiseUsesSeekTargetPrimaryTieBreakOnDiagonal`.
 - Typed entity action state and legacy action plan variables/check writes: `CanonicalFacingPersistsOnActorActionStateAcrossPlanExecutions`, `CanonicalTargetPersistsOnActorActionStateWhenBlockingEntityIsFound`, `SpawnedActionPlanUsesCanonicalInitialFacingDefault`, `ActionPlanContextStoresTypedVariables`, `PlanVariableRefReadsTypedVariableFromContext`, `PlanInterpreterCommitsCheckVariableWritesBeforeEffect`, `PrototypeRegistryValidationAcceptsVariablesWrittenByChecksBeforeLaterReads`.
 - Descriptor materialization and structured inputs: `ActionPlanDescriptorKeepsBuiltInInputsAsData`, `ActionPlanDescriptorMaterializesExecutableBuiltIns`, `BuiltInPlanPartsExposeStructuredInputs`.
+- Action Plan shape classification and invalid authored shapes: `ActionPlanShapeClassifierIdentifiesPlanShape`, `ContentEditorServiceSetsCanonicalBehaviorChainAndClearsLegacyPlanShapes`, `PrototypeRegistryValidationReportsMixedActionPlanShapes`, `PrototypeRegistryValidationReportsEmptyBehaviorChain`, `EditorViewModelSelectingBehaviorPlanShowsCanonicalActionSteps`, `EditorViewModelShowsLegacyCompatibilityOnlyForLegacyLowLevelPlans`.
 - Primitive catalog completeness and field contracts: `PlanPrimitiveCatalogExposesAllCheckEffectAndValueKinds`, `PlanPrimitiveCatalogDescribesCheckFieldsAndVariableContracts`, `PlanPrimitiveCatalogDescribesEffectFieldsAndReferences`.
 - YAML loading: `YamlContentLoaderCreatesRegistryFromDeclarativeContent`, `YamlContentLoaderCanLoadRegistryFromFile`.
 - Editable document roundtrip: `EditableContentDocumentCanLoadMaterializeSaveAndReloadYaml`.
 - Content editor operations: `ContentEditorServiceUpdatesEntityPresetAndPresentation`, `ContentEditorServicePlacesAndMovesCarriedEntityInInventoryLayout`, `ContentEditorServiceAddsReordersAndRemovesActionPlanSteps`, `ContentEditorServiceSetsActionPlanStepChecksAndEffects`, `ContentEditorServiceEditsTemplateDefaultPlanVariables`, `ContentEditorServiceValidatesCurrentDocumentAfterEdits`, `ContentEditorServiceValidationReportsCurrentDocumentErrors`.
 - Built-in content validation: `PrototypeRegistryValidationPassesForBuiltInContent`.
+- Scenario materialization and Console launch: `ScenarioMaterializerMaterializesAlphaScenarioWithPlayerInsertion`, `ScenarioMaterializerReportsAuthoringDiagnostics`, `ScenarioMaterializerPersistsAndMaterializesAlphaScenarioDefinitionById`, `ScenarioMaterializerValidatesPersistedAlphaScenarioDefinitions`, `AlphaScenarioFixtureLoadsValidatesAndMaterializesPlayer`, `AlphaScenarioFixtureCanLaunchInConsoleAndAcceptPlayerMove`, `ConsoleScenarioLauncherBuildsPlayableSessionFromPersistedScenario`, `ScenarioMaterializerSupportsRootOnlyScenarioCompatibility`.
+- Headless scenario run/report behavior: `ScenarioRunServiceRunsRootInventoryActorsInInitiativeOrder`, `ScenarioRunServiceShowsBehaviorStepsAndTreatsNoActionAsObservation`, `ScenarioRunServiceReportsMultiTurnMoveFacingScenario`, `ScenarioRunnerReportsUnsupportedCapabilityGap`.
+- Scenario recording behavior: `ScenarioRecordingServiceRecordsPersistedScenarioInitialStateAndFullTurns`, `ScenarioRecordingServiceReportsAuthoringDiagnosticsWithoutArtifacts`.

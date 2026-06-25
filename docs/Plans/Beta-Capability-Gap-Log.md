@@ -10,11 +10,13 @@ Read when:
 
 Related plans:
 
+- `docs/Source of Truth/Content-Authoring-Manual.md`
+- `docs/Source of Truth/Engine-Editor-Capabilities.md`
+- `docs/Source of Truth/invariants.md`
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
 - `docs/Archived/Sprint-12-Beta-Primitive-Showcases.md`
 - `docs/Archived/Sprint-14-Gate-2-Targeting-Showcases.md`
 - `docs/Archived/Sprint-16-Gate-3-Distance-Movement.md`
-- `docs/Source of Truth/Engine-Editor-Capabilities.md`
 
 ## Open gaps
 

@@ -10,10 +10,11 @@ Read when:
 
 Related source of truth:
 
-- `docs/Source of Truth/Engine-Editor-Capabilities.md` is the single source of truth for implemented and authorable engine/editor capabilities.
+- `docs/Source of Truth/Content-Authoring-Manual.md` is the source of truth for content-editor-facing authoring capabilities, workflows, limits, and gap logging.
+- `docs/Source of Truth/Engine-Editor-Capabilities.md` is the source of truth for maintainer-facing capability support tiers and layer coverage.
+- `docs/Source of Truth/invariants.md` is the source of truth for stable behavior contracts and test traces when beta work changes existing behavior.
 - `docs/Plans/High-Level-Roadmap.md` remains the strategic roadmap and backlog authority.
 - `docs/Plans/Beta-Capability-Gap-Log.md` records gaps discovered during beta scenario exploration.
-- `docs/Archived/Sprint-17-Scenario-Tooling-Decoupling.md` records the completed tooling cleanup before Gate 4 `Give`/`Take`.
 
 ## Beta exploration intent
 
@@ -29,6 +30,8 @@ This plan orders vignettes by what content tools can author now, then by explici
 4. requests for new primitives, engine systems, content organization, or reporting only when scenario evidence justifies them.
 
 ## Content-file organization ownership
+
+Author-facing workflow guidance belongs in `docs/Source of Truth/Content-Authoring-Manual.md`. This section only records beta-exploration file-organization planning.
 
 The content editor/content-authoring role owns the organization of beta content files. As content grows, prefer introducing clear content package structure over letting all fixtures accumulate in a single YAML file.
 
@@ -50,6 +53,8 @@ Potential future structure, to be introduced only when useful:
 - `src/GameGameGame.Content/Beta/Reactions/*.yaml`
 
 ## Promotion and request policy
+
+The reusable content-authoring gap workflow belongs in `docs/Source of Truth/Content-Authoring-Manual.md`. This section records the beta-exploration thresholds used by this plan.
 
 Use a capability-gap log during every phase. Promote a feature request when any of these are true:
 
@@ -382,7 +387,7 @@ Start with explicit authored showcase scenarios. Add generated previews only aft
 
 ## Sprint 12 primitive brainstorm notes
 
-Status: Possibilities and testing insights only. These are not planned features, promotion requests, or capability-gap entries unless later scenario evidence justifies them. Keep `Engine-Editor-Capabilities.md` as the implemented-capability source of truth and `High-Level-Roadmap.md` as the roadmap/backlog authority.
+Status: Possibilities and testing insights only. These are not planned features, promotion requests, or capability-gap entries unless later scenario evidence justifies them. Keep `Content-Authoring-Manual.md` as the authoring source of truth, `Engine-Editor-Capabilities.md` as the maintainer-facing support source of truth, and `High-Level-Roadmap.md` as the roadmap/backlog authority.
 
 The first current-tool primitive showcases suggested several possible future Action Step families:
 

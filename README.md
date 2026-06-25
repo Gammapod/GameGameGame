@@ -130,8 +130,11 @@ dotnet test tests/GameGameGame.Editor.Tests/GameGameGame.Editor.Tests.csproj
 
 ## Documentation
 
-The current engine/editor capability reference is maintained at:
+Source-of-truth documentation starts at:
 
+- `docs/Source of Truth/planning-index.md`
+- `docs/Source of Truth/invariants.md`
 - `docs/Source of Truth/Engine-Editor-Capabilities.md`
+- `docs/Source of Truth/Content-Authoring-Manual.md`
 
-Other design notes, invariants, testing guidance, and implementation plans are under `docs/`.
+Other design notes, testing guidance, and implementation plans are under `docs/`.

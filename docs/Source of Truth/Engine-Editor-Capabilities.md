@@ -1,12 +1,26 @@
-# Engine-Editor Capabilities Manual
+# Engine-Editor Capability Matrix
 
-This is the central manual for GameGameGame engine/editor capability parity. It is intended for:
+Status: Source of truth for maintainer-facing engine/editor capability support, parity tiers, and layer coverage.
+
+Read when:
+
+- adding, removing, renaming, or re-tiering an engine/editor capability;
+- deciding which layers must participate in a vertical slice;
+- checking whether a capability is stable, advanced, legacy, planned, or intentionally unsupported in a layer.
+
+Do not read when:
+
+- looking for TDD invariant/test traces; use `docs/Source of Truth/invariants.md`;
+- looking for content-authoring instructions without implementation detail; use `docs/Source of Truth/Content-Authoring-Manual.md`.
+
+This document is intended for:
 
 - engine/editor maintainers deciding how new Core features should be authored, validated, and exercised through editor tooling;
-- content creators and content-editing agents that need to know what the editor can safely author today;
 - agent API work, which should use the same canonical authoring model as the editor service and future frontend/editor surfaces.
 
 Update this document whenever an engine capability is added, removed, renamed, promoted to editor support, intentionally kept engine-only, or moved into legacy compatibility.
+
+Stable behavior contracts and test traces belong in `docs/Source of Truth/invariants.md`. Content-editor-facing usage guidance belongs in `docs/Source of Truth/Content-Authoring-Manual.md`.
 
 ## Evolution policy
 

@@ -12,23 +12,36 @@ Do not read when:
 
 - making a narrow code/content edit whose relevant active plan is already known.
 
+## Documentation lanes
+
+- Core-owner/TDD lane: `docs/Source of Truth/invariants.md` records stable behavior contracts and test traces.
+- Capability matrix lane: `docs/Source of Truth/Engine-Editor-Capabilities.md` records maintainer-facing capability support tiers and layer coverage.
+- Content-authoring lane: `docs/Source of Truth/Content-Authoring-Manual.md` records content-editor-facing authoring capabilities, workflows, limits, and gap logging.
+- Planning lane: `docs/Plans/High-Level-Roadmap.md`, active plans, and the gap log record priorities, promotion triggers, and selected work.
+
 ## Required reading order for planning/content work
 
-1. `docs/Source of Truth/Engine-Editor-Capabilities.md`
-   - Canonical source of truth for implemented and authorable engine/editor capabilities.
-   - Trust this over roadmap or plan documents if there is a conflict.
-2. `docs/Plans/High-Level-Roadmap.md`
+1. `docs/Source of Truth/Content-Authoring-Manual.md`
+   - Source of truth for what content authors and content-editing agents can safely author today.
+   - Use this before authoring scenarios or classifying content-facing gaps.
+2. `docs/Source of Truth/Engine-Editor-Capabilities.md`
+   - Source of truth for maintainer-facing engine/editor capability support tiers and layer coverage.
+   - Trust this over roadmap or plan documents for implemented support status.
+3. `docs/Source of Truth/invariants.md`
+   - Source of truth for core-owner-facing TDD invariant/test traces.
+   - Use this before planning changes to stable behavior.
+4. `docs/Plans/High-Level-Roadmap.md`
    - Canonical source of truth for active strategic direction, prioritized backlog buckets, deferred ideas, dependencies, and promotion triggers.
-3. `docs/Source of Truth/vertical-slice-map.md`
+5. `docs/Source of Truth/vertical-slice-map.md`
    - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
    - Read selectively when a planned slice spans multiple layers.
-4. `docs/Plans/Beta-Content-Exploration-Plan.md`
+6. `docs/Plans/Beta-Content-Exploration-Plan.md`
    - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
-5. `docs/Plans/Beta-Capability-Gap-Log.md`
+7. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
-6. `docs/Plans/Sprint-Retrospective.md`
+8. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
-7. `docs/Archived/`
+9. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
    - Includes completed Sprint 17 scenario/tooling decoupling and Sprint 18 tech-debt cleanup plans.
 
@@ -55,7 +68,9 @@ See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies
 
 ## Planning conventions
 
-- Capabilities and supported authoring tiers belong in `Engine-Editor-Capabilities.md`.
+- Stable behavior contracts and test traces belong in `invariants.md`.
+- Maintainer-facing capability tiers and layer support belong in `Engine-Editor-Capabilities.md`.
+- Content-editor-facing authoring capabilities, workflows, limits, and gap logging belong in `Content-Authoring-Manual.md`.
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
 - Active implementation details belong in an active sprint plan under `docs/Plans/`.

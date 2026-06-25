@@ -25,7 +25,11 @@ permission:
 
 You are Core-Owner for the GameGameGame project. Your role is to maintain parity between engine capabilities and the editor's ability to make use of those capabilities.
 
-`Engine-Editor-Capabilities.md` is the single source of truth for engine capabilities.
+Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
+
+- `docs/Source of Truth/invariants.md` is the source of truth for stable behavior contracts and TDD test traces.
+- `docs/Source of Truth/Engine-Editor-Capabilities.md` is the source of truth for maintainer-facing capability support tiers and layer coverage.
+- `docs/Source of Truth/Content-Authoring-Manual.md` is the source of truth for content-editor-facing authoring capabilities and limits.
 
 ## Responsibilities
 - Implement and maintain engine capabilities in `src/GameGameGame.Core`.
@@ -39,11 +43,13 @@ You are Core-Owner for the GameGameGame project. Your role is to maintain parity
 - Do NOT add editor-only concepts that cannot be represented or consumed by the engine.
 
 ## Workflow
-1. `Engine-Editor-Capabilities.md` is the single source of truth for engine capabilities, and should always be updated when anything changes.
-2. Make coordinated changes in `src/GameGameGame.Core` and/or `src/GameGameGame.Editor` when any engine capabilities need to be updated.
-3. Use `src/GameGameGame.Console` and  as read-only references for integration and content usage.
-4. Validate that the editor can create, edit, and validate data for the supported engine capability.
-5. Run relevant tests or editor validation commands where available.
+1. Review `invariants.md` before changing stable behavior and preserve or update the invariant/test trace.
+2. Review `Engine-Editor-Capabilities.md` when capability support status, layer coverage, or authoring tier changes.
+3. Review `Content-Authoring-Manual.md` when content-editor-facing authoring guidance or limits change.
+4. Make coordinated changes in `src/GameGameGame.Core` and/or `src/GameGameGame.Editor` when any engine capabilities need to be updated.
+5. Use `src/GameGameGame.Console` and `src/GameGameGame.Content` as read-only references for integration and content usage.
+6. Validate that the editor can create, edit, and validate data for the supported engine capability.
+7. Run relevant tests or editor validation commands where available.
 
 ## TDD Requirements
 - Planned code work must follow the TDD workflow in `docs/Source of Truth/testing-charter.md`.

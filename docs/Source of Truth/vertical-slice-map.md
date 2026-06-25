@@ -32,8 +32,9 @@ Use this as a navigation map, not a mandatory scope checklist. A slice may inten
    - Human-facing view-model/window support only when the active plan explicitly selects current GUI work or when maintaining an already-supported GUI workflow.
 8. **Tests**
    - Layer-appropriate tests for Core, Content, Editor service/API, integration/scenario behavior, and GUI only when GUI work is in scope.
-9. **Capability documentation**
-   - Update `Engine-Editor-Capabilities.md` when actual support status or authoring guidance changes.
+9. **Capability and authoring documentation**
+   - Update `Engine-Editor-Capabilities.md` when actual support status or layer coverage changes.
+   - Update `Content-Authoring-Manual.md` when content-editor-facing authoring guidance or limits change.
 10. **Planning/backlog documentation**
    - Update active plan or `High-Level-Roadmap.md` when scope changes, gaps are deferred, or follow-up items are promoted.
 
