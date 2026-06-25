@@ -26,13 +26,11 @@ Do not read when:
    - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
 5. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
-6. `docs/Plans/Sprint-17-Scenario-Tooling-Decoupling.md`
-   - Recently completed implementation slice before Gate 4 `Give`/`Take`; keep as wrap-up reference until archived.
-   - Canonical scenario materialization, extracted headless scenario run/record services, and removal of non-UI dependencies on `GameGameGame.Editor` / Avalonia.
-7. `docs/Plans/Sprint-Retrospective.md`
+6. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
-8. `docs/Archived/`
+7. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
+   - Includes completed Sprint 17 scenario/tooling decoupling and Sprint 18 tech-debt cleanup plans.
 
 ## Current strategic priority
 
@@ -40,19 +38,18 @@ Alpha MVP is complete: the game can launch and be played in an authored scenario
 
 ## Current highest-priority backlog buckets
 
-1. Foundational movement and peer interaction primitives, with Gate 4 `Give`/`Take` as the next planned mechanics gate after the Sprint 17 decoupling cleanup.
+1. Foundational movement and peer interaction primitives, with Gate 4 `Give`/`Take` as the next planned mechanics gate after the completed Sprint 17 and Sprint 18 cleanup work.
 2. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`, `docs/Plans/Beta-Content-Exploration-Plan.md`, and `docs/Plans/Beta-Capability-Gap-Log.md`.
-3. Scenario/testing/tooling feedback loop, especially persisted scenario runs, report summaries, recorded artifact review, and Sprint 17 polish follow-ups.
-4. Scenario/testing/tooling decoupling polish from `docs/Plans/Sprint-17-Scenario-Tooling-Decoupling.md`, including root-only terminology, linked Editor test file organization, `EditorViewModelTests` service extraction opportunities, and eventual `MinimalScenarioRunner` cleanup.
-5. Scenario/content packaging beyond alpha.
-6. Inventory, containment, and transfer mechanics.
-7. Spawning, creation, and template materialization.
-8. Runtime architecture and simulation scale.
-9. Behavior authoring reuse and organization.
-10. Future integrated game/editor frontend.
-11. Reactions and cross-entity behavior.
-12. Future player control and action choice model.
-13. Long-horizon diegetic/meta systems.
+3. Scenario/testing/tooling feedback loop, especially persisted scenario runs, report summaries, recorded artifact review, and remaining non-blocking tooling polish.
+4. Scenario/content packaging beyond alpha.
+5. Inventory, containment, and transfer mechanics.
+6. Spawning, creation, and template materialization.
+7. Runtime architecture and simulation scale.
+8. Behavior authoring reuse and organization.
+9. Future integrated game/editor frontend.
+10. Reactions and cross-entity behavior.
+11. Future player control and action choice model.
+12. Long-horizon diegetic/meta systems.
 
 See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies, defer reasons, and promotion triggers within each bucket.
 

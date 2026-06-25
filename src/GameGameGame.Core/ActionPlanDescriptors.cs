@@ -14,6 +14,54 @@ public sealed record ActionPlanDescriptor(
             Behavior);
 }
 
+public enum ActionPlanShape
+{
+    EmptyPassive,
+    CanonicalBehaviorChain,
+    TransitionalPrimitivePlan,
+    LegacyLowLevelSteps,
+    InvalidMixedShape,
+    InvalidEmptyBehaviorChain
+}
+
+public static class ActionPlanShapeClassifier
+{
+    public static ActionPlanShape Classify(ActionPlanDescriptor descriptor)
+    {
+        var hasBehavior = descriptor.Behavior?.Steps.Count > 0;
+        var hasPrimitive = descriptor.Primitive is not null;
+        var hasLowLevelSteps = descriptor.Steps.Count > 0;
+        var activeShapes = 0;
+        activeShapes += hasBehavior ? 1 : 0;
+        activeShapes += hasPrimitive ? 1 : 0;
+        activeShapes += hasLowLevelSteps ? 1 : 0;
+
+        if (activeShapes > 1)
+        {
+            return ActionPlanShape.InvalidMixedShape;
+        }
+
+        if (descriptor.Behavior is { Steps.Count: 0 })
+        {
+            return ActionPlanShape.InvalidEmptyBehaviorChain;
+        }
+
+        if (hasBehavior)
+        {
+            return ActionPlanShape.CanonicalBehaviorChain;
+        }
+
+        if (hasPrimitive)
+        {
+            return ActionPlanShape.TransitionalPrimitivePlan;
+        }
+
+        return hasLowLevelSteps
+            ? ActionPlanShape.LegacyLowLevelSteps
+            : ActionPlanShape.EmptyPassive;
+    }
+}
+
 public sealed record ActionPlanBehaviorDescriptor(
     IReadOnlyList<ActionPlanBehaviorStepDescriptor> Steps);
 

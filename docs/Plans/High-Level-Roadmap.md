@@ -95,7 +95,8 @@ Recently completed supporting documents:
 - [Sprint 14: Gate 2 Targeting Showcases](../Archived/Sprint-14-Gate-2-Targeting-Showcases.md)
 - [Sprint 15: Debug Scenario Recorder](../Archived/Sprint-15-Debug-Scenario-Recorder.md)
 - [Sprint 16: Gate 3 Distance Movement Showcases](../Archived/Sprint-16-Gate-3-Distance-Movement.md)
-- [Sprint 17: Scenario Tooling Decoupling](Sprint-17-Scenario-Tooling-Decoupling.md)
+- [Sprint 17: Scenario Tooling Decoupling](../Archived/Sprint-17-Scenario-Tooling-Decoupling.md)
+- [Sprint 18: Tech Debt Cleanup](../Archived/Sprint-18-Tech-Debt-Cleanup.md)
 
 Active beta planning document:
 

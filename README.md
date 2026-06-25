@@ -67,25 +67,65 @@ Basic controls shown by the app include:
 - `I` to inspect;
 - `Q` or `Esc` to quit.
 
-## Build and test
+## Run and author scenarios
 
-This repository uses a `.slnx` solution file and targets .NET 10.
-
-```bash
-dotnet build GameGameGame.slnx
-dotnet test GameGameGame.slnx
-```
-
-Run the console prototype:
+Run the default console prototype:
 
 ```bash
 dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj
 ```
 
-Run the editor:
+Run a specific authored scenario from a content YAML file:
+
+```bash
+dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- <content-file> <scenario-id>
+```
+
+Example:
+
+```bash
+dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke
+```
+
+Record a scenario to PNG frames and a GIF:
+
+```bash
+dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- record-scenario <content-file> <scenario-id> --turns <N> --output <directory>
+```
+
+Example:
+
+```bash
+dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- record-scenario src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke --turns 5 --output artifacts/scenario-recordings/alpha-smoke
+```
+
+Open the current Avalonia editor for content and scenario authoring:
 
 ```bash
 dotnet run --project src/GameGameGame.Editor/GameGameGame.Editor.csproj
+```
+
+Content is YAML-backed and primarily lives under `src/GameGameGame.Content`. Current beta scenario fixtures are organized under `src/GameGameGame.Content/Beta`.
+
+## Build and test
+
+This repository targets .NET 10. Build the main runnable projects directly:
+
+```bash
+dotnet build src/GameGameGame.Console/GameGameGame.Console.csproj
+dotnet build src/GameGameGame.Editor/GameGameGame.Editor.csproj
+```
+
+Run the normal non-Editor test project for Core, Content, Console, and Headless coverage:
+
+```bash
+dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj
+```
+
+Run legacy/current Avalonia editor-specific tests separately:
+
+```bash
+dotnet test tests/GameGameGame.Editor.Tests/GameGameGame.Editor.Tests.csproj
 ```
 
 ## Documentation

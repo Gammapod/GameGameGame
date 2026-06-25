@@ -1,6 +1,6 @@
 # Sprint 17: Scenario Tooling Decoupling
 
-Status: Implementation complete; keep as wrap-up reference until archived.
+Status: Archived; implementation complete.
 
 Read when:
 

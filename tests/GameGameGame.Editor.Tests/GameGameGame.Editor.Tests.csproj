@@ -26,8 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\GameGameGame.Tests\AgentContentEditorApiTests.cs" Link="AgentContentEditorApiTests.cs" />
-    <Compile Include="..\GameGameGame.Tests\EditorViewModelTests.cs" Link="EditorViewModelTests.cs" />
     <Compile Include="..\GameGameGame.Tests\TestSuites.cs" Link="TestSuites.cs" />
     <Compile Include="..\GameGameGame.Tests\TestWorld.cs" Link="TestWorld.cs" />
   </ItemGroup>

@@ -341,12 +341,8 @@ public sealed class PrototypeContentRegistry(
             ActionPlanTemplateId actionPlanTemplateId,
             ActionPlanDescriptor descriptor)
         {
-            var activeShapes = 0;
-            activeShapes += descriptor.Behavior?.Steps.Count > 0 ? 1 : 0;
-            activeShapes += descriptor.Primitive is not null ? 1 : 0;
-            activeShapes += descriptor.Steps.Count > 0 ? 1 : 0;
-
-            if (activeShapes > 1)
+            var shape = ActionPlanShapeClassifier.Classify(descriptor);
+            if (shape == ActionPlanShape.InvalidMixedShape)
             {
                 AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionPlanShape,
@@ -355,7 +351,7 @@ public sealed class PrototypeContentRegistry(
                     actionPlanId: descriptor.Id));
             }
 
-            if (descriptor.Behavior is { Steps.Count: 0 })
+            if (shape == ActionPlanShape.InvalidEmptyBehaviorChain)
             {
                 AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionPlanShape,

@@ -239,17 +239,21 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         }
     }
 
-    public string SelectedActionPlanShape => SelectedActionPlan?.Shape ?? "No action plan selected";
+    public string SelectedActionPlanShape => SelectedActionPlan is null
+        ? "No action plan selected"
+        : ContentEditorService.FormatActionPlanShape(SelectedActionPlan.Shape);
 
     public bool IsLegacyActionPlanCompatibilityVisible =>
-        SelectedActionPlan?.Shape == "Legacy / Advanced Low-Level Steps";
+        SelectedActionPlan?.Shape == ActionPlanShape.LegacyLowLevelSteps;
 
     public string SelectedActionPlanShapeDetail => SelectedActionPlan?.Shape switch
     {
-        "Canonical Behavior Chain" => "Recommended: this plan uses ordered engine-defined Action Steps. Keep authoring here for normal behavior work.",
-        "Transitional Primitive Plan" => "Compatibility: this plan uses primitive-backed fallback links. It still loads and runs, but canonical behavior chains are preferred for new authoring.",
-        "Legacy / Advanced Low-Level Steps" => "Advanced compatibility: this plan uses low-level steps/checks/effects. Keep only when canonical Action Steps cannot express the behavior yet.",
-        "Empty / Passive" => "Passive: this plan has no behavior. Add canonical Action Steps when the entity should act on its turn.",
+        ActionPlanShape.CanonicalBehaviorChain => "Recommended: this plan uses ordered engine-defined Action Steps. Keep authoring here for normal behavior work.",
+        ActionPlanShape.TransitionalPrimitivePlan => "Compatibility: this plan uses primitive-backed fallback links. It still loads and runs, but canonical behavior chains are preferred for new authoring.",
+        ActionPlanShape.LegacyLowLevelSteps => "Advanced compatibility: this plan uses low-level steps/checks/effects. Keep only when canonical Action Steps cannot express the behavior yet.",
+        ActionPlanShape.EmptyPassive => "Passive: this plan has no behavior. Add canonical Action Steps when the entity should act on its turn.",
+        ActionPlanShape.InvalidMixedShape => "Invalid: this plan mixes behavior shapes. Use only one of behavior, primitive, or low-level steps.",
+        ActionPlanShape.InvalidEmptyBehaviorChain => "Invalid: this plan declares an empty behavior chain. Omit behavior or add at least one Action Step.",
         null => "Select an action plan to inspect its authoring shape.",
         _ => "Unknown plan shape. Validate the document before saving."
     };
@@ -1309,7 +1313,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 plan.Descriptor.Id.Value,
                 plan.Descriptor.Steps.Count,
                 plan.Descriptor.Behavior?.Steps.Count ?? 0,
-                GetActionPlanShape(plan.Descriptor)));
+                ActionPlanShapeClassifier.Classify(plan.Descriptor)));
         }
 
         foreach (var step in _session.Editor.ListActionSteps())
@@ -1829,26 +1833,6 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             _ => $"{slot.Slot} can be defaulted as {slot.ValueKind}"
         };
 
-    private static string GetActionPlanShape(ActionPlanDescriptor descriptor)
-    {
-        if (descriptor.Behavior?.Steps.Count > 0)
-        {
-            return "Canonical Behavior Chain";
-        }
-
-        if (descriptor.Primitive is not null)
-        {
-            return "Transitional Primitive Plan";
-        }
-
-        if (descriptor.Steps.Count > 0)
-        {
-            return "Legacy / Advanced Low-Level Steps";
-        }
-
-        return "Empty / Passive";
-    }
-
     private static string FormatEffect(PlanEffectDescriptor effect)
     {
         var fields = new List<string>();
@@ -1950,7 +1934,7 @@ public sealed record ActionPlanListItem(
     string RuntimeId,
     int StepCount,
     int BehaviorStepCount,
-    string Shape)
+    ActionPlanShape Shape)
 {
     public override string ToString() => BehaviorStepCount > 0
         ? $"{Id} ({BehaviorStepCount} action steps)"

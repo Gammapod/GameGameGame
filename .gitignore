@@ -29,8 +29,9 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Test results
+# Test results and debug images
 TestResults/
 coverage/
+debug/**
 *.coverage
 *.trx

@@ -5,6 +5,43 @@ namespace GameGameGame.Tests;
 [Trait(TestSuites.TraitName, TestSuites.Core)]
 public sealed class CoreActionPlanTests
 {
+    [Theory]
+    [InlineData(ActionPlanShape.EmptyPassive)]
+    [InlineData(ActionPlanShape.CanonicalBehaviorChain)]
+    [InlineData(ActionPlanShape.TransitionalPrimitivePlan)]
+    [InlineData(ActionPlanShape.LegacyLowLevelSteps)]
+    [InlineData(ActionPlanShape.InvalidMixedShape)]
+    [InlineData(ActionPlanShape.InvalidEmptyBehaviorChain)]
+    public void ActionPlanShapeClassifierIdentifiesPlanShape(ActionPlanShape expectedShape)
+    {
+        var descriptor = expectedShape switch
+        {
+            ActionPlanShape.EmptyPassive => new ActionPlanDescriptor(new ActionPlanId("empty"), []),
+            ActionPlanShape.CanonicalBehaviorChain => new ActionPlanDescriptor(
+                new ActionPlanId("behavior"),
+                [],
+                Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing)])),
+            ActionPlanShape.TransitionalPrimitivePlan => new ActionPlanDescriptor(
+                new ActionPlanId("primitive"),
+                [],
+                Primitive: new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing)),
+            ActionPlanShape.LegacyLowLevelSteps => new ActionPlanDescriptor(
+                new ActionPlanId("legacy"),
+                [new ActionPlanStepDescriptor("wait", [], PlanEffectDescriptor.Wait(), OnFailure: null)]),
+            ActionPlanShape.InvalidMixedShape => new ActionPlanDescriptor(
+                new ActionPlanId("mixed"),
+                [new ActionPlanStepDescriptor("wait", [], PlanEffectDescriptor.Wait(), OnFailure: null)],
+                Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing)])),
+            ActionPlanShape.InvalidEmptyBehaviorChain => new ActionPlanDescriptor(
+                new ActionPlanId("empty-behavior"),
+                [],
+                Behavior: new ActionPlanBehaviorDescriptor([])),
+            _ => throw new ArgumentOutOfRangeException(nameof(expectedShape))
+        };
+
+        Assert.Equal(expectedShape, ActionPlanShapeClassifier.Classify(descriptor));
+    }
+
     [Fact]
     public void ActionPlanContextStoresTypedVariables()
     {

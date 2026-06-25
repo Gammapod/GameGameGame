@@ -264,12 +264,9 @@ public sealed class EditableContentDocument
         string planId,
         ActionPlanDescriptorDto plan)
     {
-        var activeShapes = 0;
-        activeShapes += plan.Behavior?.Steps?.Count > 0 ? 1 : 0;
-        activeShapes += plan.Primitive is not null ? 1 : 0;
-        activeShapes += plan.Steps?.Count > 0 ? 1 : 0;
-
-        if (activeShapes > 1)
+        var descriptor = plan.ToDescriptor(planId);
+        var shape = ActionPlanShapeClassifier.Classify(descriptor);
+        if (shape == ActionPlanShape.InvalidMixedShape)
         {
             diagnostics.Add(ContentDiagnostic.Error(
                 ContentDiagnosticCode.InvalidActionPlanShape,
@@ -278,7 +275,7 @@ public sealed class EditableContentDocument
                 actionPlanId: new ActionPlanId(planId)));
         }
 
-        if (plan.Behavior is not null && (plan.Behavior.Steps is null || plan.Behavior.Steps.Count == 0))
+        if (shape == ActionPlanShape.InvalidEmptyBehaviorChain)
         {
             diagnostics.Add(ContentDiagnostic.Error(
                 ContentDiagnosticCode.InvalidActionPlanShape,
@@ -471,6 +468,13 @@ public sealed class EditableContentDocument
             Behavior = descriptor.Behavior is null ? null : ActionPlanBehaviorDescriptorDto.From(descriptor.Behavior),
             Steps = descriptor.Steps.Select(ActionPlanStepDescriptorDto.From).ToList()
         };
+
+        public ActionPlanDescriptor ToDescriptor(string fallbackId) =>
+            new(
+                new ActionPlanId(Id ?? fallbackId),
+                (Steps ?? []).Select(step => step.ToDescriptor()).ToList(),
+                Primitive?.ToDescriptor(),
+                Behavior?.ToDescriptor());
     }
 
     public sealed class ScenarioDefinitionDto

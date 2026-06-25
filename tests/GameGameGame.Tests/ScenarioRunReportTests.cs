@@ -1,18 +1,24 @@
 using System.Text;
 using GameGameGame.Content;
 using GameGameGame.Core;
+using GameGameGame.Headless;
 
 namespace GameGameGame.Tests;
 
 public sealed class ScenarioRunReportTests
 {
     [Fact]
-    public void ScenarioRunnerCanUseEditorAuthoredTemporaryContentForReport()
+    public void ScenarioRunServiceCanUseEditorAuthoredTemporaryContentForReport()
     {
         var document = new EditableContentDocument();
         var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Scenario Room");
         var actorTemplateId = editor.CreateEntityPreset("Scenario Actor");
         var rockTemplateId = editor.CreateEntityPreset("Scenario Rock");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Scenario Room", InventoryWidth: 4, InventoryHeight: 5, Weight: 100, CarryingCapacity: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
         editor.UpdateEntityPreset(
             actorTemplateId,
             new EntityTemplate("Scenario Actor", InventoryWidth: 3, InventoryHeight: 2, Weight: 10, CarryingCapacity: 5),
@@ -26,133 +32,55 @@ public sealed class ScenarioRunReportTests
         var planTemplateId = editor.CreateActionPlan("Drop Facing");
         editor.SetActionPlanBehavior(planTemplateId, [ActionPlanBehaviorStepKind.DropFacing]);
         editor.SetDefaultActionPlan(actorTemplateId, planTemplateId);
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("actor"), actorTemplateId, new GridCoord(1, 2));
         var validation = editor.Validate();
         var canonicalValidation = document.ValidateCanonicalAuthoring();
         Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
         Assert.True(canonicalValidation.IsValid, string.Join(Environment.NewLine, canonicalValidation.Errors));
 
-        var registry = document.ToRegistry();
-        var world = CreateScenarioWorld();
-        var actorId = new EntityId("actor");
-        registry.SpawnEntity(
-            world,
+        var report = ScenarioRunService.Run(document, new ScenarioRunRequest(scenarioRootId, TurnCount: 1));
+
+        Assert.Equal([new EntityId("actor")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        var turn = Assert.Single(report.Turns);
+        Assert.Equal("Scenario Actor", turn.ActorName);
+        Assert.Contains("1. DropFacing: Success; fallback=stopped", turn.TraceLines);
+        Assert.Contains("   reads: Facing=East", turn.TraceLines);
+        Assert.Contains("Scenario Actor: scenarioRoot(1,2), facing East, target none", report.FinalStateLines);
+        Assert.Contains("Scenario Rock: scenarioRoot(2,2), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeObservations);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Empty(report.CapabilityGaps);
+    }
+
+    [Fact]
+    public void ScenarioRunServiceReportsMultiTurnMoveFacingScenario()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Scenario Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Scenario Room", InventoryWidth: 5, InventoryHeight: 5, Weight: 100, CarryingCapacity: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorTemplateId = editor.CreateEntityPreset("Player");
+        editor.UpdateEntityPreset(
             actorTemplateId,
-            new EntitySpawnOptions(
-                actorId,
-                new PlaneCoord(new PlaneId("scenarioWorld"), new GridCoord(1, 2)),
-                InventoryPlaneId: new PlaneId("actorInventory"),
-                InventoryPlaneName: "Actor Inventory"));
-        var plan = registry.GetActionPlanDescriptor(planTemplateId).Materialize();
-        var scenario = new HeadlessScenario(
-            "editor_authored_actor_drops_carried_rock_facing_east",
-            world,
-            actorId,
-            plan,
-            [actorId, new EntityId("carriedRock")]);
+            new EntityTemplate("Player", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityPresentation('@', PresentationColor.White));
+        editor.SetInitialFacing(actorTemplateId, Direction.East);
+        var planTemplateId = editor.CreateActionPlan("Move Facing");
+        editor.SetActionPlanBehavior(planTemplateId, [ActionPlanBehaviorStepKind.MoveFacing]);
+        editor.SetDefaultActionPlan(actorTemplateId, planTemplateId);
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("player"), actorTemplateId, new GridCoord(1, 2));
 
-        var report = MinimalScenarioRunner.Run(scenario, turnCount: 1).FormatText();
+        var report = ScenarioRunService.Run(document, new ScenarioRunRequest(scenarioRootId, TurnCount: 2));
 
-        Assert.Equal(
-            """
-            Scenario: editor_authored_actor_drops_carried_rock_facing_east
-
-            Setup:
-            - Actor: Scenario Actor at scenarioWorld(1,2), facing East, target none
-            - Plan: dropFacing [DropFacing]
-            - Watched entities:
-              - Scenario Actor: scenarioWorld(1,2), facing East, target none
-              - Scenario Rock: actorInventory(0,0), facing none, target none
-
-            Run:
-            Turn 1: Scenario Actor executes dropFacing
-            - Plan dropFacing: Success; consumedTurn=True; continuePlan=False
-            - 1. DropFacing: Success; fallback=stopped
-            -    reads: Facing=East
-            - Terminal: succeeded; consumed turn
-
-            Final State:
-            - Scenario Actor: scenarioWorld(1,2), facing East, target none
-            - Scenario Rock: scenarioWorld(2,2), facing none, target none
-
-            Diagnostics:
-            - none
-
-            Capability Gaps:
-            - none
-            """,
-            report);
-    }
-
-    [Fact]
-    public void MinimalScenarioRunnerReportsCompletedDropFacingScenario()
-    {
-        var world = TestWorld.CreateWorld();
-        var movement = new MovementService();
-        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
-        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
-        var plan = new ActionPlanDefinition(
-            new ActionPlanId("drop-facing"),
-            [],
-            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DropFacing)]));
-        var scenario = new HeadlessScenario(
-            "actor_drops_carried_rock_facing_east",
-            world,
-            TestWorld.PlayerId,
-            plan,
-            [TestWorld.PlayerId, TestWorld.RockId]);
-
-        var report = MinimalScenarioRunner.Run(scenario, turnCount: 1).FormatText();
-
-        Assert.Equal(
-            """
-            Scenario: actor_drops_carried_rock_facing_east
-
-            Setup:
-            - Actor: Player at world(1,2), facing East, target none
-            - Plan: drop-facing [DropFacing]
-            - Watched entities:
-              - Player: world(1,2), facing East, target none
-              - Rock: player(0,0), facing none, target none
-
-            Run:
-            Turn 1: Player executes drop-facing
-            - Plan drop-facing: Success; consumedTurn=True; continuePlan=False
-            - 1. DropFacing: Success; fallback=stopped
-            -    reads: Facing=East
-            - Terminal: succeeded; consumed turn
-
-            Final State:
-            - Player: world(1,2), facing East, target none
-            - Rock: world(2,2), facing none, target none
-
-            Diagnostics:
-            - none
-
-            Capability Gaps:
-            - none
-            """,
-            report);
-    }
-
-    [Fact]
-    public void ScenarioRunnerReportsMultiTurnMoveFacingScenario()
-    {
-        var world = TestWorld.CreateWorld();
-        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
-        var scenario = new HeadlessScenario(
-            "actor_moves_facing_east_for_two_turns",
-            world,
-            TestWorld.PlayerId,
-            CreateBehaviorPlan("move-facing", ActionPlanBehaviorStepKind.MoveFacing),
-            [TestWorld.PlayerId]);
-
-        var report = MinimalScenarioRunner.Run(scenario, turnCount: 2).FormatText();
-
-        Assert.Contains("Turn 1: Player executes move-facing", report, StringComparison.Ordinal);
-        Assert.Contains("Turn 2: Player executes move-facing", report, StringComparison.Ordinal);
-        Assert.Contains("- 1. MoveFacing: Success; fallback=stopped", report, StringComparison.Ordinal);
-        Assert.Contains("- Player: world(3,2), facing East, target none", report, StringComparison.Ordinal);
-        Assert.DoesNotContain("Turn 1: plan move-facing failed", report, StringComparison.Ordinal);
+        Assert.Equal([1, 2], report.Turns.Select(turn => turn.TurnNumber).ToArray());
+        Assert.All(report.Turns, turn => Assert.Equal("Player", turn.ActorName));
+        Assert.All(report.Turns, turn => Assert.Contains("1. MoveFacing: Success; fallback=stopped", turn.TraceLines));
+        Assert.Contains("Player: scenarioRoot(3,2), facing East, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeObservations);
     }
 
     [Fact]
@@ -310,26 +238,6 @@ public sealed class ScenarioRunReportTests
 
         Assert.Contains("Diagnostics:\n- none", report, StringComparison.Ordinal);
         Assert.Contains("Capability Gaps:\n- unsupported capability: CreateFacing(templateId) is not available; current CreateFacing creates placeholder rocks only", report, StringComparison.Ordinal);
-    }
-
-    private static WorldState CreateScenarioWorld()
-    {
-        var world = new WorldState();
-        AddRectangularPlane(world, new Plane(new PlaneId("scenarioWorld"), "Scenario World", 5, 5));
-        return world;
-    }
-
-    private static void AddRectangularPlane(WorldState world, Plane plane)
-    {
-        world.Planes.Add(plane.Id, plane);
-
-        for (var y = 0; y < plane.Height; y++)
-        {
-            for (var x = 0; x < plane.Width; x++)
-            {
-                world.AddNode(plane.Id, new GridCoord(x, y));
-            }
-        }
     }
 
     private static ActionPlanDefinition CreateBehaviorPlan(string id, ActionPlanBehaviorStepKind stepKind) =>

@@ -305,7 +305,7 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         return new ActionPlanPreview(
             planId,
             entityTemplateId,
-            GetActionPlanShape(plan),
+            FormatActionPlanShape(ActionPlanShapeClassifier.Classify(plan)),
             GetActionPlanGuidance(plan),
             GetActionPlanPreviewSteps(plan),
             GetActionPlanStateHints(plan, entityTemplateId),
@@ -755,34 +755,26 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         }
     }
 
-    private static string GetActionPlanShape(ActionPlanDescriptor descriptor)
-    {
-        if (descriptor.Behavior?.Steps.Count > 0)
-        {
-            return "Canonical Behavior Chain";
-        }
-
-        if (descriptor.Primitive is not null)
-        {
-            return "Transitional Primitive Plan";
-        }
-
-        if (descriptor.Steps.Count > 0)
-        {
-            return "Legacy / Advanced Low-Level Steps";
-        }
-
-        return "Empty / Passive";
-    }
-
     private static IReadOnlyList<string> GetActionPlanGuidance(ActionPlanDescriptor descriptor) =>
-        GetActionPlanShape(descriptor) switch
+        ActionPlanShapeClassifier.Classify(descriptor) switch
         {
-            "Canonical Behavior Chain" => ["Preferred canonical behavior chain. Author normal behavior as ordered engine-defined Action Steps."],
-            "Transitional Primitive Plan" => ["Compatibility primitive-backed fallback plan. Prefer canonical behavior chains for new authoring."],
-            "Legacy / Advanced Low-Level Steps" => ["Legacy/advanced low-level steps/checks/effects. Keep only where canonical Action Steps cannot express the behavior yet."],
-            "Empty / Passive" => ["Passive plan with no current behavior. Add canonical Action Steps when the entity should act."],
+            ActionPlanShape.CanonicalBehaviorChain => ["Preferred canonical behavior chain. Author normal behavior as ordered engine-defined Action Steps."],
+            ActionPlanShape.TransitionalPrimitivePlan => ["Compatibility primitive-backed fallback plan. Prefer canonical behavior chains for new authoring."],
+            ActionPlanShape.LegacyLowLevelSteps => ["Legacy/advanced low-level steps/checks/effects. Keep only where canonical Action Steps cannot express the behavior yet."],
+            ActionPlanShape.EmptyPassive => ["Passive plan with no current behavior. Add canonical Action Steps when the entity should act."],
             _ => ["Unknown action-plan shape. Validate before saving."]
+        };
+
+    public static string FormatActionPlanShape(ActionPlanShape shape) =>
+        shape switch
+        {
+            ActionPlanShape.CanonicalBehaviorChain => "Canonical Behavior Chain",
+            ActionPlanShape.TransitionalPrimitivePlan => "Transitional Primitive Plan",
+            ActionPlanShape.LegacyLowLevelSteps => "Legacy / Advanced Low-Level Steps",
+            ActionPlanShape.EmptyPassive => "Empty / Passive",
+            ActionPlanShape.InvalidMixedShape => "Invalid Mixed Shape",
+            ActionPlanShape.InvalidEmptyBehaviorChain => "Invalid Empty Behavior Chain",
+            _ => "Unknown"
         };
 
     private static IReadOnlyList<ActionPlanPreviewStep> GetActionPlanPreviewSteps(ActionPlanDescriptor descriptor)
