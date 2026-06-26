@@ -134,6 +134,101 @@ public sealed class AgentContentEditorApiTests
         Assert.Contains("kind: TakeTarget", snapshot.YamlPreview);
     }
 
+    [Fact]
+    public void AgentContentEditorApiRunsPersistedScenarioById()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("API Scenario Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            roomId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 3,
+                InventoryHeight: 2,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("API Scenario Player"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            playerTemplateId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 0,
+                InventoryHeight: 0,
+                Weight: 1,
+                CarryingCapacity: 5,
+                Glyph: '@',
+                Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));
+        var planId = AssertSuccess(api.CreateActionPlan("API Player Move"));
+        AssertSuccess(api.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(playerTemplateId, planId));
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "api-persisted-run",
+            "API Persisted Run",
+            roomId,
+            playerTemplateId,
+            new EntityId("apiPlayer"),
+            new GridCoord(0, 1))));
+
+        var report = AssertSuccess(api.RunScenarioById("api-persisted-run", turnCount: 1));
+
+        Assert.Contains("Run mode: Persisted scenario simulation", report.SetupLines);
+        Assert.Contains("Player: API Scenario Player apiPlayer at scenarioRoot(0,1), facing East, target none", report.SetupLines);
+        Assert.Contains("API Scenario Player: scenarioRoot(1,1), facing East, target none", report.FinalStateLines);
+        Assert.Equal([new EntityId("apiPlayer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Empty(report.InventorySummaryLines);
+        Assert.Empty(report.ValidationDiagnostics);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiCreatesCombinedPersistedScenarioReport()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("Review Scenario Room"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            roomId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 3,
+                InventoryHeight: 2,
+                Weight: 100,
+                CarryingCapacity: 100,
+                Glyph: '#',
+                Color: PresentationColor.Gray)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Review Player"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            playerTemplateId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 0,
+                InventoryHeight: 0,
+                Weight: 1,
+                CarryingCapacity: 5,
+                Glyph: '@',
+                Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));
+        var planId = AssertSuccess(api.CreateActionPlan("Review Move"));
+        AssertSuccess(api.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(playerTemplateId, planId));
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "review-persisted-run",
+            "Review Persisted Run",
+            roomId,
+            playerTemplateId,
+            new EntityId("reviewPlayer"),
+            new GridCoord(0, 1))));
+
+        var report = AssertSuccess(api.PreviewAndRunScenarioById("review-persisted-run", turnCount: 1));
+
+        Assert.Equal("review-persisted-run", report.ScenarioId);
+        Assert.True(report.DocumentValidation.IsValid, string.Join(Environment.NewLine, report.DocumentValidation.Errors));
+        Assert.True(report.CanonicalValidation.IsValid, string.Join(Environment.NewLine, report.CanonicalValidation.Errors));
+        var preview = Assert.Single(report.ActionPlanPreviews, item => item.PlanId == planId);
+        Assert.Equal("Canonical Behavior Chain", preview.Shape);
+        Assert.Contains(preview.ActionSteps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing);
+        Assert.Equal(new EntityId("reviewPlayer"), report.Materialization.PlayerEntityId);
+        Assert.Contains("Run mode: Persisted scenario simulation", report.RunReport.SetupLines);
+        Assert.Contains("Review Player: scenarioRoot(1,1), facing East, target none", report.RunReport.FinalStateLines);
+    }
+
     private static void AssertSuccess(AgentApiResult result)
     {
         Assert.True(result.IsSuccess, result.Error?.Message);

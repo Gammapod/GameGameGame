@@ -34,11 +34,13 @@ Related plans:
 
 ### GAP-002: Agent/headless API cannot directly run persisted scenarios by scenario ID
 
+Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario reports.
+
 - **Discovered in:** Sprint 14 `beta-collector` follow-up.
 - **Scenario/content:** `src/GameGameGame.Content/Beta/Targeting/CollectorShowcase.yaml`, scenario `beta-collector`.
 - **Desired behavior:** Content authors should be able to run a persisted scenario by ID through the agent/headless API, including scenario root, player template, player entity ID, player start, action plans, and active scenario plane.
-- **Current behavior:** `AgentContentEditorApi.RunScenario` accepts a scenario-root template and runs a root-only simulation. It does not insert the persisted scenario player. Tests that need player insertion must materialize the scenario manually and run turns in custom code.
-- **Current workaround:** Use `MaterializeScenario(scenarioId)` or `AlphaScenarioMaterializer.Materialize(...)` plus manual `TurnService` advancement in tests.
+- **Current behavior:** `AgentContentEditorApi.RunScenarioById` and `ScenarioRunService.Run(... PersistedScenarioRunRequest ...)` run persisted scenarios by scenario ID using shared scenario materialization, including player insertion and materialized action plans. The older `RunScenario` root-template path remains available as root-only compatibility simulation.
+- **Current workaround:** None for headless/editor-agent reports. Use root-only runs only when intentionally isolating a scenario-root template without persisted scenario setup.
 - **Missing capability:** A scenario-ID run command such as `RunScenario("beta-collector", turnCount)` or equivalent request shape that uses persisted scenario materialization.
 - **Unlocks:** Faster validation of player-involved vignettes; less custom fixture code; clearer evidence for Console-playable beta scenarios.
 - **Classification:** Reporting/tooling request; editor/agent API workflow request.
@@ -71,35 +73,41 @@ Related plans:
 
 ### GAP-005: Scenario reports do not summarize carried inventory/containment richly enough
 
+Status: Resolved in Sprint 20 for headless/editor-agent scenario reports.
+
 - **Discovered in:** Sprint 14 `beta-collector` follow-up.
 - **Scenario/content:** `src/GameGameGame.Content/Beta/Targeting/CollectorShowcase.yaml`, scenario `beta-collector`.
 - **Desired behavior:** Final reports should clearly state when carried entities end up inside another entity, including inventory coordinates, e.g. `Collector inventory: collectibleGem at (0,0), betaPlayer at (1,0)`.
-- **Current behavior:** Existing final-state world listings make picked-up entities disappear from the scenario plane, but do not provide a concise inventory/containment summary in the ordinary report text.
-- **Current workaround:** Tests inspect `WorldState.GetEntityLocation(...)` directly for carried entities.
-- **Missing capability:** Richer inventory/containment summary lines in scenario reports and eventual compact world/state summaries.
+- **Current behavior:** Scenario reports expose `InventorySummaryLines` with carried entity names, IDs, and inventory coordinates. Summaries recurse into nested carried inventories and guard against recursive containment cycles.
+- **Current workaround:** None for report-visible carried contents in supported headless/editor-agent scenario reports. Direct state inspection remains useful for low-level engine tests.
+- **Missing capability:** Broader compact world/state diffs and polished saved runlog formatting remain future report work.
 - **Unlocks:** Easier review of collector, transfer, containment, give/take, and enter/exit vignettes without custom assertions or manual state inspection.
 - **Classification:** Reporting/tooling request.
 - **Priority:** Medium-high for inventory/containment-heavy beta work.
 
 ### GAP-006: No single preview-plus-simulate report for persisted scenarios
 
+Status: Resolved in Sprint 20 for editor-agent persisted scenario review reports.
+
 - **Discovered in:** Sprint 14 targeting workflow.
 - **Scenario/content:** All beta scenario fixture workflows.
 - **Desired behavior:** A single agent/editor workflow should combine plan preview, scenario validation/materialization, simulation trace, final state, inventory summary, and capability-gap notes for a persisted scenario.
-- **Current behavior:** Action-plan preview and scenario simulation are separate workflows; player-inserted scenario simulation currently requires materialization/manual test code for some cases.
-- **Current workaround:** Run preview/validation/simulation separately, or add test-local assertions.
-- **Missing capability:** A combined preview + persisted scenario simulation command/report once the persisted scenario run surface is available.
+- **Current behavior:** `AgentContentEditorApi.PreviewAndRunScenarioById` returns document validation, canonical authoring validation, action-plan previews, scenario materialization, persisted scenario run traces, final state, inventory summaries, observations/failures, and capability gaps in one report.
+- **Current workaround:** None for editor-agent persisted scenario review reports. Separate preview, materialization, and run calls remain useful when authors need only one section.
+- **Missing capability:** Polished saved runlog/golden-run formatting and future frontend UI presentation remain future work.
 - **Unlocks:** Faster content iteration and less token-heavy/manual report interpretation.
 - **Classification:** Reporting/tooling request; editor/agent API workflow request.
 - **Priority:** Medium; depends on persisted-scenario run support and report-summary improvements.
 
 ### GAP-007: Root-only versus persisted-scenario simulation terminology is easy to confuse
 
+Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario report setup labels.
+
 - **Discovered in:** Sprint 14 `beta-direct-chase` and `beta-collector` testing.
 - **Scenario/content:** `src/GameGameGame.Content/Beta/Targeting/*.yaml`.
 - **Desired behavior:** Agent/API commands and report text should make it obvious whether a run is root-only or uses a persisted scenario definition with player insertion.
-- **Current behavior:** `RunScenario` by root template is useful but easy to misread as running the persisted `scenarios` entry. This caused extra reasoning/test code when validating player-involved collector behavior.
-- **Current workaround:** Document the distinction in sprint notes and use manual materialization when player insertion is required.
+- **Current behavior:** Root-template reports are labeled `Run mode: Root-only compatibility simulation`; persisted scenario-ID reports are labeled `Run mode: Persisted scenario simulation` and include persisted scenario setup/player lines.
+- **Current workaround:** None for the supported report paths; authors should choose persisted scenario-ID runs whenever scenario setup or player insertion matters.
 - **Missing capability:** Clearer command names, request shape, report labels, or documentation distinguishing root-template simulation from persisted-scenario simulation.
 - **Unlocks:** Lower-friction content authoring and fewer mistaken assumptions during agent handoffs.
 - **Classification:** Reporting/tooling request; API ergonomics/documentation issue.

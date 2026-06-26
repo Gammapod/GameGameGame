@@ -56,7 +56,7 @@ Default workflow:
 
 | Area | Currently authorable |
 |---|---|
-| Documents | Create, open, save, reload, validate, and preview content documents. |
+| Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. |
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
 | Presentations | Assign/edit presentation data used by authored templates. |
 | Inventory / containment | Inventory dimensions, weight, carrying capacity, and carried entity layout. |
@@ -66,7 +66,7 @@ Default workflow:
 | Canonical behavior chains | Add, remove, and reorder catalog-backed Action Steps. |
 | Scenarios | Persist scenario name/root/player template/player entity ID/player start placement. |
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
-| Scenario execution | Launch persisted scenarios in Console; run supported scenario reports headlessly. |
+| Scenario execution | Launch persisted scenarios in Console; run persisted scenario reports by scenario ID headlessly with final-state and inventory/containment summaries; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
 | Scenario recording | Record persisted scenarios to PNG frames and GIF artifacts. |
 | Gap logging | Record unsupported desired behavior in the active capability gap log. |
 
@@ -102,7 +102,7 @@ Use constrained inventory behavior where possible:
 - `GiveTarget` transfers the actor's first carried entity into the current `Target` inventory.
 - `TakeTarget` transfers the current `Target`'s first carried entity into actor inventory.
 
-Use reports, direct validation output, or recorded scenarios to confirm containment behavior. If a scenario needs richer inventory summaries than reports provide, use the capability-gap workflow instead of encoding around report limitations.
+Use report `InventorySummaryLines`, direct validation output, or recorded scenarios to confirm containment behavior. Scenario reports summarize carried contents with inventory coordinates and guard against recursive containment cycles.
 
 ## Actor state authoring
 
@@ -247,7 +247,8 @@ Use the shortest review loop that answers the content question.
 | Check schema/content mistakes | Validate the content document. |
 | Inspect one behavior definition | Preview the action plan. |
 | Check scenario setup/player insertion | Materialize the persisted scenario. |
-| Inspect turn-by-turn behavior | Run a headless scenario report. |
+| Inspect turn-by-turn behavior | Run a persisted headless scenario report by scenario ID when scenario setup/player insertion matters; use root-only compatibility runs only for scenario-root template isolation. |
+| Review a scenario end-to-end | Request a combined persisted scenario review report for document validation, canonical validation, action-plan previews, scenario materialization, run traces, final state, inventory summaries, and diagnostics. |
 | Inspect spatial layout over time | Record scenario frames/GIF. |
 | Confirm Console playability | Launch Console with content file and scenario ID. |
 

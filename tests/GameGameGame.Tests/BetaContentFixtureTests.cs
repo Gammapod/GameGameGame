@@ -709,6 +709,10 @@ public sealed class BetaContentFixtureTests
         Assert.Contains("Passive Chest: scenarioRoot(3,2), facing none, target none", report.FinalStateLines);
         Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Chest Coin:", StringComparison.Ordinal));
         Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Offering Gem:", StringComparison.Ordinal));
+        Assert.Contains("Chest Runner inventory:", report.InventorySummaryLines);
+        Assert.Contains("  - Chest Coin chestCoin at (0,0)", report.InventorySummaryLines);
+        Assert.Contains("Passive Chest inventory:", report.InventorySummaryLines);
+        Assert.Contains("  - Offering Gem offeringGem at (1,0)", report.InventorySummaryLines);
         Assert.Empty(report.RuntimeObservations);
     }
 

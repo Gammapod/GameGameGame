@@ -100,6 +100,7 @@ Recently completed supporting documents:
 - [Sprint 17: Scenario Tooling Decoupling](../Archived/Sprint-17-Scenario-Tooling-Decoupling.md)
 - [Sprint 18: Tech Debt Cleanup](../Archived/Sprint-18-Tech-Debt-Cleanup.md)
 - [Sprint 19: Gate 4 Peer Transfer Showcases](../Archived/Sprint-19-Gate-4-Peer-Transfer.md)
+- [Sprint 20: Scenario Run and Report Polish](../Archived/Sprint-20-Scenario-Run-Report-Polish.md)
 
 Active beta planning document:
 
@@ -107,7 +108,7 @@ Active beta planning document:
 
 Planned next sprint:
 
-- Gate 5 template spawning, unless remaining Gate 4 transfer/trade review reveals a higher-priority content need.
+- Selection pending after Sprint 20 wrap-up. Gate 5 template spawning is again the default next mechanics gate unless the Sprint 20 report/tooling improvements reveal a higher-priority content-review or scenario-packaging need.
 
 Beta target statement:
 
@@ -122,7 +123,7 @@ Long-term frontend direction:
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
 - The current Avalonia editor is legacy-priority and should not remain a dependency of Console, scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting Avalonia assumptions.
 
-Current decision point: Sprint 19 completed the first Gate 4 `GiveTarget` / `TakeTarget` peer-transfer slice and authored the first transfer showcase set. Gate 5 template spawning is the next planned mechanics gate unless remaining transfer/trade review or scenario evidence changes the priority.
+Current decision point: Sprint 20 completed scenario run/report polish: persisted scenario-ID runs, root-only versus persisted-run terminology, cycle-safe inventory/containment summaries, and a combined persisted-scenario review report. Gate 5 template spawning is the default next mechanics gate unless wrap-up review selects a higher-priority tooling or scenario-packaging follow-up.
 
 Current beta content-exploration order:
 

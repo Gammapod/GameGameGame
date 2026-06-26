@@ -53,6 +53,120 @@ public sealed class ScenarioToolingServiceTests
     }
 
     [Fact]
+    public void ScenarioRunServiceLabelsRootOnlyCompatibilityRuns()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Root Only Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Root Only Room", InventoryWidth: 1, InventoryHeight: 1, Weight: 100, CarryingCapacity: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+
+        var report = ScenarioRunService.Run(document, new ScenarioRunRequest(scenarioRootId, TurnCount: 0));
+
+        Assert.Contains("Run mode: Root-only compatibility simulation", report.SetupLines);
+        Assert.Contains("Scenario: legacy-run (Legacy RunScenario)", report.SetupLines);
+    }
+
+    [Fact]
+    public void ScenarioRunServiceRunsPersistedScenarioByIdWithInsertedPlayer()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Persisted Run Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Persisted Run Room", InventoryWidth: 4, InventoryHeight: 3, Weight: 100, CarryingCapacity: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+
+        var playerTemplateId = editor.CreateEntityPreset("Persisted Runner");
+        editor.UpdateEntityPreset(
+            playerTemplateId,
+            new EntityTemplate("Persisted Runner", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 5),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        editor.SetInitialFacing(playerTemplateId, Direction.East);
+        var planId = editor.CreateActionPlan("Player Move East");
+        editor.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]);
+        editor.SetDefaultActionPlan(playerTemplateId, planId);
+        editor.UpsertScenario(new ScenarioDefinition(
+            "persisted-runner",
+            "Persisted Runner Scenario",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("insertedPlayer"),
+            new GridCoord(1, 1)));
+
+        var report = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("persisted-runner", TurnCount: 1));
+
+        Assert.Contains("Run mode: Persisted scenario simulation", report.SetupLines);
+        Assert.Contains("Scenario: persisted-runner (Persisted Runner Scenario)", report.SetupLines);
+        Assert.Contains("Player: Persisted Runner insertedPlayer at scenarioRoot(1,1), facing East, target none", report.SetupLines);
+        Assert.Equal([new EntityId("insertedPlayer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains("Persisted Runner: scenarioRoot(2,1), facing East, target none", report.FinalStateLines);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+    }
+
+    [Fact]
+    public void ScenarioRunServiceSummarizesCarriedInventoryContents()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Inventory Summary Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Inventory Summary Room", InventoryWidth: 3, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var carrierId = editor.CreateEntityPreset("Report Carrier");
+        editor.UpdateEntityPreset(
+            carrierId,
+            new EntityTemplate("Report Carrier", InventoryWidth: 2, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10),
+            new EntityPresentation('c', PresentationColor.Cyan));
+        var gemId = editor.CreateEntityPreset("Report Gem");
+        editor.UpdateEntityPreset(
+            gemId,
+            new EntityTemplate("Report Gem", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityPresentation('*', PresentationColor.Yellow));
+
+        editor.PlaceCarriedEntity(carrierId, new EntityId("reportGem"), gemId, new GridCoord(1, 0));
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("reportCarrier"), carrierId, new GridCoord(1, 1));
+
+        var report = ScenarioRunService.Run(document, new ScenarioRunRequest(scenarioRootId, TurnCount: 0));
+
+        Assert.Contains("Report Carrier inventory:", report.InventorySummaryLines);
+        Assert.Contains("  - Report Gem reportGem at (1,0)", report.InventorySummaryLines);
+    }
+
+    [Fact]
+    public void ScenarioInventorySummaryFormatterIsCycleSafe()
+    {
+        var world = new WorldState();
+        var aId = new EntityId("cycleA");
+        var bId = new EntityId("cycleB");
+        var aInventory = new PlaneId("cycleAInventory");
+        var bInventory = new PlaneId("cycleBInventory");
+        world.Planes.Add(aInventory, new Plane(aInventory, "Cycle A Inventory", 1, 1));
+        world.Planes.Add(bInventory, new Plane(bInventory, "Cycle B Inventory", 1, 1));
+        var aSlot = world.AddNode(aInventory, new GridCoord(0, 0));
+        var bSlot = world.AddNode(bInventory, new GridCoord(0, 0));
+        world.Entities.Add(aId, new Entity(aId, "Cycle A", bSlot, InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10));
+        world.Entities.Add(bId, new Entity(bId, "Cycle B", aSlot, InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10));
+        world.Occupancy.Add(aSlot, bId);
+        world.Occupancy.Add(bSlot, aId);
+        world.RegisterInventoryPlane(aId, aInventory);
+        world.RegisterInventoryPlane(bId, bInventory);
+
+        var lines = ScenarioInventorySummaryFormatter.SummarizeEntityInventory(world, aId);
+
+        Assert.Contains("Cycle A inventory:", lines);
+        Assert.Contains("  - Cycle B cycleB at (0,0)", lines);
+        Assert.Contains("    Cycle B inventory:", lines);
+        Assert.Contains("      - Cycle A cycleA at (0,0)", lines);
+        Assert.Contains("        - cycle detected for cycleA; nested contents omitted", lines);
+    }
+
+    [Fact]
     public void ScenarioRunServiceShowsBehaviorStepsAndTreatsNoActionAsObservation()
     {
         var document = new EditableContentDocument();

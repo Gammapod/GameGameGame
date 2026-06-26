@@ -56,6 +56,11 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
             Session.Document,
             new ScenarioRunRequest(request.ScenarioRootEntityTemplateId, request.TurnCount))));
 
+    public AgentApiResult<AgentScenarioRunReport> RunScenarioById(string scenarioId, int turnCount) =>
+        Try("RunScenarioByIdFailed", () => ToAgentReport(ScenarioRunService.Run(
+            Session.Document,
+            new PersistedScenarioRunRequest(scenarioId, turnCount))));
+
     public AgentApiResult<AgentScenarioRecordingReport> RecordScenario(AgentScenarioRecordingRequest request) =>
         Try("RecordScenarioFailed", () => ToAgentReport(ScenarioRecordingService.Record(
             Session.Document,
@@ -124,6 +129,33 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
 
     public AgentApiResult<ActionPlanPreview> PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null) =>
         Try("PreviewActionPlanFailed", () => Session.Editor.PreviewActionPlan(planId, entityTemplateId));
+
+    public AgentApiResult<AgentScenarioPreviewRunReport> PreviewAndRunScenarioById(string scenarioId, int turnCount) =>
+        Try("PreviewAndRunScenarioByIdFailed", () =>
+        {
+            var validation = Session.Editor.Validate();
+            var canonicalValidation = Session.Document.ValidateCanonicalAuthoring();
+            var scenario = Session.Editor.GetScenario(scenarioId);
+            var materialization = AlphaScenarioMaterializer.Materialize(Session, ToAgentDefinition(scenario)).ToAgentReport();
+            var previews = Session.Editor.ListActionPlans()
+                .Select(plan => Session.Editor.PreviewActionPlan(
+                    plan.TemplateId,
+                    Session.Editor.ListActionPlanReferences(plan.TemplateId)
+                        .FirstOrDefault(reference => reference.EntityTemplateId is not null)
+                        ?.EntityTemplateId))
+                .ToList();
+            var runReport = ToAgentReport(ScenarioRunService.Run(
+                Session.Document,
+                new PersistedScenarioRunRequest(scenarioId, turnCount)));
+
+            return new AgentScenarioPreviewRunReport(
+                scenarioId,
+                validation,
+                canonicalValidation,
+                previews,
+                materialization,
+                runReport);
+        });
 
     public AgentApiResult SetActionPlanPrimitive(ActionPlanTemplateId planId, ActionPlanPrimitiveKind kind, ActionPlanId? fallbackPlanId = null) =>
         Try("SetActionPlanPrimitiveFailed", () => Session.Editor.SetActionPlanPrimitive(planId, kind, fallbackPlanId));
@@ -248,6 +280,7 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
                 .ToList(),
             report.SetupLines,
             report.FinalStateLines,
+            report.InventorySummaryLines,
             report.ValidationDiagnostics,
             report.RuntimeObservations,
             report.RuntimeFailures,
@@ -376,10 +409,19 @@ public sealed record AgentScenarioRunReport(
     IReadOnlyList<AgentScenarioTurnReport> Turns,
     IReadOnlyList<string> SetupLines,
     IReadOnlyList<string> FinalStateLines,
+    IReadOnlyList<string> InventorySummaryLines,
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeObservations,
     IReadOnlyList<string> RuntimeFailures,
     IReadOnlyList<string> CapabilityGaps);
+
+public sealed record AgentScenarioPreviewRunReport(
+    string ScenarioId,
+    ContentValidationResult DocumentValidation,
+    ContentValidationResult CanonicalValidation,
+    IReadOnlyList<ActionPlanPreview> ActionPlanPreviews,
+    AgentScenarioMaterializationReport Materialization,
+    AgentScenarioRunReport RunReport);
 
 public sealed record AlphaScenarioMaterializationResult(
     string ScenarioId,
