@@ -82,7 +82,9 @@ public enum ActionPlanBehaviorStepKind
     FleeTarget,
     MaintainChebyshevDistanceTwo,
     StrafeClockwise,
-    StrafeAnticlockwise
+    StrafeAnticlockwise,
+    GiveTarget,
+    TakeTarget
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(

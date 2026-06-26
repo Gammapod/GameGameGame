@@ -1829,7 +1829,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         slot.Slot switch
         {
             ActionPlanSlot.Facing => "Facing defaults to West when materialized for authored MoveFacing behavior",
-            ActionPlanSlot.Target => "Target defaults to Self when PickupTarget needs a valid initial target slot",
+            ActionPlanSlot.Target => "Target defaults to Self when target-based Action Steps need a valid initial target slot",
             _ => $"{slot.Slot} can be defaulted as {slot.ValueKind}"
         };
 

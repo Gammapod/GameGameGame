@@ -106,6 +106,34 @@ public sealed class AgentContentEditorApiTests
         Assert.DoesNotContain("kind: SetVariable", snapshot.YamlPreview);
     }
 
+    [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalGiveTakeBehavior()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var traderId = AssertSuccess(api.CreateEntityTemplate("Transfer Trader"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            traderId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 2,
+                InventoryHeight: 1,
+                Weight: 1,
+                CarryingCapacity: 10,
+                Glyph: 't',
+                Color: PresentationColor.Yellow)));
+        var planId = AssertSuccess(api.CreateActionPlan("Transfer Behavior"));
+
+        AssertSuccess(api.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.GiveTarget, ActionPlanBehaviorStepKind.TakeTarget]));
+        AssertSuccess(api.SetDefaultActionPlan(traderId, planId));
+        var steps = AssertSuccess(api.ListActionSteps());
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.GiveTarget);
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TakeTarget);
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("kind: GiveTarget", snapshot.YamlPreview);
+        Assert.Contains("kind: TakeTarget", snapshot.YamlPreview);
+    }
+
     private static void AssertSuccess(AgentApiResult result)
     {
         Assert.True(result.IsSuccess, result.Error?.Message);

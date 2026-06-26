@@ -1,0 +1,80 @@
+entityTemplates:
+  betaCollectorTraderHandoffRoom:
+    name: Beta Collector Trader Handoff Room
+    inventoryWidth: 9
+    inventoryHeight: 3
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: handoffCollector
+      templateId: betaHandoffCollector
+      coord:
+        x: 1
+        y: 1
+    - entityId: handoffTrader
+      templateId: betaHandoffTrader
+      coord:
+        x: 6
+        y: 1
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaHandoffCollector:
+    name: Handoff Collector
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: collectThenGive
+    actionStateDefaults:
+      facing: East
+  betaHandoffTrader:
+    name: Handoff Trader
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: dropFacingOnly
+    actionStateDefaults:
+      facing: East
+presentations:
+  betaCollectorTraderHandoffRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaHandoffCollector:
+    glyph: 'C'
+    color: Green
+  betaHandoffTrader:
+    glyph: 'T'
+    color: Earth
+actionPlans:
+  collectThenGive:
+    id: collectThenGive
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: SeekTarget
+      - kind: GiveTarget
+      - kind: PickupTarget
+  dropFacingOnly:
+    id: dropFacingOnly
+    behavior:
+      steps:
+      - kind: DropFacing
+scenarios:
+  beta-collector-trader-handoff:
+    name: Beta Collector Trader Handoff
+    scenarioRootEntityTemplateId: betaCollectorTraderHandoffRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 3
+      y: 1

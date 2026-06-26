@@ -126,6 +126,18 @@ public static class ActionStepCatalog
             "Strafe Anticlockwise",
             "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the anticlockwise perpendicular cardinal move; preserves Target on success/failure.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.GiveTarget,
+            "Give Target",
+            "Transfers the first carried entity from actor inventory into the persistent Target inventory using deterministic row-major source and destination order; falls through when transfer cannot be completed.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.TakeTarget,
+            "Take Target",
+            "Transfers the first carried entity from the persistent Target inventory into actor inventory using deterministic row-major source and destination order; falls through when transfer cannot be completed.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
     ];
 

@@ -106,6 +106,30 @@ public sealed class ScenarioRunReportTests
     }
 
     [Fact]
+    public void ScenarioRunnerReportsGiveTargetScenario()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 20 };
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var scenario = new HeadlessScenario(
+            "actor_gives_carried_rock_to_target",
+            world,
+            TestWorld.PlayerId,
+            CreateBehaviorPlan("give-target", ActionPlanBehaviorStepKind.GiveTarget),
+            [TestWorld.PlayerId, TestWorld.SlimeId, TestWorld.RockId]);
+
+        var report = MinimalScenarioRunner.Run(scenario, turnCount: 1).FormatText();
+
+        Assert.Contains("- 1. GiveTarget: Success; fallback=stopped", report, StringComparison.Ordinal);
+        Assert.Contains("-    reads: Target=slime", report, StringComparison.Ordinal);
+        Assert.Contains("gave rock (Rock) from (0,0) to (0,0)", report, StringComparison.Ordinal);
+        Assert.Contains("- Rock: slime(0,0), facing none, target none", report, StringComparison.Ordinal);
+        Assert.Contains("Diagnostics:\n- none", report, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ScenarioRunnerReportsPushFacingScenario()
     {
         var world = TestWorld.CreateWorld();

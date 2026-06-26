@@ -70,6 +70,8 @@ public sealed class ContentEditorAuthoringTests
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo && step.DisplayName == "Maintain Chebyshev Distance Two");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeClockwise && step.DisplayName == "Strafe Clockwise");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeAnticlockwise && step.DisplayName == "Strafe Anticlockwise");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.GiveTarget && step.DisplayName == "Give Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TakeTarget && step.DisplayName == "Take Target");
     }
 
     [Fact]
@@ -100,6 +102,29 @@ public sealed class ContentEditorAuthoringTests
         Assert.DoesNotContain("kind: CanMove", yaml);
         Assert.DoesNotContain("kind: CallPlan", yaml);
         Assert.DoesNotContain("kind: SetVariable", yaml);
+    }
+
+    [Fact]
+    public void ContentEditorAuthorsCanonicalGiveTakeBehaviorChain()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var traderId = editor.CreateEntityPreset("Transfer Trader");
+        editor.UpdateEntityPreset(
+            traderId,
+            new EntityTemplate("Transfer Trader", InventoryWidth: 2, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10),
+            new EntityPresentation('t', PresentationColor.Yellow));
+
+        var planId = editor.CreateActionPlan("Transfer Behavior");
+        editor.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.GiveTarget, ActionPlanBehaviorStepKind.TakeTarget]);
+        editor.SetDefaultActionPlan(traderId, planId);
+
+        var yaml = document.SaveYaml();
+
+        Assert.True(editor.Validate().IsValid, string.Join(Environment.NewLine, editor.Validate().Errors));
+        Assert.Contains("kind: GiveTarget", yaml);
+        Assert.Contains("kind: TakeTarget", yaml);
+        Assert.DoesNotContain("primitive:", yaml);
     }
 
     [Fact]

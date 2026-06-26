@@ -99,6 +99,8 @@ Use constrained inventory behavior where possible:
 
 - `PickupTarget` attempts to place the current `Target` into actor inventory.
 - `DropFacing` attempts to drop a carried entity in the actor's facing direction.
+- `GiveTarget` transfers the actor's first carried entity into the current `Target` inventory.
+- `TakeTarget` transfers the current `Target`'s first carried entity into actor inventory.
 
 Use reports, direct validation output, or recorded scenarios to confirm containment behavior. If a scenario needs richer inventory summaries than reports provide, use the capability-gap workflow instead of encoding around report limitations.
 
@@ -113,7 +115,7 @@ Current content-facing actor state:
 
 Author initial `Facing` through `actionStateDefaults.facing` or the corresponding editor/API workflow.
 
-Do not author arbitrary state variables for new content. `Target` is used by canonical Action Steps such as `AcquireNearestTarget`, `PickupTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, and `StrafeAnticlockwise`. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; track that need through the gap log when it blocks content.
+Do not author arbitrary state variables for new content. `Target` is used by canonical Action Steps such as `AcquireNearestTarget`, `PickupTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, and `TakeTarget`. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; track that need through the gap log when it blocks content.
 
 ## Action plan authoring
 
@@ -169,6 +171,8 @@ This table is the content-facing catalog of currently authorable canonical Actio
 |---|---|---|---|---|
 | `PickupTarget` | `Target` | carried inventory state | Attempt to pick up current target into actor inventory; falls through when pickup cannot act. | collectors, item pickup after bump/acquisition |
 | `DropFacing` | `Facing` | carried/world placement | Drop the first carried entity into the facing cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
+| `GiveTarget` | `Target` | actor/target inventory state | Transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/capacity checks fail. | peer transfer, offering, handoff demos |
+| `TakeTarget` | `Target` | target/actor inventory state | Transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/capacity checks fail. | taking from containers, stealing prototypes |
 | `PushFacing` | `Facing` | world positions | Push blocking entity one cell in facing direction, then move actor into blocker original cell; consumes the turn on success. | shovers, obstacle interaction |
 
 ### Target acquisition and target-relative movement
@@ -199,8 +203,11 @@ Common chain patterns:
 | Keep distance before fallback behavior | `AcquireNearestTarget -> MaintainChebyshevDistanceTwo -> StrafeClockwise` |
 | Try to move, then push blocker | `MoveFacing -> PushFacing` |
 | Drop carried entity forward, otherwise move | `DropFacing -> MoveFacing` |
+| Give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
 
 `AcquireNearestTarget` currently targets any same-plane non-self entity. Use sparse scenario layouts when target filtering matters, and log a capability gap when sparse layout is not sufficient.
+
+`GiveTarget` and `TakeTarget` use first-item deterministic selection only. They do not support authorable item filters, barter/trade permissions, or transfer restrictions yet. Runtime reports identify transferred entity ID/name and coordinates; template IDs are not shown because runtime entities do not currently carry template IDs.
 
 `CreateFacing` creates a placeholder entity rather than an authored template-backed spawn. Use it for prototype creation showcases only.
 

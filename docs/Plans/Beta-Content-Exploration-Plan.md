@@ -274,30 +274,44 @@ Deferred / future candidate capabilities:
 
 ## Gate 4: `Give` / `Take`
 
-Request and implement when vignettes need peer inventory transfer:
+Status: First peer-transfer slice implemented as canonical Action Steps `GiveTarget` and `TakeTarget` and explored in Sprint 19 transfer showcases. Use the source-of-truth authoring/capability docs for current semantics.
 
-- `Give`
-- `Take`
+Implemented first-pass support:
+
+- `GiveTarget`;
+- `TakeTarget`;
+- deterministic first-carried/source selection;
+- deterministic row-major destination placement;
+- transfer diagnostics in behavior-chain traces.
+
+Deferred follow-up work:
+
 - carried-entity selection rules;
 - source-inventory selection rules;
-- transfer diagnostics and report summaries.
+- transfer permissions/restrictions;
+- barter/trade semantics;
+- richer inventory report summaries.
 
 ### Gate 4 unlocked vignettes
 
 1. **Passive chest**
-   - Player gives to and takes from a container-like entity.
+   - Completed in Sprint 19 with `beta-passive-chest-transfer`.
 
 2. **Trade vignette**
    - Entity exchanges inventory with player or another actor.
+   - Deferred after Sprint 19; true barter/trade semantics remain future work, and a simple peer exchange can be authored later if it adds new evidence.
 
 3. **Stealing actor**
-   - Actor takes from player/container.
+   - Completed in Sprint 19 with `beta-stealing-actor`.
 
 4. **Feeding / offering**
-   - Player gives item to entity as a precursor to future reactions/state changes.
+   - Completed in Sprint 19 with `beta-feeding-offering`.
 
-5. **Restricted transfer gap demo**
-   - Record any missing permission/denial model if desired transfer restrictions are not yet supported.
+5. **Collector-trader handoff**
+   - Completed in Sprint 19 with `beta-collector-trader-handoff`: Collector picks up player, gives player to Trader, and Trader drops player.
+
+6. **Restricted transfer gap demo**
+   - Deferred; record any missing permission/denial model if desired transfer restrictions become scenario-blocking.
 
 ## Gate 5: template spawning
 
@@ -435,7 +449,7 @@ It is acceptable to author or record intentionally blocked vignettes when they c
 Examples:
 
 - chaser cannot chase because target acquisition and seeking are unavailable;
-- chest cannot trade because `Give`/`Take` are unavailable;
+- chest cannot trade with barter semantics or transfer restrictions because `GiveTarget`/`TakeTarget` only provide first-pass free inventory transfer;
 - trap cannot trigger because reaction slots are unavailable;
 - builder cannot spawn authored templates because `CreateFacing` uses placeholder output;
 - enter/exit cannot change active play space because containment transition semantics are unavailable.

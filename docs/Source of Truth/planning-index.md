@@ -39,11 +39,13 @@ Do not read when:
    - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
 7. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
-8. `docs/Plans/Sprint-Retrospective.md`
+8. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+   - Active log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
+9. `docs/Plans/Sprint-Retrospective.md`
    - Recent process observations and open retrospective questions.
-9. `docs/Archived/`
+10. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
-   - Includes completed Sprint 17 scenario/tooling decoupling and Sprint 18 tech-debt cleanup plans.
+   - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, and Sprint 19 Gate 4 peer-transfer plans.
 
 ## Current strategic priority
 
@@ -51,7 +53,7 @@ Alpha MVP is complete: the game can launch and be played in an authored scenario
 
 ## Current highest-priority backlog buckets
 
-1. Foundational movement and peer interaction primitives, with Gate 4 `Give`/`Take` as the next planned mechanics gate after the completed Sprint 17 and Sprint 18 cleanup work.
+1. Foundational movement and peer interaction primitives, with Sprint 19 Gate 4 `GiveTarget`/`TakeTarget` complete and Gate 5 template spawning as the next planned mechanics gate unless transfer/trade review changes priority.
 2. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`, `docs/Plans/Beta-Content-Exploration-Plan.md`, and `docs/Plans/Beta-Capability-Gap-Log.md`.
 3. Scenario/testing/tooling feedback loop, especially persisted scenario runs, report summaries, recorded artifact review, and remaining non-blocking tooling polish.
 4. Scenario/content packaging beyond alpha.

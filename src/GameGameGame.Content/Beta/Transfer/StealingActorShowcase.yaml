@@ -1,0 +1,86 @@
+entityTemplates:
+  betaStealingActorRoom:
+    name: Beta Stealing Actor Room
+    inventoryWidth: 9
+    inventoryHeight: 3
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: sneakyThief
+      templateId: betaSneakyThief
+      coord:
+        x: 1
+        y: 1
+    - entityId: treasureVictim
+      templateId: betaTreasureVictim
+      coord:
+        x: 5
+        y: 1
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaSneakyThief:
+    name: Sneaky Thief
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: seekThenTake
+    actionStateDefaults:
+      facing: East
+  betaTreasureVictim:
+    name: Treasure Victim
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    carriedEntities:
+    - entityId: stolenRuby
+      templateId: betaStolenRuby
+      coord:
+        x: 0
+        y: 0
+  betaStolenRuby:
+    name: Stolen Ruby
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaStealingActorRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaSneakyThief:
+    glyph: 't'
+    color: Green
+  betaTreasureVictim:
+    glyph: 'V'
+    color: Earth
+  betaStolenRuby:
+    glyph: '*'
+    color: Cyan
+actionPlans:
+  seekThenTake:
+    id: seekThenTake
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: SeekTarget
+      - kind: TakeTarget
+scenarios:
+  beta-stealing-actor:
+    name: Beta Stealing Actor
+    scenarioRootEntityTemplateId: betaStealingActorRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 8
+      y: 1

@@ -280,6 +280,8 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo => null,
             ActionPlanBehaviorStepKind.StrafeClockwise => null,
             ActionPlanBehaviorStepKind.StrafeAnticlockwise => null,
+            ActionPlanBehaviorStepKind.GiveTarget => null,
+            ActionPlanBehaviorStepKind.TakeTarget => null,
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -291,6 +293,8 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo => ApplyMaintainChebyshevDistanceTwo(world, actorId, context),
             ActionPlanBehaviorStepKind.StrafeClockwise => ApplyStrafeTarget(world, actorId, context, clockwise: true),
             ActionPlanBehaviorStepKind.StrafeAnticlockwise => ApplyStrafeTarget(world, actorId, context, clockwise: false),
+            ActionPlanBehaviorStepKind.GiveTarget => ApplyGiveTargetPrimitive(world, actorId, context),
+            ActionPlanBehaviorStepKind.TakeTarget => ApplyTakeTargetPrimitive(world, actorId, context),
             _ => ApplyPrimitive(world, actorId, context, primitive!)
         };
     }
@@ -913,6 +917,66 @@ public sealed class ActionPlanInterpreter
         return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
     }
 
+    private PlanEffectResult ApplyGiveTargetPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive GiveTarget", TraceStatus.Info);
+        if (!TryReadTransferTarget(world, actorId, context, trace, "GiveTarget", out var targetId))
+        {
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var carried = FindFirstCarriedEntity(world, actorId);
+        if (carried is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"{actorId} carries no entity to give";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        return TransferToFirstOpenInventory(world, carried.Value, targetId, trace, "gave");
+    }
+
+    private PlanEffectResult ApplyTakeTargetPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive TakeTarget", TraceStatus.Info);
+        if (!TryReadTransferTarget(world, actorId, context, trace, "TakeTarget", out var targetId))
+        {
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Entities[targetId].HasUsableInventory || world.GetRegisteredInventoryPlaneId(targetId) is not { } targetInventoryPlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorHasNoInventory;
+            trace.Detail = $"{targetId} has no usable inventory to take from";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Planes.ContainsKey(targetInventoryPlaneId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.InvalidInventoryDestination;
+            trace.Detail = $"inventory plane {targetInventoryPlaneId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var carried = FindFirstCarriedEntity(world, targetId);
+        if (carried is null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = $"{targetId} carries no entity to take";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        return TransferToFirstOpenInventory(world, carried.Value, actorId, trace, "took");
+    }
+
     private PlanEffectResult ApplyPushFacingPrimitive(
         WorldState world,
         EntityId actorId,
@@ -1123,6 +1187,137 @@ public sealed class ActionPlanInterpreter
             .ThenBy(entry => world.Nodes[entry.Key].Coord.X)
             .Select(entry => (EntityId?)entry.Value)
             .FirstOrDefault();
+    }
+
+    private bool TryReadTransferTarget(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        TraceNode trace,
+        string stepName,
+        out EntityId targetId)
+    {
+        targetId = default;
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return false;
+        }
+
+        trace.Add(readTrace);
+        targetId = target.Value;
+
+        if (targetId == actorId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetIsActor;
+            trace.Detail = $"{stepName} cannot transfer with self";
+            return false;
+        }
+
+        if (!world.Entities.ContainsKey(targetId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"target {targetId} does not exist";
+            return false;
+        }
+
+        return true;
+    }
+
+    private PlanEffectResult TransferToFirstOpenInventory(
+        WorldState world,
+        EntityId carriedId,
+        EntityId destinationOwnerId,
+        TraceNode trace,
+        string verb)
+    {
+        var carriedLocation = world.GetEntityLocation(carriedId);
+        var carried = world.Entities[carriedId];
+        if (!world.Entities.TryGetValue(destinationOwnerId, out var destinationOwner))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"destination owner {destinationOwnerId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (world.GetRegisteredInventoryPlaneId(destinationOwnerId) is not { } inventoryPlaneId)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorHasNoInventory;
+            trace.Detail = $"{destinationOwner.Name} has no inventory plane";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!destinationOwner.HasUsableInventory)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.ActorInventoryUnusable;
+            trace.Detail = $"{destinationOwner.Name} inventory dimensions are {destinationOwner.InventoryWidth}x{destinationOwner.InventoryHeight}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.InvalidInventoryDestination;
+            trace.Detail = $"inventory plane {inventoryPlaneId} does not exist";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var weight = new WeightService();
+        var carriedWeight = weight.GetCarriedWeight(world, destinationOwnerId);
+        var transferWeight = weight.GetTotalWeight(world, carriedId);
+        var capacityTrace = new TraceNode("Check transfer carrying capacity", TraceStatus.Info, detail: $"carried={carriedWeight}, transfer={transferWeight}, capacity={destinationOwner.CarryingCapacity}");
+        capacityTrace.Add(weight.TraceTotalWeight(world, carriedId));
+        if (carriedWeight + transferWeight > destinationOwner.CarryingCapacity)
+        {
+            capacityTrace.Status = TraceStatus.Failure;
+            capacityTrace.Reason = FailureReason.CapacityExceeded;
+            trace.Add(capacityTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.CapacityExceeded;
+            trace.Detail = $"{destinationOwner.Name} would carry {carriedWeight + transferWeight}/{destinationOwner.CarryingCapacity}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        capacityTrace.Status = TraceStatus.Success;
+        trace.Add(capacityTrace);
+
+        ActionResolution? lastFailure = null;
+        for (var y = 0; y < inventoryPlane.Height; y++)
+        {
+            for (var x = 0; x < inventoryPlane.Width; x++)
+            {
+                var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
+                var evaluation = _movement.EvaluateRelocation(world, carriedId, MovementDestination.Plane(destination));
+                trace.Add(evaluation.Trace);
+
+                if (evaluation is { CanRelocate: true, Destination: { } resolvedDestination })
+                {
+                    _movement.TryPlace(world, carriedId, resolvedDestination);
+                    trace.Status = TraceStatus.Success;
+                    trace.Detail = $"{verb} {carriedId} ({carried.Name}) from {carriedLocation.Coord} to {resolvedDestination.Coord}";
+                    return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+                }
+
+                lastFailure = new ActionResolution(false, ConsumesTurn: false, ContinuePlan: false, evaluation.Trace);
+            }
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement;
+        trace.Detail = $"no inventory coordinate in {inventoryPlaneId} can accept {carriedId}";
+        if (!string.IsNullOrWhiteSpace(lastFailure?.Trace.Detail))
+        {
+            trace.Detail += $"; last failure: {lastFailure.Trace.Detail}";
+        }
+
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
     }
 
     private static EntityId GeneratePlaceholderEntityId(WorldState world)

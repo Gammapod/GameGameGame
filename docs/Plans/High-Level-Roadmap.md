@@ -99,6 +99,7 @@ Recently completed supporting documents:
 - [Sprint 16: Gate 3 Distance Movement Showcases](../Archived/Sprint-16-Gate-3-Distance-Movement.md)
 - [Sprint 17: Scenario Tooling Decoupling](../Archived/Sprint-17-Scenario-Tooling-Decoupling.md)
 - [Sprint 18: Tech Debt Cleanup](../Archived/Sprint-18-Tech-Debt-Cleanup.md)
+- [Sprint 19: Gate 4 Peer Transfer Showcases](../Archived/Sprint-19-Gate-4-Peer-Transfer.md)
 
 Active beta planning document:
 
@@ -106,7 +107,7 @@ Active beta planning document:
 
 Planned next sprint:
 
-- Gate 4 `Give` / `Take` peer inventory-transfer slice.
+- Gate 5 template spawning, unless remaining Gate 4 transfer/trade review reveals a higher-priority content need.
 
 Beta target statement:
 
@@ -121,7 +122,7 @@ Long-term frontend direction:
 - Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
 - The current Avalonia editor is legacy-priority and should not remain a dependency of Console, scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting Avalonia assumptions.
 
-Current decision point: Sprint 17 completed the scenario/tooling dependency cleanup needed before Gate 4. Scenario materialization now lives in `GameGameGame.Content`, scenario run/record services live in `GameGameGame.Headless`, Console no longer depends on `GameGameGame.Editor`, and normal Core/Content/Headless test runs no longer build Avalonia. Gate 4 `Give`/`Take` is the next planned mechanics gate unless scenario-review evidence changes the priority.
+Current decision point: Sprint 19 completed the first Gate 4 `GiveTarget` / `TakeTarget` peer-transfer slice and authored the first transfer showcase set. Gate 5 template spawning is the next planned mechanics gate unless remaining transfer/trade review or scenario evidence changes the priority.
 
 Current beta content-exploration order:
 
@@ -129,7 +130,7 @@ Current beta content-exploration order:
 2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes. Completed in Sprint 13.
 3. Gate 2: `AcquireNearestTarget` + `SeekTarget`, then explore direct chase, collector, follower, and targeted interaction scenarios. Completed in Sprint 14 for acquire, direct chase, targeted destroyer, and collector; follower remains deferred until it has a differentiated use case.
 4. Gate 3: target-distance / directional choice primitives, then explore fleeing, keep-away, kiting, and patterned pursuit. Completed in Sprint 16 for `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, and kiting/orbiter composition; richer configurable distance bands and patterned rook/bishop/knight-like pursuit remain deferred.
-5. Gate 4: `Give` / `Take`, then explore passive containers, trade, stealing, feeding/offering, and transfer restrictions.
+5. Gate 4: `Give` / `Take`, then explore passive containers, trade, stealing, feeding/offering, and transfer restrictions. First peer-transfer slice completed in Sprint 19 for passive chest, stealing, feeding/offering, and collector-trader handoff; true trade/barter semantics and transfer restrictions remain deferred.
 6. Gate 5: template spawning, then explore authored spawners, projectiles, traps/bombs, builders, and clone/summon prototypes.
 7. Gate 6: reaction system, then explore traps, doors/buttons/pressure plates, chain reactions, contact combat, and environmental puzzle systems.
 

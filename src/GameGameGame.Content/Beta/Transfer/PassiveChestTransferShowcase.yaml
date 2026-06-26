@@ -1,0 +1,102 @@
+entityTemplates:
+  betaPassiveChestTransferRoom:
+    name: Beta Passive Chest Transfer Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: chestRunner
+      templateId: betaChestRunner
+      coord:
+        x: 1
+        y: 2
+    - entityId: passiveChest
+      templateId: betaPassiveChest
+      coord:
+        x: 3
+        y: 2
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: West
+  betaChestRunner:
+    name: Chest Runner
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: seekGiveThenTake
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: offeringGem
+      templateId: betaOfferingGem
+      coord:
+        x: 0
+        y: 0
+  betaPassiveChest:
+    name: Passive Chest
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 5
+    carryingCapacity: 10
+    carriedEntities:
+    - entityId: chestCoin
+      templateId: betaChestCoin
+      coord:
+        x: 0
+        y: 0
+  betaOfferingGem:
+    name: Offering Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+  betaChestCoin:
+    name: Chest Coin
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaPassiveChestTransferRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaChestRunner:
+    glyph: 'r'
+    color: Green
+  betaPassiveChest:
+    glyph: 'C'
+    color: Earth
+  betaOfferingGem:
+    glyph: '*'
+    color: Cyan
+  betaChestCoin:
+    glyph: '$'
+    color: Yellow
+actionPlans:
+  seekGiveThenTake:
+    id: seekGiveThenTake
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: SeekTarget
+      - kind: GiveTarget
+      - kind: TakeTarget
+scenarios:
+  beta-passive-chest-transfer:
+    name: Beta Passive Chest Transfer
+    scenarioRootEntityTemplateId: betaPassiveChestTransferRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 7
+      y: 2

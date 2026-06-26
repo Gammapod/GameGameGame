@@ -681,6 +681,127 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(report.RuntimeObservations);
     }
 
+    [Fact]
+    public void PassiveChestTransferShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Transfer", "PassiveChestTransferShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-passive-chest-transfer"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 2)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaPassiveChestTransferRoom"), TurnCount: 3)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("chestRunner")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("3. GiveTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("4. TakeTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("gave offeringGem", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("took chestCoin", StringComparison.Ordinal));
+        Assert.Contains("Chest Runner: scenarioRoot(2,2), facing East, target passiveChest", report.FinalStateLines);
+        Assert.Contains("Passive Chest: scenarioRoot(3,2), facing none, target none", report.FinalStateLines);
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Chest Coin:", StringComparison.Ordinal));
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Offering Gem:", StringComparison.Ordinal));
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void StealingActorShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Transfer", "StealingActorShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-stealing-actor"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 1)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaStealingActorRoom"), TurnCount: 4)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("sneakyThief")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.StartsWith("2. SeekTarget: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.StartsWith("3. TakeTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.Contains("took stolenRuby", StringComparison.Ordinal));
+        Assert.Contains("Sneaky Thief: scenarioRoot(4,1), facing East, target treasureVictim", report.FinalStateLines);
+        Assert.Contains("Treasure Victim: scenarioRoot(5,1), facing none, target none", report.FinalStateLines);
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Stolen Ruby:", StringComparison.Ordinal));
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void FeedingOfferingShowcaseValidatesMaterializesAndRuns()
+    {
+        var api = OpenBetaContent("Transfer", "FeedingOfferingShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-feeding-offering"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(8, 1)), materialization.PlayerLocation);
+
+        var report = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaFeedingOfferingRoom"), TurnCount: 4)));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Equal([new EntityId("offeringBearer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Contains(report.Turns[0].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. SeekTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.StartsWith("2. SeekTarget: Failure", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.StartsWith("3. GiveTarget: Success", StringComparison.Ordinal));
+        Assert.Contains(report.Turns[3].TraceLines, line => line.Contains("gave sweetBerry", StringComparison.Ordinal));
+        Assert.Contains("Offering Bearer: scenarioRoot(4,1), facing East, target hungryBeast", report.FinalStateLines);
+        Assert.Contains("Hungry Beast: scenarioRoot(5,1), facing none, target none", report.FinalStateLines);
+        Assert.DoesNotContain(report.FinalStateLines, line => line.StartsWith("Sweet Berry:", StringComparison.Ordinal));
+        Assert.Empty(report.RuntimeObservations);
+    }
+
+    [Fact]
+    public void CollectorTraderHandoffShowcaseValidatesMaterializesAndRunsPersistedScenario()
+    {
+        var api = OpenBetaContent("Transfer", "CollectorTraderHandoffShowcase.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        var materialization = AssertSuccess(api.MaterializeScenario("beta-collector-trader-handoff"));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(3, 1)), materialization.PlayerLocation);
+
+        var turns = new TurnService(new MovementService(), materialization.ActionPlans);
+        for (var turn = 0; turn < 6; turn++)
+        {
+            turns.AdvanceAfterPlayerTurn(materialization.World);
+        }
+
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(7, 1)), materialization.World.GetEntityLocation(new EntityId("betaPlayer")));
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(5, 1)), materialization.World.GetEntityLocation(new EntityId("handoffCollector")));
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(6, 1)), materialization.World.GetEntityLocation(new EntityId("handoffTrader")));
+        Assert.Equal(new EntityId("handoffTrader"), materialization.World.GetActionTarget(new EntityId("handoffCollector")));
+        Assert.Contains(materialization.World.LastTurnReport!.Actions, action => action.ActorId == new EntityId("handoffCollector") && action.Summary.Contains("GiveTarget", StringComparison.Ordinal));
+        Assert.Contains(materialization.World.LastTurnReport!.Actions, action => action.ActorId == new EntityId("handoffTrader") && action.Summary.Contains("DropFacing", StringComparison.Ordinal));
+    }
+
     private static BetaContentApi OpenBetaContent(string group, string fileName)
     {
         var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));

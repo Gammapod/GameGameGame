@@ -408,6 +408,8 @@ public sealed class CoreActionPlanTests
     [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, "Maintain Chebyshev Distance Two")]
     [InlineData(ActionPlanBehaviorStepKind.StrafeClockwise, "Strafe Clockwise")]
     [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise, "Strafe Anticlockwise")]
+    [InlineData(ActionPlanBehaviorStepKind.GiveTarget, "Give Target")]
+    [InlineData(ActionPlanBehaviorStepKind.TakeTarget, "Take Target")]
     public void ActionStepCatalogDescribesFirstUtilityBatch(ActionPlanBehaviorStepKind kind, string displayName)
     {
         var step = ActionStepCatalog.Get(kind);
@@ -1981,6 +1983,119 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void GiveTargetTransfersFirstCarriedEntityToTargetInventoryRowMajor()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 30 };
+        var chestId = AddEntityWithInventory(world, "chest", "Chest", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 2, inventoryHeight: 2, carryingCapacity: 30);
+        var blockerId = AddEntity(world, "blocker", "Blocker", new PlaneCoord(new PlaneId("chestInventory"), new GridCoord(0, 0)));
+        var gemId = AddEntity(world, "gem", "Gem", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 0))));
+        Assert.True(movement.TryPlace(world, gemId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 1))));
+        world.SetActionTarget(TestWorld.PlayerId, chestId);
+        var plan = CreateBehaviorPlan("give-target", ActionPlanBehaviorStepKind.GiveTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(new PlaneId("chestInventory"), new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 1)), world.GetEntityLocation(gemId));
+        Assert.Equal(new PlaneCoord(new PlaneId("chestInventory"), new GridCoord(0, 0)), world.GetEntityLocation(blockerId));
+        Assert.True(TraceDetailContains(result.Trace, "gave rock (Rock) from (1,0) to (1,0)"));
+    }
+
+    [Fact]
+    public void TakeTargetTransfersFirstTargetInventoryEntityToActorInventoryRowMajor()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 30 };
+        var blockerId = AddEntity(world, "blocker", "Blocker", new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("take-target", ActionPlanBehaviorStepKind.TakeTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(blockerId));
+        Assert.True(TraceDetailContains(result.Trace, "took rock (Rock) from (0,0) to (1,0)"));
+    }
+
+    [Fact]
+    public void GiveTargetFailureFallsThroughWithoutConsumingStepTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("give-then-turn"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.GiveTarget),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TurnLeft)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(Direction.West, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Contains("1. GiveTarget: Failure; fallback=continued", summary);
+        Assert.True(TraceDetailContains(result.Trace, "player carries no entity to give"));
+    }
+
+    [Fact]
+    public void TakeTargetFailureFallsThroughWhenTargetInventoryIsEmpty()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("take-then-turn"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TakeTarget),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TurnLeft)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(Direction.West, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Contains("1. TakeTarget: Failure; fallback=continued", summary);
+        Assert.True(TraceDetailContains(result.Trace, "slime carries no entity to take"));
+    }
+
+    [Fact]
+    public void GiveTargetCanTransferPlayerEntityWhenInventoryRulesAllowIt()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var chestId = AddEntityWithInventory(world, "chest", "Chest", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 1, inventoryHeight: 1, carryingCapacity: 30);
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { CarryingCapacity = 30 };
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.SlimeId, chestId);
+        var plan = CreateBehaviorPlan("give-player", ActionPlanBehaviorStepKind.GiveTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.SlimeId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(new PlaneId("chestInventory"), new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.True(TraceDetailContains(result.Trace, "gave player (Player)"));
+    }
+
+    [Fact]
     public void PushFacingMovesBlockerAndActorAndConsumesTurn()
     {
         var world = TestWorld.CreateWorld();
@@ -2215,6 +2330,51 @@ public sealed class CoreActionPlanTests
             new ActionPlanId(id),
             [],
             Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(stepKind)]));
+
+    private static EntityId AddEntityWithInventory(
+        WorldState world,
+        string id,
+        string name,
+        PlaneCoord location,
+        int inventoryWidth,
+        int inventoryHeight,
+        int carryingCapacity)
+    {
+        var entityId = AddEntity(world, id, name, location, inventoryWidth, inventoryHeight, weight: 1, carryingCapacity);
+        var inventoryPlaneId = new PlaneId($"{id}Inventory");
+        AddPlane(world, inventoryPlaneId, inventoryWidth, inventoryHeight);
+        world.RegisterInventoryPlane(entityId, inventoryPlaneId);
+        return entityId;
+    }
+
+    private static EntityId AddEntity(
+        WorldState world,
+        string id,
+        string name,
+        PlaneCoord location,
+        int inventoryWidth = 0,
+        int inventoryHeight = 0,
+        int weight = 1,
+        int carryingCapacity = 1)
+    {
+        var entityId = new EntityId(id);
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, weight, carryingCapacity));
+        world.Occupancy.Add(nodeId, entityId);
+        return entityId;
+    }
+
+    private static void AddPlane(WorldState world, PlaneId planeId, int width, int height)
+    {
+        world.Planes.Add(planeId, new Plane(planeId, planeId.Value, width, height));
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                world.AddNode(planeId, new GridCoord(x, y));
+            }
+        }
+    }
 
     private sealed record TestPlanCheck(
         string Label,
