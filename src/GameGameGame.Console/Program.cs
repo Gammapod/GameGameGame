@@ -8,68 +8,255 @@ if (args.Length > 0 && args[0] == "record-scenario")
     return RecordScenarioCommand(args);
 }
 
-var game = args.Length >= 2
-    ? ConsoleScenarioLauncher.CreateFromFile(args[0], args[1])
-    : ConsoleScenarioLauncher.CreatePrototype();
-var world = game.World;
-var registry = game.Registry;
-var playerId = game.PlayerEntityId;
-var movement = new MovementService();
-var inspector = new EntityInspectionService(entityId => registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
-var turns = new TurnService(movement, game.ActionPlans);
+if (args.Length > 0 && args[0] == "scan-scenarios")
+{
+    return ScanScenariosCommand(args);
+}
 
-var running = true;
+ConsoleGameSession game = null!;
+WorldState world = null!;
+PrototypeContentRegistry registry = null!;
+EntityId playerId = default;
+MovementService movement = null!;
+EntityInspectionService inspector = null!;
+TurnService turns = null!;
+var running = false;
 var mode = InputMode.Play;
 var worldCursor = new GridCoord(0, 0);
 var inventoryCursor = new GridCoord(0, 0);
 EntityId? selectedEntity = null;
-var inspectedEntity = playerId;
-var message = game.ValidationDiagnostics.Count == 0 && game.RuntimeFailures.Count == 0
-    ? $"Scenario {game.ScenarioId}. Arrow keys move. I inspect. P picks up. D drops. Q or Esc quits."
-    : $"Scenario {game.ScenarioId} has diagnostics: {string.Join(" | ", game.ValidationDiagnostics.Concat(game.RuntimeFailures))}";
+EntityId inspectedEntity = default;
+var message = string.Empty;
 
-Console.CursorVisible = false;
-
-while (running)
+if (TryCreateDirectSession(args, out var directSession, out var directError))
 {
-    Render(world, inspector, registry, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, playerId, game.ActionPlans, message);
+    RunGameSession(directSession);
+    return 0;
+}
 
-    var key = Console.ReadKey(intercept: true).Key;
+if (directError is not null)
+{
+    Console.Error.WriteLine(directError);
+    return 2;
+}
 
-    if (key is ConsoleKey.Q)
+var catalog = ResolveScenarioCatalog(args);
+if (catalog.Diagnostics.Count > 0)
+{
+    foreach (var diagnostic in catalog.Diagnostics)
     {
-        running = false;
-        continue;
-    }
-
-    switch (mode)
-    {
-        case InputMode.Play:
-            HandlePlayInput(key);
-            break;
-        case InputMode.PickupSource:
-            HandlePickupSourceInput(key);
-            break;
-        case InputMode.PickupDestination:
-            HandlePickupDestinationInput(key);
-            break;
-        case InputMode.DropSource:
-            HandleDropSourceInput(key);
-            break;
-        case InputMode.DropDestination:
-            HandleDropDestinationInput(key);
-            break;
-        case InputMode.InspectSource:
-            HandleInspectSourceInput(key);
-            break;
+        Console.Error.WriteLine(diagnostic);
     }
 }
 
-Console.ResetColor();
-Console.CursorVisible = true;
-Console.Clear();
+if (catalog.Entries.Count == 0)
+{
+    Console.Error.WriteLine("No scenarios found.");
+    return 1;
+}
+
+RunScenarioMenu(catalog);
 
 return 0;
+
+int ScanScenariosCommand(string[] commandArgs)
+{
+    var folder = commandArgs.Length >= 2 && !commandArgs[1].StartsWith("--", StringComparison.Ordinal)
+        ? commandArgs[1]
+        : ScenarioCatalog.DefaultDiscoveryFolder;
+    var output = ScenarioCatalog.DefaultManifestPath;
+
+    for (var index = 1; index < commandArgs.Length; index++)
+    {
+        switch (commandArgs[index])
+        {
+            case "--output" when index + 1 < commandArgs.Length:
+                output = commandArgs[index + 1];
+                index++;
+                break;
+            case "--output":
+                Console.Error.WriteLine("Missing value for --output.");
+                return 2;
+        }
+    }
+
+    var catalog = ScenarioCatalog.DiscoverFolder(folder);
+    ScenarioCatalog.SaveManifest(catalog, output);
+    Console.WriteLine($"Wrote {catalog.Entries.Count} scenario entries to {output}.");
+    foreach (var diagnostic in catalog.Diagnostics)
+    {
+        Console.Error.WriteLine(diagnostic);
+    }
+
+    return catalog.Entries.Count == 0 ? 1 : 0;
+}
+
+static bool TryCreateDirectSession(string[] commandArgs, out ConsoleGameSession session, out string? error)
+{
+    session = null!;
+    error = null;
+
+    if (commandArgs.Length >= 2 && !commandArgs[0].StartsWith("--", StringComparison.Ordinal))
+    {
+        session = ConsoleScenarioLauncher.CreateFromFile(commandArgs[0], commandArgs[1]);
+        return true;
+    }
+
+    if (commandArgs.Length == 1 && !commandArgs[0].StartsWith("--", StringComparison.Ordinal))
+    {
+        error = "Usage: GameGameGame.Console <content-file> <scenario-id>, --content <file>, --discover <folder>, --manifest <manifest>, or scan-scenarios <folder> --output <manifest>.";
+    }
+
+    return false;
+}
+
+static ScenarioCatalogResult ResolveScenarioCatalog(string[] commandArgs)
+{
+    if (commandArgs.Length == 0)
+    {
+        return File.Exists(ScenarioCatalog.DefaultManifestPath)
+            ? ScenarioCatalog.LoadManifest(ScenarioCatalog.DefaultManifestPath)
+            : ScenarioCatalog.DiscoverFolder(ScenarioCatalog.DefaultDiscoveryFolder);
+    }
+
+    if (commandArgs.Length >= 2 && commandArgs[0] == "--content")
+    {
+        try
+        {
+            return ScenarioCatalog.BuildFromDocument(commandArgs[1], EditableContentDocument.LoadYaml(File.ReadAllText(commandArgs[1])));
+        }
+        catch (Exception ex)
+        {
+            return new ScenarioCatalogResult([], [$"{commandArgs[1]}: {ex.Message}"]);
+        }
+    }
+
+    if (commandArgs.Length >= 2 && commandArgs[0] == "--discover")
+    {
+        return ScenarioCatalog.DiscoverFolder(commandArgs[1]);
+    }
+
+    if (commandArgs.Length >= 2 && commandArgs[0] == "--manifest")
+    {
+        return ScenarioCatalog.LoadManifest(commandArgs[1]);
+    }
+
+    return new ScenarioCatalogResult([], ["Usage: GameGameGame.Console <content-file> <scenario-id>, --content <file>, --discover <folder>, --manifest <manifest>, or scan-scenarios <folder> --output <manifest>."]);
+}
+
+void RunScenarioMenu(ScenarioCatalogResult catalog)
+{
+    var selectedIndex = 0;
+    var menuMessage = "Enter launches. Up/Down selects. Q or Esc quits.";
+    Console.CursorVisible = false;
+    try
+    {
+        while (true)
+        {
+            RenderScenarioMenu(catalog, selectedIndex, menuMessage);
+            var key = Console.ReadKey(intercept: true).Key;
+
+            if (key is ConsoleKey.Q or ConsoleKey.Escape)
+            {
+                return;
+            }
+
+            if (key is ConsoleKey.UpArrow)
+            {
+                selectedIndex = Math.Max(0, selectedIndex - 1);
+                continue;
+            }
+
+            if (key is ConsoleKey.DownArrow)
+            {
+                selectedIndex = Math.Min(catalog.Entries.Count - 1, selectedIndex + 1);
+                continue;
+            }
+
+            if (key is not ConsoleKey.Enter)
+            {
+                continue;
+            }
+
+            var entry = catalog.Entries[selectedIndex];
+            try
+            {
+                RunGameSession(ConsoleScenarioLauncher.CreateFromCatalogEntry(entry));
+                menuMessage = $"Returned from {entry.ScenarioId}. Enter launches. Q quits.";
+            }
+            catch (Exception ex)
+            {
+                menuMessage = $"Could not launch {entry.ScenarioId}: {ex.Message}";
+            }
+        }
+    }
+    finally
+    {
+        Console.ResetColor();
+        Console.CursorVisible = true;
+        Console.Clear();
+    }
+}
+
+void RunGameSession(ConsoleGameSession session)
+{
+    game = session;
+    world = game.World;
+    registry = game.Registry;
+    playerId = game.PlayerEntityId;
+    movement = new MovementService();
+    inspector = new EntityInspectionService(entityId => registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
+    turns = new TurnService(movement, game.ActionPlans);
+    running = true;
+    mode = InputMode.Play;
+    worldCursor = new GridCoord(0, 0);
+    inventoryCursor = new GridCoord(0, 0);
+    selectedEntity = null;
+    inspectedEntity = playerId;
+    message = game.ValidationDiagnostics.Count == 0 && game.RuntimeFailures.Count == 0
+        ? $"Scenario {game.ScenarioId}. Arrow keys move. I inspect. P picks up. D drops. Q or Esc returns to scenario list."
+        : $"Scenario {game.ScenarioId} has diagnostics: {string.Join(" | ", game.ValidationDiagnostics.Concat(game.RuntimeFailures))}";
+
+    Console.CursorVisible = false;
+
+    while (running)
+    {
+        Render(world, inspector, registry, mode, worldCursor, inventoryCursor, selectedEntity, inspectedEntity, playerId, game.ActionPlans, message);
+
+        var key = Console.ReadKey(intercept: true).Key;
+
+        if (key is ConsoleKey.Q)
+        {
+            running = false;
+            continue;
+        }
+
+        switch (mode)
+        {
+            case InputMode.Play:
+                HandlePlayInput(key);
+                break;
+            case InputMode.PickupSource:
+                HandlePickupSourceInput(key);
+                break;
+            case InputMode.PickupDestination:
+                HandlePickupDestinationInput(key);
+                break;
+            case InputMode.DropSource:
+                HandleDropSourceInput(key);
+                break;
+            case InputMode.DropDestination:
+                HandleDropDestinationInput(key);
+                break;
+            case InputMode.InspectSource:
+                HandleInspectSourceInput(key);
+                break;
+        }
+    }
+
+    Console.ResetColor();
+    Console.Clear();
+}
 
 int RecordScenarioCommand(string[] commandArgs)
 {
@@ -446,6 +633,43 @@ static void Render(
         cursor: mode is InputMode.PickupDestination or InputMode.DropSource ? inventoryCursor : null,
         turnOrderReport: CreateLocalTurnOrderReport(world, selectedInspectionPanel, actionPlans, playerId, registry));
 
+}
+
+static void RenderScenarioMenu(ScenarioCatalogResult catalog, int selectedIndex, string message)
+{
+    Console.Clear();
+    Console.ForegroundColor = ConsoleColor.Gray;
+    Console.WriteLine("GameGameGame scenarios");
+    Console.WriteLine(message.PadRight(Console.WindowWidth - 1));
+    Console.WriteLine();
+
+    var maxEntries = Math.Max(1, Console.WindowHeight - 6);
+    var first = Math.Max(0, Math.Min(selectedIndex - maxEntries / 2, Math.Max(0, catalog.Entries.Count - maxEntries)));
+
+    for (var index = first; index < catalog.Entries.Count && index < first + maxEntries; index++)
+    {
+        var entry = catalog.Entries[index];
+        Console.ForegroundColor = index == selectedIndex ? ConsoleColor.Yellow : ConsoleColor.Gray;
+        var marker = index == selectedIndex ? ">" : " ";
+        Console.WriteLine(TrimToWidth($"{marker} {entry.Name} ({entry.ScenarioId}) - {entry.ContentPath}", Console.WindowWidth - 1));
+        if (!string.IsNullOrWhiteSpace(entry.Description))
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine(TrimToWidth($"    {entry.Description}", Console.WindowWidth - 1));
+        }
+    }
+
+    if (catalog.Diagnostics.Count == 0)
+    {
+        return;
+    }
+
+    Console.ForegroundColor = ConsoleColor.DarkYellow;
+    Console.WriteLine();
+    foreach (var diagnostic in catalog.Diagnostics.Take(3))
+    {
+        Console.WriteLine(TrimToWidth($"Catalog diagnostic: {diagnostic}", Console.WindowWidth - 1));
+    }
 }
 
 static int WriteTrace(TraceNode trace, int depth, int line, int maxLines)

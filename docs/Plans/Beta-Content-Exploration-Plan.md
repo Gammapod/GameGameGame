@@ -52,6 +52,8 @@ Potential future structure, to be introduced only when useful:
 - `src/GameGameGame.Content/Beta/Spawning/*.yaml`
 - `src/GameGameGame.Content/Beta/Reactions/*.yaml`
 
+Near-term scenario-selection ergonomics were completed in `docs/Archived/Sprint-21-Console-Scenario-Catalog.md`: existing loose YAML content documents can be discovered from a designated folder tree, a cached manifest/index can drive Console scenario selection, and content package files/import semantics remain deferred until content duplication or extensive reuse becomes a concrete bottleneck.
+
 ## Promotion and request policy
 
 The reusable content-authoring gap workflow belongs in `docs/Source of Truth/Content-Authoring-Manual.md`. This section records the beta-exploration thresholds used by this plan.

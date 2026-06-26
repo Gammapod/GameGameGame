@@ -4,6 +4,10 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What went well
 
+- Sprint 21's ad-hoc Console scenario catalog request still mapped cleanly onto existing roadmap pressure around scenario/content package ergonomics, manual scenario selection, and beta vignette playability. Treating it first as a viability/backlog comparison kept the work from becoming an unbounded frontend rewrite.
+- The implementation stayed aligned with the longer-term frontend direction by putting discovery/manifest behavior in a shared content-facing catalog service instead of burying the contract in Console UI code.
+- Keeping Console UI testing light while testing the catalog/launch contract matched Console's prototype role and avoided over-investing in replaceable frontend behavior.
+
 - Sprint 16 moved smoothly because each showcase had a clear content goal, a small primitive request, immediate content proof, headless validation, and a recorded GIF artifact.
 - Requesting both strafing primitives together was more efficient than one-at-a-time requests because their semantics, tests, docs, and catalog support were nearly identical.
 - Keeping action plans linear while embedding distance/directional checks inside primitives worked well for authoring. The final kiting-orbiter chain stayed readable despite expressing several fallback behaviors.
@@ -21,6 +25,10 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What was difficult
 
+- Sprint 21 began as an ad-hoc request outside the currently assumed next mechanics gate. Although it proved roadmap-adjacent, it exposed a prioritization question: ad-hoc workflow/friction fixes may be legitimate sprint candidates, but they should be checked explicitly against roadmap buckets before consuming implementation time.
+- The request blurred the line between a small Console workflow improvement and broader content-package architecture. We had to repeatedly constrain scope to folder discovery, cached manifests, and manifest-only descriptions so the work did not prematurely become package/import semantics.
+- Auto-generating a manifest inside `src/GameGameGame.Content/Beta` creates a content-adjacent artifact even though existing content YAML files remain untouched. Future generated/cache artifacts need an explicit decision about whether they are checked in, ignored, or treated as author-maintained content indexes.
+
 - Sprint 16 still had to work around unfiltered `AcquireNearestTarget`. Sparse layouts, far-away player starts, and the `beta-kiting-orbiter-fallback-lane` companion scenario were needed so helper/blocker entities did not become unintended targets.
 - The deepest kiting-orbiter fallback proof took more design effort than the single-primitive showcases. Demonstrating clockwise fallback, anticlockwise fallback, flee fallback, and seek fallback in one readable room was awkward with unfiltered target acquisition, so the proof was split into a main room plus a one-row fallback lane.
 - Some fixture assertions had to be adjusted to match actual compact trace wording. The strafing tests initially expected a separate `strafe=...` line in the report text, while the scenario report exposed the human summary `moved ... strafing ...`; lower-level tests still cover the structured trace details.
@@ -35,6 +43,11 @@ Status: Living retrospective notes from the current wrap-up.
 - `CreateFacing` is useful as a prototype but too limited for realistic content because it cannot select a template.
 
 ## Process improvements
+
+- For ad-hoc feature requests, keep using a short intake step before implementation: compare against roadmap buckets, identify what the request unblocks, classify it as roadmap-aligned / reprioritization signal / distraction, and only then decide whether to plan a sprint slice.
+- If an ad-hoc request is accepted, write or update a small plan with explicit in-scope/out-of-scope boundaries before coding. This is especially important when a small workflow feature could expand into a larger architecture change.
+- Add a lightweight prioritization check during wrap-up: did the ad-hoc work indicate the roadmap is stale, or did it merely surface a tactical bottleneck inside an existing bucket?
+- Generated/cache files under content directories should have an explicit policy before broad use: checked-in curated artifact, local cache ignored by git, or generated output outside source content.
 
 - For future showcase sprints, keep using the pattern: primitive request -> authored YAML -> fixture test -> `record-scenario` GIF -> sprint-plan note.
 - When two primitives are symmetric variants, request them together to reduce duplicated coordination and documentation effort.
@@ -51,6 +64,10 @@ Status: Living retrospective notes from the current wrap-up.
 - When tests become slow or flaky under normal parallel build/test execution, prefer targeted filters during development and a final relevant broader run before handoff.
 
 ## Open retrospective questions for team discussion
+
+- Does Sprint 21 indicate that scenario/content package ergonomics should move above Gate 5 template spawning, or was it a one-off tactical bottleneck now resolved?
+- Should `src/GameGameGame.Content/Beta/Manifest.yaml` be checked in as a curated scenario index with descriptions, or treated as a generated local cache and ignored?
+- What threshold should allow an ad-hoc user-experience/tooling request to interrupt the currently planned mechanics/content gate?
 
 - How polished should `RunScenario` text reports be before saved runlogs/golden runlog tests become worthwhile?
 - Should Sprint 11 finish scenario report/API polish first, or use the scenario runner immediately to drive direction/movement semantics?

@@ -66,7 +66,7 @@ Default workflow:
 | Canonical behavior chains | Add, remove, and reorder catalog-backed Action Steps. |
 | Scenarios | Persist scenario name/root/player template/player entity ID/player start placement. |
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
-| Scenario execution | Launch persisted scenarios in Console; run persisted scenario reports by scenario ID headlessly with final-state and inventory/containment summaries; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
+| Scenario execution | Launch persisted scenarios in Console directly by content file/scenario ID or through the Console scenario list populated from one file, folder discovery, or a generated manifest/cache; run persisted scenario reports by scenario ID headlessly with final-state and inventory/containment summaries; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
 | Scenario recording | Record persisted scenarios to PNG frames and GIF artifacts. |
 | Gap logging | Record unsupported desired behavior in the active capability gap log. |
 
@@ -250,7 +250,7 @@ Use the shortest review loop that answers the content question.
 | Inspect turn-by-turn behavior | Run a persisted headless scenario report by scenario ID when scenario setup/player insertion matters; use root-only compatibility runs only for scenario-root template isolation. |
 | Review a scenario end-to-end | Request a combined persisted scenario review report for document validation, canonical validation, action-plan previews, scenario materialization, run traces, final state, inventory summaries, and diagnostics. |
 | Inspect spatial layout over time | Record scenario frames/GIF. |
-| Confirm Console playability | Launch Console with content file and scenario ID. |
+| Confirm Console playability | Launch Console with content file and scenario ID, or use the Console scenario list. Folder discovery refreshes `Manifest.yaml` in the scanned folder and preserves optional manifest-only `description` annotations for unchanged entries. By default, Console reads `src\GameGameGame.Content\Beta\Manifest.yaml` when present and otherwise discovers scenarios under `src\GameGameGame.Content\Beta` and writes that default manifest. |
 
 Treat validation diagnostics and runtime observations as content feedback. Expected in-simulation inability to act is not automatically a failed scenario; decide based on the vignette goal.
 

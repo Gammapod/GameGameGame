@@ -167,7 +167,7 @@ Likely candidate focuses:
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
 - Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, local turn-order/previous-action tables, compact per-turn state diffs, created/destroyed entity summaries, capability-gap sections, preview-plus-simulation in one command, actor-zoo/isolation report templates, and cleanup/replacement of the older test-local runner. Deferred tactical telegraphing should project each actor's next resolved behavior/fallback on a safe simulation snapshot; pull it forward when complex gameplay scenarios require tactical information beyond previous actions.
 - Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.
-- Scenario/content package ergonomics: multiple fixture scenarios, scenario listing/selection, authoring helpers, and stronger validation/reporting around packages.
+- Scenario/content package ergonomics: multiple fixture scenarios, scenario listing/selection, authoring helpers, and stronger validation/reporting around packages. Sprint 21 completed the near-term Console scenario catalog: scan a designated scenario/content folder for existing YAML scenario definitions, persist a generated manifest/cache with optional menu descriptions, and let Console list/select scenarios without introducing scenario-definition metadata fields or content package files.
 - Capability-gap logging: record intentionally blocked or negative vignettes and promote feature requests when repeated scenario pressure or one high-value flagship scenario justifies it.
 - Frontend/editor loop follow-up: keep future unified frontend requirements visible, but defer implementation until beta vignette playtests clarify interaction and authoring needs.
 
@@ -214,6 +214,7 @@ Completed baseline:
 - Sprint 15 added the persisted-scenario debug recorder with PNG/GIF artifacts and visual facing/target markers for reviewing authored scenario simulations.
 - Sprint 16 added Gate 3 distance-movement primitives and beta fixtures: `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, and kiting/orbiter fallback composition, each validated headlessly and recorded as GIF artifacts.
 - Sprint 17 moved scenario materialization/run/record workflows out of the legacy Editor dependency path: `GameGameGame.Content` owns canonical scenario materialization, `GameGameGame.Headless` owns scenario run/record services and debug rendering, Console no longer references Editor, and normal non-Editor tests validate scenario tooling without building Avalonia.
+- Sprint 21 added a shared scenario catalog and Console scenario menu: single-file listing, folder discovery, automatic `Manifest.yaml` refresh, optional manifest-only descriptions, manifest loading, default Beta folder/manifest behavior, catalog-entry launch, and return-to-list flow while preserving direct content-file/scenario-ID launch.
 
 Future generalized scenario runner wishlist:
 
@@ -334,13 +335,16 @@ Priority order:
 3. Richer scenario metadata beyond alpha launch needs.
 4. Scenario-level initial action-state overrides for specific materialized entities, especially initial `Target`, once vignettes need locked-on or non-nearest target setup.
 5. Richer world/setup data beyond scenario-root inventory spaces.
-6. Loading one scenario inside another for setpieces or nested levels.
-7. Randomly generated levels.
+6. Content package files and import/merge semantics, including possible separation of scenario definitions, reusable entity templates, presentations, and action plans, only after content duplication or extensive reuse becomes a concrete bottleneck.
+7. Loading one scenario inside another for setpieces or nested levels.
+8. Randomly generated levels.
 
 Dependencies:
 
 - Alpha scenario documents, player start metadata, and Console scenario loading are now tracked in the alpha roadmap.
 - The alpha scenario materialization path should clarify the boundary between reusable content definitions, scenario setup, runtime world state, and player start metadata before richer packaging is promoted.
+- The completed Sprint 21 scenario catalog/menu stays a discovery/cache layer over existing loose content documents; future work should not turn it into a package/import system by accident.
+- Content package files are unnecessary until scenarios and templates are reused enough that duplication, cross-file references, or save-location ownership become the primary authoring pain.
 - Content-file organization is owned by the content editor/content-authoring role and should be shaped by actual beta fixture growth rather than preemptive structure.
 
 Promotion trigger:

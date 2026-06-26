@@ -37,6 +37,9 @@ public static class ConsoleScenarioLauncher
         return CreateFromDocument(document, scenarioId);
     }
 
+    public static ConsoleGameSession CreateFromCatalogEntry(ScenarioCatalogEntry entry) =>
+        CreateFromFile(entry.ContentPath, entry.ScenarioId);
+
     public static ConsoleGameSession CreateFromDocument(EditableContentDocument document, string scenarioId)
     {
         var result = ScenarioMaterializer.Materialize(document, scenarioId);
