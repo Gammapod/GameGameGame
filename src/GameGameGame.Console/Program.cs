@@ -612,26 +612,43 @@ static void Render(
 
     var playerPlaneId = world.GetEntityLocation(playerId).PlaneId;
     var containerId = inspector.FindEntityContainingPlane(world, playerPlaneId) ?? playerId;
+    var containmentPaths = new EntityContainmentPathService();
+    var playerPath = containmentPaths.GetUpwardPath(world, playerId);
+    var inspectedPath = containmentPaths.GetUpwardPath(world, inspectedEntity);
+    var getGlyph = (EntityId entityId) => registry.GetPresentationForEntity(entityId).Glyph;
+
+    Console.WriteLine(TrimToWidth($"Player path: {ConsoleInspectionDisplayFormatter.FormatBreadcrumb(world, playerPath, getGlyph)}", Console.WindowWidth - 1));
+    Console.WriteLine(TrimToWidth($"Inspecting: {ConsoleInspectionDisplayFormatter.FormatBreadcrumb(world, inspectedPath, getGlyph)}", Console.WindowWidth - 1));
+    Console.WriteLine();
 
     var currentContainerPanel = inspector.Inspect(world, containerId);
+    var currentContainerPath = containmentPaths.GetUpwardPath(world, containerId);
+    var currentContainerTurnOrder = CreateLocalTurnOrderReport(world, currentContainerPanel, actionPlans, playerId, registry);
     DrawInspectionPanel(
+        world,
         currentContainerPanel,
         left: 0,
-        top: 6,
+        top: 9,
         width: 38,
         title: "Current Container",
         cursor: mode is InputMode.PickupSource or InputMode.DropDestination or InputMode.InspectSource ? worldCursor : null,
-        turnOrderReport: CreateLocalTurnOrderReport(world, currentContainerPanel, actionPlans, playerId, registry));
+        turnOrderReport: currentContainerTurnOrder,
+        path: currentContainerPath,
+        getGlyph: getGlyph);
 
     var selectedInspectionPanel = inspector.Inspect(world, inspectedEntity);
+    var selectedTurnOrder = CreateLocalTurnOrderReport(world, selectedInspectionPanel, actionPlans, playerId, registry);
     DrawInspectionPanel(
+        world,
         selectedInspectionPanel,
         left: 40,
-        top: 6,
+        top: 9,
         width: 38,
         title: "Selected Inspection",
         cursor: mode is InputMode.PickupDestination or InputMode.DropSource ? inventoryCursor : null,
-        turnOrderReport: CreateLocalTurnOrderReport(world, selectedInspectionPanel, actionPlans, playerId, registry));
+        turnOrderReport: selectedTurnOrder,
+        path: inspectedPath,
+        getGlyph: getGlyph);
 
 }
 
@@ -746,13 +763,16 @@ static LocalTurnOrderReport? CreateLocalTurnOrderReport(
         : null;
 
 static void DrawInspectionPanel(
+    WorldState world,
     EntityInspectionPanel panel,
     int left,
     int top,
     int width,
     string title,
     GridCoord? cursor,
-    LocalTurnOrderReport? turnOrderReport)
+    LocalTurnOrderReport? turnOrderReport,
+    EntityContainmentPath path,
+    Func<EntityId, char> getGlyph)
 {
     Console.SetCursorPosition(left, top);
     Console.ForegroundColor = ConsoleColor.Gray;
@@ -763,7 +783,13 @@ static void DrawInspectionPanel(
     Console.Write(TrimToWidth($"{panel.Glyph} {panel.EntityId}", width));
 
     var propertyLine = 0;
-    foreach (var property in panel.Properties.Take(6))
+    var properties = ConsoleInspectionDisplayFormatter.BuildPanelProperties(
+        world,
+        panel,
+        path,
+        turnOrderReport,
+        getGlyph);
+    foreach (var property in properties.Take(7))
     {
         Console.SetCursorPosition(left, top + 2 + propertyLine);
         Console.ForegroundColor = ConsoleColor.Gray;

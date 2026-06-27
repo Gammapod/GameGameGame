@@ -143,6 +143,25 @@ public sealed class ConsoleScenarioLaunchTests
         Assert.Empty(session.RuntimeFailures);
     }
 
+    [Fact]
+    public void ConsoleInspectionDisplayFormatsBreadcrumbAndRuntimePanelProperties()
+    {
+        var session = ConsoleScenarioLauncher.CreateFromDocument(CreateConsoleDocument("breadcrumb", "Breadcrumb", new GridCoord(0, 0)), "breadcrumb");
+        var inspector = new EntityInspectionService(entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
+        var panel = inspector.Inspect(session.World, session.PlayerEntityId);
+        var path = new EntityContainmentPathService().GetUpwardPath(session.World, session.PlayerEntityId);
+        var glyph = (EntityId entityId) => session.Registry.GetPresentationForEntity(entityId).Glyph;
+
+        var breadcrumb = ConsoleInspectionDisplayFormatter.FormatBreadcrumb(session.World, path, glyph);
+        var properties = ConsoleInspectionDisplayFormatter.BuildPanelProperties(session.World, panel, path, turnOrderReport: null, getGlyph: glyph);
+
+        Assert.Contains("# Breadcrumb Room", breadcrumb);
+        Assert.Contains("@ Breadcrumb Player", breadcrumb);
+        Assert.Contains(properties, property => property.Name == "Path" && property.Value == breadcrumb);
+        Assert.Contains(properties, property => property.Name == "Inventory" && property.Value.Contains("1x1", StringComparison.Ordinal));
+        Assert.Contains(properties, property => property.Name == "Facing" && property.Value == Direction.East.ToString());
+    }
+
     private static EditableContentDocument CreateConsoleDocument(string scenarioId, string scenarioName, GridCoord playerStart)
     {
         var document = new EditableContentDocument();
