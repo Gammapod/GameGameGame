@@ -35,8 +35,8 @@ Do not read when:
 5. `docs/Source of Truth/vertical-slice-map.md`
    - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
    - Read selectively when a planned slice spans multiple layers.
-6. `docs/Plans/Beta-Content-Exploration-Plan.md`
-   - Active plan for ordering beta vignettes, capability gates, primitive showcase work, actor-zoo exploration, capability-gap logging, and beta content organization.
+6. `docs/Plans/Gamma-Frontend-Demo-Plan.md`
+   - Active plan for preparing current scenarios for tester feedback through scenario curation, breadcrumb/path inspection, and short-term Console frontend polish.
 7. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Active log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps.
 8. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
@@ -45,23 +45,23 @@ Do not read when:
    - Recent process observations and open retrospective questions.
 10. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
-    - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, and Sprint 21 Console scenario catalog plans.
+     - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, and the archived/paused Beta content exploration plan.
 
 ## Current strategic priority
 
-Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios. Beta targets gameplay demo vignettes: several small authored scenarios that can be played, run headlessly, and used to discover which interactions are interesting before committing to a unified frontend/player-interaction model.
+Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Gamma now targets a tester-shareable frontend demo: curate current scenarios, improve Console/breadcrumb inspection enough for feedback, and use that feedback before adding more mechanics.
 
 ## Current highest-priority backlog buckets
 
-1. Foundational movement and peer interaction primitives, with Sprint 19 Gate 4 `GiveTarget`/`TakeTarget` complete and Gate 5 template spawning as the next planned mechanics gate unless transfer/trade review changes priority.
-2. Beta gameplay vignette design using alpha scenario feedback, as described in `High-Level-Roadmap.md`, `docs/Plans/Beta-Content-Exploration-Plan.md`, and `docs/Plans/Beta-Capability-Gap-Log.md`.
-3. Scenario/testing/tooling feedback loop, especially persisted scenario runs, report summaries, recorded artifact review, and remaining non-blocking tooling polish.
-4. Scenario/content packaging beyond alpha.
-5. Inventory, containment, and transfer mechanics.
-6. Spawning, creation, and template materialization.
-7. Runtime architecture and simulation scale.
-8. Behavior authoring reuse and organization.
-9. Future integrated game/editor frontend.
+1. Gamma tester/demo frontend readiness, as described in `docs/Plans/Gamma-Frontend-Demo-Plan.md`.
+2. Scenario/testing/tooling feedback loop, especially inspection-path readability, compact summaries, recorded artifact review, and remaining non-blocking tooling polish.
+3. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy.
+4. Future integrated game/editor frontend requirements discovered from Gamma feedback.
+5. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
+6. Inventory, containment, and transfer mechanics.
+7. Spawning, creation, and template materialization.
+8. Runtime architecture and simulation scale.
+9. Behavior authoring reuse and organization.
 10. Reactions and cross-entity behavior.
 11. Future player control and action choice model.
 12. Long-horizon diegetic/meta systems.

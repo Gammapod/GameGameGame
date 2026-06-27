@@ -17,7 +17,7 @@ Related source of truth:
 
 ## Current strategic direction
 
-Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Post-alpha planning should use this scenario/Console feedback loop to choose beta work based on playable evidence rather than broad speculative mechanics. Direction, inventory, spawning, scheduler, and reaction decisions should continue to be informed by scenario evidence.
+Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and a Console scenario catalog. Gamma now shifts from adding mechanics to preparing the existing scenarios for real tester feedback. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
 
 The current Avalonia GUI is legacy-priority / maintenance-mode. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and future frontend readiness rather than maintaining broad Avalonia GUI parity. Long-term human-facing editor work is expected to move toward an integrated game/editor frontend.
 
@@ -84,9 +84,9 @@ This target promoted the following items out of backlog buckets and into the com
 
 ## Active / likely next sprint
 
-### Beta release target: gameplay demo vignettes
+### Gamma release target: tester-shareable frontend demo
 
-Status: Selected direction after Sprint 11 alpha MVP completion; sprint-sized implementation slices still pending selection.
+Status: Selected after Sprint 21 Console scenario catalog work. Beta mechanics expansion is paused while current authored scenarios are prepared for external feedback.
 
 Recently completed supporting documents:
 
@@ -101,16 +101,37 @@ Recently completed supporting documents:
 - [Sprint 18: Tech Debt Cleanup](../Archived/Sprint-18-Tech-Debt-Cleanup.md)
 - [Sprint 19: Gate 4 Peer Transfer Showcases](../Archived/Sprint-19-Gate-4-Peer-Transfer.md)
 - [Sprint 20: Scenario Run and Report Polish](../Archived/Sprint-20-Scenario-Run-Report-Polish.md)
+- [Sprint 21: Console Scenario Catalog](../Archived/Sprint-21-Console-Scenario-Catalog.md)
+- [Sprint 22: Gamma Containment Path Service](../Archived/Sprint-22-Gamma-Containment-Path-Service.md)
+- [Beta Content Exploration Plan](../Archived/Beta-Content-Exploration-Plan.md)
 
-Active beta planning document:
+Active Gamma planning document:
 
-- [Beta Content Exploration Plan](Beta-Content-Exploration-Plan.md)
+- [Gamma Frontend Demo Plan](Gamma-Frontend-Demo-Plan.md)
 
 Planned next sprint:
 
-- Selection pending after Sprint 20 wrap-up. Gate 5 template spawning is again the default next mechanics gate unless the Sprint 20 report/tooling improvements reveal a higher-priority content-review or scenario-packaging need.
+- Console breadcrumb display for the player and currently inspected entity using the completed Core structural containment path service. Scenario curation is non-blocking unless tester confusion re-promotes it.
 
-Beta target statement:
+Gamma target statement:
+
+- The project can be shared with test players as a scenario-list-driven Console demo.
+- Testers can choose curated scenarios, understand what they are looking at, and give useful feedback without reading development docs.
+- Console remains a prototype frontend; short-term polish should preserve shared UI-agnostic query/catalog contracts that a future frontend can consume.
+
+Gamma promoted stages:
+
+1. Completed in Sprint 22: read-only Core inspection path service that produces cycle-safe structural containment paths for entities, including upward, root-relative, max-depth, and shared-root queries.
+2. Console breadcrumb display for the player and currently inspected entity.
+3. Improved Console inspection panel content using path, inventory/current-space summaries, local turn order/previous action, and scenario guidance where available.
+4. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy/headless-only entries, or naming issues make it necessary.
+
+Deferred to future real frontend:
+
+- Interactive breadcrumb navigation.
+- Collapsible/expandable multi-entity inspection-chain panels.
+
+Paused Beta target statement:
 
 - The project can present several small authored gameplay vignettes, like pitch-deck slides, that demonstrate what the engine naturally makes possible.
 - Each vignette should be playable in Console, runnable headlessly for validation, and useful for deciding which interactions are interesting or engaging.
@@ -120,12 +141,12 @@ Long-term frontend direction:
 
 - A unified frontend remains desired eventually, potentially through SadConsole, Godot, Unity, Pico-8, or another frontend stack.
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
-- Do not start major frontend replacement work until beta vignettes reveal which player interactions, scenario transitions, and content-authoring workflows are worth optimizing.
+- Do not start major frontend replacement work until Gamma tester feedback clarifies which player interactions, scenario transitions, inspection/debug workflows, and content-authoring workflows are worth optimizing.
 - The current Avalonia editor is legacy-priority and should not remain a dependency of Console, scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting Avalonia assumptions.
 
-Current decision point: Sprint 20 completed scenario run/report polish: persisted scenario-ID runs, root-only versus persisted-run terminology, cycle-safe inventory/containment summaries, and a combined persisted-scenario review report. Gate 5 template spawning is the default next mechanics gate unless wrap-up review selects a higher-priority tooling or scenario-packaging follow-up.
+Current decision point: Sprint 21 completed Console scenario catalog/listing. Gate 5 template spawning and Gate 6 reactions are no longer the default next work; they remain backlog items until tester feedback or a specific scenario need re-promotes mechanics expansion.
 
-Current beta content-exploration order:
+Paused beta content-exploration order:
 
 1. Explore and test scenarios that are authorable with current tools. Completed for the first primitive-showcase batch in Sprint 12; actor zoo deferred.
 2. Gate 1: direction transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`), then explore the scenarios unlocked by relative facing changes. Completed in Sprint 13.
@@ -161,7 +182,7 @@ For each candidate vignette, record before implementation whether the intended e
 - **new Action Step / primitive** using existing engine state models;
 - **new engine capability** requiring new state, containment, reaction, scheduler, or frontend/player-interaction semantics.
 
-Likely candidate focuses:
+Paused beta candidate focuses:
 
 - Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. Sprint 13 completed focused direction-transform showcases for turning, backstep, wall-bounce, and patrol-turn behavior. Sprint 14 completed targeting showcases for acquisition, direct chase, targeted destruction, and autonomous collection. Sprint 16 completed distance-movement showcases for fleeing, hard-coded Chebyshev distance-two maintenance, clockwise/anticlockwise strafing, and kiting/orbiter fallback composition; the first curated actor zoo and follower scenario remain deferred until a broader gallery or differentiated use case becomes useful.
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
@@ -171,7 +192,7 @@ Likely candidate focuses:
 - Capability-gap logging: record intentionally blocked or negative vignettes and promote feature requests when repeated scenario pressure or one high-value flagship scenario justifies it.
 - Frontend/editor loop follow-up: keep future unified frontend requirements visible, but defer implementation until beta vignette playtests clarify interaction and authoring needs.
 
-Selection guidance:
+Paused beta selection guidance (historical):
 
 - Prefer designing the first beta vignette set before adding broad primitives, so mechanics are pulled by demo needs.
 - Prefer scenario/report polish first if content-authoring agents still need manual test harnesses or cannot quickly interpret vignette behavior.
@@ -187,24 +208,26 @@ Status: Highest-priority backlog bucket.
 
 Priority order:
 
-1. Headless debug scenario recorder: `RecordScenario`-style sibling workflow, dotnet-accessible command, PNG frames, GIF output, and visual state debugging for scenario turns.
-2. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
-3. Lightweight scenario report template once first runner output reveals the useful fields.
-4. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
-5. Plan preview + simulation in one API command.
-6. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
-7. Curated actor-zoo report template for one-room behavior demonstrations.
-8. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
-9. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
-10. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
-11. Generalized scenario runner upgrade sprint.
-12. Per-initiative debug recording frames and active-actor/focus display for dense simulations.
-13. Alternate debug-render styles, such as 2x2 color blocks, larger bordered glyph tiles, and configurable themes/layouts.
-14. Saved scenario runlogs.
-15. Golden runlog tests.
-16. Test inspector / runlog stepper with forward/back controls.
-17. Editor `Run in Console` button after Console scenario launch exists.
-18. Live in-editor preview window showing an entity performing its action plan.
+1. Gamma inspection-path/breadcrumb query: cycle-safe read-only containment path service for the current player and inspected entity.
+2. Gamma Console breadcrumb display and improved inspection panel summaries.
+3. Headless debug scenario recorder: `RecordScenario`-style sibling workflow, dotnet-accessible command, PNG frames, GIF output, and visual state debugging for scenario turns.
+4. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
+5. Lightweight scenario report template once first runner output reveals the useful fields.
+6. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
+7. Plan preview + simulation in one API command.
+8. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
+9. Curated actor-zoo report template for one-room behavior demonstrations.
+10. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
+11. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
+12. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
+13. Generalized scenario runner upgrade sprint.
+14. Per-initiative debug recording frames and active-actor/focus display for dense simulations.
+15. Alternate debug-render styles, such as 2x2 color blocks, larger bordered glyph tiles, and configurable themes/layouts.
+16. Saved scenario runlogs.
+17. Golden runlog tests.
+18. Test inspector / runlog stepper with forward/back controls.
+19. Editor `Run in Console` button after Console scenario launch exists.
+20. Live in-editor preview window showing an entity performing its action plan.
 
 Completed baseline:
 
@@ -330,14 +353,15 @@ Status: Alpha-critical subset promoted into the alpha release roadmap. This buck
 
 Priority order:
 
-1. Beta content file organization: introduce folders or multiple content documents when fixture count makes single-file navigation, scenario selection, or validation noisy.
-2. Scenario families and grouping once individual alpha scenario documents work.
-3. Richer scenario metadata beyond alpha launch needs.
-4. Scenario-level initial action-state overrides for specific materialized entities, especially initial `Target`, once vignettes need locked-on or non-nearest target setup.
-5. Richer world/setup data beyond scenario-root inventory spaces.
-6. Content package files and import/merge semantics, including possible separation of scenario definitions, reusable entity templates, presentations, and action plans, only after content duplication or extensive reuse becomes a concrete bottleneck.
-7. Loading one scenario inside another for setpieces or nested levels.
-8. Randomly generated levels.
+1. Gamma tester scenario curation: decide whether `src/GameGameGame.Content/Beta/Manifest.yaml` is a checked-in curated index or local generated cache, curate descriptions/order/visibility, and keep deprecated/crashy scenarios from confusing testers.
+2. Beta/Gamma content file organization: introduce folders or multiple content documents when fixture count makes single-file navigation, scenario selection, or validation noisy.
+3. Scenario families and grouping once individual alpha scenario documents work.
+4. Richer scenario metadata beyond alpha launch needs.
+5. Scenario-level initial action-state overrides for specific materialized entities, especially initial `Target`, once vignettes need locked-on or non-nearest target setup.
+6. Richer world/setup data beyond scenario-root inventory spaces.
+7. Content package files and import/merge semantics, including possible separation of scenario definitions, reusable entity templates, presentations, and action plans, only after content duplication or extensive reuse becomes a concrete bottleneck.
+8. Loading one scenario inside another for setpieces or nested levels.
+9. Randomly generated levels.
 
 Dependencies:
 
@@ -405,19 +429,22 @@ Status: Long-horizon strategic direction; current Avalonia GUI remains legacy-pr
 Priority order:
 
 1. Preserve frontend-agnostic editor service and agent/headless API contracts.
-2. Identify future frontend/editor requirements from scenario runner and agent workflows.
-3. Choose a frontend technology when game rendering/play needs are clearer, such as Godot, Unity, SadConsole, or another suitable option.
-4. Expose in-game editor functions through the same underlying editor service/API concepts instead of duplicating YAML/content logic in the frontend.
-5. Retire or replace the current Avalonia GUI when the future frontend/editor surface is viable.
+2. Identify future frontend/editor requirements from scenario runner, Gamma tester feedback, and agent workflows.
+3. Interactive breadcrumb navigation: select breadcrumb ancestors/entities, change inspection focus, and navigate nested spaces through the breadcrumb model.
+4. Collapsible multi-entity inspection-chain UI: expanded/collapsed panels, focus management, scrolling, and multi-entity debug/detail layout.
+5. Choose a frontend technology when game rendering/play needs are clearer, such as Godot, Unity, SadConsole, or another suitable option.
+6. Expose in-game editor functions through the same underlying editor service/API concepts instead of duplicating YAML/content logic in the frontend.
+7. Retire or replace the current Avalonia GUI when the future frontend/editor surface is viable.
 
 Dependencies:
 
-- Depends on stronger headless editor/service APIs and scenario feedback.
-- Frontend choice should wait until game rendering/play and in-game editing needs are clearer.
+- Depends on stronger headless editor/service APIs, Gamma breadcrumb/inspection experiments, and tester feedback.
+- Frontend choice should wait until game rendering/play, inspection-chain interaction, and in-game editing needs are clearer.
+- Gamma may prototype read-only breadcrumb display in Console, but interactive breadcrumb navigation and collapsible multi-entity panels should wait for a real frontend unless tester feedback proves Console is sufficient.
 
 Promotion trigger:
 
-- Promote when alpha scenario materialization, headless scenario workflows, and agent APIs are stable enough that a frontend can consume them without duplicating content/editor logic.
+- Promote when Gamma tester feedback shows that Console cannot adequately support the needed play/inspection/debug workflows, or when interactive breadcrumb/multi-panel UI becomes central enough to justify a real frontend stack.
 
 ### Bucket 9: Reactions and cross-entity behavior
 

@@ -60,7 +60,7 @@ This document records minimal functional requirements that should influence test
 - Stable entity IDs: `EditableContentDocumentCanCreateEntityTemplateWithGeneratedStableId`, `ContentEditorServiceListsJoinedEntityPresets`.
 - Entity locations are node occupancy: `EntityLocationsAreRepresentedByNodeOccupancy`.
 - One entity per node: `MovementCannotPlaceEntityOnOccupiedNode`, `PrototypeRegistryValidationReportsOverlappingCarriedEntities`.
-- Cycle-safe traversal: `TraversingRecursiveInventoryWeightIsCycleSafe`.
+- Cycle-safe traversal: `TraversingRecursiveInventoryWeightIsCycleSafe`, `ScenarioInventorySummaryFormatterIsCycleSafe`, `EntityContainmentPathServiceDetectsContainmentCycle`, `EntityContainmentPathServiceReportsCycleEdgesWithDirection`, `EntityContainmentPathServiceSharedRootPathIsCycleSafe`.
 - Zero inventory dimensions are unusable: `ZeroInventoryDimensionMakesInventoryUnusable`, `PrototypeRegistryValidationReportsCarriedEntitiesOnTemplateWithoutUsableInventory`.
 - Missing inventory space contributes no carried weight: `MissingInventoryPlaneContributesNoCarriedWeight`.
 - Own weight does not count against own capacity: `OwnWeightDoesNotCountAgainstOwnCarryingCapacity`.
