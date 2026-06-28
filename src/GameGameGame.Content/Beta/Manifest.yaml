@@ -40,6 +40,11 @@ scenarios:
   name: Pickup Drop Weight
   description: Shows that the ability to pick something up is based on Weight (placeholder mechanic)
 
+- contentPath: src\GameGameGame.Content\Beta\CurrentTools\AlphaSlimeRecreation.yaml
+  scenarioId: beta-alpha-slime-recreation
+  name: Alpha Slime Recreation
+  description: Recreates the alpha slime loop with move, pickup, and reverse fallback behavior
+
 - contentPath: src\GameGameGame.Content\Beta\CurrentTools\DropFacingShowcase.yaml
   scenarioId: beta-drop-showcase
   name: Drop Showcase

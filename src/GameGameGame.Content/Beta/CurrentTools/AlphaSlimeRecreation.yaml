@@ -1,0 +1,98 @@
+entityTemplates:
+  betaAlphaSlimeRoom:
+    name: Beta Alpha Slime Recreation Room
+    inventoryWidth: 8
+    inventoryHeight: 6
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: smallSlimeCollector
+      templateId: betaSmallSlime
+      coord:
+        x: 1
+        y: 1
+    - entityId: smallPebble
+      templateId: betaSmallPebble
+      coord:
+        x: 5
+        y: 1
+    - entityId: smallPebble2
+      templateId: betaSmallPebble
+      coord:
+        x: 3
+        y: 0
+    - entityId: bigSlimePlayerCollector
+      templateId: betaBigSlime
+      coord:
+        x: 3
+        y: 2
+    - entityId: smallSlimePlayerTester
+      templateId: betaSmallSlime
+      coord:
+        x: 2
+        y: 5
+  betaAlphaPlayer:
+    name: Beta Alpha Player
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 5
+    carryingCapacity: 5
+    actionStateDefaults:
+      facing: North
+  betaSmallSlime:
+    name: Small Slime
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 2
+    defaultActionPlanId: slimeWalkPickupReverse
+    actionStateDefaults:
+      facing: East
+  betaBigSlime:
+    name: Big Slime
+    inventoryWidth: 4
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 10
+    defaultActionPlanId: slimeWalkPickupReverse
+    actionStateDefaults:
+      facing: South
+  betaSmallPebble:
+    name: Small Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  betaAlphaSlimeRoom:
+    glyph: '#'
+    color: Gray
+  betaAlphaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaSmallSlime:
+    glyph: 's'
+    color: Green
+  betaBigSlime:
+    glyph: 'S'
+    color: DarkGreen
+  betaSmallPebble:
+    glyph: '*'
+    color: White
+actionPlans:
+  slimeWalkPickupReverse:
+    id: slimeWalkPickupReverse
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PickupTarget
+      - kind: ReverseFacing
+scenarios:
+  beta-alpha-slime-recreation:
+    name: Beta Alpha Slime Recreation
+    scenarioRootEntityTemplateId: betaAlphaSlimeRoom
+    playerEntityTemplateId: betaAlphaPlayer
+    playerEntityId: betaAlphaPlayer
+    playerStart:
+      x: 5
+      y: 3
