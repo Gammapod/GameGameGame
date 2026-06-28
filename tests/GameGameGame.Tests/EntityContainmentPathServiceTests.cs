@@ -239,7 +239,7 @@ public sealed class EntityContainmentPathServiceTests
     private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location, int inventoryWidth, int inventoryHeight)
     {
         var nodeId = world.GetNodeId(location);
-        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, Weight: 1, CarryingCapacity: 10));
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, Bulk: 1, Aperture: 10));
         world.Occupancy.Add(nodeId, entityId);
     }
 }

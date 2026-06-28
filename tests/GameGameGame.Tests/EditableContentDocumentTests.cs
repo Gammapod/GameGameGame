@@ -70,8 +70,8 @@ public sealed class EditableContentDocumentTests
                 "Giant Slime",
                 InventoryWidth: 3,
                 InventoryHeight: 3,
-                Weight: 20,
-                CarryingCapacity: 20),
+                Bulk: 20,
+                Aperture: 20),
             new EntityPresentation('S', PresentationColor.DarkGreen));
 
         var registry = EditableContentDocument.LoadYaml(document.SaveYaml()).ToRegistry();

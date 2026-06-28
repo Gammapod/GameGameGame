@@ -60,10 +60,9 @@ public static class ConsoleInspectionDisplayFormatter
 
     private static string FormatLoad(EntityInspectionPanel panel)
     {
-        var carried = FindProperty(panel, "Carried Weight") ?? "?";
-        var capacity = FindProperty(panel, "Carrying Capacity") ?? "?";
-        var total = FindProperty(panel, "Total Weight") ?? "?";
-        return $"carried {carried}/{capacity}, total {total}";
+        var bulk = FindProperty(panel, "Bulk") ?? "?";
+        var aperture = FindProperty(panel, "Aperture") ?? "?";
+        return $"bulk {bulk}, aperture {aperture}";
     }
 
     private static string? FindProperty(EntityInspectionPanel panel, string name) =>

@@ -46,7 +46,7 @@ public sealed class AlphaScenarioFixtureTests
         var document = new EditableContentDocument();
         var roomId = document.AddEntityTemplate(
             "Root Only Room",
-            new EntityTemplate("Root Only Room", InventoryWidth: 2, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Root Only Room", InventoryWidth: 2, InventoryHeight: 2, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
 
         var materialization = ScenarioMaterializer.MaterializeRootOnly(

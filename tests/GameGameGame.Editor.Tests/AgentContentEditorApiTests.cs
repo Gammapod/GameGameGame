@@ -18,8 +18,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 2,
                 InventoryHeight: 2,
-                Weight: 5,
-                CarryingCapacity: 10,
+                Bulk: 5,
+                Aperture: 10,
                 Glyph: '@',
                 Color: PresentationColor.Cyan)));
         AssertSuccess(api.SetInitialFacing(actorId, Direction.East));
@@ -84,8 +84,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 1,
                 InventoryHeight: 1,
-                Weight: 1,
-                CarryingCapacity: 3,
+                Bulk: 1,
+                Aperture: 3,
                 Glyph: 'r',
                 Color: PresentationColor.Green)));
         AssertSuccess(api.SetInitialFacing(ratId, Direction.West));
@@ -116,8 +116,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 2,
                 InventoryHeight: 1,
-                Weight: 1,
-                CarryingCapacity: 10,
+                Bulk: 1,
+                Aperture: 10,
                 Glyph: 't',
                 Color: PresentationColor.Yellow)));
         var planId = AssertSuccess(api.CreateActionPlan("Transfer Behavior"));
@@ -144,8 +144,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 3,
                 InventoryHeight: 2,
-                Weight: 100,
-                CarryingCapacity: 100,
+                Bulk: 100,
+                Aperture: 100,
                 Glyph: '#',
                 Color: PresentationColor.Gray)));
         var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("API Scenario Player"));
@@ -154,8 +154,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 0,
                 InventoryHeight: 0,
-                Weight: 1,
-                CarryingCapacity: 5,
+                Bulk: 1,
+                Aperture: 5,
                 Glyph: '@',
                 Color: PresentationColor.Yellow)));
         AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));
@@ -190,8 +190,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 3,
                 InventoryHeight: 2,
-                Weight: 100,
-                CarryingCapacity: 100,
+                Bulk: 100,
+                Aperture: 100,
                 Glyph: '#',
                 Color: PresentationColor.Gray)));
         var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Review Player"));
@@ -200,8 +200,8 @@ public sealed class AgentContentEditorApiTests
             new AgentEntityTemplateUpdate(
                 InventoryWidth: 0,
                 InventoryHeight: 0,
-                Weight: 1,
-                CarryingCapacity: 5,
+                Bulk: 1,
+                Aperture: 5,
                 Glyph: '@',
                 Color: PresentationColor.Yellow)));
         AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));

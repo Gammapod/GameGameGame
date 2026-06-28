@@ -19,7 +19,7 @@ public enum FailureReason
     TargetIsActor,
     TargetNotAdjacent,
     InvalidPlacement,
-    CapacityExceeded,
+    ApertureBlocked,
     TargetNotInInventory,
     InvalidDropDestination,
     MoveBlocked,

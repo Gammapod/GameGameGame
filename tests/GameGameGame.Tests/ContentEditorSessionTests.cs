@@ -67,7 +67,7 @@ public sealed class ContentEditorSessionTests
 
             session.Editor.UpdateEntityPreset(
                 id,
-                session.Editor.GetEntityPreset(id).Template with { Name = "Heavy Rock", Weight = 5 },
+                session.Editor.GetEntityPreset(id).Template with { Name = "Heavy Rock", Bulk = 5 },
                 new EntityPresentation('R', PresentationColor.Gray));
             Assert.True(session.IsDirty);
 
@@ -77,7 +77,7 @@ public sealed class ContentEditorSessionTests
             Assert.False(session.IsDirty);
             var reloaded = YamlContentLoader.LoadRegistryFile(path);
             Assert.Equal("Heavy Rock", reloaded.EntityTemplates[id].Name);
-            Assert.Equal(5, reloaded.EntityTemplates[id].Weight);
+            Assert.Equal(5, reloaded.EntityTemplates[id].Bulk);
             Assert.Equal('R', reloaded.Presentations[id].Glyph);
         }
         finally

@@ -646,7 +646,7 @@ public sealed class CoreActionPlanTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
-        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 20 };
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 20 };
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
         var descriptor = new ActionPlanDescriptor(
             new ActionPlanId("pickup-target"),
@@ -1987,7 +1987,7 @@ public sealed class CoreActionPlanTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
-        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 30 };
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 30 };
         var chestId = AddEntityWithInventory(world, "chest", "Chest", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 2, inventoryHeight: 2, carryingCapacity: 30);
         var blockerId = AddEntity(world, "blocker", "Blocker", new PlaneCoord(new PlaneId("chestInventory"), new GridCoord(0, 0)));
         var gemId = AddEntity(world, "gem", "Gem", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)));
@@ -2011,7 +2011,7 @@ public sealed class CoreActionPlanTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
-        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 30 };
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 30 };
         var blockerId = AddEntity(world, "blocker", "Blocker", new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
         world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
@@ -2082,7 +2082,7 @@ public sealed class CoreActionPlanTests
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         var chestId = AddEntityWithInventory(world, "chest", "Chest", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 1, inventoryHeight: 1, carryingCapacity: 30);
-        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { CarryingCapacity = 30 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 30 };
         Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
         world.SetActionTarget(TestWorld.SlimeId, chestId);
         var plan = CreateBehaviorPlan("give-player", ActionPlanBehaviorStepKind.GiveTarget);
@@ -2340,7 +2340,7 @@ public sealed class CoreActionPlanTests
         int inventoryHeight,
         int carryingCapacity)
     {
-        var entityId = AddEntity(world, id, name, location, inventoryWidth, inventoryHeight, weight: 1, carryingCapacity);
+        var entityId = AddEntity(world, id, name, location, inventoryWidth, inventoryHeight, bulk: 1, aperture: carryingCapacity);
         var inventoryPlaneId = new PlaneId($"{id}Inventory");
         AddPlane(world, inventoryPlaneId, inventoryWidth, inventoryHeight);
         world.RegisterInventoryPlane(entityId, inventoryPlaneId);
@@ -2354,12 +2354,12 @@ public sealed class CoreActionPlanTests
         PlaneCoord location,
         int inventoryWidth = 0,
         int inventoryHeight = 0,
-        int weight = 1,
-        int carryingCapacity = 1)
+        int bulk = 1,
+        int aperture = 1)
     {
         var entityId = new EntityId(id);
         var nodeId = world.GetNodeId(location);
-        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, weight, carryingCapacity));
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, bulk, aperture));
         world.Occupancy.Add(nodeId, entityId);
         return entityId;
     }

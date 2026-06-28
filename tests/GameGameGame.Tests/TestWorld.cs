@@ -19,9 +19,9 @@ internal static class TestWorld
         AddPlane(world, new Plane(PlayerInventoryPlaneId, "Player Inventory", 3, 2));
         AddPlane(world, new Plane(SlimeInventoryPlaneId, "Slime Inventory", 1, 1));
 
-        AddEntity(world, PlayerId, "Player", new PlaneCoord(WorldPlaneId, new GridCoord(1, 2)), inventoryWidth: 3, inventoryHeight: 2, weight: 10, carryingCapacity: 5);
-        AddEntity(world, SlimeId, "Slime", new PlaneCoord(WorldPlaneId, new GridCoord(1, 1)), inventoryWidth: 1, inventoryHeight: 1, weight: 3, carryingCapacity: 20);
-        AddEntity(world, RockId, "Rock", new PlaneCoord(WorldPlaneId, new GridCoord(2, 1)), inventoryWidth: 0, inventoryHeight: 0, weight: 3, carryingCapacity: 3);
+        AddEntity(world, PlayerId, "Player", new PlaneCoord(WorldPlaneId, new GridCoord(1, 2)), inventoryWidth: 3, inventoryHeight: 2, bulk: 10, aperture: 5);
+        AddEntity(world, SlimeId, "Slime", new PlaneCoord(WorldPlaneId, new GridCoord(1, 1)), inventoryWidth: 1, inventoryHeight: 1, bulk: 3, aperture: 20);
+        AddEntity(world, RockId, "Rock", new PlaneCoord(WorldPlaneId, new GridCoord(2, 1)), inventoryWidth: 0, inventoryHeight: 0, bulk: 3, aperture: 3);
 
         world.RegisterInventoryPlane(PlayerId, PlayerInventoryPlaneId);
         world.RegisterInventoryPlane(SlimeId, SlimeInventoryPlaneId);
@@ -49,11 +49,11 @@ internal static class TestWorld
         PlaneCoord location,
         int inventoryWidth,
         int inventoryHeight,
-        int weight,
-        int carryingCapacity)
+        int bulk,
+        int aperture)
     {
         var nodeId = world.GetNodeId(location);
-        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, weight, carryingCapacity));
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, bulk, aperture));
         world.Occupancy.Add(nodeId, entityId);
     }
 }

@@ -693,8 +693,8 @@ public sealed class ContentRegistryValidationTests
                     "Invisible Rock",
                     InventoryWidth: 0,
                     InventoryHeight: 0,
-                    Weight: 3,
-                    CarryingCapacity: 3));
+                    Bulk: 3,
+                    Aperture: 3));
 
         var result = registry.Validate();
 
@@ -714,8 +714,8 @@ public sealed class ContentRegistryValidationTests
                     "Bad Bag",
                     InventoryWidth: 1,
                     InventoryHeight: 1,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(new EntityId("outsideRock"), PrototypeContent.RockTemplateId, new GridCoord(1, 0))
@@ -742,8 +742,8 @@ public sealed class ContentRegistryValidationTests
                     "Crowded Bag",
                     InventoryWidth: 2,
                     InventoryHeight: 1,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(new EntityId("firstRock"), PrototypeContent.RockTemplateId, new GridCoord(0, 0)),
@@ -772,8 +772,8 @@ public sealed class ContentRegistryValidationTests
                     "Duplicate Bag",
                     InventoryWidth: 2,
                     InventoryHeight: 1,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(duplicateId, PrototypeContent.RockTemplateId, new GridCoord(0, 0)),
@@ -799,8 +799,8 @@ public sealed class ContentRegistryValidationTests
                     "Pocketless Bag",
                     InventoryWidth: 0,
                     InventoryHeight: 0,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(new EntityId("trappedRock"), PrototypeContent.RockTemplateId, new GridCoord(0, 0))
@@ -901,8 +901,8 @@ public sealed class ContentRegistryValidationTests
                     "Bad Bag",
                     InventoryWidth: 1,
                     InventoryHeight: 1,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(new EntityId("outsideRock"), PrototypeContent.RockTemplateId, new GridCoord(2, 0))
@@ -913,8 +913,8 @@ public sealed class ContentRegistryValidationTests
                     "Other Bag",
                     InventoryWidth: 0,
                     InventoryHeight: 0,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(new EntityId("trappedRock"), PrototypeContent.RockTemplateId, new GridCoord(0, 0))
@@ -973,8 +973,8 @@ public sealed class ContentRegistryValidationTests
                     "Bad Bag",
                     InventoryWidth: 1,
                     InventoryHeight: 1,
-                    Weight: 1,
-                    CarryingCapacity: 10,
+                    Bulk: 1,
+                    Aperture: 10,
                     CarriedEntities:
                     [
                         new CarriedEntityTemplate(carriedId, PrototypeContent.RockTemplateId, new GridCoord(2, 0))

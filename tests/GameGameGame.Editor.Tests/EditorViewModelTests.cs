@@ -46,7 +46,7 @@ public sealed class EditorViewModelTests
             editor.SelectedName = "Editor Rock";
             editor.SelectedGlyph = "R";
             editor.SelectedColor = PresentationColor.White;
-            editor.SelectedWeight = 5;
+            editor.SelectedBulk = 5;
             editor.ApplySelectedEntityPresetEdits();
 
             Assert.True(editor.IsDirty);

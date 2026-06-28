@@ -32,7 +32,7 @@ The expected loop is:
 
 Core tests cover engine behavior that content is allowed to reference.
 
-They are responsible for action primitives, movement, inventory interactions, weight/capacity rules, action plan interpretation, traces, and turn resolution. Core tests should use controlled test fixtures and should not depend on prototype content values.
+They are responsible for action primitives, movement, inventory interactions, Bulk/Aperture rules, action plan interpretation, traces, and turn resolution. Core tests should use controlled test fixtures and should not depend on prototype content values.
 
 ## Content Tests
 

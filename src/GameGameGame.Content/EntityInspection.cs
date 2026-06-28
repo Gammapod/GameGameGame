@@ -40,17 +40,14 @@ public sealed class EntityInspectionService(Func<EntityId, EntityInspectionAppea
     public EntityInspectionPanel Inspect(WorldState world, EntityId entityId)
     {
         var entity = world.Entities[entityId];
-        var weight = new WeightService();
         var appearance = GetAppearance(entity);
 
         var properties = new List<EntityInspectionProperty>
         {
             new("Id", entity.Id.ToString()),
             new("Location", world.GetEntityLocation(entityId).ToString()),
-            new("Weight", entity.Weight.ToString()),
-            new("Total Weight", weight.GetTotalWeight(world, entityId).ToString()),
-            new("Carried Weight", weight.GetCarriedWeight(world, entityId).ToString()),
-            new("Carrying Capacity", entity.CarryingCapacity.ToString()),
+            new("Bulk", entity.Bulk.ToString()),
+            new("Aperture", entity.Aperture.ToString()),
             new("Inventory Dimensions", $"{entity.InventoryWidth}x{entity.InventoryHeight}"),
             new("Inventory Plane", world.GetInventoryPlaneId(entityId)?.ToString() ?? "none"),
             new("Usable Inventory", entity.HasUsableInventory.ToString())

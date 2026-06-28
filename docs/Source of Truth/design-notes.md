@@ -20,7 +20,7 @@ Example emergent roles include:
 
 - Actor: has a decidable action plan or decision trigger.
 - Mover: has a move action in an available action plan.
-- Carrier: has usable inventory dimensions and enough carrying capacity.
+- Carrier: has usable inventory dimensions and an aperture large enough for constrained inventory transitions.
 - Pickup target: passes the checks of some pickup action.
 - Equipment: can be placed into a functional space whose rules care about it.
 - Modifier: changes derived properties or action resolution in context.
@@ -173,8 +173,8 @@ Entity properties should be as small and mechanical as possible. Properties exis
 
 Current preferred primitive properties include:
 
-- Weight, where absent or zero weight means `0`.
-- Carrying capacity, used against recursively carried total weight.
+- Bulk, the size of an entity for constrained inventory transitions.
+- Aperture, the largest bulk that can move into or out of an entity's inventory space through constrained actions.
 - Inventory width and inventory height, where either dimension being `0` means no usable inventory space.
 
 Inventory planes may still be materialized in world state, but their existence should follow from inventory dimensions rather than from a separate conceptual capability.
@@ -185,12 +185,12 @@ Engine code owns general mechanics:
 
 - Entity, plane, node, and occupancy data structures.
 - Inventory plane registration and lookup.
-- Movement, pickup, drop, weight, carrying capacity, action resolution, traces, and inspection data shapes.
+- Movement, pickup, drop, bulk, aperture, action resolution, traces, and inspection data shapes.
 - Primitive action and action-plan machinery.
 
 Content code owns specific game definitions:
 
-- Prototype entity IDs, names, glyphs, colors, weights, capacities, and inventory dimensions.
+- Prototype entity IDs, names, glyphs, colors, bulk, aperture, and inventory dimensions.
 - Prototype plane IDs and starting placements.
 - Scenario/world construction.
 - Which entities receive which reusable action plans.

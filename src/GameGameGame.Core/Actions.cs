@@ -117,38 +117,23 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
 
         trace.Add(TraceNode.Success("Target is adjacent"));
 
-        var relocation = movement.EvaluateRelocation(world, TargetId, MovementDestination.Plane(Destination));
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
         trace.Add(relocation.Trace);
 
         if (!relocation.CanRelocate)
         {
-            return ActionTrace.Fail(trace, FailureReason.InvalidPlacement, $"cannot place into {Destination}");
+            return ActionTrace.Fail(trace, relocation.Trace.Reason, relocation.Trace.Detail ?? $"cannot place into {Destination}");
         }
 
         trace.Add(TraceNode.Success("Destination can accept entity", Destination.ToString()));
 
-        var weight = new WeightService();
-        var carriedWeight = weight.GetCarriedWeight(world, actorId);
-        var targetWeight = weight.GetTotalWeight(world, TargetId);
-        var capacityTrace = new TraceNode("Check carrying capacity", TraceStatus.Info, detail: $"carried={carriedWeight}, target={targetWeight}, capacity={actor.CarryingCapacity}");
-        capacityTrace.Add(weight.TraceTotalWeight(world, TargetId));
-
-        if (carriedWeight + targetWeight > actor.CarryingCapacity)
-        {
-            capacityTrace.Status = TraceStatus.Failure;
-            capacityTrace.Reason = FailureReason.CapacityExceeded;
-            trace.Add(capacityTrace);
-            return ActionTrace.Fail(trace, FailureReason.CapacityExceeded, $"{actor.Name} would carry {carriedWeight + targetWeight}/{actor.CarryingCapacity}");
-        }
-
-        capacityTrace.Status = TraceStatus.Success;
-        trace.Add(capacityTrace);
         trace.Status = TraceStatus.Success;
         return new ActionEvaluation(true, trace);
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        movement.TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
+        new ConstrainedInventoryRelocationService(movement).TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
 }
 
 public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IActionIntent
@@ -194,12 +179,13 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
 
         trace.Add(TraceNode.Success("Destination is on actor plane", Destination.ToString()));
 
-        var relocation = movement.EvaluateRelocation(world, TargetId, MovementDestination.Plane(Destination));
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
         trace.Add(relocation.Trace);
 
         if (!relocation.CanRelocate)
         {
-            return ActionTrace.Fail(trace, FailureReason.InvalidPlacement, $"cannot place into {Destination}");
+            return ActionTrace.Fail(trace, relocation.Trace.Reason, relocation.Trace.Detail ?? $"cannot place into {Destination}");
         }
 
         trace.Add(TraceNode.Success("Destination can accept entity", Destination.ToString()));
@@ -208,7 +194,7 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        movement.TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
+        new ConstrainedInventoryRelocationService(movement).TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
 
 }
 

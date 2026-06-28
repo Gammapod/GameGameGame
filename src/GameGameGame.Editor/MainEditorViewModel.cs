@@ -13,8 +13,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
     private string _selectedName = string.Empty;
     private int _selectedInventoryWidth;
     private int _selectedInventoryHeight;
-    private int _selectedWeight;
-    private int _selectedCarryingCapacity;
+    private int _selectedBulk;
+    private int _selectedAperture;
     private string _selectedGlyph = string.Empty;
     private string _entityPresetNameInput = string.Empty;
     private string _actionPlanNameInput = string.Empty;
@@ -160,16 +160,16 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         set => SetField(ref _selectedInventoryHeight, value);
     }
 
-    public int SelectedWeight
+    public int SelectedBulk
     {
-        get => _selectedWeight;
-        set => SetField(ref _selectedWeight, value);
+        get => _selectedBulk;
+        set => SetField(ref _selectedBulk, value);
     }
 
-    public int SelectedCarryingCapacity
+    public int SelectedAperture
     {
-        get => _selectedCarryingCapacity;
-        set => SetField(ref _selectedCarryingCapacity, value);
+        get => _selectedAperture;
+        set => SetField(ref _selectedAperture, value);
     }
 
     public string SelectedGlyph
@@ -609,8 +609,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         SelectedName = preset.Template.Name;
         SelectedInventoryWidth = preset.Template.InventoryWidth;
         SelectedInventoryHeight = preset.Template.InventoryHeight;
-        SelectedWeight = preset.Template.Weight;
-        SelectedCarryingCapacity = preset.Template.CarryingCapacity;
+        SelectedBulk = preset.Template.Bulk;
+        SelectedAperture = preset.Template.Aperture;
         SelectedGlyph = preset.Presentation.Glyph.ToString();
         SelectedColor = preset.Presentation.Color;
         SelectedDefaultActionPlan = preset.Template.DefaultActionPlanId is { } planId
@@ -638,8 +638,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 Name = SelectedName,
                 InventoryWidth = SelectedInventoryWidth,
                 InventoryHeight = SelectedInventoryHeight,
-                Weight = SelectedWeight,
-                CarryingCapacity = SelectedCarryingCapacity
+                Bulk = SelectedBulk,
+                Aperture = SelectedAperture
             },
             new EntityPresentation(glyph, SelectedColor));
 
@@ -1787,8 +1787,8 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
         SelectedName = string.Empty;
         SelectedInventoryWidth = 0;
         SelectedInventoryHeight = 0;
-        SelectedWeight = 0;
-        SelectedCarryingCapacity = 0;
+        SelectedBulk = 0;
+        SelectedAperture = 0;
         SelectedGlyph = string.Empty;
         SelectedColor = PresentationColor.Gray;
         SelectedDefaultActionPlan = null;

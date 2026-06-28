@@ -15,13 +15,13 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Scenario Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Scenario Room", InventoryWidth: 3, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Scenario Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
 
         var eastWalkerId = editor.CreateEntityPreset("East Walker");
         editor.UpdateEntityPreset(
             eastWalkerId,
-            new EntityTemplate("East Walker", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityTemplate("East Walker", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
             new EntityPresentation('e', PresentationColor.Green));
         editor.SetInitialFacing(eastWalkerId, Direction.East);
         var eastPlanId = editor.CreateActionPlan("East Walker Behavior");
@@ -31,7 +31,7 @@ public sealed class ScenarioToolingServiceTests
         var southWalkerId = editor.CreateEntityPreset("South Walker");
         editor.UpdateEntityPreset(
             southWalkerId,
-            new EntityTemplate("South Walker", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityTemplate("South Walker", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
             new EntityPresentation('s', PresentationColor.Cyan));
         editor.SetInitialFacing(southWalkerId, Direction.South);
         var southPlanId = editor.CreateActionPlan("South Walker Behavior");
@@ -60,7 +60,7 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Root Only Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Root Only Room", InventoryWidth: 1, InventoryHeight: 1, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Root Only Room", InventoryWidth: 1, InventoryHeight: 1, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
 
         var report = ScenarioRunService.Run(document, new ScenarioRunRequest(scenarioRootId, TurnCount: 0));
@@ -77,13 +77,13 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Persisted Run Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Persisted Run Room", InventoryWidth: 4, InventoryHeight: 3, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Persisted Run Room", InventoryWidth: 4, InventoryHeight: 3, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
 
         var playerTemplateId = editor.CreateEntityPreset("Persisted Runner");
         editor.UpdateEntityPreset(
             playerTemplateId,
-            new EntityTemplate("Persisted Runner", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 5),
+            new EntityTemplate("Persisted Runner", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
             new EntityPresentation('@', PresentationColor.Yellow));
         editor.SetInitialFacing(playerTemplateId, Direction.East);
         var planId = editor.CreateActionPlan("Player Move East");
@@ -116,17 +116,17 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Inventory Summary Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Inventory Summary Room", InventoryWidth: 3, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Inventory Summary Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         var carrierId = editor.CreateEntityPreset("Report Carrier");
         editor.UpdateEntityPreset(
             carrierId,
-            new EntityTemplate("Report Carrier", InventoryWidth: 2, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10),
+            new EntityTemplate("Report Carrier", InventoryWidth: 2, InventoryHeight: 1, Bulk: 1, Aperture: 10),
             new EntityPresentation('c', PresentationColor.Cyan));
         var gemId = editor.CreateEntityPreset("Report Gem");
         editor.UpdateEntityPreset(
             gemId,
-            new EntityTemplate("Report Gem", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityTemplate("Report Gem", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
             new EntityPresentation('*', PresentationColor.Yellow));
 
         editor.PlaceCarriedEntity(carrierId, new EntityId("reportGem"), gemId, new GridCoord(1, 0));
@@ -150,8 +150,8 @@ public sealed class ScenarioToolingServiceTests
         world.Planes.Add(bInventory, new Plane(bInventory, "Cycle B Inventory", 1, 1));
         var aSlot = world.AddNode(aInventory, new GridCoord(0, 0));
         var bSlot = world.AddNode(bInventory, new GridCoord(0, 0));
-        world.Entities.Add(aId, new Entity(aId, "Cycle A", bSlot, InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10));
-        world.Entities.Add(bId, new Entity(bId, "Cycle B", aSlot, InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10));
+        world.Entities.Add(aId, new Entity(aId, "Cycle A", bSlot, InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 10));
+        world.Entities.Add(bId, new Entity(bId, "Cycle B", aSlot, InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 10));
         world.Occupancy.Add(aSlot, bId);
         world.Occupancy.Add(bSlot, aId);
         world.RegisterInventoryPlane(aId, aInventory);
@@ -174,13 +174,13 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Scenario Duel Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Scenario Duel Room", InventoryWidth: 3, InventoryHeight: 1, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Scenario Duel Room", InventoryWidth: 3, InventoryHeight: 1, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
 
         var passiveId = editor.CreateEntityPreset("Passive Walker");
         editor.UpdateEntityPreset(
             passiveId,
-            new EntityTemplate("Passive Walker", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityTemplate("Passive Walker", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
             new EntityPresentation('p', PresentationColor.Green));
         editor.SetInitialFacing(passiveId, Direction.East);
         var passivePlanId = editor.CreateActionPlan("Passive Walker Behavior");
@@ -190,7 +190,7 @@ public sealed class ScenarioToolingServiceTests
         var destroyerId = editor.CreateEntityPreset("Destroyer Walker");
         editor.UpdateEntityPreset(
             destroyerId,
-            new EntityTemplate("Destroyer Walker", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityTemplate("Destroyer Walker", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
             new EntityPresentation('d', PresentationColor.Yellow));
         editor.SetInitialFacing(destroyerId, Direction.West);
         var destroyerPlanId = editor.CreateActionPlan("Destroyer Walker Behavior");
@@ -220,13 +220,13 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Alpha Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Alpha Room", InventoryWidth: 4, InventoryHeight: 3, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Alpha Room", InventoryWidth: 4, InventoryHeight: 3, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
 
         var playerTemplateId = editor.CreateEntityPreset("Alpha Player");
         editor.UpdateEntityPreset(
             playerTemplateId,
-            new EntityTemplate("Alpha Player", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 5),
+            new EntityTemplate("Alpha Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
             new EntityPresentation('@', PresentationColor.Yellow));
         editor.SetInitialFacing(playerTemplateId, Direction.North);
 
@@ -256,7 +256,7 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Blocked Alpha Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Blocked Alpha Room", InventoryWidth: 2, InventoryHeight: 1, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Blocked Alpha Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         var blockerTemplateId = editor.CreateEntityPreset("Blocker");
         editor.PlaceCarriedEntity(scenarioRootId, new EntityId("blocker"), blockerTemplateId, new GridCoord(0, 0));
@@ -309,12 +309,12 @@ public sealed class ScenarioToolingServiceTests
         var scenarioRootId = editor.CreateEntityPreset("Persisted Alpha Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Persisted Alpha Room", InventoryWidth: 3, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Persisted Alpha Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         var playerTemplateId = editor.CreateEntityPreset("Persisted Player");
         editor.UpdateEntityPreset(
             playerTemplateId,
-            new EntityTemplate("Persisted Player", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 5),
+            new EntityTemplate("Persisted Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
             new EntityPresentation('@', PresentationColor.Yellow));
 
         editor.UpsertScenario(new ScenarioDefinition(

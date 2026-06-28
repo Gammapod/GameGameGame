@@ -95,6 +95,31 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderMaterializesBulkAndApertureMetadata()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              satchel:
+                name: Satchel
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 2
+                aperture: 3
+            presentations:
+              satchel:
+                glyph: b
+                color: Earth
+            actionPlans: {}
+            """);
+
+        var template = registry.GetEntityTemplate(new EntityTemplateId("satchel"));
+
+        Assert.Equal(2, template.Bulk);
+        Assert.Equal(3, template.Aperture);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCanonicalActionPlanDescriptorsWithoutVariableNames()
     {
         var registry = YamlContentLoader.LoadRegistry(

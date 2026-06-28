@@ -118,8 +118,8 @@ public static class PrototypeContent
             nodeId,
             template.InventoryWidth,
             template.InventoryHeight,
-            template.Weight,
-            template.CarryingCapacity);
+            template.Bulk,
+            template.Aperture);
 
         AddEntity(world, entity, options.InventoryPlaneId, options.InventoryPlaneName);
         IEntityActionPlan? actionPlan = null;

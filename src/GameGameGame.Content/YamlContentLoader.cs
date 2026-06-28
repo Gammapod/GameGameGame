@@ -44,8 +44,8 @@ public static class YamlContentLoader
                 template.Name ?? id,
                 template.InventoryWidth,
                 template.InventoryHeight,
-                template.Weight,
-                template.CarryingCapacity,
+                template.Bulk ?? template.Weight,
+                template.Aperture ?? template.CarryingCapacity,
                 CarriedEntities: MaterializeCarriedEntities(template.CarriedEntities),
                 DefaultActionPlanId: template.DefaultActionPlanId is null ? null : new ActionPlanTemplateId(template.DefaultActionPlanId),
                 DefaultPlanVariables: MaterializePlanVariables(template.DefaultPlanVariables),
@@ -278,6 +278,10 @@ public static class YamlContentLoader
         public int Weight { get; set; }
 
         public int CarryingCapacity { get; set; }
+
+        public int? Bulk { get; set; }
+
+        public int? Aperture { get; set; }
 
         public string? DefaultActionPlanId { get; set; }
 

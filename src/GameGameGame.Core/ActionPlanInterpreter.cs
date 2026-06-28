@@ -901,7 +901,8 @@ public sealed class ActionPlanInterpreter
         }
 
         var destination = new MovementDestination.AdjacentMovementDestination(actorId, facing.Value);
-        var evaluation = _movement.EvaluateRelocation(world, carried.Value, destination);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement);
+        var evaluation = constrainedRelocation.Evaluate(world, carried.Value, destination);
         trace.Add(evaluation.Trace);
         if (!evaluation.CanRelocate || evaluation.Destination is not { } resolvedDestination)
         {
@@ -1079,7 +1080,7 @@ public sealed class ActionPlanInterpreter
 
         var createdId = GeneratePlaceholderEntityId(world);
         var nodeId = world.GetNodeId(destination);
-        world.Entities.Add(createdId, new Entity(createdId, "Placeholder Rock", nodeId, InventoryWidth: 0, InventoryHeight: 0, Weight: 3, CarryingCapacity: 3));
+        world.Entities.Add(createdId, new Entity(createdId, "Placeholder Rock", nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 3, Aperture: 3));
         world.Occupancy.Add(nodeId, createdId);
         trace.Status = TraceStatus.Success;
         trace.Detail = $"created {createdId} at {destination}";
@@ -1269,32 +1270,14 @@ public sealed class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        var weight = new WeightService();
-        var carriedWeight = weight.GetCarriedWeight(world, destinationOwnerId);
-        var transferWeight = weight.GetTotalWeight(world, carriedId);
-        var capacityTrace = new TraceNode("Check transfer carrying capacity", TraceStatus.Info, detail: $"carried={carriedWeight}, transfer={transferWeight}, capacity={destinationOwner.CarryingCapacity}");
-        capacityTrace.Add(weight.TraceTotalWeight(world, carriedId));
-        if (carriedWeight + transferWeight > destinationOwner.CarryingCapacity)
-        {
-            capacityTrace.Status = TraceStatus.Failure;
-            capacityTrace.Reason = FailureReason.CapacityExceeded;
-            trace.Add(capacityTrace);
-            trace.Status = TraceStatus.Failure;
-            trace.Reason = FailureReason.CapacityExceeded;
-            trace.Detail = $"{destinationOwner.Name} would carry {carriedWeight + transferWeight}/{destinationOwner.CarryingCapacity}";
-            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
-        }
-
-        capacityTrace.Status = TraceStatus.Success;
-        trace.Add(capacityTrace);
-
         ActionResolution? lastFailure = null;
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement);
         for (var y = 0; y < inventoryPlane.Height; y++)
         {
             for (var x = 0; x < inventoryPlane.Width; x++)
             {
                 var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
-                var evaluation = _movement.EvaluateRelocation(world, carriedId, MovementDestination.Plane(destination));
+                var evaluation = constrainedRelocation.Evaluate(world, carriedId, MovementDestination.Plane(destination));
                 trace.Add(evaluation.Trace);
 
                 if (evaluation is { CanRelocate: true, Destination: { } resolvedDestination })

@@ -82,7 +82,7 @@ public sealed class ContentEditorAuthoringTests
         var ratId = editor.CreateEntityPreset("Behavior Rat");
         editor.UpdateEntityPreset(
             ratId,
-            new EntityTemplate("Behavior Rat", InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 3),
+            new EntityTemplate("Behavior Rat", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 3),
             new EntityPresentation('r', PresentationColor.Green));
         editor.SetInitialFacing(ratId, Direction.West);
 
@@ -112,7 +112,7 @@ public sealed class ContentEditorAuthoringTests
         var traderId = editor.CreateEntityPreset("Transfer Trader");
         editor.UpdateEntityPreset(
             traderId,
-            new EntityTemplate("Transfer Trader", InventoryWidth: 2, InventoryHeight: 1, Weight: 1, CarryingCapacity: 10),
+            new EntityTemplate("Transfer Trader", InventoryWidth: 2, InventoryHeight: 1, Bulk: 1, Aperture: 10),
             new EntityPresentation('t', PresentationColor.Yellow));
 
         var planId = editor.CreateActionPlan("Transfer Behavior");
@@ -134,7 +134,7 @@ public sealed class ContentEditorAuthoringTests
         var ratId = editor.CreateEntityPreset("Preview Rat");
         editor.UpdateEntityPreset(
             ratId,
-            new EntityTemplate("Preview Rat", InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 3),
+            new EntityTemplate("Preview Rat", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 3),
             new EntityPresentation('r', PresentationColor.Green));
         var planId = editor.CreateMoveFacingPickupTargetBehavior("Preview Rat Behavior");
         editor.SetDefaultActionPlan(ratId, planId);
@@ -156,7 +156,7 @@ public sealed class ContentEditorAuthoringTests
         var ratId = editor.CreateEntityPreset("Helper Rat");
         editor.UpdateEntityPreset(
             ratId,
-            new EntityTemplate("Helper Rat", InventoryWidth: 1, InventoryHeight: 1, Weight: 1, CarryingCapacity: 3),
+            new EntityTemplate("Helper Rat", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 3),
             new EntityPresentation('r', PresentationColor.Green));
 
         var planId = editor.CreateMoveFacingPickupTargetBehavior("Helper Rat Behavior");

@@ -46,7 +46,7 @@ Stable support is appropriate for editor-service workflows, agent/headless API c
 Current stable authoring areas:
 
 - entity templates and presentations;
-- inventory dimensions, weight, carrying capacity, and carried entity layout;
+- inventory dimensions, bulk, aperture, and carried entity layout;
 - legacy low-level action plans and action-plan steps remain loadable and editable as compatibility when an existing legacy plan is selected, but are hidden from current Avalonia GUI authoring paths where canonical ordered behavior-chain authoring is available;
 - actor initial `Facing` through `actionStateDefaults.facing`;
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
@@ -121,7 +121,7 @@ The Avalonia desktop editor is legacy-priority / maintenance-mode. It remains us
 The editor can currently:
 
 - create/open/save/reload content documents;
-- edit entity templates, presentations, inventory dimensions, weights, capacities, and carried entities;
+- edit entity templates, presentations, inventory dimensions, bulk, aperture, and carried entities;
 - assign/clear default action plans;
 - create new GUI action plans as empty/passive plans so authors can add canonical behavior-chain Action Steps without first creating legacy low-level steps;
 - edit actor initial `Facing`;
@@ -202,8 +202,8 @@ Current and planned Action Step / primitive support:
 | `MaintainChebyshevDistanceTwo` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists, is not self, and is on the actor's current plane, computes Chebyshev distance to the target, and moves one valid/open cardinal step toward distance 2. When too close it uses `flee/back-away` mode; when too far it uses `seek/close` mode. Direction tie-break is `North`, then `South`, then `West`, then `East`. Successful movement consumes the turn. At exactly Chebyshev distance 2 it fails/falls through without moving so later linear Action Steps can act at ideal range. If no improving valid/open move exists, or if the target is missing/self/off-plane, the step fails/falls through while preserving `Target`. |
 | `StrafeClockwise` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists, is not self, and is on the actor's current plane, selects the primary seek direction that `SeekTarget` would choose using Manhattan reduction and `North`, `South`, `West`, `East` tie-break, then attempts the clockwise perpendicular cardinal move. Successful movement consumes the turn and preserves `Target`. If no primary seek direction exists, or if the selected strafe destination is blocked/out of bounds/invalid, or if the target is missing/self/off-plane, the step fails/falls through while preserving `Target`. Adjacent targets still produce a primary direction; unlike `SeekTarget`, contact does not by itself fail strafing. |
 | `StrafeAnticlockwise` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Same as `StrafeClockwise`, except it attempts the anticlockwise perpendicular cardinal move from the selected primary seek direction. Successful movement consumes the turn; invalid target, missing primary direction, blocked, invalid, or out-of-bounds selected destinations fail/fall through while preserving `Target`. |
-| `GiveTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists and is not self, selects the first entity carried by the actor in row-major source order, and transfers it into the first valid target inventory coordinate in row-major destination order. Successful transfer consumes the turn. Missing/invalid/self target, nothing carried, target without usable inventory, no space, or capacity failure fails/falls through. Runtime transfer diagnostics include entity ID/name and source/destination coordinates; runtime entities do not currently carry template IDs. |
-| `TakeTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists and is not self, selects the first entity carried by the target in row-major source order, and transfers it into the first valid actor inventory coordinate in row-major destination order. Successful transfer consumes the turn. Missing/invalid/self target, target without usable inventory or contents, actor without usable inventory, no space, or capacity failure fails/falls through. Runtime transfer diagnostics include entity ID/name and source/destination coordinates; runtime entities do not currently carry template IDs. |
+| `GiveTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists and is not self, selects the first entity carried by the actor in row-major source order, and transfers it into the first valid target inventory coordinate in row-major destination order. Successful transfer consumes the turn. Missing/invalid/self target, nothing carried, target without usable inventory, no space, or aperture failure fails/falls through. Runtime transfer diagnostics include entity ID/name and source/destination coordinates; runtime entities do not currently carry template IDs. |
+| `TakeTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists and is not self, selects the first entity carried by the target in row-major source order, and transfers it into the first valid actor inventory coordinate in row-major destination order. Successful transfer consumes the turn. Missing/invalid/self target, target without usable inventory or contents, actor without usable inventory, no space, or aperture failure fails/falls through. Runtime transfer diagnostics include entity ID/name and source/destination coordinates; runtime entities do not currently carry template IDs. |
 | `BumpTarget` | Conceptualized | `Target` | `Self` | Deferred; may overlap with reaction slots, push, destroy, or future interaction steps. |
 | `TeleportTo` | Conceptualized | target location TBD | TBD | Deferred because it likely requires a new location/destination state slot rather than overloading entity `Target`. |
 
@@ -287,7 +287,7 @@ Behavior-chain validation/default policy:
 |---|---|---:|---:|---:|---:|---:|---:|---|
 | `Wait` | Stable | Yes | Yes | Yes | Yes | Yes | Yes | Consumes a turn through `WaitAction`. |
 | `Move` | Stable | Yes | Yes, canonical | Yes | Yes, reads `Facing` | Yes | Yes | Constrained movement primitive: self to adjacent peer/world location derived from canonical `Facing`. Uses relocation internally. |
-| `Pickup` | Stable | Yes | Yes, canonical target + literal coord | Yes | Yes, reads `Target` | Yes | Yes | Constrained movement primitive: canonical `Target` to authored carried inventory coordinate. Keeps pickup-specific validation/capacity rules. |
+| `Pickup` | Stable | Yes | Yes, canonical target + literal coord | Yes | Yes, reads `Target` | Yes | Yes | Constrained movement primitive: canonical `Target` to authored carried inventory coordinate. Keeps pickup-specific validation and Bulk/Aperture transition rules. |
 | `ReverseDirection` | Stable | Yes | Yes, canonical | Yes | Yes, reads/writes `Facing` | Yes | Yes | GUI authors fixed default turn behavior. Descriptor/runtime retain advanced turn flags. |
 | `CallPlan` | Stable | Yes | Yes | Yes | Yes, includes called-plan slot requirements | Yes | Yes | GUI can select called plan. |
 | `Teleport` | Advanced | Yes | Yes | Yes | Yes | Yes | Yes | General relocation primitive for arbitrary entity/destination movement. GUI exposes generic movement fields. |
@@ -321,8 +321,8 @@ Current movement descriptor concepts:
 
 Policy decisions:
 
-- `Teleport` is advanced and arbitrary; it does not enforce `Pickup` carrying-capacity rules.
-- `Pickup` remains the constrained/capacity-aware way to move peer/world entities into actor inventory.
+- `Teleport` is advanced and arbitrary; it does not enforce constrained Bulk/Aperture inventory transition rules.
+- `Pickup` remains the constrained aperture-aware way to move peer/world entities into actor inventory.
 - `Drop` validates that the target is carried by the actor and that the destination is on the actor plane.
 - `CanDrop` is intentionally deferred until a concrete action-plan branching use case appears.
 

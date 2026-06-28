@@ -59,7 +59,7 @@ Default workflow:
 | Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. |
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
 | Presentations | Assign/edit presentation data used by authored templates. |
-| Inventory / containment | Inventory dimensions, weight, carrying capacity, and carried entity layout. |
+| Inventory / containment | Inventory dimensions, bulk, aperture, and carried entity layout. |
 | Actor state | Initial actor `Facing` through `actionStateDefaults.facing`. |
 | Action-plan assignment | Assign or clear an entity template's default action plan. |
 | Action plans | Create, edit, delete, reorder, preview, and validate action plans. |
@@ -79,7 +79,7 @@ Author entity templates as reusable normal content. Current safe operations incl
 - create, edit, duplicate, delete, and reorder templates;
 - assign presentation data;
 - assign or clear a default action plan;
-- configure inventory dimensions, weight, and carrying capacity;
+- configure inventory dimensions, bulk, and aperture;
 - place carried entities in authored inventory layouts;
 - set initial actor `Facing` when the template acts through action plans.
 
@@ -90,8 +90,8 @@ Prefer reusable templates over scenario-specific one-off definitions. Scenarios 
 Current inventory authoring supports:
 
 - inventory dimensions;
-- entity weight;
-- carrying capacity;
+- entity bulk;
+- aperture;
 - authored carried-entity layout;
 - pickup/drop-oriented content using supported Action Steps.
 
@@ -171,8 +171,8 @@ This table is the content-facing catalog of currently authorable canonical Actio
 |---|---|---|---|---|
 | `PickupTarget` | `Target` | carried inventory state | Attempt to pick up current target into actor inventory; falls through when pickup cannot act. | collectors, item pickup after bump/acquisition |
 | `DropFacing` | `Facing` | carried/world placement | Drop the first carried entity into the facing cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
-| `GiveTarget` | `Target` | actor/target inventory state | Transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/capacity checks fail. | peer transfer, offering, handoff demos |
-| `TakeTarget` | `Target` | target/actor inventory state | Transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/capacity checks fail. | taking from containers, stealing prototypes |
+| `GiveTarget` | `Target` | actor/target inventory state | Transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/aperture checks fail. | peer transfer, offering, handoff demos |
+| `TakeTarget` | `Target` | target/actor inventory state | Transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/aperture checks fail. | taking from containers, stealing prototypes |
 | `PushFacing` | `Facing` | world positions | Push blocking entity one cell in facing direction, then move actor into blocker original cell; consumes the turn on success. | shovers, obstacle interaction |
 
 ### Target acquisition and target-relative movement

@@ -17,15 +17,15 @@ public sealed class ScenarioRunReportTests
         var rockTemplateId = editor.CreateEntityPreset("Scenario Rock");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Scenario Room", InventoryWidth: 4, InventoryHeight: 5, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Scenario Room", InventoryWidth: 4, InventoryHeight: 5, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         editor.UpdateEntityPreset(
             actorTemplateId,
-            new EntityTemplate("Scenario Actor", InventoryWidth: 3, InventoryHeight: 2, Weight: 10, CarryingCapacity: 5),
+            new EntityTemplate("Scenario Actor", InventoryWidth: 3, InventoryHeight: 2, Bulk: 10, Aperture: 5),
             new EntityPresentation('@', PresentationColor.White));
         editor.UpdateEntityPreset(
             rockTemplateId,
-            new EntityTemplate("Scenario Rock", InventoryWidth: 0, InventoryHeight: 0, Weight: 3, CarryingCapacity: 3),
+            new EntityTemplate("Scenario Rock", InventoryWidth: 0, InventoryHeight: 0, Bulk: 3, Aperture: 3),
             new EntityPresentation('*', PresentationColor.Gray));
         editor.SetInitialFacing(actorTemplateId, Direction.East);
         editor.PlaceCarriedEntity(actorTemplateId, new EntityId("carriedRock"), rockTemplateId, new GridCoord(0, 0));
@@ -61,12 +61,12 @@ public sealed class ScenarioRunReportTests
         var scenarioRootId = editor.CreateEntityPreset("Scenario Room");
         editor.UpdateEntityPreset(
             scenarioRootId,
-            new EntityTemplate("Scenario Room", InventoryWidth: 5, InventoryHeight: 5, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Scenario Room", InventoryWidth: 5, InventoryHeight: 5, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         var actorTemplateId = editor.CreateEntityPreset("Player");
         editor.UpdateEntityPreset(
             actorTemplateId,
-            new EntityTemplate("Player", InventoryWidth: 0, InventoryHeight: 0, Weight: 1, CarryingCapacity: 1),
+            new EntityTemplate("Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
             new EntityPresentation('@', PresentationColor.White));
         editor.SetInitialFacing(actorTemplateId, Direction.East);
         var planTemplateId = editor.CreateActionPlan("Move Facing");
@@ -110,7 +110,7 @@ public sealed class ScenarioRunReportTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
-        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { CarryingCapacity = 20 };
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 20 };
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
         world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
         var scenario = new HeadlessScenario(

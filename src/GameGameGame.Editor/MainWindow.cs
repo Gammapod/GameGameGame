@@ -187,8 +187,8 @@ public sealed class MainWindow : Window
         panel.Children.Add(BoundTextBox("Name", nameof(MainEditorViewModel.SelectedName)));
         panel.Children.Add(BoundNumeric("Inventory Width", nameof(MainEditorViewModel.SelectedInventoryWidth)));
         panel.Children.Add(BoundNumeric("Inventory Height", nameof(MainEditorViewModel.SelectedInventoryHeight)));
-        panel.Children.Add(BoundNumeric("Weight", nameof(MainEditorViewModel.SelectedWeight)));
-        panel.Children.Add(BoundNumeric("Carrying Capacity", nameof(MainEditorViewModel.SelectedCarryingCapacity)));
+        panel.Children.Add(BoundNumeric("Bulk", nameof(MainEditorViewModel.SelectedBulk)));
+        panel.Children.Add(BoundNumeric("Aperture", nameof(MainEditorViewModel.SelectedAperture)));
         panel.Children.Add(BoundTextBox("Glyph", nameof(MainEditorViewModel.SelectedGlyph)));
 
         var colors = new ComboBox

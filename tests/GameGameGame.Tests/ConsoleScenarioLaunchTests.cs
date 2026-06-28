@@ -140,7 +140,7 @@ public sealed class ConsoleScenarioLaunchTests
         var document = new EditableContentDocument();
         var roomId = document.AddEntityTemplate(
             "Console Alpha Room",
-            new EntityTemplate("Console Alpha Room", InventoryWidth: 3, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate("Console Alpha Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         var playerId = document.AddEntityTemplate(
             "Console Player",
@@ -148,8 +148,8 @@ public sealed class ConsoleScenarioLaunchTests
                 "Console Player",
                 InventoryWidth: 1,
                 InventoryHeight: 1,
-                Weight: 1,
-                CarryingCapacity: 5,
+                Bulk: 1,
+                Aperture: 5,
                 ActionStateDefaults: new ActorActionStateDefaults(Direction.East)),
             new EntityPresentation('@', PresentationColor.Yellow));
         document.UpsertScenario(new ScenarioDefinition(
@@ -195,7 +195,7 @@ public sealed class ConsoleScenarioLaunchTests
         var document = new EditableContentDocument();
         var roomId = document.AddEntityTemplate(
             $"{scenarioName} Room",
-            new EntityTemplate($"{scenarioName} Room", InventoryWidth: 3, InventoryHeight: 2, Weight: 100, CarryingCapacity: 100),
+            new EntityTemplate($"{scenarioName} Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
             new EntityPresentation('#', PresentationColor.Gray));
         var playerTemplateId = document.AddEntityTemplate(
             $"{scenarioName} Player",
@@ -203,8 +203,8 @@ public sealed class ConsoleScenarioLaunchTests
                 $"{scenarioName} Player",
                 InventoryWidth: 1,
                 InventoryHeight: 1,
-                Weight: 1,
-                CarryingCapacity: 5,
+                Bulk: 1,
+                Aperture: 5,
                 ActionStateDefaults: new ActorActionStateDefaults(Direction.East)),
             new EntityPresentation('@', PresentationColor.Yellow));
         document.UpsertScenario(new ScenarioDefinition(
