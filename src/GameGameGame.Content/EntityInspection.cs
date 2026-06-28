@@ -51,6 +51,8 @@ public sealed class EntityInspectionService(Func<EntityId, EntityInspectionAppea
             new("Total Weight", weight.GetTotalWeight(world, entityId).ToString()),
             new("Carried Weight", weight.GetCarriedWeight(world, entityId).ToString()),
             new("Carrying Capacity", entity.CarryingCapacity.ToString()),
+            new("Bulk", entity.Bulk.ToString()),
+            new("Aperture", entity.Aperture.ToString()),
             new("Inventory Dimensions", $"{entity.InventoryWidth}x{entity.InventoryHeight}"),
             new("Inventory Plane", world.GetInventoryPlaneId(entityId)?.ToString() ?? "none"),
             new("Usable Inventory", entity.HasUsableInventory.ToString())

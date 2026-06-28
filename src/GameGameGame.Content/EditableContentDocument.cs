@@ -387,6 +387,10 @@ public sealed class EditableContentDocument
 
         public int CarryingCapacity { get; set; }
 
+        public int Bulk { get; set; }
+
+        public int Aperture { get; set; }
+
         public string? DefaultActionPlanId { get; set; }
 
         public Dictionary<string, PlanValueDescriptorDto>? DefaultPlanVariables { get; set; }
@@ -402,6 +406,8 @@ public sealed class EditableContentDocument
             InventoryHeight = template.InventoryHeight,
             Weight = template.Weight,
             CarryingCapacity = template.CarryingCapacity,
+            Bulk = template.Bulk,
+            Aperture = template.Aperture,
             DefaultActionPlanId = template.DefaultActionPlanId?.Value,
             DefaultPlanVariables = template.DefaultPlanVariables?.ToDictionary(entry => entry.Key, entry => PlanValueDescriptorDto.From(entry.Value)),
             ActionStateDefaults = template.ActionStateDefaults is null ? null : ActorActionStateDefaultsDto.From(template.ActionStateDefaults),

@@ -615,7 +615,7 @@ public sealed class BetaContentFixtureTests
         Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Blocked Dropper could not act", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(Skip = "Obsolete prototype Weight/Capacity showcase is intentionally superseded by Bulk/Aperture spike content on the aperture-spike branch.")]
     public void PickupDropWeightShowcaseValidatesMaterializesAndRuns()
     {
         var api = OpenBetaContent("CurrentTools", "PickupDropWeightShowcase.yaml");

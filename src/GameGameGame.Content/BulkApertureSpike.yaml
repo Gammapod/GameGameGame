@@ -1,0 +1,111 @@
+entityTemplates:
+  apertureSpikeRoom:
+    name: Aperture Spike Room
+    inventoryWidth: 7
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 0
+    bulk: 0
+    aperture: 99
+    carriedEntities:
+    - entityId: smallCollector
+      templateId: apertureSmallCollector
+      coord:
+        x: 1
+        y: 1
+    - entityId: smallGem
+      templateId: apertureSmallGem
+      coord:
+        x: 2
+        y: 1
+    - entityId: narrowCollector
+      templateId: apertureNarrowCollector
+      coord:
+        x: 4
+        y: 1
+    - entityId: largeStone
+      templateId: apertureLargeStone
+      coord:
+        x: 5
+        y: 1
+  aperturePlayer:
+    name: Aperture Spike Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 2
+  apertureSmallCollector:
+    name: Small Collector
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: apertureMoveThenPickup
+    actionStateDefaults:
+      facing: East
+  apertureNarrowCollector:
+    name: Narrow Collector
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: apertureMoveThenPickup
+    actionStateDefaults:
+      facing: East
+  apertureSmallGem:
+    name: Small Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  apertureLargeStone:
+    name: Large Stone
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 2
+    aperture: 0
+presentations:
+  apertureSpikeRoom:
+    glyph: '#'
+    color: Gray
+  aperturePlayer:
+    glyph: '@'
+    color: Yellow
+  apertureSmallCollector:
+    glyph: 's'
+    color: Green
+  apertureNarrowCollector:
+    glyph: 'n'
+    color: Cyan
+  apertureSmallGem:
+    glyph: '*'
+    color: White
+  apertureLargeStone:
+    glyph: 'O'
+    color: Earth
+actionPlans:
+  apertureMoveThenPickup:
+    id: apertureMoveThenPickup
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PickupTarget
+scenarios:
+  aperture-spike-pickup:
+    name: Aperture Spike Pickup
+    scenarioRootEntityTemplateId: apertureSpikeRoom
+    playerEntityTemplateId: aperturePlayer
+    playerEntityId: aperturePlayer
+    playerStart:
+      x: 0
+      y: 0

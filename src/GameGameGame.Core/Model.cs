@@ -49,7 +49,9 @@ public sealed record Entity(
     int InventoryWidth,
     int InventoryHeight,
     int Weight,
-    int CarryingCapacity)
+    int CarryingCapacity,
+    int Bulk = 0,
+    int Aperture = 0)
 {
     public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
 }

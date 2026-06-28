@@ -9,14 +9,16 @@ This document records minimal functional requirements that should influence test
 - At most one entity may occupy a node at a time.
 - Traversals through containment or inventory relationships must be cycle-safe.
 
-## Inventory And Weight
+## Inventory, Bulk, And Aperture
 
 - An entity has no usable inventory space if its inventory width or height is `0`.
+- Bulk/Aperture is being spiked as the replacement for prototype Weight/Carrying Capacity behavior on the `aperture-spike` branch.
+- If an entity crosses into or out of another entity's inventory plane through constrained inventory actions, the moving entity's `Bulk` must be less than or equal to the crossed entity's `Aperture`.
+- Pickup, Drop, Give, and Take enforce Bulk/Aperture transition checks; Teleport intentionally bypasses them for the spike.
 - Missing or zero weight contributes `0` weight.
 - An entity's own weight does not count against its own carrying capacity.
 - Recursive carried weight includes all entities inside the entity's inventory space, plus anything those entities recursively carry.
-- Pickup must fail if `current carried weight + target total weight > carrying capacity`.
-- Peer inventory transfer must use deterministic row-major source and destination selection and must respect existing inventory capacity/space rules.
+- Peer inventory transfer must use deterministic row-major source and destination selection and must respect inventory space and Bulk/Aperture transition rules.
 
 ## Actions And Turns
 
@@ -65,7 +67,7 @@ This document records minimal functional requirements that should influence test
 - Missing inventory space contributes no carried weight: `MissingInventoryPlaneContributesNoCarriedWeight`.
 - Own weight does not count against own capacity: `OwnWeightDoesNotCountAgainstOwnCarryingCapacity`.
 - Recursive carried weight: `RecursiveCarriedWeightIncludesNestedInventoryContents`.
-- Pickup capacity failure: `PickupFailsWhenTargetTotalWeightWouldExceedCapacity`.
+- Bulk/Aperture constrained inventory actions: `PickupFailsWhenTargetBulkExceedsAperture`, `PickupFailsWhenTargetBulkExceedsCarrierAperture`, `PickupIgnoresRecursiveCarriedWeightWhenTargetBulkFitsAperture`, `DropFailsWhenTargetBulkExceedsSourceCarrierAperture`, `GiveTargetFailsWhenTransferBulkExceedsSourceAperture`, `TakeTargetFailsWhenTransferBulkExceedsDestinationAperture`, `TeleportBypassesApertureTransitionChecksForSpike`.
 - Peer inventory transfer source/destination/capacity behavior: `GiveTargetTransfersFirstCarriedEntityToTargetInventoryRowMajor`, `TakeTargetTransfersFirstTargetInventoryEntityToActorInventoryRowMajor`, `GiveTargetCanTransferPlayerEntityWhenInventoryRulesAllowIt`.
 - Actor scheduling: `TurnServiceOnlySchedulesEntitiesWithActionPlans`, `InterpretedEntityActionPlanCanBeScheduledByTurnService`.
 - Structured traces: `ActionPlanContextVariableUpdatesAreTraced`, `CallPlanEffectRunsNestedPlanWithSharedContextAndTrace`, `PickupFailsWhenTargetTotalWeightWouldExceedCapacity`.

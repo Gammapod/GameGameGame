@@ -46,7 +46,7 @@ Stable support is appropriate for editor-service workflows, agent/headless API c
 Current stable authoring areas:
 
 - entity templates and presentations;
-- inventory dimensions, weight, carrying capacity, and carried entity layout;
+- inventory dimensions, prototype weight/carrying capacity, spike Bulk/Aperture metadata, and carried entity layout;
 - legacy low-level action plans and action-plan steps remain loadable and editable as compatibility when an existing legacy plan is selected, but are hidden from current Avalonia GUI authoring paths where canonical ordered behavior-chain authoring is available;
 - actor initial `Facing` through `actionStateDefaults.facing`;
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
@@ -121,7 +121,7 @@ The Avalonia desktop editor is legacy-priority / maintenance-mode. It remains us
 The editor can currently:
 
 - create/open/save/reload content documents;
-- edit entity templates, presentations, inventory dimensions, weights, capacities, and carried entities;
+- edit entity templates, presentations, inventory dimensions, weights, capacities, spike Bulk/Aperture metadata through content/API paths, and carried entities;
 - assign/clear default action plans;
 - create new GUI action plans as empty/passive plans so authors can add canonical behavior-chain Action Steps without first creating legacy low-level steps;
 - edit actor initial `Facing`;

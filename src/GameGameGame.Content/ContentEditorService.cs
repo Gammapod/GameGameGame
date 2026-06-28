@@ -38,7 +38,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
                 InventoryWidth: 0,
                 InventoryHeight: 0,
                 Weight: 0,
-                CarryingCapacity: 0),
+                CarryingCapacity: 0,
+                Bulk: 0,
+                Aperture: 0),
             new EntityPresentation('?', PresentationColor.Gray));
         onChanged?.Invoke();
 

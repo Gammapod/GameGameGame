@@ -91,17 +91,18 @@ public sealed class CoreInvariantTests
     }
 
     [Fact]
-    public void PickupFailsWhenTargetTotalWeightWouldExceedCapacity()
+    public void PickupFailsWhenTargetBulkExceedsAperture()
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
-        movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)));
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 2 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 3 };
         var action = new PickupAction(TestWorld.SlimeId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
 
         var evaluation = action.Evaluate(world, TestWorld.PlayerId, movement);
 
         Assert.False(evaluation.CanExecute);
-        Assert.Equal(FailureReason.CapacityExceeded, evaluation.Trace.Reason);
+        Assert.Equal(FailureReason.ApertureBlocked, evaluation.Trace.Reason);
     }
 
     [Fact]

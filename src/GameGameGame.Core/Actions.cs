@@ -127,22 +127,15 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
 
         trace.Add(TraceNode.Success("Destination can accept entity", Destination.ToString()));
 
-        var weight = new WeightService();
-        var carriedWeight = weight.GetCarriedWeight(world, actorId);
-        var targetWeight = weight.GetTotalWeight(world, TargetId);
-        var capacityTrace = new TraceNode("Check carrying capacity", TraceStatus.Info, detail: $"carried={carriedWeight}, target={targetWeight}, capacity={actor.CarryingCapacity}");
-        capacityTrace.Add(weight.TraceTotalWeight(world, TargetId));
+        var aperture = new ApertureTransitionService();
+        var apertureEvaluation = aperture.EvaluateTransition(world, TargetId, Destination);
+        trace.Add(apertureEvaluation.Trace);
 
-        if (carriedWeight + targetWeight > actor.CarryingCapacity)
+        if (!apertureEvaluation.CanTransition)
         {
-            capacityTrace.Status = TraceStatus.Failure;
-            capacityTrace.Reason = FailureReason.CapacityExceeded;
-            trace.Add(capacityTrace);
-            return ActionTrace.Fail(trace, FailureReason.CapacityExceeded, $"{actor.Name} would carry {carriedWeight + targetWeight}/{actor.CarryingCapacity}");
+            return ActionTrace.Fail(trace, apertureEvaluation.Trace.Reason, apertureEvaluation.Trace.Detail ?? $"{TargetId} cannot pass through aperture");
         }
 
-        capacityTrace.Status = TraceStatus.Success;
-        trace.Add(capacityTrace);
         trace.Status = TraceStatus.Success;
         return new ActionEvaluation(true, trace);
     }
@@ -203,6 +196,16 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
         }
 
         trace.Add(TraceNode.Success("Destination can accept entity", Destination.ToString()));
+
+        var aperture = new ApertureTransitionService();
+        var apertureEvaluation = aperture.EvaluateTransition(world, TargetId, Destination);
+        trace.Add(apertureEvaluation.Trace);
+
+        if (!apertureEvaluation.CanTransition)
+        {
+            return ActionTrace.Fail(trace, apertureEvaluation.Trace.Reason, apertureEvaluation.Trace.Detail ?? $"{TargetId} cannot pass through aperture");
+        }
+
         trace.Status = TraceStatus.Success;
         return new ActionEvaluation(true, trace);
     }

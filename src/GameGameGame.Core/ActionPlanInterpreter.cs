@@ -911,6 +911,16 @@ public sealed class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
+        var apertureEvaluation = new ApertureTransitionService().EvaluateTransition(world, carried.Value, resolvedDestination);
+        trace.Add(apertureEvaluation.Trace);
+        if (!apertureEvaluation.CanTransition)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = apertureEvaluation.Trace.Reason;
+            trace.Detail = apertureEvaluation.Trace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
         _movement.TryPlace(world, carried.Value, resolvedDestination);
         trace.Status = TraceStatus.Success;
         trace.Detail = $"dropped {carried.Value} to {resolvedDestination}";
@@ -1269,25 +1279,6 @@ public sealed class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        var weight = new WeightService();
-        var carriedWeight = weight.GetCarriedWeight(world, destinationOwnerId);
-        var transferWeight = weight.GetTotalWeight(world, carriedId);
-        var capacityTrace = new TraceNode("Check transfer carrying capacity", TraceStatus.Info, detail: $"carried={carriedWeight}, transfer={transferWeight}, capacity={destinationOwner.CarryingCapacity}");
-        capacityTrace.Add(weight.TraceTotalWeight(world, carriedId));
-        if (carriedWeight + transferWeight > destinationOwner.CarryingCapacity)
-        {
-            capacityTrace.Status = TraceStatus.Failure;
-            capacityTrace.Reason = FailureReason.CapacityExceeded;
-            trace.Add(capacityTrace);
-            trace.Status = TraceStatus.Failure;
-            trace.Reason = FailureReason.CapacityExceeded;
-            trace.Detail = $"{destinationOwner.Name} would carry {carriedWeight + transferWeight}/{destinationOwner.CarryingCapacity}";
-            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
-        }
-
-        capacityTrace.Status = TraceStatus.Success;
-        trace.Add(capacityTrace);
-
         ActionResolution? lastFailure = null;
         for (var y = 0; y < inventoryPlane.Height; y++)
         {
@@ -1299,6 +1290,16 @@ public sealed class ActionPlanInterpreter
 
                 if (evaluation is { CanRelocate: true, Destination: { } resolvedDestination })
                 {
+                    var apertureEvaluation = new ApertureTransitionService().EvaluateTransition(world, carriedId, resolvedDestination);
+                    trace.Add(apertureEvaluation.Trace);
+                    if (!apertureEvaluation.CanTransition)
+                    {
+                        trace.Status = TraceStatus.Failure;
+                        trace.Reason = apertureEvaluation.Trace.Reason;
+                        trace.Detail = apertureEvaluation.Trace.Detail;
+                        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+                    }
+
                     _movement.TryPlace(world, carriedId, resolvedDestination);
                     trace.Status = TraceStatus.Success;
                     trace.Detail = $"{verb} {carriedId} ({carried.Name}) from {carriedLocation.Coord} to {resolvedDestination.Coord}";

@@ -88,7 +88,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
                 InventoryWidth = update.InventoryWidth ?? preset.Template.InventoryWidth,
                 InventoryHeight = update.InventoryHeight ?? preset.Template.InventoryHeight,
                 Weight = update.Weight ?? preset.Template.Weight,
-                CarryingCapacity = update.CarryingCapacity ?? preset.Template.CarryingCapacity
+                CarryingCapacity = update.CarryingCapacity ?? preset.Template.CarryingCapacity,
+                Bulk = update.Bulk ?? preset.Template.Bulk,
+                Aperture = update.Aperture ?? preset.Template.Aperture
             };
             var presentation = preset.Presentation with
             {
@@ -328,6 +330,8 @@ public sealed record AgentEntityTemplateUpdate(
     int? InventoryHeight = null,
     int? Weight = null,
     int? CarryingCapacity = null,
+    int? Bulk = null,
+    int? Aperture = null,
     char? Glyph = null,
     PresentationColor? Color = null);
 

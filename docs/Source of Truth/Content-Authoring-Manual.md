@@ -59,7 +59,7 @@ Default workflow:
 | Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. |
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
 | Presentations | Assign/edit presentation data used by authored templates. |
-| Inventory / containment | Inventory dimensions, weight, carrying capacity, and carried entity layout. |
+| Inventory / containment | Inventory dimensions, prototype weight/carrying capacity, spike Bulk/Aperture metadata, and carried entity layout. |
 | Actor state | Initial actor `Facing` through `actionStateDefaults.facing`. |
 | Action-plan assignment | Assign or clear an entity template's default action plan. |
 | Action plans | Create, edit, delete, reorder, preview, and validate action plans. |
@@ -79,7 +79,7 @@ Author entity templates as reusable normal content. Current safe operations incl
 - create, edit, duplicate, delete, and reorder templates;
 - assign presentation data;
 - assign or clear a default action plan;
-- configure inventory dimensions, weight, and carrying capacity;
+- configure inventory dimensions, prototype weight/carrying capacity, and spike Bulk/Aperture metadata;
 - place carried entities in authored inventory layouts;
 - set initial actor `Facing` when the template acts through action plans.
 
@@ -92,6 +92,7 @@ Current inventory authoring supports:
 - inventory dimensions;
 - entity weight;
 - carrying capacity;
+- spike entity bulk and aperture;
 - authored carried-entity layout;
 - pickup/drop-oriented content using supported Action Steps.
 

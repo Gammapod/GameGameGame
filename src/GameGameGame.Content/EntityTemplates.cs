@@ -18,6 +18,8 @@ public sealed record EntityTemplate(
     int InventoryHeight,
     int Weight,
     int CarryingCapacity,
+    int Bulk = 0,
+    int Aperture = 0,
     IReadOnlyList<CarriedEntityTemplate>? CarriedEntities = null,
     ActionPlanTemplateId? DefaultActionPlanId = null,
     IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null,
