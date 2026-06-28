@@ -80,6 +80,34 @@ public sealed class ConsoleScenarioLaunchTests
     }
 
     [Fact]
+    public void ScenarioCatalogRebasesRepositoryManifestPathsWhenLoadedFromPackagedContent()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var nestedDirectory = Path.Combine(directory, "CurrentTools");
+            Directory.CreateDirectory(nestedDirectory);
+            var contentPath = Path.Combine(nestedDirectory, "Packaged.yaml");
+            var manifestPath = Path.Combine(directory, ScenarioCatalog.ManifestFileName);
+            File.WriteAllText(contentPath, CreateConsoleDocument("catalog-packaged", "Catalog Packaged", new GridCoord(0, 0)).SaveYaml());
+            File.WriteAllText(manifestPath, """
+                scenarios:
+                - contentPath: src\GameGameGame.Content\Beta\CurrentTools\Packaged.yaml
+                  scenarioId: catalog-packaged
+                  name: Catalog Packaged
+                """);
+
+            var entry = Assert.Single(ScenarioCatalog.LoadManifest(manifestPath).Entries);
+
+            Assert.Equal(contentPath, entry.ContentPath);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ConsoleScenarioLauncherBuildsFreshSessionFromCatalogEntry()
     {
         var directory = CreateTemporaryDirectory();

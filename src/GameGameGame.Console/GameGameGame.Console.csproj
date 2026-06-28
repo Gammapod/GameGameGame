@@ -8,10 +8,19 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AssemblyName>GameGameGame</AssemblyName>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UseAppHost>false</UseAppHost>
+    <UseAppHost>true</UseAppHost>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\GameGameGame.Content\Beta\**\*.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Content\Beta\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </Content>
+  </ItemGroup>
 
 </Project>

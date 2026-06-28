@@ -12,8 +12,11 @@ public sealed record ScenarioCatalogResult(
 public static class ScenarioCatalog
 {
     public const string ManifestFileName = "Manifest.yaml";
-    public const string DefaultDiscoveryFolder = "src\\GameGameGame.Content\\Beta";
-    public const string DefaultManifestPath = "src\\GameGameGame.Content\\Beta\\Manifest.yaml";
+    private const string RepositoryDefaultDiscoveryFolder = "src\\GameGameGame.Content\\Beta";
+
+    public static string DefaultDiscoveryFolder => ResolveDefaultDiscoveryFolder();
+
+    public static string DefaultManifestPath => Path.Combine(DefaultDiscoveryFolder, ManifestFileName);
 
     public static ScenarioCatalogResult BuildFromDocument(string contentPath, EditableContentDocument document)
     {
@@ -111,7 +114,7 @@ public static class ScenarioCatalog
                 .Build();
             var dto = deserializer.Deserialize<ScenarioCatalogManifestDto>(File.ReadAllText(manifestPath)) ?? new ScenarioCatalogManifestDto();
 
-            return dto.ToCatalogResult();
+            return RebaseManifestEntries(dto.ToCatalogResult(), manifestPath);
         }
         catch (Exception ex)
         {
@@ -165,5 +168,57 @@ public static class ScenarioCatalog
 
         public int GetHashCode((string ContentPath, string ScenarioId) obj) =>
             HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.ContentPath), StringComparer.Ordinal.GetHashCode(obj.ScenarioId));
+    }
+
+    private static string ResolveDefaultDiscoveryFolder()
+    {
+        if (Directory.Exists(RepositoryDefaultDiscoveryFolder))
+        {
+            return RepositoryDefaultDiscoveryFolder;
+        }
+
+        var packagedFolder = Path.Combine(AppContext.BaseDirectory, "Content", "Beta");
+        return Directory.Exists(packagedFolder) ? packagedFolder : RepositoryDefaultDiscoveryFolder;
+    }
+
+    private static ScenarioCatalogResult RebaseManifestEntries(ScenarioCatalogResult catalog, string manifestPath) =>
+        catalog with
+        {
+            Entries = catalog.Entries
+                .Select(entry => entry with { ContentPath = RebaseManifestContentPath(entry.ContentPath, manifestPath) })
+                .ToList()
+        };
+
+    private static string RebaseManifestContentPath(string contentPath, string manifestPath)
+    {
+        if (File.Exists(contentPath) || Path.IsPathRooted(contentPath))
+        {
+            return contentPath;
+        }
+
+        var manifestDirectory = Path.GetDirectoryName(Path.GetFullPath(manifestPath));
+        if (string.IsNullOrWhiteSpace(manifestDirectory))
+        {
+            return contentPath;
+        }
+
+        var manifestRelativePath = Path.Combine(manifestDirectory, contentPath);
+        if (File.Exists(manifestRelativePath))
+        {
+            return manifestRelativePath;
+        }
+
+        var normalizedPath = contentPath.Replace('\\', '/');
+        const string betaMarker = "GameGameGame.Content/Beta/";
+        var markerIndex = normalizedPath.IndexOf(betaMarker, StringComparison.OrdinalIgnoreCase);
+        if (markerIndex < 0)
+        {
+            return contentPath;
+        }
+
+        var betaRelativePath = normalizedPath[(markerIndex + betaMarker.Length)..]
+            .Replace('/', Path.DirectorySeparatorChar);
+        var packagedRelativePath = Path.Combine(manifestDirectory, betaRelativePath);
+        return File.Exists(packagedRelativePath) ? packagedRelativePath : contentPath;
     }
 }

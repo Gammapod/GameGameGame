@@ -128,6 +128,22 @@ Run legacy/current Avalonia editor-specific tests separately:
 dotnet test tests/GameGameGame.Editor.Tests/GameGameGame.Editor.Tests.csproj
 ```
 
+## Feedback build
+
+Create a self-contained Windows feedback build with the console app and inspectable scenario YAML files:
+
+```bash
+dotnet publish src/GameGameGame.Console/GameGameGame.Console.csproj -c Release -r win-x64 --self-contained true -o artifacts/GameGameGame-win-x64
+```
+
+Run `artifacts/GameGameGame-win-x64/GameGameGame.exe` to open the interactive scenario list. Packaged scenarios are copied to `artifacts/GameGameGame-win-x64/Content/Beta`.
+
+Create a shareable zip:
+
+```powershell
+Compress-Archive -Path artifacts/GameGameGame-win-x64/* -DestinationPath artifacts/GameGameGame-win-x64.zip -Force
+```
+
 ## Documentation
 
 Source-of-truth documentation starts at:
