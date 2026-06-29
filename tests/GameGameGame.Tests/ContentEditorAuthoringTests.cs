@@ -64,9 +64,10 @@ public sealed class ContentEditorAuthoringTests
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.PushFacing && step.DisplayName == "Push Facing");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.DestroyTarget && step.DisplayName == "Destroy Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.CreateFacing && step.DisplayName == "Create Facing");
-        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnLeft && step.DisplayName == "Turn Left");
-        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnRight && step.DisplayName == "Turn Right");
-        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ReverseFacing && step.DisplayName == "Reverse Facing");
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.AcquireNearestTarget);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnLeft);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnRight);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.ReverseFacing);
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo && step.DisplayName == "Maintain Chebyshev Distance Two");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeClockwise && step.DisplayName == "Strafe Clockwise");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeAnticlockwise && step.DisplayName == "Strafe Anticlockwise");

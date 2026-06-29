@@ -21,7 +21,14 @@ public sealed record EntityTemplate(
     IReadOnlyList<CarriedEntityTemplate>? CarriedEntities = null,
     ActionPlanTemplateId? DefaultActionPlanId = null,
     IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null,
-    ActorActionStateDefaults? ActionStateDefaults = null);
+    ActorActionStateDefaults? ActionStateDefaults = null,
+    IReadOnlyList<EntityTargetingRule>? TargetingRules = null);
+
+public sealed record EntityTargetingRule(
+    int Slot,
+    EntityTemplateId TargetTemplateId,
+    int Range,
+    string? Hint = null);
 
 public sealed record ActorActionStateDefaults(
     Direction? Facing = null,

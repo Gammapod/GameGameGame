@@ -90,7 +90,8 @@ public enum ActionPlanBehaviorStepKind
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(
-    ActionPlanBehaviorStepKind Kind);
+    ActionPlanBehaviorStepKind Kind,
+    int? TargetSlot = null);
 
 public enum ActionPlanPrimitiveKind
 {

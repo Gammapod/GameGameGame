@@ -38,6 +38,13 @@ public sealed class ActionPlanContext
 
     private EntityId? _attachedActorId;
 
+    private int _activeTargetSlot = 1;
+
+    public void UseTargetSlot(int targetSlot)
+    {
+        _activeTargetSlot = targetSlot <= 0 ? 1 : targetSlot;
+    }
+
     public void AttachEntityActionState(WorldState world, EntityId actorId)
     {
         _attachedWorld = world;
@@ -63,7 +70,7 @@ public sealed class ActionPlanContext
                     _attachedWorld.SetActionFacing(actorId, direction.Value);
                     break;
                 case (ActionPlanSlot.Target, EntityPlanValue entity):
-                    _attachedWorld.SetActionTarget(actorId, entity.Value);
+                    _attachedWorld.SetActionTarget(actorId, _activeTargetSlot, entity.Value);
                     break;
             }
         }
@@ -139,7 +146,7 @@ public sealed class ActionPlanContext
                 case ActionPlanSlot.Facing when _attachedWorld.GetActionFacing(actorId) is { } facing:
                     value = new DirectionPlanValue(facing);
                     return true;
-                case ActionPlanSlot.Target when _attachedWorld.GetActionTarget(actorId) is { } target:
+                case ActionPlanSlot.Target when _attachedWorld.GetActionTarget(actorId, _activeTargetSlot) is { } target:
                     value = new EntityPlanValue(target);
                     return true;
             }

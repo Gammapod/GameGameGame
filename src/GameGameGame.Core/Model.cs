@@ -59,6 +59,8 @@ public sealed class EntityActionState
     public Direction? Facing { get; set; }
 
     public EntityId? Target { get; set; }
+
+    public Dictionary<int, EntityId> Targets { get; } = [];
 }
 
 public sealed record Plane(

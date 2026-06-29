@@ -4,6 +4,10 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What went well
 
+- Moving targeting and post-move facing into shared state services simplified canonical behavior chains without losing fallback composition. Plans can now consume target slots while target selection happens before the plan, and facing follows successful movement direction afterward.
+- Keeping target slots numeric with content-authored hints avoided baking semantic roles like enemy, food, or ally into Core while still giving authors enough structure for different entities to interpret slots differently.
+- Demoting legacy acquisition/turn-only steps instead of deleting runtime support preserved old content compatibility while making new editor/API authoring safer.
+
 - Sprint 21's ad-hoc Console scenario catalog request still mapped cleanly onto existing roadmap pressure around scenario/content package ergonomics, manual scenario selection, and beta vignette playability. Treating it first as a viability/backlog comparison kept the work from becoming an unbounded frontend rewrite.
 - The implementation stayed aligned with the longer-term frontend direction by putting discovery/manifest behavior in a shared content-facing catalog service instead of burying the contract in Console UI code.
 - Keeping Console UI testing light while testing the catalog/launch contract matched Console's prototype role and avoided over-investing in replaceable frontend behavior.
@@ -25,6 +29,10 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What was difficult
 
+- Targeting touched several layers at once: runtime state, content templates, YAML/editable DTOs, validation, scenario runners, Console, editor/API helpers, and tests. Small seams such as `TurnService` pre-plan hooks were important to keep Core content-agnostic.
+- Existing beta fixture expectations had encoded old facing and target-acquisition behavior. Updating those tests required separating behavior we still want to guarantee from brittle beta-era implementation details.
+- Parallel test execution can still hit transient build output locks in this workspace; sequential final verification remains safer for wrap-up.
+
 - Sprint 21 began as an ad-hoc request outside the currently assumed next mechanics gate. Although it proved roadmap-adjacent, it exposed a prioritization question: ad-hoc workflow/friction fixes may be legitimate sprint candidates, but they should be checked explicitly against roadmap buckets before consuming implementation time.
 - The request blurred the line between a small Console workflow improvement and broader content-package architecture. We had to repeatedly constrain scope to folder discovery, cached manifests, and manifest-only descriptions so the work did not prematurely become package/import semantics.
 - Auto-generating a manifest inside `src/GameGameGame.Content/Beta` creates a content-adjacent artifact even though existing content YAML files remain untouched. Future generated/cache artifacts need an explicit decision about whether they are checked in, ignored, or treated as author-maintained content indexes.
@@ -43,6 +51,9 @@ Status: Living retrospective notes from the current wrap-up.
 - `CreateFacing` is useful as a prototype but too limited for realistic content because it cannot select a template.
 
 ## Process improvements
+
+- For state-system refactors that replace action-plan scripting, explicitly list which old steps remain runtime-compatible but non-canonical before editing docs/tests. That prevents accidental preservation of old authoring patterns.
+- When adding generic slots, document both the engine invariant and the content-authoring convention in the same sprint so future work does not infer semantic slot names from examples.
 
 - For ad-hoc feature requests, keep using a short intake step before implementation: compare against roadmap buckets, identify what the request unblocks, classify it as roadmap-aligned / reprioritization signal / distraction, and only then decide whether to plan a sprint slice.
 - If an ad-hoc request is accepted, write or update a small plan with explicit in-scope/out-of-scope boundaries before coding. This is especially important when a small workflow feature could expand into a larger architecture change.

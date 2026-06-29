@@ -48,12 +48,13 @@ Current stable authoring areas:
 - entity templates and presentations;
 - inventory dimensions, bulk, aperture, and carried entity layout;
 - legacy low-level action plans and action-plan steps remain loadable and editable as compatibility when an existing legacy plan is selected, but are hidden from current Avalonia GUI authoring paths where canonical ordered behavior-chain authoring is available;
-- actor initial `Facing` through `actionStateDefaults.facing`;
+- actor initial `Facing` through `actionStateDefaults.facing`, with runtime post-action facing updates from successful directional movement;
+- template `targetingRules` for pre-plan target-slot selection by target template and range;
 - checks: `CanMove`, `BlockingEntity`, `CanPickup`;
 - effects: `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`;
 - movement effects: `Teleport`, `Drop` are functional and supported, but their GUI is intentionally advanced/generic rather than polished/specialized.
 - transitional primitive-backed `MoveFacing` and `PickupTarget` action-plan descriptors with explicit fallback references are supported through Core/content validation, editor services, and the agent API; GUI polish remains generic/minimal, and these linked descriptors are not the long-term canonical editor-facing model.
-- canonical ordered behavior-chain descriptors with `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, `EnterTarget`, and `ExitFacing` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and GUI support that makes canonical chains visually primary over legacy low-level authoring.
+- canonical ordered behavior-chain descriptors with `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, `EnterTarget`, and `ExitFacing` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and GUI support that makes canonical chains visually primary over legacy low-level authoring. Runtime compatibility remains for legacy metadata-setting steps `TurnLeft`, `TurnRight`, `ReverseFacing`, and `AcquireNearestTarget`, but new canonical authoring hides/rejects them.
 - compact canonical behavior-chain trace formatting is available in Core for tests, debugging, and future editor/agent diagnostics.
 - local turn-order reporting is available in Core for factual debugger/scenario output, including per-plane occupant ordering, actor/player/inert classification, and previous-action summaries from the latest simulated turn; Console renders this report for visible inspection inventory spaces.
 - structural entity containment path queries are available in Core for debugger/frontend foundations, including upward ancestry paths, root-relative paths, shared-root two-branch paths, max-depth truncation, not-under-root/no-shared-root statuses, and directional cycle diagnostics; presentation/content enrichment and Console rendering remain follow-up work.
@@ -131,7 +132,7 @@ The editor can currently:
 - edit pickup inventory coordinates and call-plan references;
 - edit movement target/destination fields for `Teleport` and `Drop`;
 - validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, and legacy/arbitrary variable fields;
-- load and validate canonical ordered behavior-chain descriptors for `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, `EnterTarget`, and `ExitFacing` using Action Step catalog metadata;
+- load and validate canonical ordered behavior-chain descriptors for stable Action Steps using Action Step catalog metadata, with legacy metadata-setting steps loadable for compatibility but hidden/rejected for new authoring;
 - author content through the first in-process `AgentContentEditorApi` facade over editor/content services;
 - create transitional primitive-backed `MoveFacing` action-plan descriptors with optional fallback references through editor services and the agent API;
 - create a transitional `MoveFacing -> PickupTarget` linked fallback chain through editor services and the agent API without low-level check/effect authoring;
@@ -320,7 +321,8 @@ Canonical actor action state is persistent entity runtime state. `Facing` and `T
 | State | Tier | Engine context | Content model | YAML | Validation | Editor service | GUI | Notes |
 |---|---|---:|---:|---:|---:|---:|---:|---|
 | Initial `Facing` | Stable | Yes | Yes | Yes | Yes | Yes | Yes | Canonical YAML is `actionStateDefaults.facing`; spawned actors initialize persistent entity action state. |
-| Initial `Target` | Planned | Yes | Yes | Yes | Yes | Partial | Planned | Supported by model/runtime entity action state. Expose through Actor State when a concrete content use case appears. |
+| Targeting rules | Stable | Yes | Yes | Yes | Yes | Yes | Display | Template `targetingRules` select nearest same-plane matching target template in range before plan evaluation; behavior steps read target slot `1` by default or authored `targetSlot`. |
+| Initial `Target` | Legacy/Advanced | Yes | Yes | Yes | Yes | Partial | Planned | Direct initial target remains model/runtime compatibility. Prefer targeting rules for normal content. |
 
 ## Movement primitive model
 
@@ -344,6 +346,7 @@ Policy decisions:
 - `Pickup` remains the constrained aperture-aware way to move peer/world entities into actor inventory.
 - `Drop` validates that the target is carried by the actor and that the destination is on the actor plane.
 - `CanDrop` is intentionally deferred until a concrete action-plan branching use case appears.
+- Successful directional actor movement reports movement direction; turn execution updates persistent `Facing` after action resolution.
 
 ## Turn behavior policy
 

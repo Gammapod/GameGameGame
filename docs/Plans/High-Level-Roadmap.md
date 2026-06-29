@@ -184,10 +184,10 @@ For each candidate vignette, record before implementation whether the intended e
 
 Paused beta candidate focuses:
 
-- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. Sprint 13 completed focused direction-transform showcases for turning, backstep, wall-bounce, and patrol-turn behavior. Sprint 14 completed targeting showcases for acquisition, direct chase, targeted destruction, and autonomous collection. Sprint 16 completed distance-movement showcases for fleeing, hard-coded Chebyshev distance-two maintenance, clockwise/anticlockwise strafing, and kiting/orbiter fallback composition; the first curated actor zoo and follower scenario remain deferred until a broader gallery or differentiated use case becomes useful.
+- Current-tool beta vignettes: Sprint 12 completed primitive showcase scenarios for `PushFacing`, `DestroyTarget`, `DropFacing`, and `CreateFacing`, plus pickup/drop/weight and blocker/target fallback-chain exercises. Sprint 13 completed focused direction-transform showcases for turning, backstep, wall-bounce, and patrol-turn behavior. Sprint 14 completed targeting showcases for acquisition, direct chase, targeted destruction, and autonomous collection. Sprint 16 completed distance-movement showcases for fleeing, hard-coded Chebyshev distance-two maintenance, clockwise/anticlockwise strafing, and kiting/orbiter fallback composition. The targeting/facing cleanup moved target acquisition and post-move facing updates out of normal action-plan scripting; the first curated actor zoo and follower scenario remain deferred until a broader gallery or differentiated use case becomes useful.
 - Beta vignette design: define several small demo scenarios that probe different kinds of gameplay, such as movement puzzles, blocker/target interaction, pickup/drop containment, autonomous actors, creation/destruction, and peer transfer once supported.
 - Scenario report and run workflow polish: text report/template for agents, richer inventory/containment state summaries, local turn-order/previous-action tables, compact per-turn state diffs, created/destroyed entity summaries, capability-gap sections, preview-plus-simulation in one command, actor-zoo/isolation report templates, and cleanup/replacement of the older test-local runner. Deferred tactical telegraphing should project each actor's next resolved behavior/fallback on a safe simulation snapshot; pull it forward when complex gameplay scenarios require tactical information beyond previous actions.
-- Foundational movement/peer-interaction primitives: `ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`, then `SeekTarget`/`AcquireNearestTarget` and `Give`/`Take` when vignettes demonstrate need.
+- Foundational movement/peer-interaction primitives: movement-relative primitives, `SeekTarget`, entity-authored targeting rules/slots, and `Give`/`Take` when vignettes demonstrate need. Legacy turn-in-place and acquisition steps remain compatibility behavior rather than preferred new authoring.
 - Scenario/content package ergonomics: multiple fixture scenarios, scenario listing/selection, authoring helpers, and stronger validation/reporting around packages. Sprint 21 completed the near-term Console scenario catalog: scan a designated scenario/content folder for existing YAML scenario definitions, persist a generated manifest/cache with optional menu descriptions, and let Console list/select scenarios without introducing scenario-definition metadata fields or content package files.
 - Capability-gap logging: record intentionally blocked or negative vignettes and promote feature requests when repeated scenario pressure or one high-value flagship scenario justifies it.
 - Frontend/editor loop follow-up: keep future unified frontend requirements visible, but defer implementation until beta vignette playtests clarify interaction and authoring needs.
@@ -266,40 +266,33 @@ Promotion trigger:
 
 Status: High-priority content-foundation bucket after initial scenario feedback.
 
-Direction decision: keep `Facing` as the first primitive orientation model for local movement. Prefer small canonical Action Steps that transform or move relative to `Facing` before adding broad absolute-direction movement. Add goal-directed target movement after relative direction transforms are in place. Prioritize peer inventory transfer soon after movement basics so foundational content can experiment with entity-to-entity interactions.
+Direction decision: keep `Facing` as the first primitive orientation model for local movement. Prefer movement primitives that report their actual movement direction and let shared post-action state update persistent `Facing`, rather than scripting turn-only mutations into normal plans. Add goal-directed target movement through entity-level targeting rules and generic numeric target slots. Prioritize peer inventory transfer soon after movement basics so foundational content can experiment with entity-to-entity interactions.
 
 Priority order:
 
-1. `ReverseFacing`: reverse persistent actor `Facing` without moving.
-2. `TurnLeft`: rotate persistent actor `Facing` 90 degrees counter-clockwise without moving.
-3. `TurnRight`: rotate persistent actor `Facing` 90 degrees clockwise without moving.
-4. `Backstep`: move one cell opposite persistent actor `Facing` without changing `Facing`.
-5. `SeekTarget` / move toward target: choose a deterministic step toward persistent `Target` after target movement semantics are concrete.
-6. `AcquireNearestTarget`: select a nearby valid entity and write persistent `Target`, initially with simple deterministic same-plane rules.
-7. Authorable target filters for `AcquireNearestTarget`, such as template/category/player/item filters, after sparse-layout workarounds become limiting.
-8. `Give`: move a carried entity into the inventory space of the persistent `Target` entity.
-9. `Take`: move an entity from the inventory space of an adjacent/target entity into the actor inventory.
-10. Explicit failure/turn-consumption policy for exhausted behavior chains, if scenario reports reveal author confusion beyond observational reporting.
-11. Consistent blocker/`Target` writing rules for failed directional steps, including whether `DropFacing` and `Backstep` should write blockers.
-12. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
-13. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
-14. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity `Target`.
-15. `BumpTarget` or generic interaction fallback steps.
-16. Player/screen messages if scenarios need action feedback beyond traces.
+1. Completed baseline: movement-relative primitives, `SeekTarget`, template-scoped entity `targetingRules`, numeric target slots, and post-move `Facing` updates.
+2. `Give`: move a carried entity into the inventory space of the persistent target entity.
+3. `Take`: move an entity from the inventory space of an adjacent/target entity into the actor inventory.
+4. Explicit failure/turn-consumption policy for exhausted behavior chains, if scenario reports reveal author confusion beyond observational reporting.
+5. Consistent blocker/target-slot writing rules for failed directional steps, including whether `DropFacing` and `Backstep` should write blockers.
+6. Relationship/category targeting or target priority policies if template-targeting rules become too limited.
+7. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
+8. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
+9. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity target slots.
+10. `BumpTarget` or generic interaction fallback steps.
+11. Player/screen messages if scenarios need action feedback beyond traces.
 
 Dependencies:
 
 - Scenario exercises should provide concrete movement and failure examples for each primitive batch.
-- `ReverseFacing`, `TurnLeft`, `TurnRight`, and `Backstep` should come before `SeekTarget` so relative movement/facing semantics are established.
-- `SeekTarget` should come before patterned rook/bishop/knight-like movement so target pursuit tie-breaking and blocker behavior are proven first.
+- Relative movement/facing semantics and `SeekTarget` should remain stable before patterned rook/bishop/knight-like movement is promoted.
 - `Give`/`Take` depend on the inventory/containment model enough to require explicit scenario coverage, but they are now considered foundational peer-interaction primitives rather than distant conceptual work.
 - `TeleportTo` likely depends on a new location/destination state model.
 
 Promotion trigger:
 
-- Promote the first direction-transform batch (`ReverseFacing`, `TurnLeft`, `TurnRight`, `Backstep`) when Sprint 11 or later selects movement primitive expansion over scenario report polish.
-- Promote `SeekTarget` / `AcquireNearestTarget` when generated scenarios need autonomous aggressive/chasing behavior.
 - Promote `Give`/`Take` when generated scenarios need peer inventory transfer between adjacent or targeted entities.
+- Promote richer targeting policy only when template-scoped targeting rules and numeric target slots are too limited for authored scenarios.
 
 Likely decision artifact:
 

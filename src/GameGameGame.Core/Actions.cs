@@ -23,7 +23,12 @@ public interface IActionIntent
     }
 }
 
-public sealed record ActionResolution(bool Succeeded, bool ConsumesTurn, bool ContinuePlan, TraceNode Trace);
+public sealed record ActionResolution(
+    bool Succeeded,
+    bool ConsumesTurn,
+    bool ContinuePlan,
+    TraceNode Trace,
+    Direction? ActorMovementDirection = null);
 
 public sealed record PlannedActionPlan(IReadOnlyList<IActionIntent> Options)
 {
@@ -53,6 +58,19 @@ public sealed record MoveAction(Direction Direction) : IActionIntent
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
         movement.TryRelocate(world, actorId, MovementDestination.AdjacentTo(actorId, Direction));
+
+    public ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var evaluation = Evaluate(world, actorId, movement);
+
+        if (!evaluation.CanExecute)
+        {
+            return new ActionResolution(false, ConsumesTurn: false, ContinuePlan: true, evaluation.Trace);
+        }
+
+        Execute(world, actorId, movement);
+        return new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, evaluation.Trace, Direction);
+    }
 }
 
 public sealed record WaitAction : IActionIntent
@@ -334,6 +352,19 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
         {
             new ConstrainedInventoryRelocationService(movement).TryRelocate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));
         }
+    }
+
+    public ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var evaluation = Evaluate(world, actorId, movement);
+
+        if (!evaluation.CanExecute)
+        {
+            return new ActionResolution(false, ConsumesTurn: false, ContinuePlan: true, evaluation.Trace);
+        }
+
+        Execute(world, actorId, movement);
+        return new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, evaluation.Trace, Direction);
     }
 }
 

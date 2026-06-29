@@ -48,13 +48,15 @@ Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario rep
 
 ### GAP-003: `AcquireNearestTarget` has no authorable target filters
 
+Status: Resolved by entity-authored `targetingRules` and numeric target slots.
+
 - **Discovered in:** Sprint 14 targeting showcases.
 - **Scenario/content:** `src/GameGameGame.Content/Beta/Targeting/*.yaml`.
 - **Desired behavior:** Authors should be able to restrict target acquisition to a simple intended set, such as player, items, specific template IDs, or excluding props, without relying only on room layout.
-- **Current behavior:** First-pass `AcquireNearestTarget` targets any same-plane non-self entity, with no template/category/filter parameters.
-- **Current workaround:** Keep rooms intentionally sparse and place unintended entities farther away than the intended target.
+- **Current behavior:** New canonical content should define entity-level `targetingRules` with a numeric slot, target template ID, range, and optional author hint. `TargetingService` refreshes those target slots before plan resolution, so behavior steps can consume the intended slot through `targetSlot` instead of running `AcquireNearestTarget` inside the plan.
+- **Current workaround:** None for template-targeted acquisition. The legacy `AcquireNearestTarget` step remains runnable for old content, but is no longer the preferred authoring model.
 - **Sprint 16 note:** Gate 3 distance-movement showcases continued to work around this by using sparse layouts, far-away player starts, and a separate one-row fallback-lane scenario for `beta-kiting-orbiter` so unfiltered acquisition would select the intended target instead of helper/blocker entities.
-- **Missing capability:** Small authorable filter semantics for `AcquireNearestTarget`. Template-ID allowlists are the preferred first candidate if runtime/content binding supports them; otherwise a similarly simple filter should be assessed.
+- **Missing capability:** Broader relationship/category targeting, target priority policies, and scenario-specific overrides remain future work if content needs them.
 - **Unlocks:** More complex targeting rooms; follower/chaser variants; collector scenarios with props; target selection that can prefer player or item roles.
 - **Classification:** New Action Step/primitive authoring extension using existing engine state, potentially content/runtime binding if template IDs are needed at runtime.
 - **Priority:** Medium-high when targeting rooms become complex enough that sparse-layout workarounds are fragile.

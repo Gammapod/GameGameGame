@@ -74,6 +74,32 @@ public sealed class CoreInvariantTests
         Assert.DoesNotContain(world.LastTrace!.Children, child => child.Label.Contains("Player"));
     }
 
+    [Fact]
+    public void TurnServiceUpdatesFacingAfterSuccessfulDirectionalMovement()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(new MoveAction(Direction.East)));
+
+        Assert.True(acted);
+        Assert.Equal(Direction.East, world.GetActionFacing(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void TurnServiceDoesNotUpdateFacingAfterFailedDirectionalMovement()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(new MoveAction(Direction.North)));
+
+        Assert.False(acted);
+        Assert.Equal(Direction.North, world.GetActionFacing(TestWorld.PlayerId));
+    }
+
     private static bool TraceContains(TraceNode trace, string label)
     {
         return trace.Label == label || trace.Children.Any(child => TraceContains(child, label));

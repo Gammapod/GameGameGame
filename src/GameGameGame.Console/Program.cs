@@ -206,7 +206,7 @@ void RunGameSession(ConsoleGameSession session)
     playerId = game.PlayerEntityId;
     movement = new MovementService();
     inspector = new EntityInspectionService(entityId => registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
-    turns = new TurnService(movement, game.ActionPlans);
+    turns = new TurnService(movement, game.ActionPlans, (world, entityId) => TargetingService.RefreshTargets(world, registry, entityId));
     running = true;
     mode = InputMode.Play;
     worldCursor = new GridCoord(0, 0);

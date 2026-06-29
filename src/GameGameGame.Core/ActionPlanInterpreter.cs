@@ -54,13 +54,15 @@ public sealed record PlanEffectResult(
     bool Succeeded,
     bool ConsumesTurn,
     bool ContinuePlan,
-    TraceNode Trace);
+    TraceNode Trace,
+    Direction? ActorMovementDirection = null);
 
 public sealed record PlanExecutionResult(
     bool Succeeded,
     bool ConsumesTurn,
     bool ContinuePlan,
-    TraceNode Trace);
+    TraceNode Trace,
+    Direction? ActorMovementDirection = null);
 
 public sealed class ActionPlanInterpreter
 {
@@ -135,7 +137,8 @@ public sealed class ActionPlanInterpreter
                     effectResult.Succeeded,
                     effectResult.ConsumesTurn,
                     effectResult.ContinuePlan,
-                    root);
+                    root,
+                    effectResult.ActorMovementDirection);
             }
         }
 
@@ -163,6 +166,7 @@ public sealed class ActionPlanInterpreter
         for (var index = 0; index < steps.Count; index++)
         {
             var step = steps[index];
+            context.UseTargetSlot(step.TargetSlot ?? 1);
             var stepTrace = new TraceNode($"Action Step {step.Kind}", TraceStatus.Info);
             root.Add(stepTrace);
 
@@ -177,7 +181,7 @@ public sealed class ActionPlanInterpreter
                 if (stepResult.ConsumesTurn || !stepResult.ContinuePlan || index == steps.Count - 1)
                 {
                     root.Status = TraceStatus.Success;
-                    return new PlanExecutionResult(true, stepResult.ConsumesTurn, stepResult.ContinuePlan, root);
+                    return new PlanExecutionResult(true, stepResult.ConsumesTurn, stepResult.ContinuePlan, root, stepResult.ActorMovementDirection);
                 }
 
                 continue;
@@ -204,7 +208,7 @@ public sealed class ActionPlanInterpreter
         if (primitiveResult.Succeeded)
         {
             root.Status = TraceStatus.Success;
-            return new PlanExecutionResult(true, primitiveResult.ConsumesTurn, primitiveResult.ContinuePlan, root);
+            return new PlanExecutionResult(true, primitiveResult.ConsumesTurn, primitiveResult.ContinuePlan, root, primitiveResult.ActorMovementDirection);
         }
 
         if (primitive.FallbackPlanId is not { } fallbackPlanId)
@@ -231,7 +235,8 @@ public sealed class ActionPlanInterpreter
             fallbackResult.Succeeded,
             fallbackResult.ConsumesTurn,
             fallbackResult.ContinuePlan,
-            root);
+            root,
+            fallbackResult.ActorMovementDirection);
     }
 
     private PlanEffectResult ApplyPrimitive(
@@ -438,7 +443,7 @@ public sealed class ActionPlanInterpreter
         _movement.TryPlace(world, actorId, step.Destination);
         trace.Status = TraceStatus.Success;
         trace.Detail = $"moved {step.Direction} toward {target.Value}; distance {currentDistance}->{step.Distance}";
-        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, step.Direction);
     }
 
     private PlanEffectResult ApplyFleeTarget(
@@ -521,7 +526,7 @@ public sealed class ActionPlanInterpreter
             _movement.TryPlace(world, actorId, step.Destination);
             trace.Status = TraceStatus.Success;
             trace.Detail = $"moved {step.Direction} away from {target.Value}; distance {currentDistance}->{step.Distance}";
-            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, step.Direction);
         }
 
         var lastFailure = trace.Children.LastOrDefault(child => child.Label == "Reject flee step");
@@ -620,7 +625,7 @@ public sealed class ActionPlanInterpreter
             _movement.TryPlace(world, actorId, step.Destination);
             trace.Status = TraceStatus.Success;
             trace.Detail = $"mode={mode}; moved {step.Direction} relative to {target.Value}; Chebyshev distance {currentDistance}->{step.Distance}";
-            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, step.Direction);
         }
 
         var lastFailure = trace.Children.LastOrDefault(child => child.Label == "Reject distance-two step");
@@ -714,7 +719,7 @@ public sealed class ActionPlanInterpreter
         _movement.TryPlace(world, actorId, strafeDestination);
         trace.Status = TraceStatus.Success;
         trace.Detail = $"primary={primary.Direction}; moved {strafeDirection} strafing {(clockwise ? "clockwise" : "anticlockwise")} around {target.Value}";
-        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, strafeDirection);
     }
 
     private PlanEffectResult ApplyMoveFacingPrimitive(
@@ -741,7 +746,7 @@ public sealed class ActionPlanInterpreter
         {
             trace.Status = TraceStatus.Success;
             trace.Detail = resolution.Trace.Detail;
-            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace, resolution.ActorMovementDirection);
         }
 
         if (_movement.GetBlockingEntity(world, actorId, facing.Value) is { } blocker)
@@ -781,7 +786,7 @@ public sealed class ActionPlanInterpreter
             trace.Add(TraceNode.Success("Preserve Facing", facing.Value.ToString()));
             trace.Status = TraceStatus.Success;
             trace.Detail = $"moved {movementDirection}; preserved Facing={facing.Value}";
-            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace, resolution.ActorMovementDirection);
         }
 
         if (_movement.GetBlockingEntity(world, actorId, movementDirection) is { } blocker)
@@ -1031,7 +1036,7 @@ public sealed class ActionPlanInterpreter
         {
             trace.Status = TraceStatus.Success;
             trace.Detail = resolution.Trace.Detail;
-            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, resolution.ActorMovementDirection);
         }
 
         trace.Status = TraceStatus.Failure;
@@ -1078,7 +1083,7 @@ public sealed class ActionPlanInterpreter
         _movement.TryMove(world, actorId, facing.Value);
         trace.Status = TraceStatus.Success;
         trace.Detail = $"pushed {blocker.Value} {facing.Value}";
-        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, facing.Value);
     }
 
     private static PlanEffectResult ApplyDestroyTargetPrimitive(
@@ -1424,7 +1429,8 @@ public sealed class ActionPlanInterpreter
             nestedResult.Succeeded,
             nestedResult.ConsumesTurn,
             nestedResult.ContinuePlan,
-            trace);
+            trace,
+            nestedResult.ActorMovementDirection);
     }
 
     private bool EvaluateChecks(

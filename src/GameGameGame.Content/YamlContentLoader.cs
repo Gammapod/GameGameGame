@@ -49,10 +49,27 @@ public static class YamlContentLoader
                 CarriedEntities: MaterializeCarriedEntities(template.CarriedEntities),
                 DefaultActionPlanId: template.DefaultActionPlanId is null ? null : new ActionPlanTemplateId(template.DefaultActionPlanId),
                 DefaultPlanVariables: MaterializePlanVariables(template.DefaultPlanVariables),
-                ActionStateDefaults: MaterializeActionStateDefaults(template.ActionStateDefaults));
+                ActionStateDefaults: MaterializeActionStateDefaults(template.ActionStateDefaults),
+                TargetingRules: MaterializeTargetingRules(template.TargetingRules));
         }
 
         return result;
+    }
+
+    private static IReadOnlyList<EntityTargetingRule>? MaterializeTargetingRules(List<EntityTargetingRuleDto>? rules)
+    {
+        if (rules is null || rules.Count == 0)
+        {
+            return null;
+        }
+
+        return rules
+            .Select(rule => new EntityTargetingRule(
+                rule.Slot,
+                new EntityTemplateId(Required(rule.TargetTemplateId, nameof(rule.TargetTemplateId))),
+                rule.Range,
+                rule.Hint))
+            .ToList();
     }
 
     private static IReadOnlyList<CarriedEntityTemplate>? MaterializeCarriedEntities(List<CarriedEntityTemplateDto>? carriedEntities)
@@ -144,7 +161,7 @@ public static class YamlContentLoader
         new((behavior.Steps ?? []).Select(MaterializeBehaviorStep).ToList());
 
     private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(ActionPlanBehaviorStepDescriptorDto step) =>
-        new(step.Kind);
+        new(step.Kind, step.TargetSlot);
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -289,7 +306,20 @@ public static class YamlContentLoader
 
         public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
 
+        public List<EntityTargetingRuleDto>? TargetingRules { get; set; }
+
         public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
+    }
+
+    private sealed class EntityTargetingRuleDto
+    {
+        public int Slot { get; set; }
+
+        public string? Hint { get; set; }
+
+        public string? TargetTemplateId { get; set; }
+
+        public int Range { get; set; }
     }
 
     private sealed class ActorActionStateDefaultsDto
@@ -334,6 +364,8 @@ public static class YamlContentLoader
     private sealed class ActionPlanBehaviorStepDescriptorDto
     {
         public ActionPlanBehaviorStepKind Kind { get; set; }
+
+        public int? TargetSlot { get; set; }
     }
 
     private sealed class ActionPlanPrimitiveDescriptorDto

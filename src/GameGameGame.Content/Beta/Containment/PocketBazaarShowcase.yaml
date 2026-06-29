@@ -1,0 +1,492 @@
+entityTemplates:
+  pocketBazaarOuterRoom:
+    name: Pocket Bazaar Outer Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: pocketBazaarBox
+      templateId: pocketBazaarBox
+      coord:
+        x: 3
+        y: 2
+
+  pocketBazaarBox:
+    name: Impossible Box
+    inventoryWidth: 11
+    inventoryHeight: 7
+    bulk: 5
+    aperture: 10
+    carriedEntities:
+    - entityId: workhouseDisplay
+      templateId: pocketBazaarWorkhouse
+      coord:
+        x: 2
+        y: 1
+    - entityId: slimeDisplay
+      templateId: pocketBazaarSlimeRoom
+      coord:
+        x: 5
+        y: 1
+    - entityId: patrolDisplay
+      templateId: pocketBazaarPatrolWindow
+      coord:
+        x: 8
+        y: 1
+    - entityId: thiefDisplay
+      templateId: pocketBazaarThiefRoom
+      coord:
+        x: 5
+        y: 4
+
+  pocketBazaarPlayer:
+    name: Pocket Bazaar Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    bulk: 3
+    aperture: 5
+    actionStateDefaults:
+      facing: East
+
+  pocketBazaarWorkhouse:
+    name: Workhouse Display
+    inventoryWidth: 11
+    inventoryHeight: 5
+    bulk: 20
+    aperture: 10
+    carriedEntities:
+    - entityId: workhouseHammer
+      templateId: pocketBazaarTool
+      coord:
+        x: 2
+        y: 1
+    - entityId: workhouseTongs
+      templateId: pocketBazaarTool
+      coord:
+        x: 2
+        y: 3
+    - entityId: workhouseAnvil
+      templateId: pocketBazaarAnvil
+      coord:
+        x: 5
+        y: 0
+    - entityId: workhouseMouse
+      templateId: pocketBazaarMouse
+      coord:
+        x: 3
+        y: 2
+    - entityId: workhouseSouthRailStart
+      templateId: pocketBazaarRail
+      coord:
+        x: 3
+        y: 3
+    - entityId: workhouseSouthRailMid1
+      templateId: pocketBazaarRail
+      coord:
+        x: 4
+        y: 3
+    - entityId: workhouseSouthRailMid2
+      templateId: pocketBazaarRail
+      coord:
+        x: 5
+        y: 3
+    - entityId: workhouseNorthRail1
+      templateId: pocketBazaarRail
+      coord:
+        x: 6
+        y: 1
+    - entityId: workhouseSouthRail1
+      templateId: pocketBazaarRail
+      coord:
+        x: 6
+        y: 3
+    - entityId: workhouseNorthRail2
+      templateId: pocketBazaarRail
+      coord:
+        x: 7
+        y: 1
+    - entityId: workhouseSouthRail2
+      templateId: pocketBazaarRail
+      coord:
+        x: 7
+        y: 3
+    - entityId: workhouseChest
+      templateId: pocketBazaarMouseChest
+      coord:
+        x: 8
+        y: 2
+
+  pocketBazaarTool:
+    name: Pick-up Tool
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+
+  pocketBazaarAnvil:
+    name: Too-Heavy Anvil
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 100
+    aperture: 0
+
+  pocketBazaarRail:
+    name: Workbench Rail
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 100
+    aperture: 0
+
+  pocketBazaarMouse:
+    name: Fleeing Mouse
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: pocketBazaarMouseRetreat
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      hint: Danger
+      targetTemplateId: pocketBazaarPlayer
+      range: 10
+    - slot: 2
+      hint: Workhouse Chest
+      targetTemplateId: pocketBazaarMouseChest
+      range: 10
+    - slot: 3
+      hint: Mousehole
+      targetTemplateId: pocketBazaarMousehole
+      range: 10
+
+  pocketBazaarMouseChest:
+    name: Enterable Chest
+    inventoryWidth: 5
+    inventoryHeight: 3
+    bulk: 4
+    aperture: 5
+    carriedEntities:
+    - entityId: chestMousehole
+      templateId: pocketBazaarMousehole
+      coord:
+        x: 4
+        y: 0
+
+  pocketBazaarMousehole:
+    name: Tiny Mousehole
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 3
+    aperture: 1
+
+  pocketBazaarSlimeRoom:
+    name: Alpha Slime Exhibit
+    inventoryWidth: 8
+    inventoryHeight: 6
+    bulk: 20
+    aperture: 10
+    carriedEntities:
+    - entityId: museumSmallSlimeCollector
+      templateId: pocketBazaarSmallSlime
+      coord:
+        x: 1
+        y: 1
+    - entityId: museumSmallPebble
+      templateId: pocketBazaarSmallPebble
+      coord:
+        x: 5
+        y: 1
+    - entityId: museumSmallPebble2
+      templateId: pocketBazaarSmallPebble
+      coord:
+        x: 3
+        y: 0
+    - entityId: museumBigSlime
+      templateId: pocketBazaarBigSlime
+      coord:
+        x: 3
+        y: 2
+    - entityId: museumSmallSlimeTester
+      templateId: pocketBazaarSmallSlime
+      coord:
+        x: 2
+        y: 5
+
+  pocketBazaarSmallSlime:
+    name: Small Slime
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: pocketBazaarSlimeWalkPickupReverse
+    actionStateDefaults:
+      facing: East
+
+  pocketBazaarBigSlime:
+    name: Big Slime
+    inventoryWidth: 4
+    inventoryHeight: 2
+    bulk: 3
+    aperture: 10
+    defaultActionPlanId: pocketBazaarSlimeWalkPickupReverse
+    actionStateDefaults:
+      facing: South
+
+  pocketBazaarSmallPebble:
+    name: Small Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+
+  pocketBazaarPatrolWindow:
+    name: Sealed Patrol Window
+    inventoryWidth: 9
+    inventoryHeight: 6
+    bulk: 20
+    aperture: 1
+    carriedEntities:
+    - entityId: windowRightPatroller
+      templateId: pocketBazaarRightPatroller
+      coord:
+        x: 1
+        y: 1
+    - entityId: windowRightPatrolWall
+      templateId: pocketBazaarPatrolWall
+      coord:
+        x: 3
+        y: 1
+    - entityId: windowLeftPatroller
+      templateId: pocketBazaarLeftPatroller
+      coord:
+        x: 5
+        y: 3
+    - entityId: windowLeftPatrolWall
+      templateId: pocketBazaarPatrolWall
+      coord:
+        x: 7
+        y: 3
+
+  pocketBazaarRightPatroller:
+    name: Right-Turn Patroller
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+    defaultActionPlanId: pocketBazaarMoveThenTurnRight
+    actionStateDefaults:
+      facing: East
+
+  pocketBazaarLeftPatroller:
+    name: Left-Turn Patroller
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+    defaultActionPlanId: pocketBazaarMoveThenTurnLeft
+    actionStateDefaults:
+      facing: East
+
+  pocketBazaarPatrolWall:
+    name: Patrol Wall
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 100
+    aperture: 0
+
+  pocketBazaarThiefRoom:
+    name: Thief Deposit Exhibit
+    inventoryWidth: 9
+    inventoryHeight: 3
+    bulk: 20
+    aperture: 10
+    carriedEntities:
+    - entityId: museumThief
+      templateId: pocketBazaarThief
+      coord:
+        x: 1
+        y: 1
+    - entityId: museumGemVictim
+      templateId: pocketBazaarGemVictim
+      coord:
+        x: 4
+        y: 1
+    - entityId: museumThiefChest
+      templateId: pocketBazaarThiefChest
+      coord:
+        x: 7
+        y: 1
+
+  pocketBazaarThief:
+    name: Gem Thief
+    inventoryWidth: 1
+    inventoryHeight: 1
+    bulk: 1
+    aperture: 5
+    defaultActionPlanId: pocketBazaarStealThenDeposit
+    targetingRules:
+    - slot: 1
+      hint: Gem Holder
+      targetTemplateId: pocketBazaarGemVictim
+      range: 10
+    - slot: 2
+      hint: Personal Chest
+      targetTemplateId: pocketBazaarThiefChest
+      range: 10
+
+  pocketBazaarGemVictim:
+    name: Gem Holder
+    inventoryWidth: 1
+    inventoryHeight: 1
+    bulk: 1
+    aperture: 5
+    carriedEntities:
+    - entityId: museumRuby
+      templateId: pocketBazaarRuby
+      coord:
+        x: 0
+        y: 0
+
+  pocketBazaarThiefChest:
+    name: Thief's Personal Chest
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 3
+    aperture: 5
+
+  pocketBazaarRuby:
+    name: Ruby
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+
+presentations:
+  pocketBazaarOuterRoom:
+    glyph: '#'
+    color: Gray
+  pocketBazaarBox:
+    glyph: 'B'
+    color: Earth
+  pocketBazaarPlayer:
+    glyph: '@'
+    color: Yellow
+  pocketBazaarWorkhouse:
+    glyph: 'W'
+    color: Earth
+  pocketBazaarTool:
+    glyph: '/'
+    color: White
+  pocketBazaarAnvil:
+    glyph: 'A'
+    color: Gray
+  pocketBazaarRail:
+    glyph: '='
+    color: Gray
+  pocketBazaarMouse:
+    glyph: 'm'
+    color: Green
+  pocketBazaarMouseChest:
+    glyph: 'C'
+    color: Earth
+  pocketBazaarMousehole:
+    glyph: 'o'
+    color: Gray
+  pocketBazaarSlimeRoom:
+    glyph: 'S'
+    color: DarkGreen
+  pocketBazaarSmallSlime:
+    glyph: 's'
+    color: Green
+  pocketBazaarBigSlime:
+    glyph: 'S'
+    color: DarkGreen
+  pocketBazaarSmallPebble:
+    glyph: '*'
+    color: White
+  pocketBazaarPatrolWindow:
+    glyph: 'P'
+    color: Cyan
+  pocketBazaarRightPatroller:
+    glyph: 'R'
+    color: Green
+  pocketBazaarLeftPatroller:
+    glyph: 'L'
+    color: Cyan
+  pocketBazaarPatrolWall:
+    glyph: '#'
+    color: Gray
+  pocketBazaarThiefRoom:
+    glyph: 'T'
+    color: Earth
+  pocketBazaarThief:
+    glyph: 't'
+    color: Green
+  pocketBazaarGemVictim:
+    glyph: 'V'
+    color: Earth
+  pocketBazaarThiefChest:
+    glyph: 'C'
+    color: Earth
+  pocketBazaarRuby:
+    glyph: '*'
+    color: Cyan
+
+actionPlans:
+  pocketBazaarMouseRetreat:
+    id: pocketBazaarMouseRetreat
+    behavior:
+      steps:
+      - kind: FleeTarget
+        targetSlot: 1
+      - kind: EnterTarget
+        targetSlot: 3
+      - kind: EnterTarget
+        targetSlot: 2
+
+  pocketBazaarSlimeWalkPickupReverse:
+    id: pocketBazaarSlimeWalkPickupReverse
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PickupTarget
+      - kind: ReverseFacing
+
+  pocketBazaarMoveThenTurnRight:
+    id: pocketBazaarMoveThenTurnRight
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: TurnRight
+
+  pocketBazaarMoveThenTurnLeft:
+    id: pocketBazaarMoveThenTurnLeft
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: TurnLeft
+
+  pocketBazaarStealThenDeposit:
+    id: pocketBazaarStealThenDeposit
+    behavior:
+      steps:
+      - kind: SeekTarget
+        targetSlot: 1
+      - kind: TakeTarget
+        targetSlot: 1
+      - kind: SeekTarget
+        targetSlot: 2
+      - kind: GiveTarget
+        targetSlot: 2
+
+scenarios:
+  beta-pocket-bazaar:
+    name: Beta Pocket Bazaar
+    scenarioRootEntityTemplateId: pocketBazaarOuterRoom
+    playerEntityTemplateId: pocketBazaarPlayer
+    playerEntityId: pocketBazaarPlayer
+    playerStart:
+      x: 1
+      y: 2

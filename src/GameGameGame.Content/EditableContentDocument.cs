@@ -397,6 +397,8 @@ public sealed class EditableContentDocument
 
         public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
 
+        public List<EntityTargetingRuleDto>? TargetingRules { get; set; }
+
         public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
 
         public static EntityTemplateDto From(EntityTemplate template) => new()
@@ -409,7 +411,27 @@ public sealed class EditableContentDocument
             DefaultActionPlanId = template.DefaultActionPlanId?.Value,
             DefaultPlanVariables = template.DefaultPlanVariables?.ToDictionary(entry => entry.Key, entry => PlanValueDescriptorDto.From(entry.Value)),
             ActionStateDefaults = template.ActionStateDefaults is null ? null : ActorActionStateDefaultsDto.From(template.ActionStateDefaults),
+            TargetingRules = template.TargetingRules?.Select(EntityTargetingRuleDto.From).ToList(),
             CarriedEntities = template.CarriedEntities?.Select(CarriedEntityTemplateDto.From).ToList()
+        };
+    }
+
+    public sealed class EntityTargetingRuleDto
+    {
+        public int Slot { get; set; }
+
+        public string? Hint { get; set; }
+
+        public string? TargetTemplateId { get; set; }
+
+        public int Range { get; set; }
+
+        public static EntityTargetingRuleDto From(EntityTargetingRule rule) => new()
+        {
+            Slot = rule.Slot,
+            Hint = rule.Hint,
+            TargetTemplateId = rule.TargetTemplateId.Value,
+            Range = rule.Range
         };
     }
 
@@ -529,12 +551,15 @@ public sealed class EditableContentDocument
     {
         public ActionPlanBehaviorStepKind Kind { get; set; }
 
+        public int? TargetSlot { get; set; }
+
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
         {
-            Kind = descriptor.Kind
+            Kind = descriptor.Kind,
+            TargetSlot = descriptor.TargetSlot
         };
 
-        public ActionPlanBehaviorStepDescriptor ToDescriptor() => new(Kind);
+        public ActionPlanBehaviorStepDescriptor ToDescriptor() => new(Kind, TargetSlot);
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

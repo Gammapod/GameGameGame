@@ -30,6 +30,7 @@ public sealed class InterpretedPlanIntent(
             result.Succeeded,
             result.ConsumesTurn,
             result.ContinuePlan,
-            result.Trace);
+            result.Trace,
+            result.ActorMovementDirection);
     }
 }

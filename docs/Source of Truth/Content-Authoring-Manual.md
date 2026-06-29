@@ -60,7 +60,7 @@ Default workflow:
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
 | Presentations | Assign/edit presentation data used by authored templates. |
 | Inventory / containment | Inventory dimensions, bulk, aperture, and carried entity layout. |
-| Actor state | Initial actor `Facing` through `actionStateDefaults.facing`. |
+| Actor state | Initial actor `Facing` through `actionStateDefaults.facing`; target-selection rules through `targetingRules`. |
 | Action-plan assignment | Assign or clear an entity template's default action plan. |
 | Action plans | Create, edit, delete, reorder, preview, and validate action plans. |
 | Canonical behavior chains | Add, remove, and reorder catalog-backed Action Steps. |
@@ -81,7 +81,8 @@ Author entity templates as reusable normal content. Current safe operations incl
 - assign or clear a default action plan;
 - configure inventory dimensions, bulk, and aperture;
 - place carried entities in authored inventory layouts;
-- set initial actor `Facing` when the template acts through action plans.
+- set initial actor `Facing` when the template acts through action plans;
+- configure target-selection rules for target-consuming Action Steps.
 
 Prefer reusable templates over scenario-specific one-off definitions. Scenarios should reference templates rather than encoding special behavior outside normal content structures.
 
@@ -114,12 +115,14 @@ Current content-facing actor state:
 
 | State | Authorable now | Use |
 |---|---:|---|
-| `Facing` | Yes | Initial facing direction for facing-based behavior. |
-| `Target` | Indirectly through Action Steps | Runtime target used by target-based steps. |
+| `Facing` | Yes | Initial facing direction; after a successful directional movement, runtime facing updates to the movement direction. |
+| `Target` slots | Yes, through targeting rules | Runtime targets used by target-based steps. |
 
 Author initial `Facing` through `actionStateDefaults.facing` or the corresponding editor/API workflow.
 
-Do not author arbitrary state variables for new content. `Target` is used by canonical Action Steps such as `AcquireNearestTarget`, `PickupTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, and `EnterTarget`. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; track that need through the gap log when it blocks content.
+Author target selection on entity templates with `targetingRules`. Each rule has a numeric `slot`, optional content-facing `hint`, `targetTemplateId`, and `range`. At the beginning of an entity turn, before its action plan is evaluated, each rule selects the nearest same-plane entity with the configured target template within range and writes that entity into the rule's target slot. Target-consuming Action Steps read slot `1` by default; advanced authoring can set an Action Step `targetSlot` to read another slot.
+
+Do not author arbitrary state variables for new content. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; use template target rules instead, or track the need through the gap log when rules are insufficient.
 
 ## Action plan authoring
 
@@ -145,11 +148,14 @@ Authoring model:
 - A successful turn-consuming step produces the observable action for that root resolution.
 - A failed/non-acting step may fall through to the next step, depending on the step.
 - Use Action Step order to express simple fallback behavior.
+- Target acquisition is not authored as an Action Step for new content. Use entity-template `targetingRules` instead.
+- Facing changes after successful directional movement; use movement Action Steps such as `MoveFacing`, `Backstep`, `StrafeClockwise`, and `StrafeAnticlockwise` rather than turn-in-place metadata steps.
 
 Do not use for new normal content:
 
 - arbitrary action-plan variables;
 - new `SetVariable` effects;
+- metadata-setting Action Steps such as `AcquireNearestTarget`, `TurnLeft`, `TurnRight`, and `ReverseFacing`;
 - legacy low-level check/effect construction;
 - linked fallback plans as a substitute for ordered canonical steps.
 
@@ -163,11 +169,8 @@ This table is the content-facing catalog of currently authorable canonical Actio
 
 | Step | Reads | Writes | Author-facing behavior | Common use |
 |---|---|---|---|---|
-| `MoveFacing` | `Facing` | `Target` when blocked by entity | Move one cell in facing direction; falls through when movement cannot act. | wandering, bump discovery, approach chains |
-| `Backstep` | `Facing` | `Target` when blocked by entity | Move one cell opposite facing while preserving facing; falls through when movement cannot act. | retreat, spacing, obstacle response |
-| `TurnLeft` | `Facing` | `Facing` | Rotate facing 90 degrees counter-clockwise; consumes the turn on success. | patrols, scanning, simple loops |
-| `TurnRight` | `Facing` | `Facing` | Rotate facing 90 degrees clockwise; consumes the turn on success. | patrols, scanning, simple loops |
-| `ReverseFacing` | `Facing` | `Facing` | Reverse facing direction; consumes the turn on success. | bounce behavior, patrol reversal |
+| `MoveFacing` | `Facing` | `Target` when blocked by entity; post-action `Facing` remains movement direction | Move one cell in facing direction; falls through when movement cannot act. | wandering, bump discovery, approach chains |
+| `Backstep` | `Facing` | `Target` when blocked by entity; post-action `Facing` becomes movement direction | Move one cell opposite facing; falls through when movement cannot act. | retreat, spacing, obstacle response |
 
 ### Inventory and adjacent interaction
 
@@ -181,16 +184,15 @@ This table is the content-facing catalog of currently authorable canonical Actio
 | `ExitFacing` | `Facing` | actor/container/world placement | Exit the current containing entity toward facing; falls through when not contained, blocked, out of bounds, or aperture checks fail. | leaving entered containers/rooms |
 | `PushFacing` | `Facing` | world positions | Push blocking entity one cell in facing direction, then move actor into blocker original cell; consumes the turn on success. | shovers, obstacle interaction |
 
-### Target acquisition and target-relative movement
+### Target-relative movement
 
 | Step | Reads | Writes | Author-facing behavior | Common use |
 |---|---|---|---|---|
-| `AcquireNearestTarget` | same-plane positions | `Target` | Select nearest same-plane non-self entity; no authorable filters; continues to next step when possible. | chasers, fleers, collectors, orbiters |
-| `SeekTarget` | `Target` | position | Move one cardinal step that reduces Manhattan distance to target; falls through if target is invalid or no reducing move can act. | chasing, following, collecting |
-| `FleeTarget` | `Target` | position | Move one cardinal step that increases Manhattan distance from target; falls through if no valid escape move can act. | fleeing, avoidance |
-| `MaintainChebyshevDistanceTwo` | `Target` | position | Move toward or away from target to approach Chebyshev distance 2; falls through when already at distance 2 or unable to improve. | kiting, spacing, ranged-position demos |
-| `StrafeClockwise` | `Target` | position | Attempt clockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
-| `StrafeAnticlockwise` | `Target` | position | Attempt anticlockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
+| `SeekTarget` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that reduces Manhattan distance to target; falls through if target is invalid or no reducing move can act. | chasing, following, collecting |
+| `FleeTarget` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that increases Manhattan distance from target; falls through if no valid escape move can act. | fleeing, avoidance |
+| `MaintainChebyshevDistanceTwo` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Move toward or away from target to approach Chebyshev distance 2; falls through when already at distance 2 or unable to improve. | kiting, spacing, ranged-position demos |
+| `StrafeClockwise` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Attempt clockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
+| `StrafeAnticlockwise` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Attempt anticlockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
 
 ### World mutation / prototype utility
 
@@ -204,15 +206,15 @@ Common chain patterns:
 | Goal | Chain |
 |---|---|
 | Move and pick up blockers/items | `MoveFacing -> PickupTarget` |
-| Acquire and chase nearest entity | `AcquireNearestTarget -> SeekTarget` |
-| Acquire and flee nearest entity | `AcquireNearestTarget -> FleeTarget` |
-| Keep distance before fallback behavior | `AcquireNearestTarget -> MaintainChebyshevDistanceTwo -> StrafeClockwise` |
+| Chase a selected target | `SeekTarget`, with a template `targetingRules` slot selecting the desired target type |
+| Flee a selected target | `FleeTarget`, with a template `targetingRules` slot selecting the desired target type |
+| Keep distance before fallback behavior | `MaintainChebyshevDistanceTwo -> StrafeClockwise`, with template `targetingRules` selecting the target |
 | Try to move, then push blocker | `MoveFacing -> PushFacing` |
 | Drop carried entity forward, otherwise move | `DropFacing -> MoveFacing` |
 | Give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
 | Move into a bumped/targeted container, then later leave it | `MoveFacing -> EnterTarget`; contained actor can use `ExitFacing` |
 
-`AcquireNearestTarget` currently targets any same-plane non-self entity. Use sparse scenario layouts when target filtering matters, and log a capability gap when sparse layout is not sufficient.
+Targeting rules currently select by template ID, same-plane Manhattan range, and nearest deterministic tie-break. Use multiple target slots when one entity needs different content-defined concepts such as danger/home, enemy/treasure, or food/shelter.
 
 `GiveTarget` and `TakeTarget` use first-item deterministic selection only. They do not support authorable item filters, barter/trade permissions, or transfer restrictions yet. Runtime reports identify transferred entity ID/name and coordinates; template IDs are not shown because runtime entities do not currently carry template IDs.
 

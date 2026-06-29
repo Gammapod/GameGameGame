@@ -70,21 +70,24 @@ public static class ActionStepCatalog
             "Turns the actor's persistent Facing direction 90 degrees counter-clockwise without moving any entity.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.TurnRight,
             "Turn Right",
             "Turns the actor's persistent Facing direction 90 degrees clockwise without moving any entity.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.ReverseFacing,
             "Reverse Facing",
             "Turns the actor's persistent Facing direction to the opposite direction without moving any entity.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+            StateWrites: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.Backstep,
             "Backstep",
@@ -96,7 +99,8 @@ public static class ActionStepCatalog
             ActionPlanBehaviorStepKind.AcquireNearestTarget,
             "Acquire Nearest Target",
             "Selects the nearest same-plane entity other than self by Manhattan distance, breaking ties by row-major coordinate order, writes it to Target, and continues to the next Action Step.",
-            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.SeekTarget,
             "Seek Target",
@@ -155,6 +159,9 @@ public static class ActionStepCatalog
 
     public static ActionStepDescriptor Get(ActionPlanBehaviorStepKind kind) =>
         Steps.Single(step => step.Kind == kind);
+
+    public static bool IsStableAuthoringStep(ActionPlanBehaviorStepKind kind) =>
+        Get(kind).Tier == ActionStepAuthoringTier.Stable;
 
     private static PlanPrimitiveSlotDescriptor State(ActionPlanSlot slot, PlanValueKind valueKind) =>
         new(slot, valueKind);

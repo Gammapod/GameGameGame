@@ -23,7 +23,7 @@ The existing services already provide these core authoring capabilities and shou
 - Action plans: list, create with generated ID, duplicate, delete with reference checks.
 - Action plan steps: add, update, move, remove.
 - Action plan checks/effects: add/update/move/remove checks, set success effect, set/clear failure effect.
-- Actor state defaults: set/clear initial facing using canonical `actionStateDefaults`.
+- Actor state and targeting: set/clear initial facing using canonical `actionStateDefaults`; list/set/remove entity `targetingRules`; set behavior-step `targetSlot` where target-consuming behavior should use a non-default slot.
 - Validation diagnostics: structured severity/code/message plus entity, plan, step, variable, slot, expected/actual kind, carried entity, related entity, and coordinate fields.
 
 ## Required remaining capabilities
@@ -112,6 +112,7 @@ They should also expose action primitive metadata already present in the engine/
 - slot read/write behavior
 - default descriptor produced for each primitive
 - legacy-only primitives or fields, such as `SetVariable`, when applicable
+- stable versus legacy action-step authoring tiers, including compatibility-only target acquisition or turn-only facing steps
 
 ### 5. Explicit IDs and reference management
 
@@ -198,7 +199,7 @@ Examples:
 
 When exact paths cannot be known, return the closest stable semantic location.
 
-### 11. Canonical actor state and plan slot authoring
+### 11. Canonical actor state, targeting, and plan slot authoring
 
 The old wishlist focused on default action plan variables. Current content now has canonical actor state defaults and slot validation.
 
@@ -206,11 +207,13 @@ Agent APIs should prefer canonical operations:
 
 - list actor state defaults for an entity template
 - set/clear initial facing
-- set/clear initial target, if target authoring is intended
+- list/set/remove entity targeting rules by slot, target template, range, and optional hint
+- set/clear behavior-step target slots for target-consuming behavior
+- set/clear initial target only for compatibility or deliberately pre-seeded runtime state
 - identify missing required slots for assigned action plans
 - suggest safe actor state defaults by required slot kind
 
-Arbitrary `defaultPlanVariables` and legacy variable fields should be treated as legacy/advanced authoring unless deliberately reintroduced as supported content.
+Arbitrary `defaultPlanVariables`, legacy variable fields, legacy target-acquisition steps, and turn-only facing mutation should be treated as legacy/advanced authoring unless deliberately reintroduced as supported content.
 
 ### 12. Content search and reference discovery
 
@@ -261,9 +264,13 @@ Suggested MVP operations:
 17. `delete-action-plan <file> <actionPlanTemplateId> [--dry-run] --json`
 18. `assign-default-action-plan <file> <entityTemplateId> <actionPlanTemplateId> [--dry-run] --json`
 19. `set-actor-state <file> <entityTemplateId> --facing <direction>|--clear-facing [--dry-run] --json`
-20. `catalog --json`
-21. `validate-all --json --strict --canonical`
-22. `apply-batch <file> <operations.json> --dry-run --json`
+20. `list-targeting-rules <file> <entityTemplateId> --json`
+21. `set-targeting-rule <file> <entityTemplateId> --slot <n> --target-template <id> --range <n> [--hint <text>] [--dry-run] --json`
+22. `remove-targeting-rule <file> <entityTemplateId> --slot <n> [--dry-run] --json`
+23. `set-behavior-target-slot <file> <actionPlanTemplateId> <stepIndex> --slot <n>|--clear [--dry-run] --json`
+24. `catalog --json`
+25. `validate-all --json --strict --canonical`
+26. `apply-batch <file> <operations.json> --dry-run --json`
 
 Each mutating command should return:
 
@@ -276,4 +283,4 @@ Each mutating command should return:
 
 ## Summary
 
-The original wishlist asked for many editor capabilities that now exist in `GameGameGame.Content`. The remaining need is a stable, structured, headless agent API over those capabilities, plus strict validation, schemas/catalogs, explicit ID/reference management, ordered diffs, dry-run/batch operations, and canonical actor-state-oriented authoring.
+The original wishlist asked for many editor capabilities that now exist in `GameGameGame.Content`. The remaining need is a stable, structured, headless agent API over those capabilities, plus strict validation, schemas/catalogs, explicit ID/reference management, ordered diffs, dry-run/batch operations, and canonical actor-state/targeting-oriented authoring.

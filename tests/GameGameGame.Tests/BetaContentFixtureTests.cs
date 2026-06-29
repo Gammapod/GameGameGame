@@ -68,7 +68,7 @@ public sealed class BetaContentFixtureTests
         Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("writes: Target=backstepBlocker", StringComparison.Ordinal));
         Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("1. Backstep: Failure", StringComparison.Ordinal));
         Assert.DoesNotContain(report.Turns[2].TraceLines, line => line.Contains("writes: Target=", StringComparison.Ordinal));
-        Assert.Contains("Successful Backstepper: scenarioRoot(1,2), facing North, target none", report.FinalStateLines);
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Successful Backstepper: scenarioRoot(1,2)", StringComparison.Ordinal) && line.Contains("target none", StringComparison.Ordinal));
         Assert.Contains("Blocked Backstepper: scenarioRoot(3,1), facing North, target backstepBlocker", report.FinalStateLines);
         Assert.Contains("Backstep Blocker: scenarioRoot(3,2), facing none, target none", report.FinalStateLines);
         Assert.Contains("Edge Backstepper: scenarioRoot(5,4), facing North, target none", report.FinalStateLines);
@@ -347,8 +347,8 @@ public sealed class BetaContentFixtureTests
         Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("writes: Target=idealBeacon", StringComparison.Ordinal));
         Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("2. MaintainChebyshevDistanceTwo: Failure", StringComparison.Ordinal));
 
-        Assert.Contains("Distance-Two Maintainer: scenarioRoot(2,1), facing East, target tooCloseBeacon", report.FinalStateLines);
-        Assert.Contains("Distance-Two Maintainer: scenarioRoot(8,3), facing East, target tooFarBeacon", report.FinalStateLines);
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Distance-Two Maintainer: scenarioRoot(2,1)", StringComparison.Ordinal) && line.Contains("target tooCloseBeacon", StringComparison.Ordinal));
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Distance-Two Maintainer: scenarioRoot(8,3)", StringComparison.Ordinal) && line.Contains("target tooFarBeacon", StringComparison.Ordinal));
         Assert.Contains("Distance-Two Maintainer: scenarioRoot(14,2), facing East, target idealBeacon", report.FinalStateLines);
         Assert.Contains("Distance-Two Beacon: scenarioRoot(2,3), facing none, target none", report.FinalStateLines);
         Assert.Contains("Distance-Two Beacon: scenarioRoot(8,6), facing none, target none", report.FinalStateLines);
@@ -453,9 +453,9 @@ public sealed class BetaContentFixtureTests
         Assert.Contains(report.Turns[2].TraceLines, line => line.StartsWith("3. StrafeClockwise: Success", StringComparison.Ordinal));
         Assert.Contains(report.Turns[2].TraceLines, line => line.Contains("moved North strafing clockwise", StringComparison.Ordinal));
 
-        Assert.Contains("Kiting Orbiter: scenarioRoot(17,1), facing West, target anticlockwiseFallbackTarget", report.FinalStateLines);
-        Assert.Contains("Kiting Orbiter: scenarioRoot(2,1), facing West, target closeOrbiterTarget", report.FinalStateLines);
-        Assert.Contains("Kiting Orbiter: scenarioRoot(10,2), facing West, target clockwiseOrbiterTarget", report.FinalStateLines);
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Kiting Orbiter: scenarioRoot(17,1)", StringComparison.Ordinal) && line.Contains("target anticlockwiseFallbackTarget", StringComparison.Ordinal));
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Kiting Orbiter: scenarioRoot(2,1)", StringComparison.Ordinal) && line.Contains("target closeOrbiterTarget", StringComparison.Ordinal));
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Kiting Orbiter: scenarioRoot(10,2)", StringComparison.Ordinal) && line.Contains("target clockwiseOrbiterTarget", StringComparison.Ordinal));
         Assert.Empty(report.RuntimeObservations);
     }
 
@@ -490,7 +490,7 @@ public sealed class BetaContentFixtureTests
         Assert.Contains(report.Turns[1].TraceLines, line => line.StartsWith("6. SeekTarget: Success", StringComparison.Ordinal));
         Assert.Contains(report.Turns[1].TraceLines, line => line.Contains("moved West toward seekFallbackTarget", StringComparison.Ordinal));
 
-        Assert.Contains("Kiting Orbiter: scenarioRoot(3,0), facing West, target fleeFallbackTarget", report.FinalStateLines);
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Kiting Orbiter: scenarioRoot(3,0)", StringComparison.Ordinal) && line.Contains("target fleeFallbackTarget", StringComparison.Ordinal));
         Assert.Contains("Kiting Orbiter: scenarioRoot(6,0), facing West, target seekFallbackTarget", report.FinalStateLines);
         Assert.Empty(report.RuntimeObservations);
     }

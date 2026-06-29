@@ -36,6 +36,50 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsInvalidTargetingRules()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with
+                {
+                    TargetingRules =
+                    [
+                        new EntityTargetingRule(0, new EntityTemplateId("missing"), -1, "Invalid")
+                    ]
+                });
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("slot"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("range"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingTargetTemplateReference && diagnostic.Message.Contains("missing"));
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsInvalidBehaviorTargetSlot()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("invalidTargetSlot"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.SeekTarget, TargetSlot: 0)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepTargetSlot);
+        Assert.Equal(PrototypeContent.WanderingActionPlanTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("invalidTargetSlot"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingCalledPlan()
     {
         var missingPlanId = new ActionPlanId("missingNestedPlan");

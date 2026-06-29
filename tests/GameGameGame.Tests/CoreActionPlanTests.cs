@@ -399,10 +399,6 @@ public sealed class CoreActionPlanTests
     [InlineData(ActionPlanBehaviorStepKind.PushFacing, "Push Facing")]
     [InlineData(ActionPlanBehaviorStepKind.DestroyTarget, "Destroy Target")]
     [InlineData(ActionPlanBehaviorStepKind.CreateFacing, "Create Facing")]
-    [InlineData(ActionPlanBehaviorStepKind.TurnLeft, "Turn Left")]
-    [InlineData(ActionPlanBehaviorStepKind.TurnRight, "Turn Right")]
-    [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, "Reverse Facing")]
-    [InlineData(ActionPlanBehaviorStepKind.AcquireNearestTarget, "Acquire Nearest Target")]
     [InlineData(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target")]
     [InlineData(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target")]
     [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, "Maintain Chebyshev Distance Two")]
@@ -418,6 +414,20 @@ public sealed class CoreActionPlanTests
 
         Assert.Equal(displayName, step.DisplayName);
         Assert.Equal(ActionStepAuthoringTier.Stable, step.Tier);
+        Assert.NotEmpty(step.Description);
+    }
+
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.TurnLeft, "Turn Left")]
+    [InlineData(ActionPlanBehaviorStepKind.TurnRight, "Turn Right")]
+    [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, "Reverse Facing")]
+    [InlineData(ActionPlanBehaviorStepKind.AcquireNearestTarget, "Acquire Nearest Target")]
+    public void ActionStepCatalogKeepsLegacyMetadataStepsForRuntimeCompatibility(ActionPlanBehaviorStepKind kind, string displayName)
+    {
+        var step = ActionStepCatalog.Get(kind);
+
+        Assert.Equal(displayName, step.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Legacy, step.Tier);
         Assert.NotEmpty(step.Description);
     }
 
@@ -1632,6 +1642,48 @@ public sealed class CoreActionPlanTests
         Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId));
         Assert.Contains(summary, line => line == "1. SeekTarget: Failure; reason=TargetNotAdjacent; fallback=continued");
         Assert.Contains(summary, line => line == "2. DestroyTarget: Success; fallback=stopped");
+    }
+
+    [Fact]
+    public void TargetConsumingBehaviorDefaultsToTargetSlotOne()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, slot: 1, TestWorld.SlimeId);
+        world.SetActionTarget(TestWorld.PlayerId, slot: 2, TestWorld.RockId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("destroy-default-target"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.False(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.True(world.Entities.ContainsKey(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void TargetConsumingBehaviorCanReadExplicitTargetSlot()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, slot: 1, TestWorld.RockId);
+        world.SetActionTarget(TestWorld.PlayerId, slot: 2, TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("destroy-slot-two-target"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget, TargetSlot: 2)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.False(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.True(world.Entities.ContainsKey(TestWorld.RockId));
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.PlayerId, slot: 1));
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId, slot: 2));
     }
 
     [Fact]

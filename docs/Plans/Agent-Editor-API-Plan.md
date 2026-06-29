@@ -8,6 +8,7 @@ The API should not expose legacy arbitrary-variable authoring. It should operate
 
 - entity templates and presentations,
 - actor action-state defaults,
+- entity targeting rules and numeric target slots,
 - action plans and steps,
 - canonical checks,
 - movement primitives: `Teleport`, `Move`, `Pickup`, `Drop`,
@@ -42,8 +43,9 @@ Initial command families:
    - edit carried entities.
 
 3. Actor state commands
-   - set/clear initial facing,
-   - defer initial target until a concrete content use case requires it.
+    - set/clear initial facing,
+    - list/set/remove targeting rules for template-scoped target acquisition,
+    - set behavior-step `targetSlot` when a plan consumes a non-default target slot.
 
 4. Action plan commands
    - list/create/delete plans,
@@ -65,6 +67,7 @@ Initial command families:
 
 - Do not expose `SetVariable` as an authoring command.
 - Do not expose arbitrary `directionVariable`, `targetVariable`, or `variableName` fields.
+- Do not expose legacy target-acquisition or turn-only facing mutation as normal canonical authoring.
 - Prefer typed IDs and descriptors over raw strings where possible.
 - Every mutating command should return validation status or enough context for the caller to validate immediately after.
 - Command failures should be structured and actionable, not only exception text.
@@ -161,6 +164,7 @@ Testable outcomes:
 - The agent API can create/configure a `Wandering` primitive plan without manual `CanMove`, `Move`, `BlockingEntity`, `ReverseDirection`, or `CallPlan` authoring.
 - The agent API can assign the primitive plan to an entity and set initial `Facing`.
 - The agent API can configure the `Wandering` followup port.
+- The agent API can define targeting rules on an entity and set behavior-step `targetSlot` for target-consuming behavior.
 - Unsupported arbitrary internal state mutation is rejected or clearly marked non-canonical.
 - Generated primitive-backed content validates with zero canonical diagnostics.
 

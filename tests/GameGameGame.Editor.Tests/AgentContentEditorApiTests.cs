@@ -56,6 +56,31 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsTargetingRulesAndBehaviorTargetSlots()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var mouseId = AssertSuccess(api.CreateEntityTemplate("Mouse"));
+        var catId = AssertSuccess(api.CreateEntityTemplate("Cat"));
+        AssertSuccess(api.UpdateEntityTemplate(mouseId, new AgentEntityTemplateUpdate(Glyph: 'm', Color: PresentationColor.Gray)));
+        AssertSuccess(api.UpdateEntityTemplate(catId, new AgentEntityTemplateUpdate(Glyph: 'c', Color: PresentationColor.Earth)));
+        AssertSuccess(api.SetTargetingRule(mouseId, new EntityTargetingRule(2, catId, Range: 4, Hint: "Danger")));
+        var planId = AssertSuccess(api.CreateActionPlan("Mouse Behavior"));
+        AssertSuccess(api.ClearActionPlanBehavior(planId));
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.FleeTarget));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetSlot(planId, stepIndex: 0, targetSlot: 2));
+        AssertSuccess(api.SetDefaultActionPlan(mouseId, planId));
+
+        var rules = AssertSuccess(api.ListTargetingRules(mouseId));
+        var snapshot = api.GetDocumentSnapshot();
+
+        var rule = Assert.Single(rules);
+        Assert.Equal(2, rule.Slot);
+        Assert.Equal(catId, rule.TargetTemplateId);
+        Assert.Contains("targetingRules:", snapshot.YamlPreview);
+        Assert.Contains("targetSlot: 2", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiRejectsLegacySetVariableAuthoring()
     {
         var api = AgentContentEditorApi.CreateNew();

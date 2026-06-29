@@ -1,4 +1,7 @@
 scenarios:
+- contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
+  scenarioId: beta-pocket-bazaar
+  name: Beta Pocket Bazaar
 - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
   scenarioId: beta-auto-enter-box
   name: Beta Auto Enter Box

@@ -27,6 +27,9 @@ public sealed class PrototypeContentRegistry(
             ? templateId
             : throw new InvalidOperationException($"No template assignment is registered for entity {entityId}.");
 
+    public bool TryGetTemplateIdForEntity(EntityId entityId, out EntityTemplateId templateId) =>
+        _entityTemplateAssignments.TryGetValue(entityId, out templateId);
+
     public ActionPlanDescriptor GetActionPlanDescriptor(ActionPlanTemplateId id) => actionPlanTemplates[id];
 
     public IEntityActionPlan CreateActionPlan(ActionPlanTemplateId id) =>
@@ -181,6 +184,7 @@ public sealed class PrototypeContentRegistry(
             }
 
             ValidateActionPlanTemplateReference(errors, diagnostics, templateId, template, template.DefaultActionPlanId, nameof(template.DefaultActionPlanId));
+            ValidateTargetingRules(diagnostics, templateId, template);
 
             if (template.DefaultPlanVariables is not null)
             {
@@ -203,6 +207,53 @@ public sealed class PrototypeContentRegistry(
                 {
                     errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} with missing template {carriedTemplateId}.");
                 }
+            }
+        }
+    }
+
+    private void ValidateTargetingRules(
+        List<ContentDiagnostic> diagnostics,
+        EntityTemplateId templateId,
+        EntityTemplate template)
+    {
+        if (template.TargetingRules is null || template.TargetingRules.Count == 0)
+        {
+            return;
+        }
+
+        var slots = new HashSet<int>();
+        foreach (var rule in template.TargetingRules)
+        {
+            if (rule.Slot <= 0)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidTargetingRule,
+                    $"Entity template {templateId} ({template.Name}) targeting rule slot must be greater than zero; found {rule.Slot}.",
+                    entityTemplateId: templateId));
+            }
+
+            if (!slots.Add(rule.Slot))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidTargetingRule,
+                    $"Entity template {templateId} ({template.Name}) has duplicate targeting rule slot {rule.Slot}.",
+                    entityTemplateId: templateId));
+            }
+
+            if (rule.Range < 0)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidTargetingRule,
+                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} range must be zero or greater; found {rule.Range}.",
+                    entityTemplateId: templateId));
+            }
+
+            if (!entityTemplates.ContainsKey(rule.TargetTemplateId))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingTargetTemplateReference,
+                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} references missing target template {rule.TargetTemplateId}.",
+                    entityTemplateId: templateId));
             }
         }
     }
@@ -304,6 +355,7 @@ public sealed class PrototypeContentRegistry(
             TryValidate(errors, $"Action plan template {templateId} ({descriptor.Id})", () => descriptor.Materialize());
 
             ValidateActionPlanShape(diagnostics, templateId, descriptor);
+            ValidateBehaviorTargetSlots(diagnostics, templateId, descriptor);
             ValidatePrimitiveFallback(diagnostics, templateId, descriptor);
 
             foreach (var step in descriptor.Steps)
@@ -358,6 +410,31 @@ public sealed class PrototypeContentRegistry(
                     $"Action plan {descriptor.Id} declares an empty behavior chain. Omit behavior or add at least one Action Step.",
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: descriptor.Id));
+            }
+        }
+
+        static void ValidateBehaviorTargetSlots(
+            List<ContentDiagnostic> validationDiagnostics,
+            ActionPlanTemplateId actionPlanTemplateId,
+            ActionPlanDescriptor descriptor)
+        {
+            if (descriptor.Behavior is not { } behavior)
+            {
+                return;
+            }
+
+            for (var index = 0; index < behavior.Steps.Count; index++)
+            {
+                var step = behavior.Steps[index];
+                if (step.TargetSlot is <= 0)
+                {
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidActionStepTargetSlot,
+                        $"Action plan {descriptor.Id} action step {step.Kind} targetSlot must be greater than zero; found {step.TargetSlot}.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: index));
+                }
             }
         }
 
@@ -496,6 +573,11 @@ public sealed class PrototypeContentRegistry(
         }
 
         if (template.ActionStateDefaults?.Target is not null)
+        {
+            slots[ActionPlanSlot.Target] = PlanValueKind.Entity;
+        }
+
+        if (template.TargetingRules is { Count: > 0 })
         {
             slots[ActionPlanSlot.Target] = PlanValueKind.Entity;
         }

@@ -328,7 +328,7 @@ public sealed class MoveEffect : IPlanEffect
         trace.Reason = resolution.Trace.Reason;
         trace.Detail = resolution.Trace.Detail;
 
-        return new PlanEffectResult(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+        return new PlanEffectResult(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, trace, resolution.ActorMovementDirection);
     }
 }
 

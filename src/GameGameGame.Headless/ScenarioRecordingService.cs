@@ -113,7 +113,7 @@ public static class ScenarioRecordingService
 
         AddFrame(frames, outputDirectory, baseName, frameIndex: 0, turnNumber: 0, path =>
             renderer.RenderPng(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, definition.PlayerEntityId, frameIndex: 0, turnNumber: 0, definition.ScenarioId, definition.Name, path));
-        RunFullScenarioTurns(materialization.World, materialization.ActionPlans, scenarioPlaneId, request.TurnCount, runtimeObservations, turnNumber =>
+        RunFullScenarioTurns(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, request.TurnCount, runtimeObservations, turnNumber =>
             AddFrame(frames, outputDirectory, baseName, frameIndex: turnNumber, turnNumber, path =>
                 renderer.RenderPng(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, definition.PlayerEntityId, turnNumber, turnNumber, definition.ScenarioId, definition.Name, path)));
 
@@ -134,6 +134,7 @@ public static class ScenarioRecordingService
 
     private static void RunFullScenarioTurns(
         WorldState world,
+        PrototypeContentRegistry registry,
         IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
         PlaneId scenarioPlaneId,
         int turnCount,
@@ -153,7 +154,9 @@ public static class ScenarioRecordingService
                     continue;
                 }
 
+                TargetingService.RefreshTargets(world, registry, actorId);
                 var resolution = ResolvePlan(world, actorId, actionPlan.PlanTurn(world, actorId, movement), movement);
+                PostActionStateUpdater.ApplyFacingFromMovement(world, actorId, resolution.ActorMovementDirection);
                 world.RecordTrace(resolution.Trace);
 
                 if (resolution.ConsumesTurn)
@@ -199,14 +202,14 @@ public static class ScenarioRecordingService
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"resolved {option.GetType().Name}";
-                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
+                    return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
             }
 
             if (!resolution.ContinuePlan)
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"stopped at {option.GetType().Name}";
-                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
+                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
             }
         }
 

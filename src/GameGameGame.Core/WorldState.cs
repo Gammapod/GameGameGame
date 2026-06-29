@@ -45,6 +45,47 @@ public sealed class WorldState
     public EntityId? GetActionTarget(EntityId entityId) =>
         ActionStates.TryGetValue(entityId, out var state) ? state.Target : null;
 
+    public void SetActionTarget(EntityId entityId, int slot, EntityId targetId)
+    {
+        var state = GetOrCreateActionState(entityId);
+        state.Targets[slot] = targetId;
+
+        if (slot == 1)
+        {
+            state.Target = targetId;
+        }
+    }
+
+    public void ClearActionTarget(EntityId entityId, int slot)
+    {
+        if (!ActionStates.TryGetValue(entityId, out var state))
+        {
+            return;
+        }
+
+        state.Targets.Remove(slot);
+
+        if (slot == 1)
+        {
+            state.Target = null;
+        }
+    }
+
+    public EntityId? GetActionTarget(EntityId entityId, int slot)
+    {
+        if (!ActionStates.TryGetValue(entityId, out var state))
+        {
+            return null;
+        }
+
+        if (state.Targets.TryGetValue(slot, out var targetId))
+        {
+            return targetId;
+        }
+
+        return slot == 1 ? state.Target : null;
+    }
+
     public NodeId AddNode(PlaneId planeId, GridCoord coord)
     {
         var nodeId = new NodeId($"{planeId}:{coord.X},{coord.Y}");

@@ -1,12 +1,17 @@
 namespace GameGameGame.Core;
 
-public sealed class TurnService(MovementService movement, IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans)
+public sealed class TurnService(
+    MovementService movement,
+    IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+    Action<WorldState, EntityId>? beforePlan = null)
 {
     public bool TakeActorTurnThenAdvance(WorldState world, EntityId actorId, PlannedActionPlan actorPlan)
     {
         var root = new TraceNode($"Turn {world.TurnNumber + 1}", TraceStatus.Info);
         var actions = new List<TurnActionReport>();
+        beforePlan?.Invoke(world, actorId);
         var actorResult = ResolvePlanTrace(world, actorId, actorPlan);
+        PostActionStateUpdater.ApplyFacingFromMovement(world, actorId, actorResult.ActorMovementDirection);
         root.Add(actorResult.Trace);
         actions.Add(CreateActionReport(world, actorId, actorResult));
 
@@ -40,7 +45,9 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
         {
             if (world.Entities.ContainsKey(entityId))
             {
+                beforePlan?.Invoke(world, entityId);
                 var result = ResolvePlanTrace(world, entityId, actionPlan.PlanTurn(world, entityId, movement));
+                PostActionStateUpdater.ApplyFacingFromMovement(world, entityId, result.ActorMovementDirection);
                 root.Add(result.Trace);
                 actions.Add(CreateActionReport(world, entityId, result));
             }
@@ -49,7 +56,9 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
 
     public bool ResolvePlan(WorldState world, EntityId actorId, PlannedActionPlan plan)
     {
+        beforePlan?.Invoke(world, actorId);
         var result = ResolvePlanTrace(world, actorId, plan);
+        PostActionStateUpdater.ApplyFacingFromMovement(world, actorId, result.ActorMovementDirection);
         world.RecordTrace(result.Trace);
 
         return result.Acted;
@@ -69,14 +78,14 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"resolved {option.GetType().Name}";
-                return new TurnResolutionReport(resolution.Succeeded, resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
+                return new TurnResolutionReport(resolution.Succeeded, resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
             }
 
             if (!resolution.ContinuePlan)
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"stopped at {option.GetType().Name}";
-                return new TurnResolutionReport(resolution.Succeeded, resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
+                return new TurnResolutionReport(resolution.Succeeded, resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
             }
         }
 
@@ -97,5 +106,5 @@ public sealed class TurnService(MovementService movement, IReadOnlyDictionary<En
             resolution.Trace);
     }
 
-    private sealed record TurnResolutionReport(bool Acted, bool Succeeded, bool ConsumesTurn, bool ContinuePlan, TraceNode Trace);
+    private sealed record TurnResolutionReport(bool Acted, bool Succeeded, bool ConsumesTurn, bool ContinuePlan, TraceNode Trace, Direction? ActorMovementDirection = null);
 }

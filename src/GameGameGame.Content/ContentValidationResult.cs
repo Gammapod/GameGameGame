@@ -55,7 +55,10 @@ public enum ContentDiagnosticCode
     InventoryOverlap,
     DuplicateCarriedEntityId,
     CarriedEntityWithoutUsableInventory,
-    InvalidScenarioDefinition
+    InvalidScenarioDefinition,
+    InvalidTargetingRule,
+    MissingTargetTemplateReference,
+    InvalidActionStepTargetSlot
 }
 
 public sealed record ContentDiagnostic(

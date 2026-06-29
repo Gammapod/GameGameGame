@@ -111,6 +111,15 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
     public AgentApiResult ClearInitialFacing(EntityTemplateId entityTemplateId) =>
         Try("ClearInitialFacingFailed", () => Session.Editor.ClearInitialFacing(entityTemplateId));
 
+    public AgentApiResult<IReadOnlyList<EntityTargetingRule>> ListTargetingRules(EntityTemplateId entityTemplateId) =>
+        Try("ListTargetingRulesFailed", () => Session.Editor.ListTargetingRules(entityTemplateId));
+
+    public AgentApiResult SetTargetingRule(EntityTemplateId entityTemplateId, EntityTargetingRule rule) =>
+        Try("SetTargetingRuleFailed", () => Session.Editor.SetTargetingRule(entityTemplateId, rule));
+
+    public AgentApiResult RemoveTargetingRule(EntityTemplateId entityTemplateId, int slot) =>
+        Try("RemoveTargetingRuleFailed", () => Session.Editor.RemoveTargetingRule(entityTemplateId, slot));
+
     public AgentApiResult<EntityId> PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityTemplateId carriedTemplateId, GridCoord coord) =>
         Try("PlaceCarriedEntityFailed", () => Session.Editor.PlaceCarriedEntity(parentTemplateId, carriedTemplateId, coord));
 
@@ -177,6 +186,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
 
     public AgentApiResult AddActionPlanBehaviorStep(ActionPlanTemplateId planId, ActionPlanBehaviorStepKind kind) =>
         Try("AddActionPlanBehaviorStepFailed", () => Session.Editor.AddActionPlanBehaviorStep(planId, kind));
+
+    public AgentApiResult SetActionPlanBehaviorStepTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot) =>
+        Try("SetActionPlanBehaviorStepTargetSlotFailed", () => Session.Editor.SetActionPlanBehaviorStepTargetSlot(planId, stepIndex, targetSlot));
 
     public AgentApiResult MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex) =>
         Try("MoveActionPlanBehaviorStepFailed", () => Session.Editor.MoveActionPlanBehaviorStep(planId, fromIndex, toIndex));

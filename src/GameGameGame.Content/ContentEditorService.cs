@@ -286,7 +286,10 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .ToList();
     }
 
-    public IReadOnlyList<ActionStepDescriptor> ListActionSteps() => ActionStepCatalog.Steps;
+    public IReadOnlyList<ActionStepDescriptor> ListActionSteps() =>
+        ActionStepCatalog.Steps
+            .Where(step => step.Tier == ActionStepAuthoringTier.Stable)
+            .ToList();
 
     public ActionPlanPreview PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null)
     {
@@ -414,7 +417,7 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     {
         foreach (var step in steps)
         {
-            _ = ActionStepCatalog.Get(step.Kind);
+            EnsureStableAuthoringStep(step.Kind);
         }
 
         var plan = GetActionPlanDto(planId);
@@ -441,11 +444,33 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public void AddActionPlanBehaviorStep(ActionPlanTemplateId planId, ActionPlanBehaviorStepKind kind)
     {
-        _ = ActionStepCatalog.Get(kind);
+        EnsureStableAuthoringStep(kind);
         var steps = GetActionPlanBehaviorSteps(planId);
         steps.Add(new EditableContentDocument.ActionPlanBehaviorStepDescriptorDto { Kind = kind });
         MaterializeBehaviorDefaultsForAssignedTemplates(planId, GetActionPlanDto(planId).Behavior);
         onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot)
+    {
+        if (targetSlot is <= 0)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} target slot must be greater than zero.");
+        }
+
+        var steps = GetActionPlanBehaviorSteps(planId);
+        _ = steps[stepIndex];
+        steps[stepIndex].TargetSlot = targetSlot;
+        onChanged?.Invoke();
+    }
+
+    private static void EnsureStableAuthoringStep(ActionPlanBehaviorStepKind kind)
+    {
+        _ = ActionStepCatalog.Get(kind);
+        if (!ActionStepCatalog.IsStableAuthoringStep(kind))
+        {
+            throw new InvalidOperationException($"Action step {kind} is legacy/advanced and is not available for canonical authoring.");
+        }
     }
 
     public void MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex)
@@ -686,6 +711,50 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         if (template.ActionStateDefaults.Target is null)
         {
             template.ActionStateDefaults = null;
+        }
+
+        onChanged?.Invoke();
+    }
+
+    public IReadOnlyList<EntityTargetingRule> ListTargetingRules(EntityTemplateId templateId)
+    {
+        var template = GetEntityPreset(templateId).Template;
+        return (template.TargetingRules ?? [])
+            .OrderBy(rule => rule.Slot)
+            .ToList();
+    }
+
+    public void SetTargetingRule(EntityTemplateId templateId, EntityTargetingRule rule)
+    {
+        if (rule.Slot <= 0)
+        {
+            throw new InvalidOperationException($"Entity template {templateId} targeting rule slot must be greater than zero.");
+        }
+
+        if (rule.Range < 0)
+        {
+            throw new InvalidOperationException($"Entity template {templateId} targeting rule slot {rule.Slot} range must be zero or greater.");
+        }
+
+        var template = GetTemplateDto(templateId);
+        template.TargetingRules ??= [];
+        template.TargetingRules.RemoveAll(existing => existing.Slot == rule.Slot);
+        template.TargetingRules.Add(EditableContentDocument.EntityTargetingRuleDto.From(rule));
+        template.TargetingRules = template.TargetingRules.OrderBy(existing => existing.Slot).ToList();
+        onChanged?.Invoke();
+    }
+
+    public void RemoveTargetingRule(EntityTemplateId templateId, int slot)
+    {
+        var template = GetTemplateDto(templateId);
+        if (template.TargetingRules is null || template.TargetingRules.RemoveAll(rule => rule.Slot == slot) == 0)
+        {
+            throw new InvalidOperationException($"Entity template {templateId} has no targeting rule slot {slot}.");
+        }
+
+        if (template.TargetingRules.Count == 0)
+        {
+            template.TargetingRules = null;
         }
 
         onChanged?.Invoke();

@@ -137,7 +137,9 @@ public static class ScenarioRunService
                     continue;
                 }
 
+                TargetingService.RefreshTargets(world, materialization.Registry, actor.EntityId);
                 var resolution = ResolvePlan(world, actor.EntityId, actionPlan.PlanTurn(world, actor.EntityId, movement), movement);
+                PostActionStateUpdater.ApplyFacingFromMovement(world, actor.EntityId, resolution.ActorMovementDirection);
                 world.RecordTrace(resolution.Trace);
 
                 if (resolution.ConsumesTurn)
@@ -201,14 +203,14 @@ public static class ScenarioRunService
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"resolved {option.GetType().Name}";
-                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
+                    return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
             }
 
             if (!resolution.ContinuePlan)
             {
                 root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
                 root.Detail = $"stopped at {option.GetType().Name}";
-                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root);
+                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
             }
         }
 

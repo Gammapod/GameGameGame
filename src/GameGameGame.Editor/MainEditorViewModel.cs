@@ -1466,6 +1466,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
             BehaviorSteps.Add(new ActionPlanBehaviorStepListItem(
                 index,
                 step.Kind,
+                step.TargetSlot,
                 metadata.DisplayName,
                 metadata.Description,
                 FormatSlots("Requires", metadata.RequiredState),
@@ -1952,13 +1953,18 @@ public sealed record ActionStepCatalogListItem(
 public sealed record ActionPlanBehaviorStepListItem(
     int Index,
     ActionPlanBehaviorStepKind Kind,
+    int? TargetSlot,
     string DisplayName,
     string Description,
     string RequiredStateSummary,
     string DefaultStateSummary,
     string StateWritesSummary)
 {
-    public override string ToString() => $"{Index}: {DisplayName} | {RequiredStateSummary} | {DefaultStateSummary} | {StateWritesSummary}";
+    public override string ToString()
+    {
+        var targetSlot = TargetSlot is { } slot ? $" | Target Slot: {slot}" : string.Empty;
+        return $"{Index}: {DisplayName}{targetSlot} | {RequiredStateSummary} | {DefaultStateSummary} | {StateWritesSummary}";
+    }
 }
 
 public sealed record ActionPlanStepListItem(

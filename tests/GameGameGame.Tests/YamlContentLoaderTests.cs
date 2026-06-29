@@ -220,6 +220,7 @@ public sealed class YamlContentLoaderTests
                     - kind: TurnRight
                     - kind: ReverseFacing
                     - kind: FleeTarget
+                      targetSlot: 2
                     - kind: MaintainChebyshevDistanceTwo
                     - kind: StrafeClockwise
                     - kind: StrafeAnticlockwise
@@ -249,10 +250,12 @@ public sealed class YamlContentLoaderTests
         Assert.Contains("kind: Backstep", saved);
         Assert.Contains("kind: ReverseFacing", saved);
         Assert.Contains("kind: FleeTarget", saved);
+        Assert.Contains("targetSlot: 2", saved);
         Assert.Contains("kind: MaintainChebyshevDistanceTwo", saved);
         Assert.Contains("kind: StrafeClockwise", saved);
         Assert.Contains("kind: StrafeAnticlockwise", saved);
         Assert.Equal(ActionPlanBehaviorStepKind.FleeTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[6].Kind);
+        Assert.Equal(2, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[6].TargetSlot);
         Assert.Equal(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[7].Kind);
         Assert.Equal(ActionPlanBehaviorStepKind.StrafeClockwise, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[8].Kind);
         Assert.Equal(ActionPlanBehaviorStepKind.StrafeAnticlockwise, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[9].Kind);
@@ -282,6 +285,92 @@ public sealed class YamlContentLoaderTests
         var template = registry.GetEntityTemplate(new EntityTemplateId("slime"));
 
         Assert.Equal(Direction.East, template.ActionStateDefaults!.Facing);
+    }
+
+    [Fact]
+    public void YamlContentLoaderLoadsTemplateTargetingRules()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              cat:
+                name: Cat
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 0
+              mouse:
+                name: Mouse
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+                targetingRules:
+                  - slot: 1
+                    hint: Danger
+                    targetTemplateId: cat
+                    range: 6
+            presentations:
+              cat:
+                glyph: c
+                color: Earth
+              mouse:
+                glyph: m
+                color: Gray
+            actionPlans: {}
+            """);
+
+        var template = registry.GetEntityTemplate(new EntityTemplateId("mouse"));
+        var rule = Assert.Single(template.TargetingRules!);
+
+        Assert.Equal(1, rule.Slot);
+        Assert.Equal("Danger", rule.Hint);
+        Assert.Equal(new EntityTemplateId("cat"), rule.TargetTemplateId);
+        Assert.Equal(6, rule.Range);
+        Assert.True(registry.Validate().IsValid);
+    }
+
+    [Fact]
+    public void EditableContentDocumentRoundTripsTemplateTargetingRules()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              cat:
+                name: Cat
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 3
+                carryingCapacity: 0
+              mouse:
+                name: Mouse
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+                targetingRules:
+                  - slot: 2
+                    hint: Home
+                    targetTemplateId: cat
+                    range: 4
+            presentations:
+              cat:
+                glyph: c
+                color: Earth
+              mouse:
+                glyph: m
+                color: Gray
+            actionPlans: {}
+            """);
+
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+        var rule = Assert.Single(reloaded.GetEntityTemplate(new EntityTemplateId("mouse")).TargetingRules!);
+
+        Assert.Contains("targetingRules:", saved);
+        Assert.Contains("hint: Home", saved);
+        Assert.Equal(2, rule.Slot);
+        Assert.Equal(new EntityTemplateId("cat"), rule.TargetTemplateId);
     }
 
     [Fact]
