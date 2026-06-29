@@ -822,7 +822,8 @@ public sealed class BetaContentFixtureTests
             "beta-too-bulky-enter",
             "beta-nested-aperture-success",
             "beta-nested-aperture-blocked",
-            "beta-exit-practice"
+            "beta-exit-practice",
+            "beta-mouse-crack"
         })
         {
             var materialization = AssertSuccess(api.MaterializeScenario(scenarioId));
@@ -855,6 +856,13 @@ public sealed class BetaContentFixtureTests
         Assert.Empty(nestedBlockedReport.RuntimeFailures);
         Assert.Contains(nestedBlockedReport.Turns[0].TraceLines, line => line.StartsWith("2. EnterTarget: Failure; reason=ApertureBlocked", StringComparison.Ordinal));
         Assert.Contains(nestedBlockedReport.RuntimeObservations, observation => observation.Contains("Nested Crawler could not act", StringComparison.Ordinal));
+
+        var mouseReport = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaMouseCrackRoom"), TurnCount: 1)));
+        Assert.Empty(mouseReport.ValidationDiagnostics);
+        Assert.Empty(mouseReport.RuntimeFailures);
+        Assert.Contains(mouseReport.Turns[0].TraceLines, line => line.StartsWith("2. EnterTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Mouse Crack inventory:", mouseReport.InventorySummaryLines);
+        Assert.Contains("  - Tiny Mouse tinyMouse at (0,0)", mouseReport.InventorySummaryLines);
     }
 
     private static BetaContentApi OpenBetaContent(string group, string fileName)

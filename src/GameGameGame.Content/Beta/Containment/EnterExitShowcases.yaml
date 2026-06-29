@@ -97,11 +97,38 @@ entityTemplates:
         x: 3
         y: 2
 
+  betaMouseCrackRoom:
+    name: Beta Mouse Crack Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: tinyMouse
+      templateId: betaTinyMouse
+      coord:
+        x: 2
+        y: 2
+    - entityId: mouseCrack
+      templateId: betaMouseCrack
+      coord:
+        x: 3
+        y: 2
+
   betaPlayer:
     name: Beta Player
     inventoryWidth: 2
     inventoryHeight: 2
     bulk: 1
+    aperture: 10
+    actionStateDefaults:
+      facing: West
+
+  betaBulkyAdventurer:
+    name: Bulky Adventurer
+    inventoryWidth: 2
+    inventoryHeight: 2
+    bulk: 5
     aperture: 10
     actionStateDefaults:
       facing: West
@@ -130,6 +157,14 @@ entityTemplates:
     aperture: 1
     defaultActionPlanId: acquireThenEnter
 
+  betaTinyMouse:
+    name: Tiny Mouse
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: acquireThenEnter
+
   betaEnterExitOpenBox:
     name: Open Box
     inventoryWidth: 2
@@ -146,6 +181,13 @@ entityTemplates:
 
   betaNarrowCrack:
     name: Narrow Crack
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 3
+    aperture: 2
+
+  betaMouseCrack:
+    name: Mouse Crack
     inventoryWidth: 2
     inventoryHeight: 1
     bulk: 3
@@ -170,7 +212,13 @@ presentations:
   betaExitPracticeRoom:
     glyph: '#'
     color: Gray
+  betaMouseCrackRoom:
+    glyph: '#'
+    color: Gray
   betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaBulkyAdventurer:
     glyph: '@'
     color: Yellow
   betaEnterCrawler:
@@ -182,6 +230,9 @@ presentations:
   betaNestedCrawler:
     glyph: 'n'
     color: Cyan
+  betaTinyMouse:
+    glyph: 'm'
+    color: Green
   betaEnterExitOpenBox:
     glyph: 'C'
     color: Earth
@@ -189,6 +240,9 @@ presentations:
     glyph: 'C'
     color: Green
   betaNarrowCrack:
+    glyph: '='
+    color: Gray
+  betaMouseCrack:
     glyph: '='
     color: Gray
 
@@ -253,4 +307,13 @@ scenarios:
     playerEntityId: betaPlayer
     playerStart:
       x: 2
+      y: 2
+
+  beta-mouse-crack:
+    name: Beta Mouse Crack
+    scenarioRootEntityTemplateId: betaMouseCrackRoom
+    playerEntityTemplateId: betaBulkyAdventurer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 4
       y: 2
