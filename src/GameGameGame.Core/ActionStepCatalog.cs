@@ -138,7 +138,19 @@ public static class ActionStepCatalog
             "Take Target",
             "Transfers the first carried entity from the persistent Target inventory into actor inventory using deterministic row-major source and destination order; falls through when transfer cannot be completed.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.EnterTarget,
+            "Enter Target",
+            "Moves the actor into the persistent Target inventory using deterministic row-major destination order; falls through when target adjacency, inventory space, or aperture checks fail.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.ExitFacing,
+            "Exit Facing",
+            "Moves the actor out of its containing entity inventory to the cell adjacent to the container in the actor's persistent Facing direction; falls through when no containing inventory, destination, or aperture check allows exit.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)])
     ];
 
     public static ActionStepDescriptor Get(ActionPlanBehaviorStepKind kind) =>

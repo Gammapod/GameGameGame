@@ -806,6 +806,57 @@ public sealed class BetaContentFixtureTests
         Assert.Contains(materialization.World.LastTurnReport!.Actions, action => action.ActorId == new EntityId("handoffTrader") && action.Summary.Contains("DropFacing", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void EnterExitShowcasesValidateMaterializeAndRun()
+    {
+        var api = OpenBetaContent("Containment", "EnterExitShowcases.yaml");
+
+        var snapshot = api.GetDocumentSnapshot();
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
+
+        foreach (var scenarioId in new[]
+        {
+            "beta-enter-exit-manual",
+            "beta-auto-enter-box",
+            "beta-too-bulky-enter",
+            "beta-nested-aperture-success",
+            "beta-nested-aperture-blocked",
+            "beta-exit-practice"
+        })
+        {
+            var materialization = AssertSuccess(api.MaterializeScenario(scenarioId));
+            Assert.Empty(materialization.ValidationDiagnostics);
+            Assert.Empty(materialization.RuntimeFailures);
+        }
+
+        var enterReport = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaAutoEnterRoom"), TurnCount: 1)));
+        Assert.Empty(enterReport.ValidationDiagnostics);
+        Assert.Empty(enterReport.RuntimeFailures);
+        Assert.Contains(enterReport.Turns[0].TraceLines, line => line.StartsWith("2. EnterTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Open Box inventory:", enterReport.InventorySummaryLines);
+        Assert.Contains("  - Enter Crawler autoCrawler at (0,0)", enterReport.InventorySummaryLines);
+
+        var bulkyReport = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaTooBulkyEnterRoom"), TurnCount: 1)));
+        Assert.Empty(bulkyReport.ValidationDiagnostics);
+        Assert.Empty(bulkyReport.RuntimeFailures);
+        Assert.Contains(bulkyReport.Turns[0].TraceLines, line => line.StartsWith("2. EnterTarget: Failure; reason=ApertureBlocked", StringComparison.Ordinal));
+        Assert.Contains(bulkyReport.RuntimeObservations, observation => observation.Contains("Bulky Crawler could not act", StringComparison.Ordinal));
+
+        var nestedSuccessReport = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaNestedApertureSuccessRoom"), TurnCount: 1)));
+        Assert.Empty(nestedSuccessReport.ValidationDiagnostics);
+        Assert.Empty(nestedSuccessReport.RuntimeFailures);
+        Assert.Contains(nestedSuccessReport.Turns[0].TraceLines, line => line.StartsWith("2. EnterTarget: Success", StringComparison.Ordinal));
+        Assert.Contains("Open Box inventory:", nestedSuccessReport.InventorySummaryLines);
+        Assert.Contains("  - Nested Crawler nestedCrawler at (0,0)", nestedSuccessReport.InventorySummaryLines);
+
+        var nestedBlockedReport = AssertSuccess(api.RunScenario(new ScenarioRunRequest(new EntityTemplateId("betaNestedApertureBlockedRoom"), TurnCount: 1)));
+        Assert.Empty(nestedBlockedReport.ValidationDiagnostics);
+        Assert.Empty(nestedBlockedReport.RuntimeFailures);
+        Assert.Contains(nestedBlockedReport.Turns[0].TraceLines, line => line.StartsWith("2. EnterTarget: Failure; reason=ApertureBlocked", StringComparison.Ordinal));
+        Assert.Contains(nestedBlockedReport.RuntimeObservations, observation => observation.Contains("Nested Crawler could not act", StringComparison.Ordinal));
+    }
+
     private static BetaContentApi OpenBetaContent(string group, string fileName)
     {
         var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", group, fileName));

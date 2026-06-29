@@ -1,127 +1,19 @@
 scenarios:
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\BehaviorChainCompositionShowcase.yaml
-  scenarioId: beta-behavior-chain-composition
-  name: Behavior Chain Composition
-  description: Shows fallback movement after first action step fails
-
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\BackstepShowcase.yaml
-  scenarioId: beta-backstep-showcase
-  name: Backstep Showcase
-  description: Shows the Backstep action (ie tank controls - opposite direction as facing)
-
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\TurnShowcase.yaml
-  scenarioId: beta-turn-showcase
-  name: Turn Showcase
-  description: Shows creatures that turn in place (very boring to look at in Console)
-
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\WallBounceShowcase.yaml
-  scenarioId: beta-wall-bounce
-  name: Wall Bounce
-  description: Creatures that move forward and reverse direction when blocked
-
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\PatrolTurnShowcase.yaml
-  scenarioId: beta-patrol-turn
-  name: Patrol Turn
-  description: Creatures that move forward and turn when blocked
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\DestroyTargetShowcase.yaml
-  scenarioId: beta-destroy-showcase
-  name: Destroy Showcase
-  description: Shows the Destroy command. Self-destruction is blocked.
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\CreateFacingShowcase.yaml
-  scenarioId: beta-create-showcase
-  name: Create Showcase
-  description: Crashes(deprecated) - originally showed the creation of a new object
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PickupDropWeightShowcase.yaml
-  scenarioId: beta-pickup-drop-weight
-  name: Pickup Drop Weight
-  description: Shows that the ability to pick something up is based on Weight (placeholder mechanic)
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\AlphaSlimeRecreation.yaml
-  scenarioId: beta-alpha-slime-recreation
-  name: Alpha Slime Recreation
-  description: Recreates the alpha slime loop with move, pickup, and reverse fallback behavior
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\DropFacingShowcase.yaml
-  scenarioId: beta-drop-showcase
-  name: Drop Showcase
-  description: Shows one entity dropping another
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PushFacingShowcase.yaml
-  scenarioId: beta-push-showcase
-  name: Push Showcase
-  description: Shows that an entity can Push another one
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\FleeTargetShowcase.yaml
-  scenarioId: beta-flee-target
-  name: Flee Target
-  description: Creatures that will move away from the closest object
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\DistanceTwoShowcase.yaml
-  scenarioId: beta-distance-two
-  name: Distance Two
-  description: Creatures that try to stay exactly 2 away from the closest object
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
-  scenarioId: beta-kiting-orbiter
-  name: Kiting Orbiter
-  description: Creatures that will try to stay 2 away while orbiting around the closest object (they quickly get distracted)
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
-  scenarioId: beta-kiting-orbiter-fallback-lane
-  name: Kiting Orbiter Fallback Lane
-  description: Shows the same kiting behavior when restricted from strafing
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\StrafeAnticlockwiseShowcase.yaml
-  scenarioId: beta-strafe-anticlockwise
-  name: Strafe Anticlockwise
-  description: A creature who faces the nearest object, and steps left (manhattan, chebyshev would likely work better)
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\StrafeClockwiseShowcase.yaml
-  scenarioId: beta-strafe-clockwise
-  name: Strafe Clockwise
-  description: A creature who faces the nearest object, and steps right (manhattan, chebyshev would likely work better)
-
-- contentPath: src\GameGameGame.Content\Beta\Targeting\AcquireTargetShowcase.yaml
-  scenarioId: beta-acquire-target-showcase
-  name: Acquire Target Showcase
-  description: A creature that looks at the closest object
-
-- contentPath: src\GameGameGame.Content\Beta\Targeting\DirectChaseShowcase.yaml
-  scenarioId: beta-direct-chase
-  name: Direct Chase
-  description: A creature that moves towards the nearest object
-
-- contentPath: src\GameGameGame.Content\Beta\Targeting\CollectorShowcase.yaml
-  scenarioId: beta-collector
-  name: Collector
-  description: A creature that moves towards the nearest object, then picks it up
-
-- contentPath: src\GameGameGame.Content\Beta\Targeting\TargetedDestroyerShowcase.yaml
-  scenarioId: beta-targeted-destroyer
-  name: Targeted Destroyer
-  description: A creature that moves towards the nearest object, then destroys it
-
-- contentPath: src\GameGameGame.Content\Beta\Transfer\PassiveChestTransferShowcase.yaml
-  scenarioId: beta-passive-chest-transfer
-  name: Passive Chest Transfer
-  description: A creature places an item in a chest
-
-- contentPath: src\GameGameGame.Content\Beta\Transfer\FeedingOfferingShowcase.yaml
-  scenarioId: beta-feeding-offering
-  name: Feeding Offering
-  description: A creature who gives an item to another creature (nothing else happens, so it's a lot like the chest one)
-
-- contentPath: src\GameGameGame.Content\Beta\Transfer\StealingActorShowcase.yaml
-  scenarioId: beta-stealing-actor
-  name: Stealing Actor
-  description: A creature who takes an item from another creature
-
-- contentPath: src\GameGameGame.Content\Beta\Transfer\CollectorTraderHandoffShowcase.yaml
-  scenarioId: beta-collector-trader-handoff
-  name: Collector Trader Handoff
-  description: A creature that picks up and gives away the player (at turn 11, the player ends up inside themself)
-diagnostics: []
+- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+  scenarioId: beta-auto-enter-box
+  name: Beta Auto Enter Box
+- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+  scenarioId: beta-enter-exit-manual
+  name: Beta Enter Exit Manual
+- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+  scenarioId: beta-exit-practice
+  name: Beta Exit Practice
+- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+  scenarioId: beta-nested-aperture-blocked
+  name: Beta Nested Aperture Blocked
+- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+  scenarioId: beta-nested-aperture-success
+  name: Beta Nested Aperture Success
+- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+  scenarioId: beta-too-bulky-enter
+  name: Beta Too Bulky Enter

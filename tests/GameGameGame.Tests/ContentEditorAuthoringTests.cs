@@ -72,6 +72,8 @@ public sealed class ContentEditorAuthoringTests
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeAnticlockwise && step.DisplayName == "Strafe Anticlockwise");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.GiveTarget && step.DisplayName == "Give Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TakeTarget && step.DisplayName == "Take Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.EnterTarget && step.DisplayName == "Enter Target");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ExitFacing && step.DisplayName == "Exit Facing");
     }
 
     [Fact]
@@ -124,6 +126,30 @@ public sealed class ContentEditorAuthoringTests
         Assert.True(editor.Validate().IsValid, string.Join(Environment.NewLine, editor.Validate().Errors));
         Assert.Contains("kind: GiveTarget", yaml);
         Assert.Contains("kind: TakeTarget", yaml);
+        Assert.DoesNotContain("primitive:", yaml);
+    }
+
+    [Fact]
+    public void ContentEditorAuthorsCanonicalEnterExitBehaviorChain()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var explorerId = editor.CreateEntityPreset("Containment Explorer");
+        editor.UpdateEntityPreset(
+            explorerId,
+            new EntityTemplate("Containment Explorer", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 10),
+            new EntityPresentation('e', PresentationColor.Cyan));
+        editor.SetInitialFacing(explorerId, Direction.West);
+
+        var planId = editor.CreateActionPlan("Enter Exit Behavior");
+        editor.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.EnterTarget, ActionPlanBehaviorStepKind.ExitFacing]);
+        editor.SetDefaultActionPlan(explorerId, planId);
+
+        var yaml = document.SaveYaml();
+
+        Assert.True(editor.Validate().IsValid, string.Join(Environment.NewLine, editor.Validate().Errors));
+        Assert.Contains("kind: EnterTarget", yaml);
+        Assert.Contains("kind: ExitFacing", yaml);
         Assert.DoesNotContain("primitive:", yaml);
     }
 

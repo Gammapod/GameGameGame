@@ -190,6 +190,15 @@ public sealed class ConsoleScenarioLaunchTests
         Assert.Contains(properties, property => property.Name == "Facing" && property.Value == Direction.East.ToString());
     }
 
+    [Fact]
+    public void ConsolePlayerControlsMapEnterAndExitToPlayerActionIntents()
+    {
+        Assert.Equal(ConsolePlayerCommand.Enter, ConsolePlayerControls.GetCommand(ConsoleKey.E));
+        Assert.Equal(ConsolePlayerCommand.Exit, ConsolePlayerControls.GetCommand(ConsoleKey.X));
+        Assert.IsType<EnterAction>(ConsolePlayerControls.CreateEnterAction(new EntityId("door")));
+        Assert.IsType<ExitAction>(ConsolePlayerControls.CreateExitAction(Direction.North));
+    }
+
     private static EditableContentDocument CreateConsoleDocument(string scenarioId, string scenarioName, GridCoord playerStart)
     {
         var document = new EditableContentDocument();

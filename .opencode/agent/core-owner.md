@@ -1,6 +1,6 @@
 ---
 description: Maintains parity between engine capabilities and editor support for those capabilities.
-mode: primary
+mode: all
 model: openai/gpt-5.5
 permission:
   read:

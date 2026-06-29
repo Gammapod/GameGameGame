@@ -60,7 +60,7 @@ public sealed class CoreBulkApertureTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
-        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
         world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 1 };
         world.Entities[TestWorld.RockId] = world.Entities[TestWorld.RockId] with { Bulk = 2 };
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
@@ -71,6 +71,39 @@ public sealed class CoreBulkApertureTests
         Assert.False(result.Succeeded);
         Assert.True(TraceHasReason(result.Trace, FailureReason.ApertureBlocked));
         Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void EnterTargetFailsWhenActorBulkExceedsTargetAperture()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Bulk = 10 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, CreateBehaviorPlan("enter", ActionPlanBehaviorStepKind.EnterTarget), new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.ApertureBlocked));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void ExitFacingFailsWhenActorBulkExceedsContainerAperture()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Bulk = 10 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, CreateBehaviorPlan("exit", ActionPlanBehaviorStepKind.ExitFacing), new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.ApertureBlocked));
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.PlayerId));
     }
 
     [Fact]

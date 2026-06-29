@@ -84,7 +84,9 @@ public enum ActionPlanBehaviorStepKind
     StrafeClockwise,
     StrafeAnticlockwise,
     GiveTarget,
-    TakeTarget
+    TakeTarget,
+    EnterTarget,
+    ExitFacing
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(

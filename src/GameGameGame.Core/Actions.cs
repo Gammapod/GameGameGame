@@ -198,6 +198,145 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
 
 }
 
+public sealed record EnterAction(EntityId TargetId) : IActionIntent
+{
+    public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"Enter {TargetId}", TraceStatus.Info);
+
+        if (!world.Entities.TryGetValue(actorId, out var actor))
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+        }
+
+        if (!world.Entities.TryGetValue(TargetId, out var target))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetMissing, $"target {TargetId} does not exist");
+        }
+
+        if (TargetId == actorId)
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetIsActor, "actor cannot enter itself");
+        }
+
+        if (!movement.AreAdjacent(world, actorId, TargetId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}");
+        }
+
+        trace.Add(TraceNode.Success("Target is adjacent"));
+
+        if (world.GetRegisteredInventoryPlaneId(TargetId) is not { } inventoryPlaneId)
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetHasNoInventory, $"target {TargetId} ({target.Name}) has no inventory plane");
+        }
+
+        if (!target.HasUsableInventory)
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetInventoryUnusable, $"target {TargetId} ({target.Name}) inventory dimensions are {target.InventoryWidth}x{target.InventoryHeight}");
+        }
+
+        if (!world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        {
+            return ActionTrace.Fail(trace, FailureReason.InvalidInventoryDestination, $"inventory plane {inventoryPlaneId} does not exist");
+        }
+
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        ActionResolution? lastFailure = null;
+        for (var y = 0; y < inventoryPlane.Height; y++)
+        {
+            for (var x = 0; x < inventoryPlane.Width; x++)
+            {
+                var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
+                var evaluation = constrainedRelocation.Evaluate(world, actorId, MovementDestination.Plane(destination));
+                trace.Add(evaluation.Trace);
+
+                if (evaluation.CanRelocate)
+                {
+                    trace.Status = TraceStatus.Success;
+                    trace.Detail = $"entered {actorId} ({actor.Name}) into {TargetId} ({target.Name}) at {destination.Coord}";
+                    return new ActionEvaluation(true, trace);
+                }
+
+                lastFailure = new ActionResolution(false, false, true, evaluation.Trace);
+            }
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement;
+        trace.Detail = $"no inventory coordinate can accept entering {actorId}";
+        if (!string.IsNullOrWhiteSpace(lastFailure?.Trace.Detail))
+        {
+            trace.Detail += $"; last failure: {lastFailure.Trace.Detail}";
+        }
+
+        return new ActionEvaluation(false, trace);
+    }
+
+    public void Execute(WorldState world, EntityId actorId, MovementService movement)
+    {
+        if (world.GetRegisteredInventoryPlaneId(TargetId) is not { } inventoryPlaneId ||
+            !world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        {
+            return;
+        }
+
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        for (var y = 0; y < inventoryPlane.Height; y++)
+        {
+            for (var x = 0; x < inventoryPlane.Width; x++)
+            {
+                if (constrainedRelocation.TryRelocate(world, actorId, MovementDestination.Plane(new PlaneCoord(inventoryPlaneId, new GridCoord(x, y)))))
+                {
+                    return;
+                }
+            }
+        }
+    }
+}
+
+public sealed record ExitAction(Direction Direction) : IActionIntent
+{
+    public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"Exit {Direction}", TraceStatus.Info);
+
+        if (!world.Entities.TryGetValue(actorId, out var actor))
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        if (!InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId) ||
+            !world.Entities.TryGetValue(containerId, out var container))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetNotInInventory, $"{actor.Name} is not inside an entity inventory plane");
+        }
+
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        var evaluation = constrainedRelocation.Evaluate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));
+        trace.Add(evaluation.Trace);
+
+        if (!evaluation.CanRelocate || evaluation.Destination is not { } resolvedDestination)
+        {
+            return ActionTrace.Fail(trace, evaluation.Trace.Reason, evaluation.Trace.Detail ?? $"cannot exit {containerId} toward {Direction}");
+        }
+
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"exited {actorId} ({actor.Name}) from {containerId} ({container.Name}) to {resolvedDestination.Coord}";
+        return new ActionEvaluation(true, trace);
+    }
+
+    public void Execute(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var actorLocation = world.GetEntityLocation(actorId);
+        if (InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId))
+        {
+            new ConstrainedInventoryRelocationService(movement).TryRelocate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));
+        }
+    }
+}
+
 internal static class ActionTrace
 {
     public static ActionEvaluation Fail(TraceNode trace, FailureReason reason, string detail)

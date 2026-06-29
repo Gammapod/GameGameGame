@@ -101,6 +101,10 @@ Use constrained inventory behavior where possible:
 - `DropFacing` attempts to drop a carried entity in the actor's facing direction.
 - `GiveTarget` transfers the actor's first carried entity into the current `Target` inventory.
 - `TakeTarget` transfers the current `Target`'s first carried entity into actor inventory.
+- `EnterTarget` moves the actor into the adjacent current `Target` inventory.
+- `ExitFacing` moves the actor out of its current containing entity toward `Facing`.
+
+Bulk/Aperture checks apply to every inventory boundary crossed by these constrained behaviors. For nested interiors, entering from inside one entity into another crosses both the source containing entity's aperture and the destination entity's aperture; exiting crosses the current containing entity's aperture. This is intentional: use larger apertures for interiors meant to allow passage, or use `Teleport` for exceptional movement that should bypass aperture rules.
 
 Use report `InventorySummaryLines`, direct validation output, or recorded scenarios to confirm containment behavior. Scenario reports summarize carried contents with inventory coordinates and guard against recursive containment cycles.
 
@@ -115,7 +119,7 @@ Current content-facing actor state:
 
 Author initial `Facing` through `actionStateDefaults.facing` or the corresponding editor/API workflow.
 
-Do not author arbitrary state variables for new content. `Target` is used by canonical Action Steps such as `AcquireNearestTarget`, `PickupTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, and `TakeTarget`. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; track that need through the gap log when it blocks content.
+Do not author arbitrary state variables for new content. `Target` is used by canonical Action Steps such as `AcquireNearestTarget`, `PickupTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, and `EnterTarget`. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; track that need through the gap log when it blocks content.
 
 ## Action plan authoring
 
@@ -173,6 +177,8 @@ This table is the content-facing catalog of currently authorable canonical Actio
 | `DropFacing` | `Facing` | carried/world placement | Drop the first carried entity into the facing cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
 | `GiveTarget` | `Target` | actor/target inventory state | Transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/aperture checks fail. | peer transfer, offering, handoff demos |
 | `TakeTarget` | `Target` | target/actor inventory state | Transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/aperture checks fail. | taking from containers, stealing prototypes |
+| `EnterTarget` | `Target` | actor/container inventory state | Enter an adjacent target's inventory at the first open row-major coordinate; falls through when target adjacency, inventory, space, or aperture checks fail. | rooms-inside-entities, containers as spaces |
+| `ExitFacing` | `Facing` | actor/container/world placement | Exit the current containing entity toward facing; falls through when not contained, blocked, out of bounds, or aperture checks fail. | leaving entered containers/rooms |
 | `PushFacing` | `Facing` | world positions | Push blocking entity one cell in facing direction, then move actor into blocker original cell; consumes the turn on success. | shovers, obstacle interaction |
 
 ### Target acquisition and target-relative movement
@@ -204,6 +210,7 @@ Common chain patterns:
 | Try to move, then push blocker | `MoveFacing -> PushFacing` |
 | Drop carried entity forward, otherwise move | `DropFacing -> MoveFacing` |
 | Give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
+| Move into a bumped/targeted container, then later leave it | `MoveFacing -> EnterTarget`; contained actor can use `ExitFacing` |
 
 `AcquireNearestTarget` currently targets any same-plane non-self entity. Use sparse scenario layouts when target filtering matters, and log a capability gap when sparse layout is not sufficient.
 

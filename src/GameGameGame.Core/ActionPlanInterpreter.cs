@@ -282,6 +282,8 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.StrafeAnticlockwise => null,
             ActionPlanBehaviorStepKind.GiveTarget => null,
             ActionPlanBehaviorStepKind.TakeTarget => null,
+            ActionPlanBehaviorStepKind.EnterTarget => null,
+            ActionPlanBehaviorStepKind.ExitFacing => null,
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -295,6 +297,8 @@ public sealed class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.StrafeAnticlockwise => ApplyStrafeTarget(world, actorId, context, clockwise: false),
             ActionPlanBehaviorStepKind.GiveTarget => ApplyGiveTargetPrimitive(world, actorId, context),
             ActionPlanBehaviorStepKind.TakeTarget => ApplyTakeTargetPrimitive(world, actorId, context),
+            ActionPlanBehaviorStepKind.EnterTarget => ApplyEnterTargetPrimitive(world, actorId, context),
+            ActionPlanBehaviorStepKind.ExitFacing => ApplyExitFacingPrimitive(world, actorId, context),
             _ => ApplyPrimitive(world, actorId, context, primitive!)
         };
     }
@@ -976,6 +980,64 @@ public sealed class ActionPlanInterpreter
         }
 
         return TransferToFirstOpenInventory(world, carried.Value, actorId, trace, "took");
+    }
+
+    private PlanEffectResult ApplyEnterTargetPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive EnterTarget", TraceStatus.Info);
+        if (!TryReadTransferTarget(world, actorId, context, trace, "EnterTarget", out var targetId))
+        {
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        var resolution = ((IActionIntent)new EnterAction(targetId)).Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+
+        if (resolution.Succeeded)
+        {
+            trace.Status = TraceStatus.Success;
+            trace.Detail = resolution.Trace.Detail;
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
+
+    private PlanEffectResult ApplyExitFacingPrimitive(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context)
+    {
+        var trace = new TraceNode("Primitive ExitFacing", TraceStatus.Info);
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var readTrace))
+        {
+            trace.Add(readTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = readTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(readTrace);
+        var resolution = ((IActionIntent)new ExitAction(facing.Value)).Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+
+        if (resolution.Succeeded)
+        {
+            trace.Status = TraceStatus.Success;
+            trace.Detail = resolution.Trace.Detail;
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
     }
 
     private PlanEffectResult ApplyPushFacingPrimitive(

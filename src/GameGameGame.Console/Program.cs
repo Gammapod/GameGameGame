@@ -251,6 +251,12 @@ void RunGameSession(ConsoleGameSession session)
             case InputMode.InspectSource:
                 HandleInspectSourceInput(key);
                 break;
+            case InputMode.EnterSource:
+                HandleEnterSourceInput(key);
+                break;
+            case InputMode.ExitDirection:
+                HandleExitDirectionInput(key);
+                break;
         }
     }
 
@@ -370,7 +376,93 @@ void HandlePlayInput(ConsoleKey key)
         selectedEntity = null;
         mode = InputMode.InspectSource;
         message = "Pick an entity in the left panel inventory grid. Enter inspects. Esc cancels.";
+        return;
     }
+
+    switch (ConsolePlayerControls.GetCommand(key))
+    {
+        case ConsolePlayerCommand.Enter:
+            worldCursor = world.GetEntityLocation(playerId).Coord;
+            selectedEntity = null;
+            mode = InputMode.EnterSource;
+            message = "Pick an adjacent entity to enter. Enter selects. Esc cancels.";
+            return;
+        case ConsolePlayerCommand.Exit:
+            selectedEntity = null;
+            mode = InputMode.ExitDirection;
+            message = "Choose an exit direction with an arrow key. Esc cancels.";
+            return;
+    }
+}
+
+void HandleEnterSourceInput(ConsoleKey key)
+{
+    if (CancelSelection(key))
+    {
+        return;
+    }
+
+    var playerPlaneId = world.GetEntityLocation(playerId).PlaneId;
+    worldCursor = MoveCursor(worldCursor, key, world.Planes[playerPlaneId]);
+
+    if (key is not ConsoleKey.Enter)
+    {
+        return;
+    }
+
+    var target = world.GetOccupant(new PlaneCoord(playerPlaneId, worldCursor));
+
+    if (target is null || target == playerId)
+    {
+        message = "There is no enter target at that world cell.";
+        return;
+    }
+
+    var action = ConsolePlayerControls.CreateEnterAction(target.Value);
+    var evaluation = action.Evaluate(world, playerId, movement);
+    if (!evaluation.CanExecute)
+    {
+        world.RecordTrace(evaluation.Trace);
+        message = FormatFailure(evaluation.Trace);
+        return;
+    }
+
+    turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(action));
+    mode = InputMode.Play;
+    selectedEntity = null;
+    worldCursor = world.GetEntityLocation(playerId).Coord;
+    inspectedEntity = playerId;
+    message = "Entered entity. Other entities took their turns.";
+}
+
+void HandleExitDirectionInput(ConsoleKey key)
+{
+    if (CancelSelection(key))
+    {
+        return;
+    }
+
+    var direction = KeyToDirection(key);
+    if (direction is null)
+    {
+        return;
+    }
+
+    var action = ConsolePlayerControls.CreateExitAction(direction.Value);
+    var evaluation = action.Evaluate(world, playerId, movement);
+    if (!evaluation.CanExecute)
+    {
+        world.RecordTrace(evaluation.Trace);
+        message = FormatFailure(evaluation.Trace);
+        return;
+    }
+
+    turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(action));
+    mode = InputMode.Play;
+    selectedEntity = null;
+    worldCursor = world.GetEntityLocation(playerId).Coord;
+    inspectedEntity = playerId;
+    message = "Exited entity. Other entities took their turns.";
 }
 
 void HandlePickupSourceInput(ConsoleKey key)
@@ -631,7 +723,7 @@ static void Render(
         top: 9,
         width: 38,
         title: "Current Container",
-        cursor: mode is InputMode.PickupSource or InputMode.DropDestination or InputMode.InspectSource ? worldCursor : null,
+        cursor: mode is InputMode.PickupSource or InputMode.DropDestination or InputMode.InspectSource or InputMode.EnterSource ? worldCursor : null,
         turnOrderReport: currentContainerTurnOrder,
         path: currentContainerPath,
         getGlyph: getGlyph);
@@ -864,5 +956,7 @@ internal enum InputMode
     PickupDestination,
     DropSource,
     DropDestination,
-    InspectSource
+    InspectSource,
+    EnterSource,
+    ExitDirection
 }

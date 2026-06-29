@@ -23,7 +23,9 @@ public enum FailureReason
     TargetNotInInventory,
     InvalidDropDestination,
     MoveBlocked,
-    MoveOutOfBounds
+    MoveOutOfBounds,
+    TargetHasNoInventory,
+    TargetInventoryUnusable
 }
 
 public sealed class TraceNode(

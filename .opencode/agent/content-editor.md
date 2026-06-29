@@ -1,6 +1,6 @@
 ---
 description: Authors game content using editor tools; does not modify editor tools or game engine.
-mode: primary
+mode: all
 model: openai/gpt-5.5
 permission:
   read:

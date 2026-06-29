@@ -410,6 +410,8 @@ public sealed class CoreActionPlanTests
     [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise, "Strafe Anticlockwise")]
     [InlineData(ActionPlanBehaviorStepKind.GiveTarget, "Give Target")]
     [InlineData(ActionPlanBehaviorStepKind.TakeTarget, "Take Target")]
+    [InlineData(ActionPlanBehaviorStepKind.EnterTarget, "Enter Target")]
+    [InlineData(ActionPlanBehaviorStepKind.ExitFacing, "Exit Facing")]
     public void ActionStepCatalogDescribesFirstUtilityBatch(ActionPlanBehaviorStepKind kind, string displayName)
     {
         var step = ActionStepCatalog.Get(kind);
@@ -2007,6 +2009,97 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void EnterTargetMovesActorIntoAdjacentTargetInventoryRowMajor()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var blockerId = AddEntity(world, "blocker", "Blocker", new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)));
+        AddPlane(world, new PlaneId("roomInventory"), 2, 2);
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { InventoryWidth = 2, InventoryHeight = 2, Aperture = 20 };
+        world.RegisterInventoryPlane(TestWorld.SlimeId, new PlaneId("roomInventory"));
+        Assert.True(movement.TryPlace(world, blockerId, new PlaneCoord(new PlaneId("roomInventory"), new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("enter-target", ActionPlanBehaviorStepKind.EnterTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(new PlaneId("roomInventory"), new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Equal(new PlaneCoord(new PlaneId("roomInventory"), new GridCoord(0, 0)), world.GetEntityLocation(blockerId));
+        Assert.True(TraceDetailContains(result.Trace, "entered player (Player) into slime (Slime) at (1,0)"));
+    }
+
+    [Fact]
+    public void EnterTargetReportsTargetInventoryMissingWithTargetCentricReason()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var doorwayId = AddEntity(world, "doorway", "Doorway", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+        world.SetActionTarget(TestWorld.PlayerId, doorwayId);
+        var plan = CreateBehaviorPlan("enter-target", ActionPlanBehaviorStepKind.EnterTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.TargetHasNoInventory));
+        Assert.True(TraceDetailContains(result.Trace, "target doorway (Doorway) has no inventory plane"));
+    }
+
+    [Fact]
+    public void EnterTargetReportsTargetInventoryUnusableWithTargetCentricReason()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { InventoryWidth = 0, InventoryHeight = 1 };
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("enter-target", ActionPlanBehaviorStepKind.EnterTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.TargetInventoryUnusable));
+        Assert.True(TraceDetailContains(result.Trace, "target slime (Slime) inventory dimensions are 0x1"));
+    }
+
+    [Fact]
+    public void ExitFacingMovesActorOutOfContainingInventoryToAdjacentContainerCell()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = CreateBehaviorPlan("exit-facing", ActionPlanBehaviorStepKind.ExitFacing);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.True(TraceDetailContains(result.Trace, "exited player (Player) from slime (Slime) to (1,2)"));
+    }
+
+    [Fact]
+    public void EnterAndExitActionsAreUsableAsPlayerActionIntents()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 20 };
+        IActionIntent enter = new EnterAction(TestWorld.SlimeId);
+
+        var enterResolution = enter.Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.True(enterResolution.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.PlayerId));
+
+        IActionIntent exit = new ExitAction(Direction.South);
+        var exitResolution = exit.Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.True(exitResolution.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+    }
+
+    [Fact]
     public void TakeTargetTransfersFirstTargetInventoryEntityToActorInventoryRowMajor()
     {
         var world = TestWorld.CreateWorld();
@@ -2323,6 +2416,11 @@ public sealed class CoreActionPlanTests
     {
         return trace.Detail?.Contains(detail, StringComparison.Ordinal) == true
             || trace.Children.Any(child => TraceDetailContains(child, detail));
+    }
+
+    private static bool TraceHasReason(TraceNode trace, FailureReason reason)
+    {
+        return trace.Reason == reason || trace.Children.Any(child => TraceHasReason(child, reason));
     }
 
     private static ActionPlanDefinition CreateBehaviorPlan(string id, ActionPlanBehaviorStepKind stepKind) =>

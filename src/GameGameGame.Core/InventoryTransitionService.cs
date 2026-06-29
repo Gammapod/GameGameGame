@@ -70,17 +70,7 @@ public sealed class InventoryTransitionService
 
     private static bool TryFindInventoryOwner(WorldState world, PlaneId planeId, out EntityId ownerId)
     {
-        foreach (var (entityId, inventoryPlaneId) in world.InventoryPlanes)
-        {
-            if (inventoryPlaneId == planeId && world.Entities.ContainsKey(entityId))
-            {
-                ownerId = entityId;
-                return true;
-            }
-        }
-
-        ownerId = default;
-        return false;
+        return InventoryPlaneOwnership.TryFindOwner(world, planeId, out ownerId);
     }
 }
 

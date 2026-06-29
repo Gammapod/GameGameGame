@@ -53,7 +53,7 @@ Current stable authoring areas:
 - effects: `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`;
 - movement effects: `Teleport`, `Drop` are functional and supported, but their GUI is intentionally advanced/generic rather than polished/specialized.
 - transitional primitive-backed `MoveFacing` and `PickupTarget` action-plan descriptors with explicit fallback references are supported through Core/content validation, editor services, and the agent API; GUI polish remains generic/minimal, and these linked descriptors are not the long-term canonical editor-facing model.
-- canonical ordered behavior-chain descriptors with `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, and `TakeTarget` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and GUI support that makes canonical chains visually primary over legacy low-level authoring.
+- canonical ordered behavior-chain descriptors with `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, `EnterTarget`, and `ExitFacing` Action Steps have Core runtime, Action Step catalog metadata, descriptor/YAML, hardened validation/default handling, editor service, agent API, and GUI support that makes canonical chains visually primary over legacy low-level authoring.
 - compact canonical behavior-chain trace formatting is available in Core for tests, debugging, and future editor/agent diagnostics.
 - local turn-order reporting is available in Core for factual debugger/scenario output, including per-plane occupant ordering, actor/player/inert classification, and previous-action summaries from the latest simulated turn; Console renders this report for visible inspection inventory spaces.
 - structural entity containment path queries are available in Core for debugger/frontend foundations, including upward ancestry paths, root-relative paths, shared-root two-branch paths, max-depth truncation, not-under-root/no-shared-root statuses, and directional cycle diagnostics; presentation/content enrichment and Console rendering remain follow-up work.
@@ -131,7 +131,7 @@ The editor can currently:
 - edit pickup inventory coordinates and call-plan references;
 - edit movement target/destination fields for `Teleport` and `Drop`;
 - validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, and legacy/arbitrary variable fields;
-- load and validate canonical ordered behavior-chain descriptors for `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, and `StrafeAnticlockwise` using Action Step catalog metadata;
+- load and validate canonical ordered behavior-chain descriptors for `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, `EnterTarget`, and `ExitFacing` using Action Step catalog metadata;
 - author content through the first in-process `AgentContentEditorApi` facade over editor/content services;
 - create transitional primitive-backed `MoveFacing` action-plan descriptors with optional fallback references through editor services and the agent API;
 - create a transitional `MoveFacing -> PickupTarget` linked fallback chain through editor services and the agent API without low-level check/effect authoring;
@@ -166,7 +166,7 @@ Current vocabulary/model assumptions:
 
 - **Action Plan**: the behavior definition assigned to an entity as its default behavior or invoked by another supported mechanism.
 - **Canonical behavior chain**: the preferred new authoring shape for normal behavior. It is an ordered list of engine-defined Action Steps on one Action Plan.
-- **Action Step**: one engine-defined behavior attempt inside a canonical behavior chain, such as `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, or `TakeTarget`.
+- **Action Step**: one engine-defined behavior attempt inside a canonical behavior chain, such as `MoveFacing`, `Backstep`, `PickupTarget`, `DropFacing`, `PushFacing`, `DestroyTarget`, `CreateFacing`, `TurnLeft`, `TurnRight`, `ReverseFacing`, `AcquireNearestTarget`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, `GiveTarget`, `TakeTarget`, `EnterTarget`, or `ExitFacing`.
 - **Fallback / fallthrough**: in canonical behavior chains, fallback means continuing to the next ordered Action Step in the same Action Plan when the current step fails or cannot act. It does not mean creating linked fallback plans for new normal authoring.
 - **Primitive-backed linked plans**: transitional compatibility/prototype descriptors. They may remain loadable/supported where documented, but they are not the desired new authoring model.
 - **Legacy low-level steps/checks/effects**: compatibility authoring for existing plans. New normal workflows should prefer canonical behavior chains and engine-defined slots instead of arbitrary variable names.
@@ -204,12 +204,14 @@ Current and planned Action Step / primitive support:
 | `StrafeAnticlockwise` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Same as `StrafeClockwise`, except it attempts the anticlockwise perpendicular cardinal move from the selected primary seek direction. Successful movement consumes the turn; invalid target, missing primary direction, blocked, invalid, or out-of-bounds selected destinations fail/fall through while preserving `Target`. |
 | `GiveTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists and is not self, selects the first entity carried by the actor in row-major source order, and transfers it into the first valid target inventory coordinate in row-major destination order. Successful transfer consumes the turn. Missing/invalid/self target, nothing carried, target without usable inventory, no space, or aperture failure fails/falls through. Runtime transfer diagnostics include entity ID/name and source/destination coordinates; runtime entities do not currently carry template IDs. |
 | `TakeTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists and is not self, selects the first entity carried by the target in row-major source order, and transfers it into the first valid actor inventory coordinate in row-major destination order. Successful transfer consumes the turn. Missing/invalid/self target, target without usable inventory or contents, actor without usable inventory, no space, or aperture failure fails/falls through. Runtime transfer diagnostics include entity ID/name and source/destination coordinates; runtime entities do not currently carry template IDs. |
+| `EnterTarget` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers and as Console player control `E` | `Target` | `Self` | Reads persistent actor `Target`, verifies the target exists, is not self, is adjacent, and has usable inventory, then moves the actor into the first valid target inventory coordinate in row-major order. Successful enter consumes the turn. Missing/invalid/self/non-adjacent target, target without usable inventory, no space, or aperture failure fails/falls through. The constrained move checks the destination inventory owner's aperture; target-inventory failures use target-centric trace reasons/details. |
+| `ExitFacing` | Supported as canonical Action Step at Core/descriptor/YAML/validation/editor service/agent API/GUI layers and as Console player control `X` plus direction | `Facing` | `West` | Reads persistent actor `Facing`, finds the entity whose inventory plane currently contains the actor, and moves the actor to the cell adjacent to that container in `Facing`. Successful exit consumes the turn. Not being in an entity inventory, blocked/out-of-bounds destination, missing container, or aperture failure fails/falls through. The constrained move checks the source/container inventory owner's aperture before placing outside it. |
 | `BumpTarget` | Conceptualized | `Target` | `Self` | Deferred; may overlap with reaction slots, push, destroy, or future interaction steps. |
 | `TeleportTo` | Conceptualized | target location TBD | TBD | Deferred because it likely requires a new location/destination state slot rather than overloading entity `Target`. |
 
 Canonical Action Step metadata is exposed by Core as the machine-readable source for editor/API discovery and validation. Initial metadata includes Action Step kind, display name, description/hint text, required state, defaultable state, state writes, and authoring tier.
 
-Canonical behavior-chain traces can be summarized through `BehaviorChainTraceFormatter`. The compact formatter reports the root plan outcome, each attempted Action Step, success/failure reason, whether fallback continued or stopped, canonical state reads/writes such as `Facing` and `Target`, Backstep preserve-facing results, AcquireNearestTarget selected target/distance/tie-break details, SeekTarget movement/contact/blocking details, FleeTarget escape direction/distance/blocking details, MaintainChebyshevDistanceTwo mode/distance/blocking details, StrafeClockwise/StrafeAnticlockwise primary/strafe direction and blocking details, GiveTarget/TakeTarget transfer details, and the terminal consumed-turn outcome.
+Canonical behavior-chain traces can be summarized through `BehaviorChainTraceFormatter`. The compact formatter reports the root plan outcome, each attempted Action Step, success/failure reason, whether fallback continued or stopped, canonical state reads/writes such as `Facing` and `Target`, Backstep preserve-facing results, AcquireNearestTarget selected target/distance/tie-break details, SeekTarget movement/contact/blocking details, FleeTarget escape direction/distance/blocking details, MaintainChebyshevDistanceTwo mode/distance/blocking details, StrafeClockwise/StrafeAnticlockwise primary/strafe direction and blocking details, GiveTarget/TakeTarget transfer details, EnterTarget/ExitFacing containment movement details, and the terminal consumed-turn outcome.
 
 Canonical YAML authoring for the Gate 2 targeting Action Steps uses the same behavior-chain step shape as other canonical steps and has no parameters in the first pass:
 
@@ -258,6 +260,23 @@ actionPlans:
       steps:
         - kind: GiveTarget
         - kind: TakeTarget
+```
+
+`EnterTarget` and `ExitFacing` use the same parameterless behavior-chain step shape; a common enter chain uses `MoveFacing` to write the blocking entity to `Target`, then `EnterTarget` to enter it. `ExitFacing` uses `Facing` from actor state/defaults and is normally authored on a separate contained-actor behavior because successful enter consumes the current turn:
+
+```yaml
+actionPlans:
+  enterTarget:
+    id: enterTarget
+    behavior:
+      steps:
+        - kind: MoveFacing
+        - kind: EnterTarget
+  exitFacing:
+    id: exitFacing
+    behavior:
+      steps:
+        - kind: ExitFacing
 ```
 
 `AcquireNearestTarget` currently has no `templateId`, `templateIds`, or filter field. It targets any same-plane non-self entity. Add more selective target filters only when Core runtime/entity metadata and behavior-step parameter descriptors can support them canonically across YAML, validation, editor service, and agent API.

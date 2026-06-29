@@ -1,0 +1,256 @@
+entityTemplates:
+  betaEnterExitManualRoom:
+    name: Beta Enter Exit Manual Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: manualOpenBox
+      templateId: betaEnterExitOpenBox
+      coord:
+        x: 3
+        y: 2
+
+  betaAutoEnterRoom:
+    name: Beta Auto Enter Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: autoCrawler
+      templateId: betaEnterCrawler
+      coord:
+        x: 2
+        y: 2
+    - entityId: autoOpenBox
+      templateId: betaEnterExitOpenBox
+      coord:
+        x: 3
+        y: 2
+
+  betaTooBulkyEnterRoom:
+    name: Beta Too Bulky Enter Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: bulkyCrawler
+      templateId: betaBulkyCrawler
+      coord:
+        x: 2
+        y: 2
+    - entityId: narrowCrack
+      templateId: betaNarrowCrack
+      coord:
+        x: 3
+        y: 2
+
+  betaNestedApertureSuccessRoom:
+    name: Beta Nested Aperture Success Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 5
+    carriedEntities:
+    - entityId: nestedCrawler
+      templateId: betaNestedCrawler
+      coord:
+        x: 2
+        y: 2
+    - entityId: nestedOpenBox
+      templateId: betaEnterExitOpenBox
+      coord:
+        x: 3
+        y: 2
+
+  betaNestedApertureBlockedRoom:
+    name: Beta Nested Aperture Blocked Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1
+    carriedEntities:
+    - entityId: nestedBlockedCrawler
+      templateId: betaNestedCrawler
+      coord:
+        x: 2
+        y: 2
+    - entityId: nestedRoomyBox
+      templateId: betaEnterExitOpenBox
+      coord:
+        x: 3
+        y: 2
+
+  betaExitPracticeRoom:
+    name: Beta Exit Practice Room
+    inventoryWidth: 7
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: exitPracticeBox
+      templateId: betaLargePracticeBox
+      coord:
+        x: 3
+        y: 2
+
+  betaPlayer:
+    name: Beta Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    bulk: 1
+    aperture: 10
+    actionStateDefaults:
+      facing: West
+
+  betaEnterCrawler:
+    name: Enter Crawler
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: acquireThenEnter
+
+  betaBulkyCrawler:
+    name: Bulky Crawler
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 5
+    aperture: 1
+    defaultActionPlanId: acquireThenEnter
+
+  betaNestedCrawler:
+    name: Nested Crawler
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 2
+    aperture: 1
+    defaultActionPlanId: acquireThenEnter
+
+  betaEnterExitOpenBox:
+    name: Open Box
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 3
+    aperture: 5
+
+  betaLargePracticeBox:
+    name: Large Practice Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    bulk: 3
+    aperture: 10
+
+  betaNarrowCrack:
+    name: Narrow Crack
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 3
+    aperture: 2
+
+presentations:
+  betaEnterExitManualRoom:
+    glyph: '#'
+    color: Gray
+  betaAutoEnterRoom:
+    glyph: '#'
+    color: Gray
+  betaTooBulkyEnterRoom:
+    glyph: '#'
+    color: Gray
+  betaNestedApertureSuccessRoom:
+    glyph: '#'
+    color: Gray
+  betaNestedApertureBlockedRoom:
+    glyph: '#'
+    color: Gray
+  betaExitPracticeRoom:
+    glyph: '#'
+    color: Gray
+  betaPlayer:
+    glyph: '@'
+    color: Yellow
+  betaEnterCrawler:
+    glyph: 'e'
+    color: Green
+  betaBulkyCrawler:
+    glyph: 'B'
+    color: Earth
+  betaNestedCrawler:
+    glyph: 'n'
+    color: Cyan
+  betaEnterExitOpenBox:
+    glyph: 'C'
+    color: Earth
+  betaLargePracticeBox:
+    glyph: 'C'
+    color: Green
+  betaNarrowCrack:
+    glyph: '='
+    color: Gray
+
+actionPlans:
+  acquireThenEnter:
+    id: acquireThenEnter
+    behavior:
+      steps:
+      - kind: AcquireNearestTarget
+      - kind: EnterTarget
+
+scenarios:
+  beta-enter-exit-manual:
+    name: Beta Enter Exit Manual
+    scenarioRootEntityTemplateId: betaEnterExitManualRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 2
+      y: 2
+
+  beta-auto-enter-box:
+    name: Beta Auto Enter Box
+    scenarioRootEntityTemplateId: betaAutoEnterRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 6
+      y: 4
+
+  beta-too-bulky-enter:
+    name: Beta Too Bulky Enter
+    scenarioRootEntityTemplateId: betaTooBulkyEnterRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 6
+      y: 4
+
+  beta-nested-aperture-success:
+    name: Beta Nested Aperture Success
+    scenarioRootEntityTemplateId: betaNestedApertureSuccessRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 6
+      y: 4
+
+  beta-nested-aperture-blocked:
+    name: Beta Nested Aperture Blocked
+    scenarioRootEntityTemplateId: betaNestedApertureBlockedRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 6
+      y: 4
+
+  beta-exit-practice:
+    name: Beta Exit Practice
+    scenarioRootEntityTemplateId: betaExitPracticeRoom
+    playerEntityTemplateId: betaPlayer
+    playerEntityId: betaPlayer
+    playerStart:
+      x: 2
+      y: 2

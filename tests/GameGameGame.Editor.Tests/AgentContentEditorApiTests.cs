@@ -135,6 +135,35 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalEnterExitBehavior()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var explorerId = AssertSuccess(api.CreateEntityTemplate("Containment Explorer"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            explorerId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Bulk: 1,
+                Aperture: 10,
+                Glyph: 'e',
+                Color: PresentationColor.Cyan)));
+        AssertSuccess(api.SetInitialFacing(explorerId, Direction.West));
+        var planId = AssertSuccess(api.CreateActionPlan("Enter Exit Behavior"));
+
+        AssertSuccess(api.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.EnterTarget, ActionPlanBehaviorStepKind.ExitFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(explorerId, planId));
+        var steps = AssertSuccess(api.ListActionSteps());
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.EnterTarget);
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ExitFacing);
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("kind: EnterTarget", snapshot.YamlPreview);
+        Assert.Contains("kind: ExitFacing", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiRunsPersistedScenarioById()
     {
         var api = AgentContentEditorApi.CreateNew();

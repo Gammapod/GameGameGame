@@ -458,6 +458,35 @@ public sealed class EditorViewModelTests
     }
 
     [Fact]
+    public void EditorViewModelAvailableActionStepsCanAddEnterAndExitBehaviorSteps()
+    {
+        var path = WriteTempContentFile(ActionPlanContentYamlWithoutAssignedPlan);
+
+        try
+        {
+            var editor = new MainEditorViewModel();
+            editor.OpenFile(path);
+            editor.SelectedActionPlan = editor.ActionPlans.Single(item => item.Id == new ActionPlanTemplateId("wander"));
+
+            editor.SelectedActionStepToAdd = editor.AvailableActionSteps.Single(item => item.Kind == ActionPlanBehaviorStepKind.EnterTarget);
+            editor.AddSelectedBehaviorStepToSelectedActionPlan();
+            editor.SelectedActionStepToAdd = editor.AvailableActionSteps.Single(item => item.Kind == ActionPlanBehaviorStepKind.ExitFacing);
+            editor.AddSelectedBehaviorStepToSelectedActionPlan();
+
+            Assert.Collection(
+                editor.BehaviorSteps,
+                step => Assert.Equal(ActionPlanBehaviorStepKind.EnterTarget, step.Kind),
+                step => Assert.Equal(ActionPlanBehaviorStepKind.ExitFacing, step.Kind));
+            Assert.Contains("kind: EnterTarget", editor.YamlPreview);
+            Assert.Contains("kind: ExitFacing", editor.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void EditorViewModelSelectingBehaviorStepShowsHint()
     {
         var path = WriteTempContentFile(BehaviorChainContentYaml);
