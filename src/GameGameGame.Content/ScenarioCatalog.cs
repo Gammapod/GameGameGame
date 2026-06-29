@@ -12,7 +12,7 @@ public sealed record ScenarioCatalogResult(
 public static class ScenarioCatalog
 {
     public const string ManifestFileName = "Manifest.yaml";
-    private const string RepositoryDefaultDiscoveryFolder = "src\\GameGameGame.Content\\Beta";
+    private static readonly string RepositoryDefaultDiscoveryFolder = Path.Combine("src", "GameGameGame.Content", "Beta");
 
     public static string DefaultDiscoveryFolder => ResolveDefaultDiscoveryFolder();
 

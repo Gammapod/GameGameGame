@@ -144,6 +144,20 @@ Create a shareable zip:
 Compress-Archive -Path artifacts/GameGameGame-win-x64/* -DestinationPath artifacts/GameGameGame-win-x64.zip -Force
 ```
 
+Create a self-contained Linux feedback build:
+
+```bash
+dotnet publish src/GameGameGame.Console/GameGameGame.Console.csproj -c Release -r linux-x64 --self-contained true -o artifacts/GameGameGame-linux-x64
+```
+
+Run `artifacts/GameGameGame-linux-x64/GameGameGame` to open the interactive scenario list.
+
+Create a shareable tarball:
+
+```bash
+tar czf artifacts/GameGameGame-linux-x64.tar.gz -C artifacts/GameGameGame-linux-x64 .
+```
+
 ## Documentation
 
 Source-of-truth documentation starts at:
