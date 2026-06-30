@@ -109,6 +109,12 @@ Active Gamma planning document:
 
 - [Gamma Frontend Demo Plan](Gamma-Frontend-Demo-Plan.md)
 
+Immediate frontend priority:
+
+- Carry the completed SadConsole spike findings into a frontend architecture plan before more frontend feature work.
+- Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so future Console, SadConsole, Godot, or editor-facing surfaces consume the same capabilities.
+- Keep Console as the supported minimal demo surface until a replacement frontend is selected.
+
 Planned next sprint:
 
 - Console breadcrumb display for the player and currently inspected entity using the completed Core structural containment path service. Scenario curation is non-blocking unless tester confusion re-promotes it.
@@ -126,7 +132,7 @@ Gamma promoted stages:
 3. Improved Console inspection panel content using path, inventory/current-space summaries, local turn order/previous action, and scenario guidance where available.
 4. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy/headless-only entries, or naming issues make it necessary.
 
-Deferred to future real frontend:
+Deferred to the consolidated frontend bucket:
 
 - Interactive breadcrumb navigation.
 - Collapsible/expandable multi-entity inspection-chain panels.
@@ -221,13 +227,9 @@ Priority order:
 11. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
 12. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
 13. Generalized scenario runner upgrade sprint.
-14. Per-initiative debug recording frames and active-actor/focus display for dense simulations.
-15. Alternate debug-render styles, such as 2x2 color blocks, larger bordered glyph tiles, and configurable themes/layouts.
-16. Saved scenario runlogs.
-17. Golden runlog tests.
-18. Test inspector / runlog stepper with forward/back controls.
-19. Editor `Run in Console` button after Console scenario launch exists.
-20. Live in-editor preview window showing an entity performing its action plan.
+14. Per-initiative debug recording frames for dense simulations.
+15. Saved scenario runlogs.
+16. Golden runlog tests.
 
 Completed baseline:
 
@@ -415,29 +417,72 @@ Promotion trigger:
 
 - Promote when repeated authored scenarios duplicate the same behavior chains often enough that manual chain authoring becomes a clear bottleneck.
 
-### Bucket 8: Future integrated game/editor frontend
+### Bucket 8: Unified frontend, inspection UX, and integrated editor
 
-Status: Long-horizon strategic direction; current Avalonia GUI remains legacy-priority.
+Status: Active strategic bucket with the SadConsole prototype spike concluded as research findings. Current Avalonia GUI remains legacy-priority / maintenance-mode; Console remains the supported minimal frontend until a replacement is selected.
+
+Consolidated scope:
+
+- Tester-facing play frontend: scenario selection/loading, play controls, inspection, action prompts, feedback, and rendering.
+- Debug/inspection frontend: breadcrumb/entity-chain navigation, entity panels, runlog stepping, local logs, visual focus/active-actor cues, and debug-render styles.
+- Future integrated editor frontend: player-friendly authoring/editing surfaces backed by existing editor service/API concepts, not duplicated YAML/content logic.
+- Frontend technology decision: compare SadConsole, Godot, Unity, or other candidates after prototype evidence clarifies play, inspection, mouse, layout, and editor needs.
 
 Priority order:
 
-1. Preserve frontend-agnostic editor service and agent/headless API contracts.
-2. Identify future frontend/editor requirements from scenario runner, Gamma tester feedback, and agent workflows.
-3. Interactive breadcrumb navigation: select breadcrumb ancestors/entities, change inspection focus, and navigate nested spaces through the breadcrumb model.
-4. Collapsible multi-entity inspection-chain UI: expanded/collapsed panels, focus management, scrolling, and multi-entity debug/detail layout.
-5. Choose a frontend technology when game rendering/play needs are clearer, such as Godot, Unity, SadConsole, or another suitable option.
-6. Expose in-game editor functions through the same underlying editor service/API concepts instead of duplicating YAML/content logic in the frontend.
-7. Retire or replace the current Avalonia GUI when the future frontend/editor surface is viable.
+1. Preserve frontend-agnostic Core/Content/Headless/Editor service contracts so Console, SadConsole, and any later game/editor frontend consume the same capabilities.
+2. Convert the completed SadConsole spike findings into a frontend architecture plan, especially shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services.
+3. Turn-log UX for a future build: start from the universal turn trace, then distribute useful local per-panel logs beneath each entity by initiative/turn order without losing access to the full trace.
+4. Scenario selection for a future build: add a manifest/scenario menu using the existing scenario catalog/manifest concepts so players can choose curated scenarios without command-line arguments.
+5. Distribution for a future build: investigate and implement an itch.io-friendly browser/HTML5 path if the selected frontend stack can support it; otherwise record the blocker and provide the best shareable fallback while reassessing frontend technology risk.
+6. Choose the next frontend experiment only after the shared-service plan is clear: continue SadConsole, compare another engine, or keep Console as the supported demo surface.
+7. Entity panel chain UX: display the inspected entity's containment/breadcrumb path as left-to-right panels, auto-focus newly inspected panels, and keep entity panels as the primary UX handle.
+8. Collapsible/expandable multi-entity inspection-chain panels: expanded/collapsed state, focused-panel navigation, scrolling, and clear debug/detail layout.
+9. Keyboard-first player-centric mode model: default Play mode for movement/actions, Inspect/action-prompt modes only when selecting entities or destinations, and coherent focus restoration after actions.
+10. Action-prompt targeting polish: show valid targets/destinations, skip invalid cells where practical, and explain blocked pickup/drop/enter/exit choices without inventing frontend-only simulation rules.
+11. Mouse convenience layer after keyboard UX is coherent: hit-test panels/cells, click to inspect/select prompt targets, and keep mouse behavior equivalent to keyboard-driven actions.
+12. Facing/target/active-actor visualization for play and dense debug simulations, including alternate render styles such as 2x2 color blocks, larger bordered glyph tiles, configurable themes/layouts, and active-actor/focus display.
+13. Extract reusable frontend layout/view-model geometry from prototype code so panel bounds, cell hit-testing, focus, and prompt rendering are testable and portable across frontend stacks.
+14. Scenario/runlog inspection tools: test inspector or runlog stepper with forward/back controls, plus richer visual state debugging that remains backed by Headless run/record outputs.
+15. Future integrated editor affordances: `Run in Console` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
+16. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
+17. Retire or replace the current Avalonia GUI only when the future frontend/editor surface is viable.
+
+SadConsole prototype coverage snapshot:
+
+| Roadmap need | Current coverage |
+| --- | --- |
+| Direct scenario launch and materialization reuse | Partially covered by prototype command-line launch; production Console catalog/menu remains separate. |
+| Manifest/scenario selection menu | Not covered in SadConsole; production Console has shared scenario catalog/menu concepts to reuse. |
+| Entity panel chain from containment path | Partially covered; panels render from inspection path and auto-focus newly inspected panels. |
+| Expand/collapse panels and keyboard focus | Partially covered; prototype supports collapse/expand and Tab focus, but layout/focus rules are not production-ready. |
+| Keyboard-first play/inspect/action modes | Partially covered; Play, Inspect, pickup/drop/enter/exit prompt modes exist and need polish. |
+| Action valid-target highlighting/skipping | Not covered. |
+| Mouse hit-testing/click inspection | Not covered. |
+| Facing/target/active-actor visualization | Partially covered elsewhere by headless debug rendering; not yet a strong SadConsole UX. |
+| Local per-panel logs from universal turn trace | Not covered; prototype currently seeds a universal log view from last turn/local order reports. |
+| Itch.io browser/HTML5 distribution | Not covered; current prototype targets `net10.0` with `MonoGame.Framework.DesktopGL`, so browser export needs investigation before assuming feasibility. |
+| Reusable panel layout geometry/view models | Partially covered; view models exist, but panel geometry and hit-testing are not centralized. |
+| Runlog stepper / debug playback frontend | Not covered. |
+| Integrated editor affordances | Not covered; must reuse existing editor/API concepts when promoted. |
+| Final frontend engine choice | Not covered; SadConsole remains experimental and should be compared after prototype evidence. |
 
 Dependencies:
 
-- Depends on stronger headless editor/service APIs, Gamma breadcrumb/inspection experiments, and tester feedback.
-- Frontend choice should wait until game rendering/play, inspection-chain interaction, and in-game editing needs are clearer.
-- Gamma may prototype read-only breadcrumb display in Console, but interactive breadcrumb navigation and collapsible multi-entity panels should wait for a real frontend unless tester feedback proves Console is sufficient.
+- Depends on shared Core/Content/Headless/Editor service/API contracts staying frontend-agnostic.
+- Frontend behavior must not contradict engine/editor capability contracts or add frontend-only simulation semantics.
+- Frontend choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer.
+- Gamma Console breadcrumb work may continue as the supported minimal demo path, but interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated frontend bucket.
 
 Promotion trigger:
 
-- Promote when Gamma tester feedback shows that Console cannot adequately support the needed play/inspection/debug workflows, or when interactive breadcrumb/multi-panel UI becomes central enough to justify a real frontend stack.
+- Promote when Gamma tester feedback shows that Console cannot adequately support play/inspection/debug workflows, when interactive breadcrumb/multi-panel UI becomes central enough to justify a real frontend stack, or when the SadConsole prototype demonstrates enough value/risk to choose or reject it as the next frontend path.
+
+Decision checkpoint after the timebox:
+
+- **Replace Console as debug/prototype frontend** only if SadConsole proves it can cover debug play, scenario selection, logs, packaging, and developer ergonomics without losing important Console workflows.
+- **Stay alongside Console as the main shareable frontend** if SadConsole is clearly better for testers but Console remains valuable as the minimal CLI/debug fallback.
+- **Postmortem/R&D only** if the log/menu/package explorations reveal enough friction, especially around browser delivery, to justify starting a different shareable frontend path.
 
 ### Bucket 9: Reactions and cross-entity behavior
 
