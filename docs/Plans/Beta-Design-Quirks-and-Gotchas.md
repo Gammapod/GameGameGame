@@ -1,6 +1,6 @@
 # Beta Design Quirks and Gotchas
 
-Status: Active beta exploration log for unexpected-but-not-necessarily-wrong behavior.
+Status: Active reference log for unexpected-but-not-necessarily-wrong beta behavior, not an active implementation plan. Use as design context only while the SadConsole frontend roadmap is the implementation priority.
 
 Read when:
 
@@ -12,7 +12,7 @@ Related plans and source of truth:
 
 - `docs/Source of Truth/Content-Authoring-Manual.md` remains the source of truth for currently authorable content workflows.
 - `docs/Plans/Beta-Capability-Gap-Log.md` records missing capabilities, blockers, reporting needs, and authoring friction.
-- `docs/Plans/Beta-Content-Exploration-Plan.md` records active beta vignette ordering and gate context.
+- `docs/Plans/Beta-Content-Exploration-Plan.md` records paused beta vignette ordering and gate context.
 
 ## Purpose
 

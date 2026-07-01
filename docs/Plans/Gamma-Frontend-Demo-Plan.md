@@ -1,12 +1,16 @@
 # Gamma Frontend Demo Plan
 
-Status: Active plan for preparing a tester-shareable Console/front-end demo.
+Status: Supporting Gamma context. Superseded for next-sprint selection by `docs/Plans/SadConsole-Frontend-Roadmap.md`, which makes SadConsole/frontend contract paving the unambiguous priority. Use this document for Gamma tester/demo goals and historical Console polish scope; do not treat Console breadcrumb work as the default next sprint unless it is explicitly re-selected.
 
 Read when:
 
 - selecting short-term work whose purpose is external playtest feedback rather than adding new mechanics;
 - deciding whether a UI request belongs in short-term Console polish or a future real frontend;
 - curating current scenarios for tester-facing play.
+
+Do not read when:
+
+- selecting the immediate frontend implementation sequence; use `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 
 Related source of truth:
 

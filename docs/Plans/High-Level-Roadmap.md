@@ -105,32 +105,36 @@ Recently completed supporting documents:
 - [Sprint 22: Gamma Containment Path Service](../Archived/Sprint-22-Gamma-Containment-Path-Service.md)
 - [Beta Content Exploration Plan](../Archived/Beta-Content-Exploration-Plan.md)
 
-Active Gamma planning document:
+Active frontend planning documents:
 
 - [Gamma Frontend Demo Plan](Gamma-Frontend-Demo-Plan.md)
+- [SadConsole Frontend Roadmap](SadConsole-Frontend-Roadmap.md)
 
 Immediate frontend priority:
 
 - Carry the completed SadConsole spike findings into a frontend architecture plan before more frontend feature work.
+- Use the SadConsole frontend roadmap to pave shared session/action/target/log/entity-panel contracts before handing rich UI work to frontend-owner.
 - Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so future Console, SadConsole, Godot, or editor-facing surfaces consume the same capabilities.
 - Keep Console as the supported minimal demo surface until a replacement frontend is selected.
 
 Planned next sprint:
 
-- Console breadcrumb display for the player and currently inspected entity using the completed Core structural containment path service. Scenario curation is non-blocking unless tester confusion re-promotes it.
+- Begin `docs/Plans/SadConsole-Frontend-Roadmap.md` Stage 0, then Stage 1: frontend UX source-of-truth cleanup, debt inventory, and shared playable-session launch extraction. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole debug-browser path unless explicitly re-selected as fallback polish.
 
-Gamma target statement:
+Gamma/frontend target statement:
 
-- The project can be shared with test players as a scenario-list-driven Console demo.
+- The project can be shared with test players through a scenario-list-driven frontend/debug browser path.
 - Testers can choose curated scenarios, understand what they are looking at, and give useful feedback without reading development docs.
-- Console remains a prototype frontend; short-term polish should preserve shared UI-agnostic query/catalog contracts that a future frontend can consume.
+- SadConsole is now the preferred canonical debug/editor browser direction; Console remains fallback/minimal tooling.
+- Short-term work should preserve shared UI-agnostic query/catalog/session/action/log contracts that Console, SadConsole, or a later frontend engine can consume.
 
-Gamma promoted stages:
+Gamma/frontend promoted stages:
 
 1. Completed in Sprint 22: read-only Core inspection path service that produces cycle-safe structural containment paths for entities, including upward, root-relative, max-depth, and shared-root queries.
-2. Console breadcrumb display for the player and currently inspected entity.
-3. Improved Console inspection panel content using path, inventory/current-space summaries, local turn order/previous action, and scenario guidance where available.
-4. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy/headless-only entries, or naming issues make it necessary.
+2. SadConsole roadmap Stage 0/1 contract paving: frontend UX source-of-truth cleanup, debt inventory, and shared playable-session launch extraction.
+3. Shared controlled action / Action Choice-compatible command result, action target/affordance queries, structured outcome/log projection, and entity panel projection.
+4. SadConsole debug/browser shell and information-density pass once shared contracts are ready for frontend-owner consumption.
+5. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy entries, or naming issues make it necessary.
 
 Deferred to the consolidated frontend bucket:
 
@@ -145,9 +149,9 @@ Paused Beta target statement:
 
 Long-term frontend direction:
 
-- A unified frontend remains desired eventually, potentially through SadConsole, Godot, Unity, Pico-8, or another frontend stack.
+- SadConsole is the preferred canonical debug/editor browser direction while final frontend-engine choice remains deferred.
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
-- Do not start major frontend replacement work until Gamma tester feedback clarifies which player interactions, scenario transitions, inspection/debug workflows, and content-authoring workflows are worth optimizing.
+- Major frontend feature work should follow the shared-contract paving sequence in `docs/Plans/SadConsole-Frontend-Roadmap.md` so frontend-owner work does not require Core knowledge or duplicate simulation semantics.
 - The current Avalonia editor is legacy-priority and should not remain a dependency of Console, scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting Avalonia assumptions.
 
 Current decision point: Sprint 21 completed Console scenario catalog/listing. Gate 5 template spawning and Gate 6 reactions are no longer the default next work; they remain backlog items until tester feedback or a specific scenario need re-promotes mechanics expansion.
@@ -214,22 +218,23 @@ Status: Highest-priority backlog bucket.
 
 Priority order:
 
-1. Gamma inspection-path/breadcrumb query: cycle-safe read-only containment path service for the current player and inspected entity.
-2. Gamma Console breadcrumb display and improved inspection panel summaries.
-3. Headless debug scenario recorder: `RecordScenario`-style sibling workflow, dotnet-accessible command, PNG frames, GIF output, and visual state debugging for scenario turns.
-4. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
-5. Lightweight scenario report template once first runner output reveals the useful fields.
-6. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
-7. Plan preview + simulation in one API command.
-8. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
-9. Curated actor-zoo report template for one-room behavior demonstrations.
-10. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
-11. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
-12. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
-13. Generalized scenario runner upgrade sprint.
-14. Per-initiative debug recording frames for dense simulations.
-15. Saved scenario runlogs.
-16. Golden runlog tests.
+1. Completed Gamma inspection-path/breadcrumb query: cycle-safe read-only containment path service for the current player and inspected entity.
+2. SadConsole/frontend contract paving from `docs/Plans/SadConsole-Frontend-Roadmap.md`, especially shared session launch, controlled action/Action Choice-compatible results, target affordances, structured logs, and entity panel projections.
+3. SadConsole entity-panel breadcrumb display and improved inspection panel summaries.
+4. Headless debug scenario recorder: `RecordScenario`-style sibling workflow, dotnet-accessible command, PNG frames, GIF output, and visual state debugging for scenario turns.
+5. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
+6. Lightweight scenario report template once first runner output reveals the useful fields.
+7. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
+8. Plan preview + simulation in one API command.
+9. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
+10. Curated actor-zoo report template for one-room behavior demonstrations.
+11. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
+12. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
+13. Headless run command / scriptable entry point for running scenarios without writing tests or embedding C#.
+14. Generalized scenario runner upgrade sprint.
+15. Per-initiative debug recording frames for dense simulations.
+16. Saved scenario runlogs.
+17. Golden runlog tests.
 
 Completed baseline:
 
@@ -435,7 +440,7 @@ Priority order:
 3. Turn-log UX for a future build: start from the universal turn trace, then distribute useful local per-panel logs beneath each entity by initiative/turn order without losing access to the full trace.
 4. Scenario selection for a future build: add a manifest/scenario menu using the existing scenario catalog/manifest concepts so players can choose curated scenarios without command-line arguments.
 5. Distribution for a future build: investigate and implement an itch.io-friendly browser/HTML5 path if the selected frontend stack can support it; otherwise record the blocker and provide the best shareable fallback while reassessing frontend technology risk.
-6. Choose the next frontend experiment only after the shared-service plan is clear: continue SadConsole, compare another engine, or keep Console as the supported demo surface.
+6. Resume SadConsole frontend work only after the shared-service plan is clear and the initial contracts are ready for frontend-owner consumption; keep final engine comparison deferred until evidence from the canonical debug/browser path requires it.
 7. Entity panel chain UX: display the inspected entity's containment/breadcrumb path as left-to-right panels, auto-focus newly inspected panels, and keep entity panels as the primary UX handle.
 8. Collapsible/expandable multi-entity inspection-chain panels: expanded/collapsed state, focused-panel navigation, scrolling, and clear debug/detail layout.
 9. Keyboard-first player-centric mode model: default Play mode for movement/actions, Inspect/action-prompt modes only when selecting entities or destinations, and coherent focus restoration after actions.
@@ -465,18 +470,18 @@ SadConsole prototype coverage snapshot:
 | Reusable panel layout geometry/view models | Partially covered; view models exist, but panel geometry and hit-testing are not centralized. |
 | Runlog stepper / debug playback frontend | Not covered. |
 | Integrated editor affordances | Not covered; must reuse existing editor/API concepts when promoted. |
-| Final frontend engine choice | Not covered; SadConsole remains experimental and should be compared after prototype evidence. |
+| Final frontend engine choice | Not covered; SadConsole is now the preferred canonical debug/browser direction, with final engine comparison deferred until packaging, editor-widget, mouse, or layout evidence requires it. |
 
 Dependencies:
 
 - Depends on shared Core/Content/Headless/Editor service/API contracts staying frontend-agnostic.
 - Frontend behavior must not contradict engine/editor capability contracts or add frontend-only simulation semantics.
-- Frontend choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer.
+- Final frontend-engine choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer; short-term work should still pave SadConsole as the canonical debug/browser direction.
 - Gamma Console breadcrumb work may continue as the supported minimal demo path, but interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated frontend bucket.
 
 Promotion trigger:
 
-- Promote when Gamma tester feedback shows that Console cannot adequately support play/inspection/debug workflows, when interactive breadcrumb/multi-panel UI becomes central enough to justify a real frontend stack, or when the SadConsole prototype demonstrates enough value/risk to choose or reject it as the next frontend path.
+- Promote when SadConsole/frontend contract paving needs shared Core/Content/Headless work, when Gamma tester feedback shows current fallback Console cannot adequately support play/inspection/debug workflows, or when interactive breadcrumb/multi-panel UI becomes central enough to expand the SadConsole debug/browser surface.
 
 Decision checkpoint after the timebox:
 

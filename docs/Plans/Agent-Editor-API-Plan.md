@@ -1,5 +1,7 @@
 # Agent Editor API Plan
 
+Status: Historical/reference plan. The in-process `AgentContentEditorApi` baseline and behavior-chain authoring direction have been implemented or superseded by source-of-truth capability docs. Remaining external transport/API polish is backlogged below the SadConsole frontend roadmap unless a selected frontend/editor-browser stage promotes it.
+
 ## Goal
 
 Provide a stable, constrained API that agents can use to author content through the same engine/editor capability model used by the editor service and future frontend/editor surfaces. The current Avalonia GUI is legacy-priority and should not define the agent API contract.
@@ -120,9 +122,9 @@ Recommended next API work before external transport:
 3. Add higher-level content authoring helpers for common patterns, such as passive containers and actors that reuse an existing action plan.
 4. Keep multi-action turns, directional trap behavior, and other new gameplay semantics out of the agent API until Core supports canonical engine concepts for them.
 
-## Current priority: behavior-primitive action-plan authoring
+## Historical priority: behavior-primitive action-plan authoring
 
-The next in-process API work should remodel canonical action-plan authoring around behavior primitives before the API is stabilized or exposed through an external transport. The engine can keep low-level checks/effects as internal, legacy, or advanced machinery, but normal content authoring should expose plans as primitive behaviors with typed configuration.
+This section is retained for context from the behavior-primitive planning era. The current implementation has moved to canonical ordered behavior chains and Action Steps as described in `docs/Source of Truth/Engine-Editor-Capabilities.md` and `docs/Source of Truth/Content-Authoring-Manual.md`. Do not treat this section as the active next priority.
 
 ### Phase 1: Define the behavior primitive model
 

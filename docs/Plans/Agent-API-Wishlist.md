@@ -1,5 +1,7 @@
 # Agent Content API Wishlist
 
+Status: Wishlist / backlog reference, not an active implementation plan. Promote items only through the active roadmap when frontend/editor-browser work needs them.
+
 This document describes the remaining API surface that would make GameGameGame content authoring practical and reliable for code agents. It has been updated to reflect the current editor/content services.
 
 The editor now has a strong headless foundation in `GameGameGame.Content`, especially `ContentEditorSession`, `ContentEditorService`, `EditableContentDocument`, `ContentValidationResult`, and `ContentDiagnostic`. The goal of the agent API is therefore not to recreate editor logic, but to expose the existing content-authoring capabilities through stable, documented, structured contracts.

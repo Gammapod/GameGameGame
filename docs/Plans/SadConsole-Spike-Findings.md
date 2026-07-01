@@ -1,6 +1,6 @@
 # SadConsole Spike Findings
 
-Status: Findings document for ending the SadConsole prototype spike. The prototype may remain on the spike branch, but these findings should be merged forward to inform a more robust frontend plan.
+Status: Findings document for ending the SadConsole prototype spike. Superseded for next-work selection by `docs/Plans/SadConsole-Frontend-Roadmap.md`; retain this document as evidence/reference for the roadmap.
 
 Read when:
 
@@ -201,17 +201,17 @@ Before choosing a long-term frontend engine or trying another shareable frontend
 
 ## Recommended next planning move
 
-Do not continue adding SadConsole features as the default next step. Instead:
+Do not continue adding SadConsole features as the default next step from this findings document alone. Instead:
 
 1. Record this spike as completed research.
 2. Create a frontend architecture plan that first extracts or specifies the shared session/action/target/log contracts above.
-3. Then choose the next frontend experiment: continue SadConsole, compare Godot/another engine, or keep Console as the only supported demo surface until shared services are ready.
+3. Follow `docs/Plans/SadConsole-Frontend-Roadmap.md`: pave shared services first, then resume SadConsole as the canonical debug/browser direction while deferring final engine comparison.
 4. Treat browser delivery and future editor widgets as first-class engine-selection criteria, not late packaging details.
 
 ## Decision status
 
-SadConsole remains a useful prototype and reference implementation, but the spike did not prove it should replace Console or become the final frontend engine.
+SadConsole remains a useful prototype and reference implementation. Later planning selected it as the preferred canonical debug/browser direction, while final frontend-engine choice remains deferred.
 
-Current decision: **end the spike and carry findings forward**.
+Current decision: **end the spike, carry findings forward, and use the SadConsole frontend roadmap for next work**.
 
 Future decision should happen only after shared frontend-facing service contracts are planned and the next frontend candidate is assessed against play, inspection, logs, scenario selection, packaging, mouse interaction, and future editor needs.

@@ -1,12 +1,17 @@
 # Beta Content Exploration Plan
 
-Status: Active content-exploration plan.
+Status: Paused / re-backlogged content-exploration plan. Beta mechanics/content expansion is not active sprint work while the SadConsole frontend roadmap is the unambiguous priority. Use this document as historical ordering and backlog context only; promote individual vignettes or gates through `docs/Plans/High-Level-Roadmap.md` when frontend feedback or a specific scenario need justifies them.
 
 Read when:
 
-- designing or ordering beta gameplay vignettes;
-- deciding whether a content gap should request a new Action Step, engine capability, or reporting feature;
-- adding scenario fixtures or reorganizing content files for beta exploration.
+- researching paused beta gameplay-vignette context;
+- deciding whether frontend feedback should re-promote a beta content/mechanics gate;
+- reviewing old content-gap rationale before updating `docs/Plans/Beta-Capability-Gap-Log.md` or `docs/Plans/High-Level-Roadmap.md`.
+
+Do not read when:
+
+- selecting the next frontend sprint; use `docs/Plans/SadConsole-Frontend-Roadmap.md`;
+- looking for the active strategic priority; use `docs/Plans/High-Level-Roadmap.md`.
 
 Related source of truth:
 

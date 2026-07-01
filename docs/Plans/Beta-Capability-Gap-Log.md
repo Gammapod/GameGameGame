@@ -1,6 +1,6 @@
 # Beta Capability Gap Log
 
-Status: Active beta exploration log.
+Status: Active reference log for beta-discovered gaps, not an active implementation plan. New work should only be promoted from this log through `docs/Plans/High-Level-Roadmap.md` after the SadConsole frontend roadmap or frontend feedback re-prioritizes it.
 
 Read when:
 
