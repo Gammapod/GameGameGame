@@ -119,7 +119,7 @@ Immediate frontend priority:
 
 Planned next sprint:
 
-- Begin `docs/Plans/SadConsole-Frontend-Roadmap.md` Stage 0, then Stage 1: frontend UX source-of-truth cleanup, debt inventory, and shared playable-session launch extraction. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole debug-browser path unless explicitly re-selected as fallback polish.
+- Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` have paved the initial frontend contracts: frontend UX source-of-truth docs, Content's frontend-neutral `PlayableScenarioLauncher`, Core's `ControlledActorCommandService`, Core's `ControlledActorAffordanceService`, controlled-command outcome/log projection, and Content's first-pass `EntityPanelProjectionService`. Next implementation selection should begin Stage 6 fresh SadConsole canonical debug/browser shell work unless a contract polish gap is found first. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole debug-browser path unless explicitly re-selected as fallback polish.
 
 Gamma/frontend target statement:
 
@@ -424,7 +424,7 @@ Promotion trigger:
 
 ### Bucket 8: Unified frontend, inspection UX, and integrated editor
 
-Status: Active strategic bucket with the SadConsole prototype spike concluded as research findings. Current Avalonia GUI remains legacy-priority / maintenance-mode; Console remains the supported minimal frontend until a replacement is selected.
+Status: Active strategic bucket with the SadConsole prototype spike concluded as research findings only. The old prototype project is not current source; future SadConsole implementation should start fresh as `GameGameGame.SadConsole` after shared contracts are selected. Current Avalonia GUI remains legacy-priority / maintenance-mode; Console remains the supported minimal frontend until a replacement is selected.
 
 Consolidated scope:
 
@@ -453,7 +453,9 @@ Priority order:
 16. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
 17. Retire or replace the current Avalonia GUI only when the future frontend/editor surface is viable.
 
-SadConsole prototype coverage snapshot:
+SadConsole prototype findings coverage snapshot:
+
+This table summarizes findings from the completed spike; it does not imply that the old prototype project exists on main.
 
 | Roadmap need | Current coverage |
 | --- | --- |

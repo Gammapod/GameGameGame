@@ -66,7 +66,8 @@ Default workflow:
 | Canonical behavior chains | Add, remove, and reorder catalog-backed Action Steps. |
 | Scenarios | Persist scenario name/root/player template/player entity ID/player start placement. |
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
-| Scenario execution | Launch persisted scenarios in Console directly by content file/scenario ID or through the Console scenario list populated from one file, folder discovery, or a generated manifest/cache; run persisted scenario reports by scenario ID headlessly with final-state and inventory/containment summaries; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
+| Playable session launch | Create frontend-neutral playable sessions from persisted scenarios or catalog entries through the shared Content launcher, including world, registry/presentation lookup, action plans, player entity, active plane/container, diagnostics, runtime failures, and capability gaps. |
+| Scenario execution | Launch persisted scenarios in Console directly by content file/scenario ID or through the Console scenario list populated from one file, folder discovery, or a generated manifest/cache; Console uses the shared playable session launcher for fallback play. Run persisted scenario reports by scenario ID headlessly with final-state and inventory/containment summaries; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
 | Scenario recording | Record persisted scenarios to PNG frames and GIF artifacts. |
 | Gap logging | Record unsupported desired behavior in the active capability gap log. |
 

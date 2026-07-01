@@ -6,6 +6,7 @@ permission:
   read:
     "docs/**": allow
     "src/GameGameGame.Console/**": allow
+    "src/GameGameGame.SadConsole/**": allow
     "src/GameGameGame.Editor/**": allow
     "src/GameGameGame.Headless/**": allow
     "src/GameGameGame.Core/**": deny
@@ -14,11 +15,15 @@ permission:
   edit:
     "docs/**": allow
     "src/GameGameGame.Console/**": allow
+    "src/GameGameGame.SadConsole/**": allow
     "src/GameGameGame.Editor/**": deny
     "src/GameGameGame.Headless/**": deny
     "src/GameGameGame.Core/**": deny
     "src/GameGameGame.Content/**": deny
     "*": ask
+  task:
+    "core-owner": allow
+    "content-editor": allow
 ---
 
 You are Frontend-Owner for the GameGameGame project. Your role is to own `src/GameGameGame.Console` and any other frontend applications that are created.

@@ -17,6 +17,7 @@ Do not read when:
 - Core-owner/TDD lane: `docs/Source of Truth/invariants.md` records stable behavior contracts and test traces.
 - Capability matrix lane: `docs/Source of Truth/Engine-Editor-Capabilities.md` records maintainer-facing capability support tiers and layer coverage.
 - Content-authoring lane: `docs/Source of Truth/Content-Authoring-Manual.md` records content-editor-facing authoring capabilities, workflows, limits, and gap logging.
+- Frontend UX lane: `docs/Source of Truth/Frontend-UX-Invariants.md` and `docs/Source of Truth/Entity-Panel-UX-Spec.md` record frontend UX constraints, handoff boundaries, and the entity-panel/breadcrumb/log model.
 - Planning lane: `docs/Plans/High-Level-Roadmap.md`, active plans, and the gap log record priorities, promotion triggers, and selected work.
 
 ## Required reading order for planning/content work

@@ -13,13 +13,12 @@ if (args.Length > 0 && args[0] == "scan-scenarios")
     return ScanScenariosCommand(args);
 }
 
-ConsoleGameSession game = null!;
+PlayableScenarioSession game = null!;
 WorldState world = null!;
 PrototypeContentRegistry registry = null!;
 EntityId playerId = default;
-MovementService movement = null!;
 EntityInspectionService inspector = null!;
-TurnService turns = null!;
+ControlledActorCommandService controlledActorCommands = null!;
 var running = false;
 var mode = InputMode.Play;
 var worldCursor = new GridCoord(0, 0);
@@ -91,7 +90,7 @@ int ScanScenariosCommand(string[] commandArgs)
     return catalog.Entries.Count == 0 ? 1 : 0;
 }
 
-static bool TryCreateDirectSession(string[] commandArgs, out ConsoleGameSession session, out string? error)
+static bool TryCreateDirectSession(string[] commandArgs, out PlayableScenarioSession session, out string? error)
 {
     session = null!;
     error = null;
@@ -198,15 +197,15 @@ void RunScenarioMenu(ScenarioCatalogResult catalog)
     }
 }
 
-void RunGameSession(ConsoleGameSession session)
+void RunGameSession(PlayableScenarioSession session)
 {
     game = session;
     world = game.World;
     registry = game.Registry;
     playerId = game.PlayerEntityId;
-    movement = new MovementService();
+    var movement = new MovementService();
     inspector = new EntityInspectionService(entityId => registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
-    turns = new TurnService(movement, game.ActionPlans, (world, entityId) => TargetingService.RefreshTargets(world, registry, entityId));
+    controlledActorCommands = new ControlledActorCommandService(movement, game.ActionPlans, (world, entityId) => TargetingService.RefreshTargets(world, registry, entityId));
     running = true;
     mode = InputMode.Play;
     worldCursor = new GridCoord(0, 0);
@@ -346,8 +345,10 @@ void HandlePlayInput(ConsoleKey key)
 
     if (direction is { } moveDirection)
     {
-        turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(new MoveAction(moveDirection)));
-        message = "Player acted. Other entities took their turns.";
+        var result = controlledActorCommands.Execute(world, playerId, ControlledActorCommand.Move(moveDirection));
+        message = result.Succeeded
+            ? "Player acted. Other entities took their turns."
+            : FormatFailure(result.Trace);
         return;
     }
 
@@ -418,16 +419,13 @@ void HandleEnterSourceInput(ConsoleKey key)
         return;
     }
 
-    var action = ConsolePlayerControls.CreateEnterAction(target.Value);
-    var evaluation = action.Evaluate(world, playerId, movement);
-    if (!evaluation.CanExecute)
+    var result = controlledActorCommands.Execute(world, playerId, ControlledActorCommand.Enter(target.Value));
+    if (!result.Succeeded)
     {
-        world.RecordTrace(evaluation.Trace);
-        message = FormatFailure(evaluation.Trace);
+        message = FormatFailure(result.Trace);
         return;
     }
 
-    turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(action));
     mode = InputMode.Play;
     selectedEntity = null;
     worldCursor = world.GetEntityLocation(playerId).Coord;
@@ -448,16 +446,13 @@ void HandleExitDirectionInput(ConsoleKey key)
         return;
     }
 
-    var action = ConsolePlayerControls.CreateExitAction(direction.Value);
-    var evaluation = action.Evaluate(world, playerId, movement);
-    if (!evaluation.CanExecute)
+    var result = controlledActorCommands.Execute(world, playerId, ControlledActorCommand.Exit(direction.Value));
+    if (!result.Succeeded)
     {
-        world.RecordTrace(evaluation.Trace);
-        message = FormatFailure(evaluation.Trace);
+        message = FormatFailure(result.Trace);
         return;
     }
 
-    turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(action));
     mode = InputMode.Play;
     selectedEntity = null;
     worldCursor = world.GetEntityLocation(playerId).Coord;
@@ -510,18 +505,14 @@ void HandlePickupDestinationInput(ConsoleKey key)
         return;
     }
 
-    var action = new PickupAction(target, new PlaneCoord(inventoryPlaneId, inventoryCursor));
+    var result = controlledActorCommands.Execute(world, playerId, ControlledActorCommand.Pickup(target, new PlaneCoord(inventoryPlaneId, inventoryCursor)));
 
-    var evaluation = action.Evaluate(world, playerId, movement);
-
-    if (!evaluation.CanExecute)
+    if (!result.Succeeded)
     {
-        world.RecordTrace(evaluation.Trace);
-        message = FormatFailure(evaluation.Trace);
+        message = FormatFailure(result.Trace);
         return;
     }
 
-    turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(action));
     mode = InputMode.Play;
     selectedEntity = null;
     message = "Picked up entity. Other entities took their turns.";
@@ -571,18 +562,14 @@ void HandleDropDestinationInput(ConsoleKey key)
         return;
     }
 
-    var action = new DropAction(target, new PlaneCoord(playerPlaneId, worldCursor));
+    var result = controlledActorCommands.Execute(world, playerId, ControlledActorCommand.Drop(target, new PlaneCoord(playerPlaneId, worldCursor)));
 
-    var evaluation = action.Evaluate(world, playerId, movement);
-
-    if (!evaluation.CanExecute)
+    if (!result.Succeeded)
     {
-        world.RecordTrace(evaluation.Trace);
-        message = FormatFailure(evaluation.Trace);
+        message = FormatFailure(result.Trace);
         return;
     }
 
-    turns.TakeActorTurnThenAdvance(world, playerId, PlannedActionPlan.Single(action));
     mode = InputMode.Play;
     selectedEntity = null;
     message = "Dropped entity. Other entities took their turns.";

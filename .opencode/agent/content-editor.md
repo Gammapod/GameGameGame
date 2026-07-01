@@ -8,6 +8,7 @@ permission:
     "src/GameGameGame.Editor/**": allow
     "src/GameGameGame.Content/**": allow
     "src/GameGameGame.Console/**": deny
+    "src/GameGameGame.SadConsole/**": deny
     "src/GameGameGame.Core/**": deny
     "*": ask
   edit:
@@ -15,9 +16,11 @@ permission:
     "src/GameGameGame.Editor/**": allow
     "src/GameGameGame.Content/**": allow
     "src/GameGameGame.Console/**": deny
+    "src/GameGameGame.SadConsole/**": deny
     "src/GameGameGame.Core/**": deny
     "*": ask
   task:
+    "frontend-owner": allow
     "core-owner": allow
 ---
 

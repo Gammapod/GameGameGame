@@ -7,6 +7,7 @@ GameGameGame is a .NET game prototype with a shared engine, YAML-backed content 
 - `src/GameGameGame.Core` — engine/runtime model and gameplay services.
 - `src/GameGameGame.Content` — content loading, editable content documents, validation, prototype content, and editor service operations.
 - `src/GameGameGame.Console` — console gameplay shell for exercising the prototype runtime.
+- `src/GameGameGame.SadConsole` — SadConsole debug/browser frontend shell over shared scenario/action/panel contracts.
 - `src/GameGameGame.Editor` — Avalonia editor for authoring and validating content.
 - `tests/GameGameGame.Tests` — xUnit coverage for core behavior, content loading/validation, editor services, and editor view-model behavior.
 
@@ -87,6 +88,18 @@ Example:
 dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke
 ```
 
+Run the first-pass SadConsole debug/browser shell:
+
+```bash
+dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
+```
+
+SadConsole accepts the same direct scenario-launch shape as Console:
+
+```bash
+dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -- <content-file> <scenario-id>
+```
+
 Record a scenario to PNG frames and a GIF:
 
 ```bash
@@ -113,6 +126,7 @@ This repository targets .NET 10. Build the main runnable projects directly:
 
 ```bash
 dotnet build src/GameGameGame.Console/GameGameGame.Console.csproj
+dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
 dotnet build src/GameGameGame.Editor/GameGameGame.Editor.csproj
 ```
 

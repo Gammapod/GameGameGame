@@ -75,6 +75,8 @@ Examples:
 
 ### Stage 0: Documentation and debt inventory
 
+Status: Completed for source-of-truth consolidation. Use `docs/Source of Truth/Frontend-UX-Invariants.md` and `docs/Source of Truth/Entity-Panel-UX-Spec.md` as canonical constraints before selecting Stage 1 implementation details.
+
 Owner: Core-aware planner, with frontend-owner review once available.
 
 Goal: make the contracts and handoff boundaries explicit before adding more SadConsole features.
@@ -85,7 +87,7 @@ Scope:
    - `docs/Source of Truth/Frontend-UX-Invariants.md`;
    - `docs/Source of Truth/Entity-Panel-UX-Spec.md`.
 2. Record that Console is becoming fallback CLI/debug tooling while SadConsole is the canonical debug/editor browser direction.
-3. Audit existing Console/SadConsole prototype code for duplicated app/session/action/rendering responsibilities.
+3. Audit existing Console responsibilities and SadConsole spike findings for duplicated app/session/action/rendering responsibilities.
 4. Define the first shared contract names and boundaries before implementation:
    - playable scenario session launch;
    - controlled actor command / Action Choice compatibility result;
@@ -99,7 +101,15 @@ Exit criteria:
 - The frontend-owner handoff boundary is documented.
 - No new SadConsole feature work is started until Stage 1 contracts are selected.
 
+Stage 0 audit note:
+
+- Console currently combines fallback presentation/input with several responsibilities targeted for shared extraction: playable session launch, direct action evaluation/turn submission, failed-action message derivation, target selection prompts, local panel composition, and log/turn-order projection.
+- `ConsoleScenarioLauncher` is the closest existing shape to the planned shared playable-session launch contract.
+- Only the SadConsole spike findings were carried forward to main; the old prototype project is not current source. Future implementation should use a fresh `src/GameGameGame.SadConsole` project after the shared contracts it depends on are selected.
+
 ### Stage 1: Shared session launch extraction
+
+Status: Completed for initial shared launcher extraction. Console launches through the Content-level `PlayableScenarioLauncher`; future SadConsole work should consume that launcher rather than referencing Console.
 
 Owner: Core/content/headless-aware implementation.
 
@@ -127,6 +137,8 @@ Exit criteria:
 - SadConsole can depend on Content/Headless/Core contracts without referencing Console.
 
 ### Stage 2: Controlled action and future Action Choice contract
+
+Status: Completed for current direct-control compatibility. Core exposes `ControlledActorCommandService`; Console uses it for move, pickup, drop, enter, and exit. This is still a bridge toward future Action Choice naming/semantics rather than the final player-control model.
 
 Owner: Core-aware implementation.
 
@@ -162,6 +174,8 @@ Exit criteria:
 
 ### Stage 3: Action target / affordance queries
 
+Status: Completed for current direct-control compatibility. Core exposes `ControlledActorAffordanceService` for movement, pickup, drop, enter, and exit prompt hints while keeping `ControlledActorCommandService` authoritative for execution.
+
 Owner: Core-aware implementation; frontend-owner can consume after completion.
 
 Goal: let frontends highlight and constrain valid action choices without duplicating Core rules.
@@ -187,6 +201,8 @@ Exit criteria:
 
 ### Stage 4: Structured action outcome and log projection
 
+Status: Completed for controlled-command results. Core exposes `ActionOutcomeProjection` and `ActionLogProjection` for compact sentence rendering, anchors, local entity/plane filtering, and trace preservation. Projection over broader autonomous turn reports remains follow-up work for later log polish.
+
 Owner: Core/headless-aware implementation, with frontend-owner feedback on projection shape.
 
 Goal: make global and local logs inspectable without parsing trace labels.
@@ -208,6 +224,8 @@ Exit criteria:
 - Frontend display strings are derived from structured outcome fields, not from ad-hoc trace parsing.
 
 ### Stage 5: Entity panel projection contract
+
+Status: Completed for a first-pass mutable contract. Content exposes `EntityPanelProjectionService` over inspection panels, breadcrumbs, action state, inventory grids, local contents, and structured local logs. The DTO is expected to evolve once a fresh `GameGameGame.SadConsole` consumes it.
 
 Owner: Content/headless-aware implementation with frontend-owner review.
 

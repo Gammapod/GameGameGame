@@ -1,10 +1,10 @@
 # SadConsole Entity Panel Prototype
 
-Status: Completed experimental spike plan. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated end-of-spike architecture findings.
+Status: Completed experimental spike plan / archival reference. Only the findings were carried forward to main; the old prototype project is not current source. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated end-of-spike architecture findings.
 
 Read when:
 
-- working on the SadConsole frontend prototype;
+- reviewing the completed SadConsole frontend prototype findings;
 - deciding whether near-term frontend experiments should stay in Console or move into SadConsole;
 - recording UX findings that should inform future frontend engine choice.
 
@@ -19,7 +19,7 @@ Related source of truth:
 
 Created a small SadConsole prototype that renders existing simulation state through entity panels, breadcrumbs, and action/log seed data, without committing SadConsole as the final frontend engine.
 
-The spike is now stopped. The prototype remains useful reference code, but the findings should feed a frontend architecture plan before further SadConsole feature work.
+The spike is now stopped. The prototype findings remain useful reference material, but the prototype source should not be treated as current main-branch code. Future SadConsole implementation should start fresh as `src/GameGameGame.SadConsole` after shared frontend contracts are selected.
 
 The proposed follow-up explorations were panel-specific log filters, a manifest/scenario selection menu, and itch.io HTML5/browser feasibility. The timebox is now closed. `docs/Plans/SadConsole-Spike-Findings.md` carries forward the post-spike decision inputs and architectural splits.
 
@@ -34,7 +34,7 @@ The proposed follow-up explorations were panel-specific log filters, a manifest/
 
 ## Ownership and boundaries
 
-Frontend-owned prototype code may live under `src/GameGameGame.SadConsolePrototype` or another frontend-owned prototype project.
+The old prototype code is not carried forward as current source. Future frontend-owned SadConsole code should live under a fresh `src/GameGameGame.SadConsole` project when implementation resumes.
 
 The prototype should consume existing shared contracts, especially scenario materialization, entity inspection panels, containment paths, local turn-order reports, and turn traces. Missing contracts should be recorded as findings rather than patched around with frontend-only simulation behavior.
 
@@ -88,25 +88,9 @@ Stretch goals:
 - What data needed by the entity-panel spec is missing or inconvenient to consume?
 - When should a future prototype move to Godot or another richer 2D frontend?
 
-## Current run command
+## Historical run status
 
-```powershell
-dotnet run --project "src\GameGameGame.SadConsolePrototype\GameGameGame.SadConsolePrototype.csproj"
-```
-
-The Turn 1 smoke opens a SadConsole window with placeholder text. The command does not exit on its own because the game loop stays open until the window is closed.
-
-Direct scenario launch is supported for spike testing:
-
-```powershell
-dotnet run --project "src\GameGameGame.SadConsolePrototype\GameGameGame.SadConsolePrototype.csproj" -- "src\GameGameGame.Content\AlphaScenarioContent.yaml" "alpha-smoke"
-```
-
-Example richer scenario:
-
-```powershell
-dotnet run --project "src\GameGameGame.SadConsolePrototype\GameGameGame.SadConsolePrototype.csproj" -- "src\GameGameGame.Content\Beta\CurrentTools\AlphaSlimeRecreation.yaml" "beta-alpha-slime-recreation"
-```
+The completed spike had a runnable prototype with direct scenario launch on the spike branch. Those run commands are intentionally not carried forward here because the prototype project source is not current main-branch code. Future runnable SadConsole work should be created as a fresh `src/GameGameGame.SadConsole` project after shared frontend contracts are selected.
 
 ## First-pass outcome
 

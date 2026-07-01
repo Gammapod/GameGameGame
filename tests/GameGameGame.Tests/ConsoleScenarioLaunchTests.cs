@@ -108,6 +108,55 @@ public sealed class ConsoleScenarioLaunchTests
     }
 
     [Fact]
+    public void PlayableScenarioLauncherBuildsFrontendNeutralSessionFromPersistedScenario()
+    {
+        var document = CreateConsoleDocument("playable-alpha", "Playable Alpha", new GridCoord(1, 0));
+
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "playable-alpha");
+
+        Assert.Equal("playable-alpha", session.ScenarioId);
+        Assert.Equal("Playable Alpha", session.Name);
+        Assert.Equal(new EntityId("playable-alpha-player"), session.PlayerEntityId);
+        Assert.Equal(new PlaneId("scenarioRoot"), session.ActivePlaneId);
+        Assert.Equal(new EntityId("scenarioRoot"), session.ActiveContainerEntityId);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(1, 0)), session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.NotNull(session.World.GetInventoryPlaneId(session.PlayerEntityId));
+        Assert.True(session.CanPlay);
+        Assert.Empty(session.ValidationDiagnostics);
+        Assert.Empty(session.RuntimeFailures);
+        Assert.Empty(session.CapabilityGaps);
+    }
+
+    [Fact]
+    public void PlayableScenarioLauncherBuildsFreshSessionFromCatalogEntry()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var path = Path.Combine(directory, "PlayableCatalogLaunch.yaml");
+            File.WriteAllText(path, CreateConsoleDocument("playable-catalog-launch", "Playable Catalog Launch", new GridCoord(0, 0)).SaveYaml());
+            var entry = ScenarioCatalog.DiscoverFolder(directory).Entries.Single();
+
+            var firstSession = PlayableScenarioLauncher.CreateFromCatalogEntry(entry);
+            var movement = new MovementService();
+            new TurnService(movement, firstSession.ActionPlans).TakeActorTurnThenAdvance(
+                firstSession.World,
+                firstSession.PlayerEntityId,
+                PlannedActionPlan.Single(new MoveAction(Direction.East)));
+            var secondSession = PlayableScenarioLauncher.CreateFromCatalogEntry(entry);
+
+            Assert.Equal(new PlaneCoord(secondSession.ActivePlaneId, new GridCoord(0, 0)), secondSession.World.GetEntityLocation(secondSession.PlayerEntityId));
+            Assert.NotEqual(firstSession.World.GetEntityLocation(firstSession.PlayerEntityId), secondSession.World.GetEntityLocation(secondSession.PlayerEntityId));
+            Assert.Equal(entry.ScenarioId, secondSession.ScenarioId);
+            Assert.Equal(entry.Name, secondSession.Name);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ConsoleScenarioLauncherBuildsFreshSessionFromCatalogEntry()
     {
         var directory = CreateTemporaryDirectory();
