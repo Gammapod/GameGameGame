@@ -1,101 +1,41 @@
 scenarios:
-- contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
-  scenarioId: beta-pocket-bazaar
-  name: Beta Pocket Bazaar
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-auto-enter-box
-  name: Beta Auto Enter Box
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-enter-exit-manual
-  name: Beta Enter Exit Manual
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-exit-practice
-  name: Beta Exit Practice
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-mouse-crack
-  name: Beta Mouse Crack
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-nested-aperture-blocked
-  name: Beta Nested Aperture Blocked
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-nested-aperture-success
-  name: Beta Nested Aperture Success
-- contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
-  scenarioId: beta-too-bulky-enter
-  name: Beta Too Bulky Enter
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\AlphaSlimeRecreation.yaml
-  scenarioId: beta-alpha-slime-recreation
-  name: Beta Alpha Slime Recreation
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\BehaviorChainCompositionShowcase.yaml
-  scenarioId: beta-behavior-chain-composition
-  name: Beta Behavior Chain Composition
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\CreateFacingShowcase.yaml
-  scenarioId: beta-create-showcase
-  name: Beta Create Showcase
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\DestroyTargetShowcase.yaml
-  scenarioId: beta-destroy-showcase
-  name: Beta Destroy Showcase
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\DropFacingShowcase.yaml
-  scenarioId: beta-drop-showcase
-  name: Beta Drop Showcase
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PickupDropWeightShowcase.yaml
-  scenarioId: beta-pickup-drop-weight
-  name: Beta Pickup Drop Weight
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PushFacingShowcase.yaml
-  scenarioId: beta-push-showcase
-  name: Beta Push Showcase
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\BackstepShowcase.yaml
-  scenarioId: beta-backstep-showcase
-  name: Beta Backstep Showcase
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\PatrolTurnShowcase.yaml
-  scenarioId: beta-patrol-turn
-  name: Beta Patrol Turn
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\TurnShowcase.yaml
-  scenarioId: beta-turn-showcase
-  name: Beta Turn Showcase
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\WallBounceShowcase.yaml
-  scenarioId: beta-wall-bounce
-  name: Beta Wall Bounce
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\DistanceTwoShowcase.yaml
-  scenarioId: beta-distance-two
-  name: Beta Distance Two
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\FleeTargetShowcase.yaml
-  scenarioId: beta-flee-target
-  name: Beta Flee Target
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
-  scenarioId: beta-kiting-orbiter
-  name: Beta Kiting Orbiter
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
-  scenarioId: beta-kiting-orbiter-fallback-lane
-  name: Beta Kiting Orbiter Fallback Lane
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\StrafeAnticlockwiseShowcase.yaml
-  scenarioId: beta-strafe-anticlockwise
-  name: Beta Strafe Anticlockwise
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\StrafeClockwiseShowcase.yaml
-  scenarioId: beta-strafe-clockwise
-  name: Beta Strafe Clockwise
-- contentPath: src\GameGameGame.Content\Beta\Targeting\AcquireTargetShowcase.yaml
-  scenarioId: beta-acquire-target-showcase
-  name: Beta Acquire Target Showcase
-- contentPath: src\GameGameGame.Content\Beta\Targeting\CollectorShowcase.yaml
-  scenarioId: beta-collector
-  name: Beta Collector
-- contentPath: src\GameGameGame.Content\Beta\Targeting\DirectChaseShowcase.yaml
-  scenarioId: beta-direct-chase
-  name: Beta Direct Chase
-- contentPath: src\GameGameGame.Content\Beta\Targeting\TargetedDestroyerShowcase.yaml
-  scenarioId: beta-targeted-destroyer
-  name: Beta Targeted Destroyer
-- contentPath: src\GameGameGame.Content\Beta\Transfer\CollectorTraderHandoffShowcase.yaml
-  scenarioId: beta-collector-trader-handoff
-  name: Beta Collector Trader Handoff
-- contentPath: src\GameGameGame.Content\Beta\Transfer\FeedingOfferingShowcase.yaml
-  scenarioId: beta-feeding-offering
-  name: Beta Feeding Offering
 - contentPath: src\GameGameGame.Content\Beta\Transfer\PassiveChestTransferShowcase.yaml
   scenarioId: beta-passive-chest-transfer
   name: Beta Passive Chest Transfer
+  description: A scene where a creature places an item in a chest.
+
 - contentPath: src\GameGameGame.Content\Beta\Transfer\StealingActorShowcase.yaml
   scenarioId: beta-stealing-actor
   name: Beta Stealing Actor
+  description: A scene where a creature takes an item from a chest.
+
+- contentPath: src\GameGameGame.Content\Beta\Targeting\CollectorShowcase.yaml
+  scenarioId: beta-collector
+  name: Beta Collector
+  description: A creature that picks everything up, including the player.
+
+- contentPath: src\GameGameGame.Content\Beta\Transfer\CollectorTraderHandoffShowcase.yaml
+  scenarioId: beta-collector-trader-handoff
+  name: Beta Collector Trader Handoff
+  description: This collector picks up the closest object and hands it to the next-closest. Around turn 11, the player ends up inside themselves.
+
+- contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
+  scenarioId: beta-pocket-bazaar
+  name: Beta Pocket Bazaar
+  description: A longer showcase with several nested scenes. E to enter, X to exit an inventory space.
+
+- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
+  scenarioId: beta-kiting-orbiter
+  name: Beta Kiting Orbiter
+  description: Creatures that try to orbit the nearest object (they are easily distracted).
+
+- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PushFacingShowcase.yaml
+  scenarioId: beta-push-showcase
+  name: Beta Push Showcase
+  description: Creatures that can push things.
+
+- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\PatrolTurnShowcase.yaml
+  scenarioId: beta-patrol-turn
+  name: Beta Patrol Turn
+  description: Some simple patrolling creatures that turn when they hit a wall.
 diagnostics: []
