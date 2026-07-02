@@ -12,7 +12,7 @@ Related plans and source of truth:
 
 - `docs/Source of Truth/Content-Authoring-Manual.md` remains the source of truth for currently authorable content workflows.
 - `docs/Plans/Beta-Capability-Gap-Log.md` records missing capabilities, blockers, reporting needs, and authoring friction.
-- `docs/Plans/Beta-Content-Exploration-Plan.md` records paused beta vignette ordering and gate context.
+- `docs/Archived/Beta-Content-Exploration-Plan.md` records paused beta vignette ordering and gate context.
 
 ## Purpose
 

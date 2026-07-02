@@ -380,7 +380,7 @@ Agent API should continue to:
 - reuse movement target/destination descriptors for `Teleport` and `Drop`;
 - keep initial `Target`, `CanDrop`, and advanced turn-flag authoring deferred until concrete use cases appear.
 
-See `Agent-Editor-API-Plan.md` for the implementation plan and next transport/protocol considerations.
+See `docs/Archived/Agent-Editor-API-Plan.md` for the historical implementation plan and next transport/protocol considerations.
 
 ## Upcoming behavior-system priorities
 

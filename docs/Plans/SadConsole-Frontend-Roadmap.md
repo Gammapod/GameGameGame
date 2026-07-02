@@ -375,6 +375,8 @@ Promote or consider while planning SadConsole work:
 - Entity/location/container indexes if frontend browsing or large scenarios create performance pressure.
 - Behavior/action-plan templates, usage display, and future editor/browser workflows.
 - Entity panel chain UX, collapsible panels, keyboard mode model, target highlighting, mouse layer, facing/target visualization, reusable layout geometry, runlog stepper, and integrated editor affordances.
+- SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs.
+- SadConsole screenshot/debug capture workflow, using the existing RecordScenario/debug-rendering path as a prototype where practical.
 - Reaction trace causality when reactions are promoted.
 - Future Action Choice / `PlayerInputStep` model.
 - Long-horizon diegetic action-plan UI if action plans become gameplay objects.

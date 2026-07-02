@@ -11,6 +11,7 @@ Read when:
 Related documents:
 
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the canonical entity-panel, breadcrumb, and log UX model.
+- `docs/Source of Truth/Frontend-UX-Standards.md` records frontend UI-bible presentation standards that guide implementation but are not Core behavior invariants.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the staged implementation roadmap.
 - `docs/Plans/SadConsole-Spike-Findings.md` records prototype evidence behind these constraints.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.

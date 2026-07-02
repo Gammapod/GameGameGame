@@ -13,6 +13,8 @@ internal sealed class SadConsoleShell : Console
 {
     public const int ScreenWidth = 120;
     public const int ScreenHeight = 42;
+    private const int PanelTop = 6;
+    private const int GlobalLogTop = 33;
 
     private readonly MovementService _movement = new();
     private readonly EntityPanelProjectionService _panelProjection;
@@ -420,24 +422,25 @@ internal sealed class SadConsoleShell : Console
         var affordances = _affordances.Query(world, _session.PlayerEntityId);
         PrintClipped(1, 2, Width - 2, FormatAffordances(affordances), Color.Gray);
         PrintClipped(1, 3, Width - 2, _selectedEntity is { } selected ? $"Selected: {world.FormatEntityAddress(selected)}" : "Selected: none", Color.Gray);
+        PrintClipped(1, 4, Width - 2, FormatPromptHint(affordances), Color.DarkGray);
 
         var containerProjection = _panelProjection.Project(world, CurrentContainerEntityId(), _session.ActionPlans, _session.PlayerEntityId, _actionLog);
         var inspectedProjection = _panelProjection.Project(world, _inspectedEntity ?? _session.PlayerEntityId, _session.ActionPlans, _session.PlayerEntityId, _actionLog);
-        DrawPanel(containerProjection, 1, 5, 56, "Current Container", UsesWorldCursor() ? _worldCursor : null);
-        DrawPanel(inspectedProjection, 60, 5, 58, "Inspection", UsesInventoryCursor() ? _inventoryCursor : null);
+        DrawPanel(containerProjection, 1, PanelTop, 56, GlobalLogTop - 1, "Current Container", UsesWorldCursor() ? _worldCursor : null, affordances);
+        DrawPanel(inspectedProjection, 60, PanelTop, 58, GlobalLogTop - 1, "Inspection", UsesInventoryCursor() ? _inventoryCursor : null, affordances);
 
-        if (_actionLog is { } actionLog)
-        {
-            PrintText(1, Height - 5, "Recent controlled-command log", Color.Yellow);
-            var y = Height - 4;
-            foreach (var outcome in actionLog.Chronological.TakeLast(3))
-            {
-                PrintClipped(1, y++, Width - 2, outcome.Sentence, outcome.Succeeded ? Color.LightGreen : Color.Orange);
-            }
-        }
+        DrawGlobalLog();
     }
 
-    private void DrawPanel(EntityPanelProjection panel, int left, int top, int width, string title, GridCoord? cursor)
+    private void DrawPanel(
+        EntityPanelProjection panel,
+        int left,
+        int top,
+        int width,
+        int bottom,
+        string title,
+        GridCoord? cursor,
+        ControlledActorAffordances affordances)
     {
         PrintClipped(left, top, width, $"{title}: {panel.Glyph} {panel.Name} {panel.EntityId}", Color.Yellow);
         PrintClipped(left, top + 1, width, $"Path: {FormatBreadcrumb(panel.Breadcrumb)}", Color.Gray);
@@ -461,29 +464,202 @@ internal sealed class SadConsoleShell : Console
         }
 
         PrintClipped(left, y++, width, $"Inventory: {grid.PlaneId} ({grid.Width}x{grid.Height})", Color.White);
-        for (var row = 0; row < grid.Height && y < top + 20; row++, y++)
+        var highlights = BuildHighlights(grid.PlaneId, affordances);
+        for (var row = 0; row < grid.Height && y < bottom - 8; row++, y++)
         {
             for (var x = 0; x < grid.Width && x < width - 1; x++)
             {
                 var coord = new GridCoord(x, row);
                 var cell = grid.Cells.Single(cell => cell.Coord == coord);
+                var occupant = cell.EntityId;
                 var foreground = ToSadColor(cell.Color);
-                var background = cursor == coord ? Color.DarkGoldenrod : Color.Black;
+                var background = BackgroundForCell(grid.PlaneId, coord, occupant, cursor, highlights);
                 SetCell(left + x, y, cell.Glyph, foreground, background);
             }
+        }
+
+        if (y >= bottom)
+        {
+            return;
         }
 
         PrintClipped(left, y++, width, "Contents", Color.Yellow);
         foreach (var row in panel.Contents.Take(6))
         {
-            PrintClipped(left, y++, width, $"{row.Order}. {row.Glyph} {row.EntityName} [{row.Participation}] {row.PreviousAction}", Color.White);
+            if (y >= bottom) return;
+            PrintClipped(left, y++, width, $"{row.Order}. {row.Glyph} {row.EntityName}{FormatEntityStateSuffix(row.EntityId)} [{row.Participation}] {row.PreviousAction}", Color.White);
         }
 
-        foreach (var outcome in panel.LocalLog.TakeLast(3))
+        if (y < bottom && panel.LocalLog.Count > 0)
         {
+            PrintClipped(left, y++, width, "Local log", Color.Yellow);
+        }
+
+        foreach (var outcome in panel.LocalLog.TakeLast(Math.Max(0, bottom - y)))
+        {
+            if (y >= bottom) return;
             PrintClipped(left, y++, width, outcome.Sentence, outcome.Succeeded ? Color.LightGreen : Color.Orange);
         }
     }
+
+    private void DrawGlobalLog()
+    {
+        PrintText(1, GlobalLogTop, "Global controlled-command log", Color.Yellow);
+        if (_actionLog is null || _actionLog.Chronological.Count == 0)
+        {
+            PrintClipped(1, GlobalLogTop + 1, Width - 2, "No controlled commands submitted yet.", Color.DarkGray);
+            return;
+        }
+
+        var y = GlobalLogTop + 1;
+        foreach (var outcome in _actionLog.Chronological.TakeLast(ScreenHeight - GlobalLogTop - 1))
+        {
+            var turn = outcome.TurnNumber is { } turnNumber ? $"T{turnNumber}: " : string.Empty;
+            PrintClipped(1, y++, Width - 2, $"{turn}{outcome.Sentence}", outcome.Succeeded ? Color.LightGreen : Color.Orange);
+        }
+    }
+
+    private IReadOnlyDictionary<GridCoord, CellHighlight> BuildHighlights(PlaneId planeId, ControlledActorAffordances affordances)
+    {
+        var highlights = new Dictionary<GridCoord, CellHighlight>();
+
+        switch (_mode)
+        {
+            case ShellMode.Play:
+                foreach (var movement in affordances.MovementDirections.Where(affordance => affordance.Destination?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, movement.Destination!.Value.Coord, movement.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+
+                foreach (var source in affordances.PickupSources.Concat(affordances.EnterTargets).Where(affordance => affordance.Source?.PlaneId == planeId && affordance.CanExecute))
+                {
+                    AddHighlight(highlights, source.Source!.Value.Coord, CellHighlight.Valid);
+                }
+                break;
+
+            case ShellMode.PickupSource:
+                foreach (var source in affordances.PickupSources.Where(affordance => affordance.Source?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, source.Source!.Value.Coord, source.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+                break;
+
+            case ShellMode.PickupDestination when _selectedEntity is { } pickupTarget:
+                foreach (var destination in affordances.PickupDestinations(pickupTarget).Where(affordance => affordance.Destination.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, destination.Destination.Coord, destination.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+                break;
+
+            case ShellMode.DropSource:
+                foreach (var source in affordances.DropSources.Where(affordance => affordance.Source?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, source.Source!.Value.Coord, source.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+                break;
+
+            case ShellMode.DropDestination when _selectedEntity is { } dropTarget:
+                foreach (var destination in affordances.DropDestinations(dropTarget).Where(affordance => affordance.Destination.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, destination.Destination.Coord, destination.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+                break;
+
+            case ShellMode.EnterSource:
+                foreach (var source in affordances.EnterTargets.Where(affordance => affordance.Source?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, source.Source!.Value.Coord, source.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+                break;
+
+            case ShellMode.ExitDirection:
+                foreach (var exit in affordances.ExitDirections.Where(affordance => affordance.Destination?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, exit.Destination!.Value.Coord, exit.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
+                }
+                break;
+        }
+
+        return highlights;
+    }
+
+    private static void AddHighlight(Dictionary<GridCoord, CellHighlight> highlights, GridCoord coord, CellHighlight highlight)
+    {
+        if (!highlights.TryGetValue(coord, out var existing) || existing != CellHighlight.Valid)
+        {
+            highlights[coord] = highlight;
+        }
+    }
+
+    private Color BackgroundForCell(
+        PlaneId planeId,
+        GridCoord coord,
+        EntityId? occupant,
+        GridCoord? cursor,
+        IReadOnlyDictionary<GridCoord, CellHighlight> highlights)
+    {
+        if (cursor == coord)
+        {
+            return Color.DarkGoldenrod;
+        }
+
+        if (occupant == _session?.PlayerEntityId)
+        {
+            return Color.DarkBlue;
+        }
+
+        if (occupant is { } entityId && entityId == _selectedEntity)
+        {
+            return Color.DarkMagenta;
+        }
+
+        if (occupant is { } targetId && _session?.World.GetActionTarget(_session.PlayerEntityId) == targetId)
+        {
+            return Color.Purple;
+        }
+
+        if (highlights.TryGetValue(coord, out var highlight))
+        {
+            return highlight == CellHighlight.Valid ? Color.DarkGreen : Color.DarkRed;
+        }
+
+        return Color.Black;
+    }
+
+    private string FormatEntityStateSuffix(EntityId entityId)
+    {
+        if (_session is null)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string>();
+        if (_session.World.GetActionFacing(entityId) is { } facing)
+        {
+            parts.Add($"F:{FacingArrow(facing)}");
+        }
+
+        if (_session.World.GetActionTarget(entityId) is { } target)
+        {
+            parts.Add($"T:{FormatEntityShortName(target)}");
+        }
+
+        return parts.Count == 0 ? string.Empty : $" ({string.Join(' ', parts)})";
+    }
+
+    private string FormatEntityShortName(EntityId entityId) =>
+        _session is { } session && session.World.Entities.TryGetValue(entityId, out var entity)
+            ? entity.Name
+            : entityId.Value;
+
+    private static string FacingArrow(GggDirection direction) => direction switch
+    {
+        GggDirection.North => "N↑",
+        GggDirection.South => "S↓",
+        GggDirection.West => "W←",
+        GggDirection.East => "E→",
+        _ => direction.ToString()
+    };
 
     private EntityId CurrentContainerEntityId()
     {
@@ -566,6 +742,49 @@ internal sealed class SadConsoleShell : Console
         return $"Valid moves: {(string.IsNullOrWhiteSpace(moves) ? "none" : moves)} | pickups: {affordances.PickupSources.Count(a => a.CanExecute)} | drops: {affordances.DropSources.Count(a => a.CanExecute)} | enter: {affordances.EnterTargets.Count(a => a.CanExecute)} | exit: {affordances.ExitDirections.Count(a => a.CanExecute)}";
     }
 
+    private string FormatPromptHint(ControlledActorAffordances affordances)
+    {
+        return _mode switch
+        {
+            ShellMode.Play => "Highlights: green valid action target, red blocked move, blue controlled entity, purple current target, gold cursor. Facing/target appear in text.",
+            ShellMode.PickupSource => FormatEntityAffordanceHint("Pickup source", affordances.PickupSources),
+            ShellMode.PickupDestination when _selectedEntity is { } target => FormatDestinationAffordanceHint("Pickup destination", affordances.PickupDestinations(target)),
+            ShellMode.DropSource => FormatEntityAffordanceHint("Drop source", affordances.DropSources),
+            ShellMode.DropDestination when _selectedEntity is { } target => FormatDestinationAffordanceHint("Drop destination", affordances.DropDestinations(target)),
+            ShellMode.EnterSource => FormatEntityAffordanceHint("Enter target", affordances.EnterTargets),
+            ShellMode.ExitDirection => FormatDirectionAffordanceHint("Exit", affordances.ExitDirections),
+            ShellMode.InspectSource => "Inspect: gold cursor selects visible entities in the current container panel.",
+            _ => string.Empty
+        };
+    }
+
+    private static string FormatEntityAffordanceHint(string label, IReadOnlyList<ControlledActorEntityAffordance> affordances)
+    {
+        var valid = affordances.Count(affordance => affordance.CanExecute);
+        var blocked = affordances.FirstOrDefault(affordance => !affordance.CanExecute && !string.IsNullOrWhiteSpace(affordance.FailureDetail));
+        return blocked is null
+            ? $"{label}: {valid} valid highlighted target(s)."
+            : $"{label}: {valid} valid target(s). Blocked: {blocked.FailureReason} {blocked.FailureDetail}";
+    }
+
+    private static string FormatDestinationAffordanceHint(string label, IReadOnlyList<ControlledActorDestinationAffordance> affordances)
+    {
+        var valid = affordances.Count(affordance => affordance.CanExecute);
+        var blocked = affordances.FirstOrDefault(affordance => !affordance.CanExecute && !string.IsNullOrWhiteSpace(affordance.FailureDetail));
+        return blocked is null
+            ? $"{label}: {valid} valid highlighted cell(s)."
+            : $"{label}: {valid} valid cell(s). Blocked: {blocked.FailureReason} {blocked.FailureDetail}";
+    }
+
+    private static string FormatDirectionAffordanceHint(string label, IReadOnlyList<ControlledActorDirectionAffordance> affordances)
+    {
+        var valid = affordances.Count(affordance => affordance.CanExecute);
+        var blocked = affordances.FirstOrDefault(affordance => !affordance.CanExecute && !string.IsNullOrWhiteSpace(affordance.FailureDetail));
+        return blocked is null
+            ? $"{label}: {valid} valid highlighted direction(s)."
+            : $"{label}: {valid} valid direction(s). Blocked: {blocked.FailureReason} {blocked.FailureDetail}";
+    }
+
     private static string FormatFailure(ControlledActorCommandResult result) =>
         string.IsNullOrWhiteSpace(result.FailureDetail)
             ? $"Action failed: {result.FailureReason?.ToString() ?? "failed"}."
@@ -595,4 +814,10 @@ internal enum ShellMode
     DropDestination,
     EnterSource,
     ExitDirection
+}
+
+internal enum CellHighlight
+{
+    Invalid,
+    Valid
 }
