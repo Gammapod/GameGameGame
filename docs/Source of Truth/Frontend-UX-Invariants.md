@@ -12,7 +12,9 @@ Related documents:
 
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the canonical entity-panel, breadcrumb, and log UX model.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records frontend UI-bible presentation standards that guide implementation but are not Core behavior invariants.
+- `docs/Source of Truth/testing-charter.md` records frontend testing workflow expectations and the Core/frontend TDD split.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the staged implementation roadmap.
+- `docs/Archived/Frontend-Testing-Strategy-Proposal.md` records the approved initial frontend testing strategy that established the current test project and charter guidance.
 - `docs/Plans/SadConsole-Spike-Findings.md` records prototype evidence behind these constraints.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records maintainer-facing capability support.
@@ -74,6 +76,24 @@ These are known risks to evaluate before treating any frontend engine or interac
 - browser/HTML5 or itch.io-friendly packaging versus downloadable desktop delivery;
 - future editor UX comfort compared with a richer UI/game framework.
 
+## Frontend invariant test trace
+
+Frontend invariant traces may point to Core/Content/Editor tests when the invariant is enforced by a shared service rather than by frontend code. Frontend-owned traces should remain focused on presentation, layout, prompt, and view-model behavior.
+
+Prefer tracing frontend invariants to focused component/helper suites rather than every individual frontend test. If a single invariant needs a disproportionately large number of frontend tests, review whether the tests are too detailed, the component needs a clearer suite boundary, the invariant should be split, or the behavior belongs in a shared semantic layer.
+
+| Invariant | Automated trace | Manual or deferred trace |
+|---|---|---|
+| 1. Frontends do not invent simulation semantics. | Core/shared semantic trace remains in `docs/Source of Truth/invariants.md`: `ControlledActorCommandMoveReturnsStructuredSuccessAndAdvancesTurn`, `ControlledActorCommandFailedMoveRecordsFailureWithoutAdvancingTurn`, `ControlledActorCommandPickupReportsTargetAndDestinationAnchors`, `ControlledActorAffordanceQueryReportsValidAndBlockedMovementDirections`, `ControlledActorAffordanceQueryReportsPickupSourcesAndDestinations`, `ControlledActorAffordanceQueryReportsDropSourcesAndBlockedDropDestinations`, `ControlledActorAffordanceQueryReportsEnterTargetsAndExitDirections`. | Frontend review should reject tests or UI code that redefines legality, failure policy, movement, inventory, containment, or turn advancement. |
+| 2. Frontend state is presentation state. | `SadConsoleSessionLayoutTests`, `SadConsolePanelChainViewTests`, `PromptChoiceCyclerTests`, and `LocalActivityViewBuilderTests` cover layout, collapse, selection, candidate cycling, and local presentation as pure frontend state. | Future focus, hover, scrolling, mouse hit-testing, and animation behavior should add SadConsole tests once stable enough to pin. |
+| 3. Player action should converge on shared action contracts. | Core/shared bridge trace remains in `docs/Source of Truth/invariants.md`: `ControlledActorCommandMoveReturnsStructuredSuccessAndAdvancesTurn`, `ControlledActorCommandFailedMoveRecordsFailureWithoutAdvancingTurn`, `ControlledActorCommandPickupReportsTargetAndDestinationAnchors`. | Future Action Choice request/submission/resolution should add Core/shared tests before frontend prompt tests depend on the new contract. |
+| 4. Action evaluation remains authoritative. | Core/shared affordance and execution trace remains in `docs/Source of Truth/invariants.md`: `ControlledActorAffordanceQueryReportsValidAndBlockedMovementDirections`, `ControlledActorAffordanceQueryReportsPickupSourcesAndDestinations`, `ControlledActorAffordanceQueryReportsDropSourcesAndBlockedDropDestinations`, `ControlledActorAffordanceQueryReportsEnterTargetsAndExitDirections`, plus controlled-command execution tests. `PromptChoiceCyclerTests` cover only frontend filtering/cycling of already-computed candidates. | Manual UI review should confirm highlighted targets are presented as hints and that command submission still flows through shared execution services. |
+| 5. Logs derive from structured outcomes, not parsed display strings. | Core/shared log trace remains in `docs/Source of Truth/invariants.md`: `ActionOutcomeProjectionRendersSuccessfulPickupFromStructuredCommandResult`, `ActionOutcomeProjectionRendersFailedMoveWithoutParsingDisplaySummary`, `ActionLogProjectionFiltersOutcomesByEntityAndPlaneAnchors`. `LocalActivityViewBuilderTests` cover presentation of local controlled-command snippets and honest empty text. | Future all-entity/autonomous log projection needs Core/shared tests before frontend global/local log tests claim complete simulation history. |
+| 6. Scenario launch is frontend-neutral. | Content/Console trace remains in `docs/Source of Truth/invariants.md`: `PlayableScenarioLauncherBuildsFrontendNeutralSessionFromPersistedScenario`, `PlayableScenarioLauncherBuildsFreshSessionFromCatalogEntry`, `ConsoleScenarioLauncherBuildsPlayableSessionFromPersistedScenario`, `ConsoleScenarioLauncherBuildsFreshSessionFromCatalogEntry`. | Future SadConsole scenario menu/session view tests should assert presentation over `PlayableScenarioLauncher` results, not new launch semantics. |
+| 7. Editor-like workflows consume editor/content APIs. | Editor/content trace remains in `docs/Source of Truth/invariants.md`: `ContentEditorServiceUpdatesEntityPresetAndPresentation`, `ContentEditorServicePlacesAndMovesCarriedEntityInInventoryLayout`, `ContentEditorServiceAddsReordersAndRemovesActionPlanSteps`, `ContentEditorServiceValidatesCurrentDocumentAfterEdits`, `AgentContentEditorApiAuthorsCanonicalEnterExitBehavior`, `EditorViewModelAvailableActionStepsCanAddEnterAndExitBehaviorSteps`. | Future frontend Editor mode tests should assert UI/view-model behavior over editor services, not direct YAML mutation or runtime-state editing. |
+| 8. Console is fallback/minimal tooling. | Existing Console launch smoke traces remain in `docs/Source of Truth/invariants.md`: `AlphaScenarioFixtureCanLaunchInConsoleAndAcceptPlayerMove`, `ConsoleScenarioLauncherBuildsPlayableSessionFromPersistedScenario`, `ConsoleScenarioLauncherBuildsFreshSessionFromCatalogEntry`. | Console polish tests are targeted only when Console fallback behavior is explicitly selected. Rich UI regression coverage should prefer SadConsole/shared frontend-neutral tests. |
+| 9. SadConsole is the preferred debug/editor browser direction, not a final engine lock. | `tests/GameGameGame.SadConsole.Tests` is the current automated frontend test home for SadConsole-owned pure logic. | Engine-selection, packaging, mouse comfort, animation, and final UI-framework decisions remain manual/research-backed until promoted into stable contracts. |
+
 ## Stage 0 debt inventory
 
 The Stage 0 code/documentation audit found these current responsibility concentrations:
@@ -93,7 +113,7 @@ Known first-pass panel projection limitations:
 - layout, scrolling, collapse, focus, filtering, and visual prioritization are intentionally not represented.
 - `src/GameGameGame.Console/ConsolePlayerControls.cs` is a very small key-to-command/action helper. It is acceptable as fallback input mapping, but command creation/resolution should not become Console-specific.
 - `src/GameGameGame.Console/ConsoleInspectionDisplayFormatter.cs` formats breadcrumbs and panel properties from shared inspection/path/turn-order data. This is useful reference behavior, but stable panel projection should move to frontend-neutral DTOs before SadConsole depends on equivalent composition.
-- Only the SadConsole spike findings were carried forward to main. The old `src/GameGameGame.SadConsolePrototype` prototype source is intentionally not a current codebase artifact. Future SadConsole implementation should start fresh in `src/GameGameGame.SadConsole` after the shared contracts it needs are selected.
+- Only the SadConsole spike findings were carried forward to main. The old `src/GameGameGame.SadConsolePrototype` prototype source is intentionally not a current codebase artifact. Current SadConsole implementation lives in the fresh `src/GameGameGame.SadConsole` project and should continue consuming shared contracts rather than reviving prototype-local semantics.
 
 ## Contradictions or clarification needed
 
@@ -101,4 +121,4 @@ No semantic contradiction was found in the core UX direction: the documents cons
 
 Repository-state clarification:
 
-- Several historical docs describe the completed prototype and old run commands. Those commands are archival only. Main should carry forward the findings, not the prototype project. Create a fresh `GameGameGame.SadConsole` project for future frontend work when the roadmap promotes it.
+- Several historical docs describe the completed prototype and old run commands. Those commands are archival only. Main should carry forward the findings, not the prototype project. Current SadConsole work should continue in `src/GameGameGame.SadConsole` and keep frontend-specific behavior behind testable presentation/view-model seams where practical.

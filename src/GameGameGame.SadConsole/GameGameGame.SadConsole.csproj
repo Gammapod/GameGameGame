@@ -19,6 +19,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="GameGameGame.SadConsole.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="..\GameGameGame.Content\Beta\**\*.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

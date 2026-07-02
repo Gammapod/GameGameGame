@@ -500,8 +500,8 @@ internal sealed class SadConsoleShell : Console
         var session = _session!;
         var inspectedEntityId = _inspectedEntity ?? session.PlayerEntityId;
         var inspectedProjection = _panelProjection.Project(session.World, inspectedEntityId, session.ActionPlans, session.PlayerEntityId, _actionLog);
-        var fullChainEntityIds = BuildPanelChain(inspectedProjection.Breadcrumb);
-        var chainEntityIds = BuildVisiblePanelChain(fullChainEntityIds);
+        var fullChainEntityIds = SadConsolePanelChainViewBuilder.BuildPanelChain(inspectedProjection.Breadcrumb);
+        var chainEntityIds = SadConsolePanelChainViewBuilder.BuildVisiblePanelChain(fullChainEntityIds);
         var slots = SadConsoleSessionLayout.BuildPanelChainSlots(chainEntityIds.Count);
         var currentContainerId = CurrentContainerEntityId();
         var omittedCount = Math.Max(0, fullChainEntityIds.Count - chainEntityIds.Count);
@@ -513,45 +513,12 @@ internal sealed class SadConsoleShell : Console
             var projection = entityId == inspectedProjection.EntityId
                 ? inspectedProjection
                 : _panelProjection.Project(session.World, entityId, session.ActionPlans, session.PlayerEntityId, _actionLog);
-            var title = PanelTitle(index, entityId, currentContainerId, inspectedEntityId, omittedCount);
+            var title = SadConsolePanelChainViewBuilder.PanelTitle(index, entityId, currentContainerId, inspectedEntityId, omittedCount);
             var cursor = CursorForPanel(entityId, currentContainerId, inspectedEntityId);
             result.Add(new SadConsolePanelView(title, projection, slots[index].Bounds, cursor, slots[index].IsCollapsed));
         }
 
         return result;
-    }
-
-    private static IReadOnlyList<EntityId> BuildPanelChain(EntityContainmentPath breadcrumb)
-    {
-        var chain = breadcrumb.Segments.Select(segment => segment.EntityId).ToList();
-        if (chain.Count == 0)
-        {
-            chain.Add(breadcrumb.RequestedEntityId);
-        }
-
-        return chain;
-    }
-
-    private static IReadOnlyList<EntityId> BuildVisiblePanelChain(IReadOnlyList<EntityId> chain)
-    {
-        if (chain.Count <= 4)
-        {
-            return chain;
-        }
-
-        return chain.Take(1).Concat(chain.TakeLast(3)).ToList();
-    }
-
-    private static string PanelTitle(int index, EntityId entityId, EntityId currentContainerId, EntityId inspectedEntityId, int omittedCount)
-    {
-        var role = entityId == inspectedEntityId
-            ? "Inspection"
-            : entityId == currentContainerId
-                ? "Current Container"
-                : index == 0
-                    ? "Root"
-                    : "Ancestor";
-        return omittedCount > 0 && index == 0 ? $"{role} (+{omittedCount})" : role;
     }
 
     private GridCoord? CursorForPanel(EntityId entityId, EntityId currentContainerId, EntityId inspectedEntityId)
@@ -648,43 +615,22 @@ internal sealed class SadConsoleShell : Console
 
     private void DrawLocalActivity(EntityPanelProjection panel, int left, int width, int bottom, ref int y)
     {
-        if (y >= bottom)
+        foreach (var row in LocalActivityViewBuilder.Build(panel, bottom - y))
         {
-            return;
-        }
-
-        PrintClipped(left, y++, width, "Local activity", Color.Yellow);
-        if (panel.Contents.Count == 0 && panel.LocalLog.Count == 0)
-        {
-            if (y < bottom)
+            var x = row.IsHeader ? left : row.Text.StartsWith('└') ? left + 2 : left;
+            var rowWidth = row.Text.StartsWith('└') ? Math.Max(0, width - 2) : width;
+            var text = row.Text;
+            if (!row.IsHeader && !row.Text.StartsWith('└'))
             {
-                PrintClipped(left, y++, width, "No visible contents or controlled-command snippets.", Color.DarkGray);
+                var content = panel.Contents.FirstOrDefault(contentRow => row.Text.StartsWith($"{contentRow.Order}. {contentRow.Glyph} {contentRow.EntityName}"));
+                if (content is not null)
+                {
+                    text = $"{content.Order}. {content.Glyph} {content.EntityName}{FormatEntityStateSuffix(content.EntityId)} [{content.Participation}]";
+                }
             }
 
-            return;
-        }
-
-        foreach (var row in panel.Contents)
-        {
-            if (y >= bottom) return;
-            PrintClipped(left, y++, width, $"{row.Order}. {row.Glyph} {row.EntityName}{FormatEntityStateSuffix(row.EntityId)} [{row.Participation}]", Color.White);
-
-            if (y >= bottom || string.IsNullOrWhiteSpace(row.PreviousAction))
-            {
-                continue;
-            }
-
-            PrintClipped(left + 2, y++, Math.Max(0, width - 2), $"└ {row.PreviousAction}", Color.LightGreen);
-        }
-
-        var contentEntityIds = panel.Contents.Select(row => row.EntityId).ToHashSet();
-        var remainingRows = Math.Max(0, bottom - y);
-        foreach (var outcome in panel.LocalLog
-                     .Where(outcome => !outcome.AnchorEntityIds.Any(contentEntityIds.Contains))
-                     .TakeLast(remainingRows))
-        {
-            if (y >= bottom) return;
-            PrintClipped(left + 2, y++, Math.Max(0, width - 2), $"└ {outcome.Sentence}", outcome.Succeeded ? Color.LightGreen : Color.Orange);
+            var color = row.IsHeader ? Color.Yellow : row.IsPositive ? Color.LightGreen : row.IsWarning ? Color.Orange : row.IsMuted ? Color.DarkGray : Color.White;
+            PrintClipped(x, y++, rowWidth, text, color);
         }
     }
 
@@ -901,24 +847,9 @@ internal sealed class SadConsoleShell : Console
 
     private bool CycleCursor(IEnumerable<PlaneCoord?> candidates, PlaneId planeId, ref GridCoord cursor, string label)
     {
-        var coords = candidates
-            .Where(candidate => candidate?.PlaneId == planeId)
-            .Select(candidate => candidate!.Value.Coord)
-            .Distinct()
-            .OrderBy(coord => coord.Y)
-            .ThenBy(coord => coord.X)
-            .ToList();
-
-        if (coords.Count == 0)
-        {
-            _message = $"{label}: no valid choices.";
-            return true;
-        }
-
-        var current = cursor;
-        var index = coords.FindIndex(coord => coord == current);
-        cursor = coords[(index + 1 + coords.Count) % coords.Count];
-        _message = $"{label}: selected {cursor}. Tab cycles, Enter confirms.";
+        var result = PromptChoiceCycler.Cycle(candidates, planeId, cursor, label);
+        cursor = result.Cursor;
+        _message = result.Message;
         return true;
     }
 
@@ -938,14 +869,8 @@ internal sealed class SadConsoleShell : Console
         }
     }
 
-    private static GridCoord? FirstValidCoord(IEnumerable<PlaneCoord?> candidates, PlaneId planeId) => candidates
-        .Where(candidate => candidate?.PlaneId == planeId)
-        .Select(candidate => candidate!.Value.Coord)
-        .Distinct()
-        .OrderBy(coord => coord.Y)
-        .ThenBy(coord => coord.X)
-        .Cast<GridCoord?>()
-        .FirstOrDefault();
+    private static GridCoord? FirstValidCoord(IEnumerable<PlaneCoord?> candidates, PlaneId planeId) =>
+        PromptChoiceCycler.FirstValidCoord(candidates, planeId);
 
     private void CycleExitDirection(IReadOnlyList<ControlledActorDirectionAffordance> exits)
     {

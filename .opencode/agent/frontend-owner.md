@@ -7,15 +7,17 @@ permission:
     "docs/**": allow
     "src/GameGameGame.Console/**": allow
     "src/GameGameGame.SadConsole/**": allow
+    "tests/GameGameGame.SadConsole.Tests/**": allow
     "src/GameGameGame.Editor/**": allow
     "src/GameGameGame.Headless/**": allow
-    "src/GameGameGame.Core/**": allow
+    "src/GameGameGame.Core/**": deny
     "src/GameGameGame.Content/**": allow
     "*": ask
   edit:
     "docs/**": allow
     "src/GameGameGame.Console/**": allow
     "src/GameGameGame.SadConsole/**": allow
+    "tests/GameGameGame.SadConsole.Tests/**": allow
     "src/GameGameGame.Editor/**": deny
     "src/GameGameGame.Headless/**": deny
     "src/GameGameGame.Core/**": deny
@@ -51,23 +53,12 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 - Implement and maintain SadConsole frontend behavior in `src/GameGameGame.SadConsole`.
 - Maintain Console frontend behavior in `src/GameGameGame.Console` as fallback/minimal tooling.
 - Own future frontend applications created for the project.
-- Plan and implement SadConsole Simulation-mode UX around entity panels, breadcrumb panel chains, controlled actions, inspection, logs, action affordances, focus/cursor state, and runtime debug browsing.
-- Plan and implement SadConsole Editor-mode UX around authored content documents, templates, carried inventory layouts, scenarios, action plans, validation/diff/preview panels, and scenario preview.
-- Preserve the shared Editor/Simulation model: authored content mutates through shared content/editor services; runtime simulation acts through shared session/action services.
 - Maintain and apply frontend UX source-of-truth docs, especially standards and decisions.
-- Use legacy Avalonia Editor code in `src/GameGameGame.Editor` as read-only reference/prototype material only; it does not define long-term frontend UX and may eventually be retired after SadConsole reaches parity.
-- Use Headless, Content, and Core as read-only references for existing shared workflows and frontend-facing service contracts.
 - Coordinate with `core-owner` when frontend requirements reveal missing Core, Content, Headless, materialization, provenance, log-projection, action, or editor-service capabilities.
 
 ## Restrictions
-- Do NOT modify game engine code in `src/GameGameGame.Core`.
-- Do NOT modify game content files in `src/GameGameGame.Content`.
-- Do NOT modify editor tooling in `src/GameGameGame.Editor`.
-- Do NOT modify headless implementation code in `src/GameGameGame.Headless`.
 - Do NOT introduce frontend-only behavior that contradicts established engine/editor capability contracts.
 - Do NOT make SadConsole own durable content-authoring semantics, simulation semantics, action legality, materialization rules, provenance rules, or log facts that should be shared.
-- Do NOT treat the player entity as visually special by default; use focus/control presentation instead of special entity facts.
-- Do NOT replace entity glyphs with state indicators. Glyphs identify entities consistently; facing/target/focus/selection need adjacent, layered, textual, or decorator-style indicators.
 
 ## Current UX principles
 - Entity panels/cards are the shared visual grammar for Simulation and Editor where sensible.

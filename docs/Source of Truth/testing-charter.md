@@ -2,11 +2,11 @@
 
 Tests follow the same architectural split as `src`.
 
-## TDD Workflow For Planned Code Changes
+## TDD Workflow For Planned Semantic Changes
 
-Every planned code change must have at least one testable outcome before implementation begins. If a change cannot be described in testable terms, it is not ready for implementation.
+Every planned Core/Content/Editor semantic code change must have at least one testable outcome before implementation begins. If a semantic change cannot be described in testable terms, it is not ready for implementation.
 
-Before changing production code, write intentionally failing tests for the planned behavior. These tests should be the first executable expression of the desired behavior and should fail for the expected reason before implementation starts.
+For this semantic workflow, write intentionally failing tests for the planned behavior before changing production code. These tests should be the first executable expression of the desired behavior and should fail for the expected reason before implementation starts.
 
 If the plan changes existing behavior, the plan must include an invariant/test trace before implementation:
 
@@ -24,9 +24,50 @@ The expected loop is:
 1. Confirm the planned behavior has testable outcomes.
 2. Trace affected invariants and existing tests, or explicitly record `None`.
 3. Write or revise tests so they intentionally fail for the planned behavior.
-4. Implement the smallest coordinated Core/Content/Editor change that makes the tests pass.
+4. Implement the smallest coordinated Core/Content/Editor semantic change that makes the tests pass.
 5. Run the targeted tests and relevant broader suites.
 6. Update capability, invariant, and planning docs when behavior or support status changes.
+
+## Frontend Testing Workflow
+
+Frontend work follows the same architectural split, but does not require strict red/green TDD for every exploratory UI change.
+
+Stable pure frontend logic should receive automated tests once it is extracted or shaped into a testable seam. This includes layout slots, panel-chain visibility and titles, prompt candidate filtering/cycling, local activity row composition, menu/session summaries, log labels, and future hit-test geometry.
+
+Exploratory UX work may be implemented and manually evaluated before tests pin it. This includes visual density, wording, colors, animation, cursor feel, mouse comfort, and other presentation choices that are still expected to churn.
+
+Frontend tests must not duplicate Core legality, materialization, turn advancement, inventory, containment, action-resolution, or durable content semantics. If a frontend behavior depends on those facts, test or extend the owning Core/Content/Editor service instead and keep frontend tests focused on how existing shared facts are presented or selected.
+
+Frontend plans should trace affected constraints in `docs/Source of Truth/Frontend-UX-Invariants.md` when changing stable presentation, layout, prompt, log, or frontend-boundary behavior. If the affected behavior is still exploratory, the plan should say which parts are manual-review-only and which parts should receive automated tests once the view-model seam stabilizes.
+
+## Lightweight Frontend Test Standard
+
+Frontend tests should stay light while components and interaction patterns are still being prototyped.
+
+Use suites as the normal frontend trace unit. Invariant docs may trace to component or helper suites such as `SadConsolePanelChainViewTests`, `PromptChoiceCyclerTests`, or `LocalActivityViewBuilderTests` instead of listing every individual case. Individual test names are useful when a single behavior is especially important or when the suite name would be ambiguous.
+
+Use test-count thresholds as review triggers, not hard quotas. As a guideline, a stable frontend invariant should usually trace to one or two focused suites or a small number of representative tests. If an invariant starts accumulating many frontend tests, review whether the tests are too detailed, whether they belong in a component suite, whether the invariant should be split, or whether the behavior actually belongs in Core/Content/Editor.
+
+Avoid testing every visual element or wording choice. Prefer representative tests that protect the component contract: ordering policy, collapse policy, empty-state honesty, role labels, candidate filtering, wrapping behavior, clipping/layout bounds, and whether shared facts are consumed without redefining them.
+
+Do not add snapshot or cell-perfect tests by default. Add lightweight text snapshots only after the view-builder output is stable enough that snapshots catch real regressions instead of expected UX iteration. Do not launch the real SadConsole window in automated tests unless a later frontend automation plan explicitly promotes that approach.
+
+For a new frontend component, use this sequence:
+
+1. Create stub or placeholder tests only when they clarify the intended seam, component boundary, or still-open questions.
+2. Explore the component through implementation, manual testing, and refinement without pinning every intermediate shape.
+3. Once the component shape stabilizes, decide which existing or new frontend invariants define it, then add focused tests that trace to those invariants.
+4. When editing an existing stable component, trace the existing component suite and affected frontend invariants before changing behavior.
+
+Frontend stub tests must not become permanent noise. Delete, replace, or complete them when the component is either stabilized, deferred, or abandoned.
+
+Current frontend test project:
+
+- `tests/GameGameGame.SadConsole.Tests`
+
+Archived strategy reference:
+
+- `docs/Archived/Frontend-Testing-Strategy-Proposal.md`
 
 ## Core Tests
 
@@ -45,3 +86,11 @@ They are responsible for YAML loading, editable document roundtrips, editor serv
 Console tests cover frontend behavior.
 
 They are responsible for input handling, rendering-facing behavior, and user workflows. Console tests are currently deprioritized, but future tests should stay focused on console behavior rather than re-testing Core or Content internals.
+
+## SadConsole Tests
+
+SadConsole tests cover frontend-owned presentation and interaction-model logic without launching the real SadConsole window or asserting cell-perfect rendering.
+
+They are responsible for pure layout geometry, panel-chain selection, collapsed-card policy, prompt candidate filtering and cycling, local activity presentation rows, and future stable view-builder or hit-test behavior. They should use `InternalsVisibleTo("GameGameGame.SadConsole.Tests")` for frontend internals where needed rather than making test seams public API prematurely.
+
+Manual SadConsole smoke testing remains required for frontend sprints until richer UI automation is promoted. Representative manual checks should include launching the default catalog or manifest, selecting representative scenarios, verifying panel chains and collapsed cards, exercising inspect/action cycling, checking local activity readability, confirming glyph identity is preserved, and confirming limited logs are honestly labeled.
