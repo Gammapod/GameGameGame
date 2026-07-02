@@ -1,0 +1,29 @@
+flowchart TD
+    MainMenu[Main Menu]
+    ContentFile[Choose Content File]
+    ScenarioCatalog[Choose Scenario from Manifest/Catalog]
+    EditorContext[Editor Context\nContentEditorSession + selected document]
+    EditorMode[Editor Mode\nAuthor templates, scenarios, action plans, inventory layouts]
+    Preview[Scenario Preview\nTurn 0 materialization]
+    SimulationMode[Simulation Mode\nRuntime session + entity panel chain]
+    ReturnEditor[Return to previous Editor context]
+    SourceJump[Source Jump\nRuntime entity/log/diagnostic -> authored template/action plan/scenario]
+    DeferredDebug[Deferred Debug Capabilities\nLive hot-editing / runtime debug mutation]
+
+    MainMenu --> ContentFile --> EditorContext --> EditorMode
+    MainMenu --> ScenarioCatalog --> EditorContext
+    EditorMode --> Preview
+    Preview --> SimulationMode
+    EditorMode --> SimulationMode
+    ScenarioCatalog --> SimulationMode
+    SimulationMode --> ReturnEditor --> EditorMode
+    SimulationMode -. when provenance exists .-> SourceJump --> EditorMode
+    SimulationMode -. future only .-> DeferredDebug
+
+    classDef mode fill:#1f2937,stroke:#facc15,color:#ffffff
+    classDef context fill:#0f766e,stroke:#67e8f9,color:#ffffff
+    classDef deferred fill:#4b5563,stroke:#f97316,color:#ffffff
+
+    class EditorMode,SimulationMode mode
+    class EditorContext,Preview,SourceJump context
+    class DeferredDebug deferred
