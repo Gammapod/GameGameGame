@@ -1,6 +1,6 @@
 # SadConsole Prototype Assessment
 
-Status: Completed assessment checkpoint after the SadConsole entity-panel/action prototype spike. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated findings to merge forward.
+Status: Completed / archived assessment checkpoint after the SadConsole entity-panel/action prototype spike. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated findings to merge forward.
 
 Read when:
 
@@ -13,7 +13,7 @@ Related source of truth:
 
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records broad frontend UX invariants.
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the entity-panel UX model.
-- `docs/Plans/SadConsole-Entity-Panel-Prototype.md` records the implementation spike and turn-by-turn findings.
+- `docs/Archived/SadConsole-Entity-Panel-Prototype.md` records the implementation spike and turn-by-turn findings.
 - `docs/Plans/SadConsole-Spike-Findings.md` records the end-of-spike architecture findings and recommended service splits.
 
 ## Current assessment

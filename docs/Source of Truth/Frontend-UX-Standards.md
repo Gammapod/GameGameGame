@@ -92,9 +92,17 @@ These standards are intentionally distinct from Core invariants. They should not
    - If invalid/blocked options are shown, their reason should be discoverable in prompt text, local detail, or future hover/focus UI.
 
 4. **Cursor/focus state should be animated or otherwise distinct.**
-   - A selection cursor should be visually distinct from static valid-target highlights.
-   - Desired follow-up: blink the active selection cursor gold.
-   - Desired follow-up: when no action target is being selected and a move/action is available, blink or otherwise emphasize the currently controlled entity without changing its identity glyph.
+    - A selection cursor should be visually distinct from static valid-target highlights.
+    - Desired follow-up: blink the active selection cursor gold.
+    - Desired follow-up: when no action target is being selected and a move/action is available, blink or otherwise emphasize the currently controlled entity without changing its identity glyph.
+
+5. **Known dead-end prompt modes should be avoided when shared affordance data is sufficient.**
+   - If the current direct-control affordance query reports no valid targets for an action, the frontend should prefer explaining that immediately rather than entering an empty selection mode.
+   - This is a presentation/input shortcut only. Shared command execution remains authoritative if a command is submitted through another path or the world changes.
+
+6. **Inspection selection can use valid-target style affordances, but it is navigation rather than action legality.**
+   - Inspect mode may highlight and cycle visible inspectable entities/cells to reduce cursor work.
+   - Inspection targeting should be derived from visible projected/runtime facts and should not be confused with Core action-target legality.
 
 ## Editor and Simulation mode model
 
@@ -208,3 +216,5 @@ Use these as planning seeds for Stage 7 follow-up slices:
 6. Define a reusable glyph/decorator style policy before adding animation.
 7. Plan the Editor -> scenario preview -> Simulation loop before implementing broad Editor mode UI.
 8. Backlog live hot-editing and runtime debug mutation as deferred debugger capabilities, potentially through debug-only action primitives.
+9. Add valid inspection target highlighting/cycling as a Stage 7 navigation polish item.
+10. Suppress known-dead-end direct-control prompt modes when current shared affordance data reports no valid targets.

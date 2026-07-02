@@ -12,8 +12,8 @@ Read when:
 Related source of truth:
 
 - `docs/Plans/SadConsole-Spike-Findings.md` records the completed prototype findings that motivated this roadmap.
-- `docs/Plans/SadConsole-Prototype-Assessment.md` records UX and technical-debt findings from the spike.
-- `docs/Plans/SadConsole-Entity-Panel-Prototype.md` records the prototype's implementation sequence and findings log.
+- `docs/Archived/SadConsole-Prototype-Assessment.md` records UX and technical-debt findings from the spike.
+- `docs/Archived/SadConsole-Entity-Panel-Prototype.md` records the prototype's implementation sequence and findings log.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 
@@ -292,6 +292,7 @@ Scope:
 5. Facing, target, active-actor, selected-entity, and focus visualization.
 6. Collapsible/expandable panel cards.
 7. Centralized panel layout geometry for later mouse hit-testing.
+8. Valid inspection target highlighting/cycling for Inspect mode, using visible/projection data without inventing simulation legality.
 
 Exit criteria:
 
@@ -375,6 +376,7 @@ Promote or consider while planning SadConsole work:
 - Entity/location/container indexes if frontend browsing or large scenarios create performance pressure.
 - Behavior/action-plan templates, usage display, and future editor/browser workflows.
 - Entity panel chain UX, collapsible panels, keyboard mode model, target highlighting, mouse layer, facing/target visualization, reusable layout geometry, runlog stepper, and integrated editor affordances.
+- No-valid-target prompt suppression for current direct-control prompt modes, while preserving shared command execution as authoritative.
 - SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs.
 - SadConsole screenshot/debug capture workflow, using the existing RecordScenario/debug-rendering path as a prototype where practical.
 - Reaction trace causality when reactions are promoted.

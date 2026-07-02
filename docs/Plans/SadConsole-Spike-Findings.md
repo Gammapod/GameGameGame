@@ -13,8 +13,8 @@ Related source of truth:
 
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records broad frontend UX invariants, including the rule that frontends must not invent frontend-only simulation semantics.
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the entity-panel, breadcrumb, and turn-log UX model.
-- `docs/Plans/SadConsole-Entity-Panel-Prototype.md` records the prototype implementation turns.
-- `docs/Plans/SadConsole-Prototype-Assessment.md` records the immediate UX assessment after keyboard-first action controls.
+- `docs/Archived/SadConsole-Entity-Panel-Prototype.md` records the prototype implementation turns.
+- `docs/Archived/SadConsole-Prototype-Assessment.md` records the immediate UX assessment after keyboard-first action controls.
 
 ## Executive summary
 

@@ -13,9 +13,6 @@ internal sealed class SadConsoleShell : Console
 {
     public const int ScreenWidth = 120;
     public const int ScreenHeight = 42;
-    private const int PanelTop = 6;
-    private const int GlobalLogTop = 33;
-
     private readonly MovementService _movement = new();
     private readonly EntityPanelProjectionService _panelProjection;
     private readonly ControlledActorAffordanceService _affordances;
@@ -30,6 +27,7 @@ internal sealed class SadConsoleShell : Console
     private GridCoord _inventoryCursor = new(0, 0);
     private EntityId? _selectedEntity;
     private EntityId? _inspectedEntity;
+    private GggDirection? _selectedExitDirection;
     private string _message;
 
     public SadConsoleShell(SadConsoleStartup startup) : base(ScreenWidth, ScreenHeight)
@@ -171,31 +169,38 @@ internal sealed class SadConsoleShell : Console
         {
             _worldCursor = PlayerLocation().Coord;
             _mode = ShellMode.InspectSource;
-            _message = "Inspect mode: move cursor in current container, Enter inspects.";
+            MoveWorldCursorToFirstValid(InspectCandidates(PlayerLocation().PlaneId));
+            _message = "Inspect mode: Tab cycles visible entities, arrows move cursor, Enter inspects.";
         }
         else if (keyboard.IsKeyReleased(Keys.P))
         {
             _worldCursor = PlayerLocation().Coord;
+            MoveWorldCursorToFirstValid(_affordances.Query(_session!.World, _session.PlayerEntityId).PickupSources.Select(source => source.Source));
             _mode = ShellMode.PickupSource;
-            _message = "Pickup mode: choose adjacent source, Enter selects.";
+            _message = "Pickup mode: Tab cycles valid sources, arrows move cursor, Enter selects.";
         }
         else if (keyboard.IsKeyReleased(Keys.D))
         {
             _inventoryCursor = new GridCoord(0, 0);
             _inspectedEntity = _session!.PlayerEntityId;
+            MoveInventoryCursorToFirstValid(_affordances.Query(_session.World, _session.PlayerEntityId).DropSources.Select(source => source.Source));
             _mode = ShellMode.DropSource;
-            _message = "Drop mode: choose carried item, Enter selects.";
+            _message = "Drop mode: Tab cycles carried items, arrows move cursor, Enter selects.";
         }
         else if (keyboard.IsKeyReleased(Keys.E))
         {
             _worldCursor = PlayerLocation().Coord;
+            MoveWorldCursorToFirstValid(_affordances.Query(_session!.World, _session.PlayerEntityId).EnterTargets.Select(source => source.Source));
             _mode = ShellMode.EnterSource;
-            _message = "Enter mode: choose adjacent entity, Enter enters.";
+            _message = "Enter mode: Tab cycles valid targets, arrows move cursor, Enter enters.";
         }
         else if (keyboard.IsKeyReleased(Keys.X))
         {
+            var exits = _affordances.Query(_session!.World, _session.PlayerEntityId).ExitDirections;
+            _selectedExitDirection = exits.FirstOrDefault(exit => exit.CanExecute)?.Direction;
+            MoveWorldCursorToExitDestination(exits, _selectedExitDirection);
             _mode = ShellMode.ExitDirection;
-            _message = "Exit mode: choose exit direction with an arrow key.";
+            _message = "Exit mode: Tab cycles valid exits, Enter exits, arrows still choose a direction.";
         }
     }
 
@@ -208,6 +213,8 @@ internal sealed class SadConsoleShell : Console
             _message = "Current container has no inspectable inventory.";
             return;
         }
+
+        if (CycleWorldCursor(keyboard, InspectCandidates(planeId.Value), planeId.Value, "Inspect target")) return;
 
         MoveCursor(keyboard, planeId.Value, ref _worldCursor);
         if (!keyboard.IsKeyReleased(Keys.Enter)) return;
@@ -227,6 +234,9 @@ internal sealed class SadConsoleShell : Console
     private void HandlePickupSourceInput(Keyboard keyboard)
     {
         var playerPlaneId = PlayerLocation().PlaneId;
+        var affordances = _affordances.Query(_session!.World, _session.PlayerEntityId);
+        if (CycleWorldCursor(keyboard, affordances.PickupSources.Where(source => source.CanExecute).Select(source => source.Source), playerPlaneId, "Pickup source")) return;
+
         MoveCursor(keyboard, playerPlaneId, ref _worldCursor);
         if (!keyboard.IsKeyReleased(Keys.Enter)) return;
 
@@ -240,8 +250,9 @@ internal sealed class SadConsoleShell : Console
         _selectedEntity = target;
         _inventoryCursor = new GridCoord(0, 0);
         _inspectedEntity = _session.PlayerEntityId;
+        MoveInventoryCursorToFirstValid(affordances.PickupDestinations(target.Value).Where(destination => destination.CanExecute).Select(destination => (PlaneCoord?)destination.Destination));
         _mode = ShellMode.PickupDestination;
-        _message = $"Choose inventory destination for {_session.World.Entities[target.Value].Name}.";
+        _message = $"Choose inventory destination for {_session.World.Entities[target.Value].Name}. Tab cycles valid cells.";
     }
 
     private void HandlePickupDestinationInput(Keyboard keyboard)
@@ -253,6 +264,8 @@ internal sealed class SadConsoleShell : Console
             _message = "Player has no inventory.";
             return;
         }
+
+        if (_selectedEntity is { } pickupTarget && CycleInventoryCursor(keyboard, _affordances.Query(_session.World, _session.PlayerEntityId).PickupDestinations(pickupTarget).Where(destination => destination.CanExecute).Select(destination => (PlaneCoord?)destination.Destination), inventoryPlaneId.Value, "Pickup destination")) return;
 
         MoveCursor(keyboard, inventoryPlaneId.Value, ref _inventoryCursor);
         if (!keyboard.IsKeyReleased(Keys.Enter) || _selectedEntity is not { } target) return;
@@ -269,6 +282,9 @@ internal sealed class SadConsoleShell : Console
             return;
         }
 
+        var affordances = _affordances.Query(_session!.World, _session.PlayerEntityId);
+        if (CycleInventoryCursor(keyboard, affordances.DropSources.Where(source => source.CanExecute).Select(source => source.Source), inventoryPlaneId.Value, "Drop source")) return;
+
         MoveCursor(keyboard, inventoryPlaneId.Value, ref _inventoryCursor);
         if (!keyboard.IsKeyReleased(Keys.Enter)) return;
 
@@ -281,13 +297,16 @@ internal sealed class SadConsoleShell : Console
 
         _selectedEntity = target;
         _worldCursor = PlayerLocation().Coord;
+        MoveWorldCursorToFirstValid(affordances.DropDestinations(target.Value).Where(destination => destination.CanExecute).Select(destination => (PlaneCoord?)destination.Destination));
         _mode = ShellMode.DropDestination;
-        _message = $"Choose world destination for {_session.World.Entities[target.Value].Name}.";
+        _message = $"Choose world destination for {_session.World.Entities[target.Value].Name}. Tab cycles valid cells.";
     }
 
     private void HandleDropDestinationInput(Keyboard keyboard)
     {
         var playerPlaneId = PlayerLocation().PlaneId;
+        if (_selectedEntity is { } dropTarget && CycleWorldCursor(keyboard, _affordances.Query(_session!.World, _session.PlayerEntityId).DropDestinations(dropTarget).Where(destination => destination.CanExecute).Select(destination => (PlaneCoord?)destination.Destination), playerPlaneId, "Drop destination")) return;
+
         MoveCursor(keyboard, playerPlaneId, ref _worldCursor);
         if (!keyboard.IsKeyReleased(Keys.Enter) || _selectedEntity is not { } target) return;
         Execute(ControlledActorCommand.Drop(target, new PlaneCoord(playerPlaneId, _worldCursor)), "Dropped entity.");
@@ -296,6 +315,9 @@ internal sealed class SadConsoleShell : Console
     private void HandleEnterSourceInput(Keyboard keyboard)
     {
         var playerPlaneId = PlayerLocation().PlaneId;
+        var affordances = _affordances.Query(_session!.World, _session.PlayerEntityId);
+        if (CycleWorldCursor(keyboard, affordances.EnterTargets.Where(source => source.CanExecute).Select(source => source.Source), playerPlaneId, "Enter target")) return;
+
         MoveCursor(keyboard, playerPlaneId, ref _worldCursor);
         if (!keyboard.IsKeyReleased(Keys.Enter)) return;
 
@@ -312,11 +334,27 @@ internal sealed class SadConsoleShell : Console
 
     private void HandleExitDirectionInput(Keyboard keyboard)
     {
+        var exits = _affordances.Query(_session!.World, _session.PlayerEntityId).ExitDirections;
+        if (keyboard.IsKeyReleased(Keys.Tab))
+        {
+            CycleExitDirection(exits);
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Enter) && _selectedExitDirection is { } selectedExit)
+        {
+            Execute(ControlledActorCommand.Exit(selectedExit), "Exited entity.");
+            _inspectedEntity = _session.PlayerEntityId;
+            _selectedExitDirection = null;
+            return;
+        }
+
         var direction = ReadDirection(keyboard);
         if (direction is { } exitDirection)
         {
             Execute(ControlledActorCommand.Exit(exitDirection), "Exited entity.");
             _inspectedEntity = _session!.PlayerEntityId;
+            _selectedExitDirection = null;
         }
     }
 
@@ -327,6 +365,7 @@ internal sealed class SadConsoleShell : Console
         _actionLog = ActionLogProjection.FromOutcomes(_outcomes);
         _mode = ShellMode.Play;
         _selectedEntity = null;
+        _selectedExitDirection = null;
         _worldCursor = PlayerLocation().Coord;
         _message = result.Succeeded ? successMessage : FormatFailure(result);
     }
@@ -337,6 +376,7 @@ internal sealed class SadConsoleShell : Console
         _commands = new ControlledActorCommandService(_movement, session.ActionPlans, (world, entityId) => TargetingService.RefreshTargets(world, session.Registry, entityId));
         _mode = ShellMode.Play;
         _selectedEntity = null;
+        _selectedExitDirection = null;
         _inspectedEntity = session.PlayerEntityId;
         _worldCursor = PlayerLocation().Coord;
         _inventoryCursor = new GridCoord(0, 0);
@@ -415,33 +455,153 @@ internal sealed class SadConsoleShell : Console
             return;
         }
 
-        var world = _session.World;
-        PrintText(1, 0, $"GameGameGame SadConsole | { _session.Name } | Turn {world.TurnNumber} | Mode {_mode}", Color.Yellow);
-        PrintClipped(1, 1, Width - 2, _message, Color.White);
+        var view = BuildSessionView();
+        PrintText(1, 0, view.Header, Color.Yellow);
+        PrintClipped(1, 1, Width - 2, view.Message, Color.White);
+        PrintClipped(1, 2, Width - 2, view.AffordanceSummary, Color.Gray);
+        PrintClipped(1, 3, Width - 2, view.SelectedSummary, Color.Gray);
+        PrintClipped(1, 4, Width - 2, view.PromptHint, Color.DarkGray);
 
-        var affordances = _affordances.Query(world, _session.PlayerEntityId);
-        PrintClipped(1, 2, Width - 2, FormatAffordances(affordances), Color.Gray);
-        PrintClipped(1, 3, Width - 2, _selectedEntity is { } selected ? $"Selected: {world.FormatEntityAddress(selected)}" : "Selected: none", Color.Gray);
-        PrintClipped(1, 4, Width - 2, FormatPromptHint(affordances), Color.DarkGray);
+        foreach (var panel in view.Panels)
+        {
+            DrawPanel(panel, view.Affordances);
+        }
 
-        var containerProjection = _panelProjection.Project(world, CurrentContainerEntityId(), _session.ActionPlans, _session.PlayerEntityId, _actionLog);
-        var inspectedProjection = _panelProjection.Project(world, _inspectedEntity ?? _session.PlayerEntityId, _session.ActionPlans, _session.PlayerEntityId, _actionLog);
-        DrawPanel(containerProjection, 1, PanelTop, 56, GlobalLogTop - 1, "Current Container", UsesWorldCursor() ? _worldCursor : null, affordances);
-        DrawPanel(inspectedProjection, 60, PanelTop, 58, GlobalLogTop - 1, "Inspection", UsesInventoryCursor() ? _inventoryCursor : null, affordances);
+        DrawGlobalLog(view.GlobalLog);
+    }
 
-        DrawGlobalLog();
+    private SadConsoleSessionView BuildSessionView()
+    {
+        var session = _session!;
+        var world = session.World;
+        var affordances = _affordances.Query(world, session.PlayerEntityId);
+        var panels = BuildPanelChainViews(affordances);
+        var selectedSummary = _selectedEntity is { } selected
+            ? $"Selected: {world.FormatEntityAddress(selected)}"
+            : "Selected: none";
+
+        return new SadConsoleSessionView(
+            $"GameGameGame SadConsole | {session.Name} | Turn {world.TurnNumber} | Mode {_mode}",
+            _message,
+            FormatAffordances(affordances),
+            selectedSummary,
+            FormatPromptHint(affordances),
+            panels,
+            new SadConsoleLogView(
+                "Global controlled-command log",
+                SadConsoleSessionLayout.GlobalLogRect,
+                "No controlled commands submitted yet.",
+                _actionLog?.Chronological ?? []),
+            affordances);
+    }
+
+    private IReadOnlyList<SadConsolePanelView> BuildPanelChainViews(ControlledActorAffordances affordances)
+    {
+        var session = _session!;
+        var inspectedEntityId = _inspectedEntity ?? session.PlayerEntityId;
+        var inspectedProjection = _panelProjection.Project(session.World, inspectedEntityId, session.ActionPlans, session.PlayerEntityId, _actionLog);
+        var fullChainEntityIds = BuildPanelChain(inspectedProjection.Breadcrumb);
+        var chainEntityIds = BuildVisiblePanelChain(fullChainEntityIds);
+        var slots = SadConsoleSessionLayout.BuildPanelChainSlots(chainEntityIds.Count);
+        var currentContainerId = CurrentContainerEntityId();
+        var omittedCount = Math.Max(0, fullChainEntityIds.Count - chainEntityIds.Count);
+        var result = new List<SadConsolePanelView>();
+
+        for (var index = 0; index < chainEntityIds.Count; index++)
+        {
+            var entityId = chainEntityIds[index];
+            var projection = entityId == inspectedProjection.EntityId
+                ? inspectedProjection
+                : _panelProjection.Project(session.World, entityId, session.ActionPlans, session.PlayerEntityId, _actionLog);
+            var title = PanelTitle(index, entityId, currentContainerId, inspectedEntityId, omittedCount);
+            var cursor = CursorForPanel(entityId, currentContainerId, inspectedEntityId);
+            result.Add(new SadConsolePanelView(title, projection, slots[index].Bounds, cursor, slots[index].IsCollapsed));
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<EntityId> BuildPanelChain(EntityContainmentPath breadcrumb)
+    {
+        var chain = breadcrumb.Segments.Select(segment => segment.EntityId).ToList();
+        if (chain.Count == 0)
+        {
+            chain.Add(breadcrumb.RequestedEntityId);
+        }
+
+        return chain;
+    }
+
+    private static IReadOnlyList<EntityId> BuildVisiblePanelChain(IReadOnlyList<EntityId> chain)
+    {
+        if (chain.Count <= 4)
+        {
+            return chain;
+        }
+
+        return chain.Take(1).Concat(chain.TakeLast(3)).ToList();
+    }
+
+    private static string PanelTitle(int index, EntityId entityId, EntityId currentContainerId, EntityId inspectedEntityId, int omittedCount)
+    {
+        var role = entityId == inspectedEntityId
+            ? "Inspection"
+            : entityId == currentContainerId
+                ? "Current Container"
+                : index == 0
+                    ? "Root"
+                    : "Ancestor";
+        return omittedCount > 0 && index == 0 ? $"{role} (+{omittedCount})" : role;
+    }
+
+    private GridCoord? CursorForPanel(EntityId entityId, EntityId currentContainerId, EntityId inspectedEntityId)
+    {
+        if (UsesWorldCursor() && entityId == currentContainerId)
+        {
+            return _worldCursor;
+        }
+
+        if (UsesInventoryCursor() && entityId == inspectedEntityId)
+        {
+            return _inventoryCursor;
+        }
+
+        return null;
+    }
+
+    private void DrawPanel(SadConsolePanelView view, ControlledActorAffordances affordances)
+    {
+        if (view.IsCollapsed)
+        {
+            DrawCollapsedPanel(view);
+            return;
+        }
+
+        DrawPanel(view.Projection, view.Bounds, view.Title, view.Cursor, affordances);
+    }
+
+    private void DrawCollapsedPanel(SadConsolePanelView view)
+    {
+        var panel = view.Projection;
+        var bounds = view.Bounds;
+        PrintClipped(bounds.Left, bounds.Top, bounds.Width, view.Title, Color.Yellow);
+        PrintClipped(bounds.Left, bounds.Top + 1, bounds.Width, $"{panel.Glyph} {panel.Name}", Color.White);
+        PrintClipped(bounds.Left, bounds.Top + 2, bounds.Width, panel.EntityId.Value, Color.Gray);
+        PrintClipped(bounds.Left, bounds.Top + 3, bounds.Width, "collapsed", Color.DarkGray);
     }
 
     private void DrawPanel(
         EntityPanelProjection panel,
-        int left,
-        int top,
-        int width,
-        int bottom,
+        SadConsoleRect bounds,
         string title,
         GridCoord? cursor,
         ControlledActorAffordances affordances)
     {
+        var left = bounds.Left;
+        var top = bounds.Top;
+        var width = bounds.Width;
+        var bottom = bounds.Bottom;
+
         PrintClipped(left, top, width, $"{title}: {panel.Glyph} {panel.Name} {panel.EntityId}", Color.Yellow);
         PrintClipped(left, top + 1, width, $"Path: {FormatBreadcrumb(panel.Breadcrumb)}", Color.Gray);
         PrintClipped(left, top + 2, width, $"Location: {panel.Location} | Facing: {panel.ActionState.Facing?.ToString() ?? "none"} | Target: {panel.ActionState.Target?.ToString() ?? "none"}", Color.Gray);
@@ -483,39 +643,65 @@ internal sealed class SadConsoleShell : Console
             return;
         }
 
-        PrintClipped(left, y++, width, "Contents", Color.Yellow);
-        foreach (var row in panel.Contents.Take(6))
-        {
-            if (y >= bottom) return;
-            PrintClipped(left, y++, width, $"{row.Order}. {row.Glyph} {row.EntityName}{FormatEntityStateSuffix(row.EntityId)} [{row.Participation}] {row.PreviousAction}", Color.White);
-        }
-
-        if (y < bottom && panel.LocalLog.Count > 0)
-        {
-            PrintClipped(left, y++, width, "Local log", Color.Yellow);
-        }
-
-        foreach (var outcome in panel.LocalLog.TakeLast(Math.Max(0, bottom - y)))
-        {
-            if (y >= bottom) return;
-            PrintClipped(left, y++, width, outcome.Sentence, outcome.Succeeded ? Color.LightGreen : Color.Orange);
-        }
+        DrawLocalActivity(panel, left, width, bottom, ref y);
     }
 
-    private void DrawGlobalLog()
+    private void DrawLocalActivity(EntityPanelProjection panel, int left, int width, int bottom, ref int y)
     {
-        PrintText(1, GlobalLogTop, "Global controlled-command log", Color.Yellow);
-        if (_actionLog is null || _actionLog.Chronological.Count == 0)
+        if (y >= bottom)
         {
-            PrintClipped(1, GlobalLogTop + 1, Width - 2, "No controlled commands submitted yet.", Color.DarkGray);
             return;
         }
 
-        var y = GlobalLogTop + 1;
-        foreach (var outcome in _actionLog.Chronological.TakeLast(ScreenHeight - GlobalLogTop - 1))
+        PrintClipped(left, y++, width, "Local activity", Color.Yellow);
+        if (panel.Contents.Count == 0 && panel.LocalLog.Count == 0)
+        {
+            if (y < bottom)
+            {
+                PrintClipped(left, y++, width, "No visible contents or controlled-command snippets.", Color.DarkGray);
+            }
+
+            return;
+        }
+
+        foreach (var row in panel.Contents)
+        {
+            if (y >= bottom) return;
+            PrintClipped(left, y++, width, $"{row.Order}. {row.Glyph} {row.EntityName}{FormatEntityStateSuffix(row.EntityId)} [{row.Participation}]", Color.White);
+
+            if (y >= bottom || string.IsNullOrWhiteSpace(row.PreviousAction))
+            {
+                continue;
+            }
+
+            PrintClipped(left + 2, y++, Math.Max(0, width - 2), $"└ {row.PreviousAction}", Color.LightGreen);
+        }
+
+        var contentEntityIds = panel.Contents.Select(row => row.EntityId).ToHashSet();
+        var remainingRows = Math.Max(0, bottom - y);
+        foreach (var outcome in panel.LocalLog
+                     .Where(outcome => !outcome.AnchorEntityIds.Any(contentEntityIds.Contains))
+                     .TakeLast(remainingRows))
+        {
+            if (y >= bottom) return;
+            PrintClipped(left + 2, y++, Math.Max(0, width - 2), $"└ {outcome.Sentence}", outcome.Succeeded ? Color.LightGreen : Color.Orange);
+        }
+    }
+
+    private void DrawGlobalLog(SadConsoleLogView log)
+    {
+        PrintText(log.Bounds.Left, log.Bounds.Top, log.Title, Color.Yellow);
+        if (log.Rows.Count == 0)
+        {
+            PrintClipped(log.Bounds.Left, log.Bounds.Top + 1, log.Bounds.Width, log.EmptyText, Color.DarkGray);
+            return;
+        }
+
+        var y = log.Bounds.Top + 1;
+        foreach (var outcome in log.Rows.TakeLast(log.Bounds.Height - 1))
         {
             var turn = outcome.TurnNumber is { } turnNumber ? $"T{turnNumber}: " : string.Empty;
-            PrintClipped(1, y++, Width - 2, $"{turn}{outcome.Sentence}", outcome.Succeeded ? Color.LightGreen : Color.Orange);
+            PrintClipped(log.Bounds.Left, y++, log.Bounds.Width, $"{turn}{outcome.Sentence}", outcome.Succeeded ? Color.LightGreen : Color.Orange);
         }
     }
 
@@ -534,6 +720,13 @@ internal sealed class SadConsoleShell : Console
                 foreach (var source in affordances.PickupSources.Concat(affordances.EnterTargets).Where(affordance => affordance.Source?.PlaneId == planeId && affordance.CanExecute))
                 {
                     AddHighlight(highlights, source.Source!.Value.Coord, CellHighlight.Valid);
+                }
+                break;
+
+            case ShellMode.InspectSource:
+                foreach (var coord in InspectCandidates(planeId).Where(candidate => candidate is not null).Select(candidate => candidate!.Value.Coord))
+                {
+                    AddHighlight(highlights, coord, CellHighlight.Valid);
                 }
                 break;
 
@@ -671,6 +864,121 @@ internal sealed class SadConsoleShell : Console
 
     private PlaneCoord PlayerLocation() => _session!.World.GetEntityLocation(_session.PlayerEntityId);
 
+    private IReadOnlyList<PlaneCoord?> InspectCandidates(PlaneId planeId)
+    {
+        if (_session is null)
+        {
+            return [];
+        }
+
+        return _session.World.Occupancy
+            .Where(entry => _session.World.Nodes.TryGetValue(entry.Key, out var node) && node.PlaneId == planeId)
+            .Select(entry => (PlaneCoord?)_session.World.GetEntityLocation(entry.Value))
+            .OrderBy(coord => coord!.Value.Coord.Y)
+            .ThenBy(coord => coord!.Value.Coord.X)
+            .ToList();
+    }
+
+    private bool CycleWorldCursor(Keyboard keyboard, IEnumerable<PlaneCoord?> candidates, PlaneId planeId, string label)
+    {
+        if (!keyboard.IsKeyReleased(Keys.Tab))
+        {
+            return false;
+        }
+
+        return CycleCursor(candidates, planeId, ref _worldCursor, label);
+    }
+
+    private bool CycleInventoryCursor(Keyboard keyboard, IEnumerable<PlaneCoord?> candidates, PlaneId planeId, string label)
+    {
+        if (!keyboard.IsKeyReleased(Keys.Tab))
+        {
+            return false;
+        }
+
+        return CycleCursor(candidates, planeId, ref _inventoryCursor, label);
+    }
+
+    private bool CycleCursor(IEnumerable<PlaneCoord?> candidates, PlaneId planeId, ref GridCoord cursor, string label)
+    {
+        var coords = candidates
+            .Where(candidate => candidate?.PlaneId == planeId)
+            .Select(candidate => candidate!.Value.Coord)
+            .Distinct()
+            .OrderBy(coord => coord.Y)
+            .ThenBy(coord => coord.X)
+            .ToList();
+
+        if (coords.Count == 0)
+        {
+            _message = $"{label}: no valid choices.";
+            return true;
+        }
+
+        var current = cursor;
+        var index = coords.FindIndex(coord => coord == current);
+        cursor = coords[(index + 1 + coords.Count) % coords.Count];
+        _message = $"{label}: selected {cursor}. Tab cycles, Enter confirms.";
+        return true;
+    }
+
+    private void MoveWorldCursorToFirstValid(IEnumerable<PlaneCoord?> candidates)
+    {
+        if (FirstValidCoord(candidates, PlayerLocation().PlaneId) is { } coord)
+        {
+            _worldCursor = coord;
+        }
+    }
+
+    private void MoveInventoryCursorToFirstValid(IEnumerable<PlaneCoord?> candidates)
+    {
+        if (_session?.World.GetInventoryPlaneId(_session.PlayerEntityId) is { } inventoryPlaneId && FirstValidCoord(candidates, inventoryPlaneId) is { } coord)
+        {
+            _inventoryCursor = coord;
+        }
+    }
+
+    private static GridCoord? FirstValidCoord(IEnumerable<PlaneCoord?> candidates, PlaneId planeId) => candidates
+        .Where(candidate => candidate?.PlaneId == planeId)
+        .Select(candidate => candidate!.Value.Coord)
+        .Distinct()
+        .OrderBy(coord => coord.Y)
+        .ThenBy(coord => coord.X)
+        .Cast<GridCoord?>()
+        .FirstOrDefault();
+
+    private void CycleExitDirection(IReadOnlyList<ControlledActorDirectionAffordance> exits)
+    {
+        var validExits = exits.Where(exit => exit.CanExecute).ToList();
+        if (validExits.Count == 0)
+        {
+            _message = "Exit: no valid exits.";
+            return;
+        }
+
+        var index = _selectedExitDirection is { } current
+            ? validExits.FindIndex(exit => exit.Direction == current)
+            : -1;
+        var selected = validExits[(index + 1 + validExits.Count) % validExits.Count];
+        _selectedExitDirection = selected.Direction;
+        MoveWorldCursorToExitDestination(exits, _selectedExitDirection);
+        _message = $"Exit: selected {selected.Direction}. Tab cycles, Enter exits.";
+    }
+
+    private void MoveWorldCursorToExitDestination(IReadOnlyList<ControlledActorDirectionAffordance> exits, GggDirection? direction)
+    {
+        if (direction is null)
+        {
+            return;
+        }
+
+        var destination = exits.FirstOrDefault(exit => exit.Direction == direction)?.Destination;
+        if (destination?.PlaneId == PlayerLocation().PlaneId)
+        {
+            _worldCursor = destination.Value.Coord;
+        }
+    }
+
     private void MoveCursor(Keyboard keyboard, PlaneId planeId, ref GridCoord cursor)
     {
         if (ReadDirection(keyboard) is not { } direction || !_session!.World.Planes.TryGetValue(planeId, out var plane)) return;
@@ -685,7 +993,7 @@ internal sealed class SadConsoleShell : Console
         keyboard.IsKeyReleased(Keys.Right) ? GggDirection.East :
         null;
 
-    private bool UsesWorldCursor() => _mode is ShellMode.PickupSource or ShellMode.DropDestination or ShellMode.InspectSource or ShellMode.EnterSource;
+    private bool UsesWorldCursor() => _mode is ShellMode.PickupSource or ShellMode.DropDestination or ShellMode.InspectSource or ShellMode.EnterSource or ShellMode.ExitDirection;
     private bool UsesInventoryCursor() => _mode is ShellMode.PickupDestination or ShellMode.DropSource;
 
     private void PrintClipped(int x, int y, int width, string text, Color color)

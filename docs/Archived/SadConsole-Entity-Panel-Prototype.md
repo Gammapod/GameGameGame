@@ -1,6 +1,6 @@
 # SadConsole Entity Panel Prototype
 
-Status: Completed experimental spike plan / archival reference. Only the findings were carried forward to main; the old prototype project is not current source. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated end-of-spike architecture findings.
+Status: Completed / archived experimental spike plan. Only the findings were carried forward to main; the old prototype project is not current source. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated end-of-spike architecture findings.
 
 Read when:
 
