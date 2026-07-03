@@ -26,6 +26,15 @@ internal sealed record SadConsoleLogView(
     string EmptyText,
     IReadOnlyList<ActionOutcome> Rows);
 
+internal sealed record SadConsoleSessionViewBuilderState(
+    ShellMode Mode,
+    string Message,
+    EntityId? SelectedEntity,
+    EntityId? InspectedEntity,
+    GridCoord WorldCursor,
+    GridCoord InventoryCursor,
+    ActionLogProjection? ActionLog);
+
 internal readonly record struct SadConsoleRect(int Left, int Top, int Width, int Bottom)
 {
     public int Height => Math.Max(0, Bottom - Top);
@@ -115,6 +124,135 @@ internal static class SadConsolePanelChainViewBuilder
                     ? "Root"
                     : "Ancestor";
         return omittedCount > 0 && index == 0 ? $"{role} (+{omittedCount})" : role;
+    }
+}
+
+internal sealed class SadConsoleSessionViewBuilder(
+    EntityPanelProjectionService panelProjection,
+    ControlledActorAffordanceService affordances)
+{
+    public SadConsoleSessionView Build(PlayableScenarioSession session, SadConsoleSessionViewBuilderState state)
+    {
+        var world = session.World;
+        var actorAffordances = affordances.Query(world, session.PlayerEntityId);
+        var panels = BuildPanelChainViews(session, state);
+        var selectedSummary = state.SelectedEntity is { } selected
+            ? $"Selected: {world.FormatEntityAddress(selected)}"
+            : "Selected: none";
+
+        return new SadConsoleSessionView(
+            $"GameGameGame SadConsole | {session.Name} | Turn {world.TurnNumber} | Mode {state.Mode}",
+            state.Message,
+            FormatAffordances(actorAffordances),
+            selectedSummary,
+            FormatPromptHint(state.Mode, state.SelectedEntity, actorAffordances),
+            panels,
+            new SadConsoleLogView(
+                "Global controlled-command log",
+                SadConsoleSessionLayout.GlobalLogRect,
+                "No controlled commands submitted yet.",
+                state.ActionLog?.Chronological ?? []),
+            actorAffordances);
+    }
+
+    private IReadOnlyList<SadConsolePanelView> BuildPanelChainViews(PlayableScenarioSession session, SadConsoleSessionViewBuilderState state)
+    {
+        var inspectedEntityId = state.InspectedEntity ?? session.PlayerEntityId;
+        var inspectedProjection = panelProjection.Project(session.World, inspectedEntityId, session.ActionPlans, session.PlayerEntityId, state.ActionLog);
+        var fullChainEntityIds = SadConsolePanelChainViewBuilder.BuildPanelChain(inspectedProjection.Breadcrumb);
+        var chainEntityIds = SadConsolePanelChainViewBuilder.BuildVisiblePanelChain(fullChainEntityIds);
+        var slots = SadConsoleSessionLayout.BuildPanelChainSlots(chainEntityIds.Count);
+        var currentContainerId = CurrentContainerEntityId(session);
+        var omittedCount = Math.Max(0, fullChainEntityIds.Count - chainEntityIds.Count);
+        var result = new List<SadConsolePanelView>();
+
+        for (var index = 0; index < chainEntityIds.Count; index++)
+        {
+            var entityId = chainEntityIds[index];
+            var projection = entityId == inspectedProjection.EntityId
+                ? inspectedProjection
+                : panelProjection.Project(session.World, entityId, session.ActionPlans, session.PlayerEntityId, state.ActionLog);
+            var title = SadConsolePanelChainViewBuilder.PanelTitle(index, entityId, currentContainerId, inspectedEntityId, omittedCount);
+            var cursor = CursorForPanel(state, entityId, currentContainerId, inspectedEntityId);
+            result.Add(new SadConsolePanelView(title, projection, slots[index].Bounds, cursor, slots[index].IsCollapsed));
+        }
+
+        return result;
+    }
+
+    private static GridCoord? CursorForPanel(SadConsoleSessionViewBuilderState state, EntityId entityId, EntityId currentContainerId, EntityId inspectedEntityId)
+    {
+        if (UsesWorldCursor(state.Mode) && entityId == currentContainerId)
+        {
+            return state.WorldCursor;
+        }
+
+        if (UsesInventoryCursor(state.Mode) && entityId == inspectedEntityId)
+        {
+            return state.InventoryCursor;
+        }
+
+        return null;
+    }
+
+    private static EntityId CurrentContainerEntityId(PlayableScenarioSession session)
+    {
+        var playerPlaneId = session.World.GetEntityLocation(session.PlayerEntityId).PlaneId;
+        return InventoryPlaneOwnership.TryFindOwner(session.World, playerPlaneId, out var containerId)
+            ? containerId
+            : session.PlayerEntityId;
+    }
+
+    private static bool UsesWorldCursor(ShellMode mode) => mode is ShellMode.PickupSource or ShellMode.DropDestination or ShellMode.InspectSource or ShellMode.EnterSource or ShellMode.ExitDirection;
+    private static bool UsesInventoryCursor(ShellMode mode) => mode is ShellMode.PickupDestination or ShellMode.DropSource;
+
+    private static string FormatAffordances(ControlledActorAffordances affordances)
+    {
+        var moves = string.Join(", ", affordances.MovementDirections.Where(a => a.CanExecute).Select(a => a.Direction));
+        return $"Valid moves: {(string.IsNullOrWhiteSpace(moves) ? "none" : moves)} | pickups: {affordances.PickupSources.Count(a => a.CanExecute)} | drops: {affordances.DropSources.Count(a => a.CanExecute)} | enter: {affordances.EnterTargets.Count(a => a.CanExecute)} | exit: {affordances.ExitDirections.Count(a => a.CanExecute)}";
+    }
+
+    private static string FormatPromptHint(ShellMode mode, EntityId? selectedEntity, ControlledActorAffordances affordances)
+    {
+        return mode switch
+        {
+            ShellMode.Play => "Highlights: green valid action target, red blocked move, blue controlled entity, purple current target, gold cursor. Facing/target appear in text.",
+            ShellMode.PickupSource => FormatEntityAffordanceHint("Pickup source", affordances.PickupSources),
+            ShellMode.PickupDestination when selectedEntity is { } target => FormatDestinationAffordanceHint("Pickup destination", affordances.PickupDestinations(target)),
+            ShellMode.DropSource => FormatEntityAffordanceHint("Drop source", affordances.DropSources),
+            ShellMode.DropDestination when selectedEntity is { } target => FormatDestinationAffordanceHint("Drop destination", affordances.DropDestinations(target)),
+            ShellMode.EnterSource => FormatEntityAffordanceHint("Enter target", affordances.EnterTargets),
+            ShellMode.ExitDirection => FormatDirectionAffordanceHint("Exit", affordances.ExitDirections),
+            ShellMode.InspectSource => "Inspect: gold cursor selects visible entities in the current container panel.",
+            _ => string.Empty
+        };
+    }
+
+    private static string FormatEntityAffordanceHint(string label, IReadOnlyList<ControlledActorEntityAffordance> affordances)
+    {
+        var valid = affordances.Count(affordance => affordance.CanExecute);
+        var blocked = affordances.FirstOrDefault(affordance => !affordance.CanExecute && !string.IsNullOrWhiteSpace(affordance.FailureDetail));
+        return blocked is null
+            ? $"{label}: {valid} valid highlighted target(s)."
+            : $"{label}: {valid} valid target(s). Blocked: {blocked.FailureReason} {blocked.FailureDetail}";
+    }
+
+    private static string FormatDestinationAffordanceHint(string label, IReadOnlyList<ControlledActorDestinationAffordance> affordances)
+    {
+        var valid = affordances.Count(affordance => affordance.CanExecute);
+        var blocked = affordances.FirstOrDefault(affordance => !affordance.CanExecute && !string.IsNullOrWhiteSpace(affordance.FailureDetail));
+        return blocked is null
+            ? $"{label}: {valid} valid highlighted cell(s)."
+            : $"{label}: {valid} valid cell(s). Blocked: {blocked.FailureReason} {blocked.FailureDetail}";
+    }
+
+    private static string FormatDirectionAffordanceHint(string label, IReadOnlyList<ControlledActorDirectionAffordance> affordances)
+    {
+        var valid = affordances.Count(affordance => affordance.CanExecute);
+        var blocked = affordances.FirstOrDefault(affordance => !affordance.CanExecute && !string.IsNullOrWhiteSpace(affordance.FailureDetail));
+        return blocked is null
+            ? $"{label}: {valid} valid highlighted direction(s)."
+            : $"{label}: {valid} valid direction(s). Blocked: {blocked.FailureReason} {blocked.FailureDetail}";
     }
 }
 
