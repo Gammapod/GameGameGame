@@ -11,7 +11,8 @@ Read when:
 
 Related source of truth:
 
-- `docs/Plans/SadConsole-Spike-Findings.md` records the completed prototype findings that motivated this roadmap.
+- `docs/Archived/SadConsole-Spike-Findings.md` records the completed prototype findings that motivated this roadmap.
+- `docs/Archived/Unified-Simulation-History-Log-Rollback.md` records the completed shared history/log/rollback sprint.
 - `docs/Archived/SadConsole-Prototype-Assessment.md` records UX and technical-debt findings from the spike.
 - `docs/Archived/SadConsole-Entity-Panel-Prototype.md` records the prototype's implementation sequence and findings log.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
@@ -21,7 +22,7 @@ Related source of truth:
 
 SadConsole is now the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The near-term goal is a functional, information-dense frontend over shared engine/content/headless contracts, not a polished final game UI.
 
-Console remains valuable, but its long-term role should shift toward fallback CLI tooling, smoke/debug paths, scenario scanning, scenario recording, and simple developer commands. New rich UI investment should prefer SadConsole or shared frontend-neutral services unless a task explicitly targets Console fallback behavior.
+Console remains valuable, but its long-term role should shift toward fallback CLI tooling, smoke/debug paths, scenario scanning, legacy scenario recording, and simple developer commands. New rich UI investment should prefer SadConsole or shared frontend-neutral services unless a task explicitly targets Console fallback behavior.
 
 ## Design principles
 
@@ -71,190 +72,16 @@ Examples:
 - editor-backed mutation workflows once the browser is useful;
 - validation and diagnostic presentation for authored content.
 
-## Roadmap order
+## Completed foundation summary
 
-### Stage 0: Documentation and debt inventory
+The completed shared-service foundation and unified simulation history/log/rollback sprint are archived in:
 
-Status: Completed for source-of-truth consolidation. Use `docs/Source of Truth/Frontend-UX-Invariants.md` and `docs/Source of Truth/Entity-Panel-UX-Spec.md` as canonical constraints before selecting Stage 1 implementation details.
+- `docs/Archived/SadConsole-Spike-Findings.md`;
+- `docs/Archived/Unified-Simulation-History-Log-Rollback.md`.
 
-Owner: Core-aware planner, with frontend-owner review once available.
+Implemented support status now lives in `docs/Source of Truth/Engine-Editor-Capabilities.md`; stable behavior/test traces live in `docs/Source of Truth/invariants.md`.
 
-Goal: make the contracts and handoff boundaries explicit before adding more SadConsole features.
-
-Scope:
-
-1. Recreate canonical frontend UX docs on main, using spike-branch docs only as reference:
-   - `docs/Source of Truth/Frontend-UX-Invariants.md`;
-   - `docs/Source of Truth/Entity-Panel-UX-Spec.md`.
-2. Record that Console is becoming fallback CLI/debug tooling while SadConsole is the canonical debug/editor browser direction.
-3. Audit existing Console responsibilities and SadConsole spike findings for duplicated app/session/action/rendering responsibilities.
-4. Define the first shared contract names and boundaries before implementation:
-   - playable scenario session launch;
-   - controlled actor command / Action Choice compatibility result;
-   - action target/affordance query;
-   - structured action outcome/log projection;
-   - entity panel projection.
-
-Exit criteria:
-
-- Broken references to frontend UX source-of-truth docs are resolved.
-- The frontend-owner handoff boundary is documented.
-- No new SadConsole feature work is started until Stage 1 contracts are selected.
-
-Stage 0 audit note:
-
-- Console currently combines fallback presentation/input with several responsibilities targeted for shared extraction: playable session launch, direct action evaluation/turn submission, failed-action message derivation, target selection prompts, local panel composition, and log/turn-order projection.
-- `ConsoleScenarioLauncher` is the closest existing shape to the planned shared playable-session launch contract.
-- Only the SadConsole spike findings were carried forward to main; the old prototype project is not current source. Future implementation should use a fresh `src/GameGameGame.SadConsole` project after the shared contracts it depends on are selected.
-
-### Stage 1: Shared session launch extraction
-
-Status: Completed for initial shared launcher extraction. Console launches through the Content-level `PlayableScenarioLauncher`; future SadConsole work should consume that launcher rather than referencing Console.
-
-Owner: Core/content/headless-aware implementation.
-
-Goal: remove Console ownership of playable-session launch so Console and SadConsole can launch scenarios through the same frontend-neutral contract.
-
-Scope:
-
-1. Extract `ConsoleScenarioLauncher` concepts into a shared Content/Headless-facing service or application-contract type.
-2. Return a frontend-neutral playable session result with:
-   - scenario ID/name;
-   - world;
-   - registry/presentation lookup;
-   - action plans;
-   - player entity ID;
-   - active plane/container;
-   - validation diagnostics;
-   - runtime failures;
-   - capability gaps.
-3. Migrate Console to use the shared launcher.
-4. Keep catalog/manifest discovery shared and reusable by SadConsole.
-
-Exit criteria:
-
-- Console launches scenarios through the shared service.
-- SadConsole can depend on Content/Headless/Core contracts without referencing Console.
-
-### Stage 2: Controlled action and future Action Choice contract
-
-Status: Completed for current direct-control compatibility. Core exposes `ControlledActorCommandService`; Console uses it for move, pickup, drop, enter, and exit. This is still a bridge toward future Action Choice naming/semantics rather than the final player-control model.
-
-Owner: Core-aware implementation.
-
-Goal: centralize current direct player command execution while shaping the API toward the long-term non-special player model.
-
-Scope:
-
-1. Add a controlled actor command service for current direct-control compatibility:
-   - move;
-   - pickup;
-   - drop;
-   - enter;
-   - exit.
-2. Return a structured command/choice resolution result:
-   - actor;
-   - command/action kind;
-   - target/recipient/source/destination anchors;
-   - success/failure;
-   - failure reason/detail;
-   - consumed turn;
-   - advanced turn;
-   - trace;
-   - resulting turn report.
-3. Make failed-action turn advancement behavior explicit and tested.
-4. Name and shape the result so it can evolve into future `ActionChoiceRequest`, `ActionChoiceSubmission`, and `ActionChoiceResolution` concepts.
-5. Migrate Console player controls to use this service instead of locally evaluating/executing actions.
-
-Exit criteria:
-
-- Console no longer owns action legality, failed-action execution policy, or direct turn-submission semantics.
-- SadConsole can submit player actions through one shared API.
-- The contract does not permanently encode player action as special; it is a compatibility bridge toward Action Choices.
-
-### Stage 3: Action target / affordance queries
-
-Status: Completed for current direct-control compatibility. Core exposes `ControlledActorAffordanceService` for movement, pickup, drop, enter, and exit prompt hints while keeping `ControlledActorCommandService` authoritative for execution.
-
-Owner: Core-aware implementation; frontend-owner can consume after completion.
-
-Goal: let frontends highlight and constrain valid action choices without duplicating Core rules.
-
-Scope:
-
-1. Add query support for current direct-control actions:
-   - valid movement directions;
-   - pickup source candidates;
-   - pickup inventory destinations;
-   - carried drop sources;
-   - drop destinations;
-   - enter targets;
-   - exit directions.
-2. Include useful invalid/blocking reason data where practical.
-3. Keep final action resolution authoritative even when target hints exist.
-4. Add tests covering representative movement, inventory, aperture, occupancy, enter, and exit cases.
-
-Exit criteria:
-
-- SadConsole action prompts can use shared affordance data for highlighting/skipping/explanations.
-- Console can optionally use the same queries for better prompts, but rich UI remains SadConsole-owned.
-
-### Stage 4: Structured action outcome and log projection
-
-Status: Completed for controlled-command results. Core exposes `ActionOutcomeProjection` and `ActionLogProjection` for compact sentence rendering, anchors, local entity/plane filtering, and trace preservation. Projection over broader autonomous turn reports remains follow-up work for later log polish.
-
-Owner: Core/headless-aware implementation, with frontend-owner feedback on projection shape.
-
-Goal: make global and local logs inspectable without parsing trace labels.
-
-Scope:
-
-1. Introduce structured action outcome records over existing traces/turn reports.
-2. Support compact sentence rendering:
-   - success: `{entity} {verb}ed {target/recipient}`;
-   - failure: `{entity} tried to {verb} {target}, but {failure reason}`.
-3. Preserve the full trace for debug expansion.
-4. Provide anchors to actor, target/recipient/source/destination, containing panel/space, and affected entities where known.
-5. Start local log projection for entity panels using outcome anchors and containment/space context.
-6. Reduce or replace brittle trace-label parsing in `TurnActionSummaryFormatter` where practical.
-
-Exit criteria:
-
-- SadConsole can render a full chronological log and local panel-relevant logs from shared data.
-- Frontend display strings are derived from structured outcome fields, not from ad-hoc trace parsing.
-
-### Stage 5: Entity panel projection contract
-
-Status: Completed for a first-pass mutable contract. Content exposes `EntityPanelProjectionService` over inspection panels, breadcrumbs, action state, inventory grids, local contents, and structured local logs. The DTO is expected to evolve once a fresh `GameGameGame.SadConsole` consumes it.
-
-Owner: Content/headless-aware implementation with frontend-owner review.
-
-Goal: give SadConsole a stable frontend-neutral model for information-dense entity panels.
-
-Scope:
-
-1. Consolidate existing panel inputs:
-   - `EntityInspectionPanel`;
-   - `EntityContainmentPathService`;
-   - `LocalTurnOrderReport`;
-   - action state and target slots;
-   - default action-plan/preview summaries where available;
-   - structured previous-action outcomes.
-2. Define an `EntityPanelProjection` or equivalent frontend-neutral DTO containing:
-   - identity, glyph/color, ID, name;
-   - location and breadcrumb path;
-   - metadata such as bulk, aperture, inventory dimensions;
-   - action state such as facing/target slots;
-   - optional action-plan/default-plan summary;
-   - inventory grid;
-   - contents list in initiative order;
-   - previous action/log snippet for each content entity.
-3. Keep layout, scrolling, collapse, focus, and rendering frontend-owned.
-
-Exit criteria:
-
-- SadConsole entity panels can be rebuilt from one projection call per visible entity/panel.
-- Console may keep simple formatting, but SadConsole is no longer forced to manually compose many services for each panel.
+Remaining active work should focus on SadConsole/debug-browser UX over the shared history, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics.
 
 ### Stage 6: SadConsole canonical debug browser shell
 
@@ -362,7 +189,7 @@ Promote or consider while planning SadConsole work:
 
 - Breadcrumb display and containment paths.
 - Improved inspection summaries.
-- Debug scenario recorder and visual state debugging.
+- History playback / SadConsole-rendered visual export for shareable debug artifacts.
 - Compact world/state summaries.
 - Scenario report templates and saved runlogs.
 - Plan preview plus simulation/report workflows.
@@ -378,21 +205,11 @@ Promote or consider while planning SadConsole work:
 - Entity panel chain UX, collapsible panels, keyboard mode model, target highlighting, mouse layer, facing/target visualization, reusable layout geometry, runlog stepper, and integrated editor affordances.
 - No-valid-target prompt suppression for current direct-control prompt modes, while preserving shared command execution as authoritative.
 - SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs.
-- SadConsole screenshot/debug capture workflow, using the existing RecordScenario/debug-rendering path as a prototype where practical.
+- Saved runlogs / runlog stepper backed by shared history.
 - Reaction trace causality when reactions are promoted.
 - Future Action Choice / `PlayerInputStep` model.
 - Long-horizon diegetic action-plan UI if action plans become gameplay objects.
 
 ## Near-term selection recommendation
 
-The next implementation sequence should be:
-
-1. Stage 0 documentation/debt inventory.
-2. Stage 1 shared session launch extraction.
-3. Stage 2 controlled action / Action Choice-compatible command result.
-4. Stage 3 action target / affordance queries.
-5. Stage 4 structured outcome/log projection.
-6. Stage 5 entity panel projection.
-7. Stage 6 SadConsole canonical debug browser shell, handed to frontend-owner.
-
-This order prioritizes debt cleanup and Core-only/shared-contract work before handing UI implementation to frontend-owner.
+The next implementation sequence should be selected from the active Stage 6+ SadConsole/debug-browser work above. Shared history/log/rollback and the first frontend consumption pass are complete enough for frontend-owner polish and future saved runlog/playback design.

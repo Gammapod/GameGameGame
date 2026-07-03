@@ -9,22 +9,17 @@ public static class BehaviorChainTraceFormatter
             $"{FormatPlanLabel(result.Trace.Label)}: {result.Trace.Status}; consumedTurn={result.ConsumesTurn}; continuePlan={result.ContinuePlan}"
         };
 
-        var actionSteps = result.Trace.Children
-            .Where(child => child.Label.StartsWith("Action Step ", StringComparison.Ordinal))
-            .ToList();
+        var attempts = ActionStepAttemptProjection.Project(result.Trace);
 
-        for (var index = 0; index < actionSteps.Count; index++)
+        foreach (var attempt in attempts)
         {
-            var step = actionSteps[index];
-            var fallback = ShouldContinue(step, index, actionSteps.Count)
-                ? "continued"
-                : "stopped";
-            var reason = step.Reason == FailureReason.None ? string.Empty : $"; reason={step.Reason}";
-            lines.Add($"{index + 1}. {FormatActionStepLabel(step.Label)}: {step.Status}{reason}; fallback={fallback}");
+            var fallback = attempt.Continued ? "continued" : "stopped";
+            var reason = attempt.FailureReason is null ? string.Empty : $"; reason={attempt.FailureReason}";
+            lines.Add($"{attempt.Order}. {attempt.StepKind}: {attempt.Status}{reason}; fallback={fallback}");
 
-            AddStateLine(lines, "reads", FindStateReads(step));
-            AddStateLine(lines, "writes", FindStateWrites(step));
-            AddStateLine(lines, "results", FindResults(step));
+            AddStateLine(lines, "reads", attempt.StateReads);
+            AddStateLine(lines, "writes", attempt.StateWrites);
+            AddStateLine(lines, "results", attempt.Results);
         }
 
         lines.Add($"Terminal: {FormatTerminalStatus(result)}; {FormatTurnStatus(result)}");
@@ -36,55 +31,11 @@ public static class BehaviorChainTraceFormatter
             ? $"Plan {label[5..]}"
             : label;
 
-    private static string FormatActionStepLabel(string label) =>
-        label.StartsWith("Action Step ", StringComparison.Ordinal)
-            ? label[12..]
-            : label;
-
-    private static bool ShouldContinue(TraceNode step, int index, int actionStepCount) =>
-        index < actionStepCount - 1
-        && (step.Status == TraceStatus.Failure
-            || Descendants(step).Any(trace => trace.Label == "Primitive AcquireNearestTarget" && trace.Status == TraceStatus.Success));
-
     private static void AddStateLine(List<string> lines, string label, IReadOnlyList<string> entries)
     {
         if (entries.Count > 0)
         {
             lines.Add($"   {label}: {string.Join(", ", entries)}");
-        }
-    }
-
-    private static IReadOnlyList<string> FindStateReads(TraceNode node) =>
-        Descendants(node)
-            .Where(trace => trace.Label.StartsWith("Read slot ", StringComparison.Ordinal) && trace.Status == TraceStatus.Success)
-            .Select(trace => $"{trace.Label[10..]}={trace.Detail}")
-            .Distinct()
-            .ToList();
-
-    private static IReadOnlyList<string> FindStateWrites(TraceNode node) =>
-        Descendants(node)
-            .Where(trace => trace.Label.StartsWith("Set slot ", StringComparison.Ordinal) && trace.Status == TraceStatus.Success)
-            .Select(trace => $"{trace.Label[9..]}={trace.Detail}")
-            .Distinct()
-            .ToList();
-
-    private static IReadOnlyList<string> FindResults(TraceNode node) =>
-        Descendants(node)
-            .Where(trace => (trace.Label is "Primitive Backstep" or "Primitive PickupTarget" or "Primitive AcquireNearestTarget" or "Primitive SeekTarget" or "Primitive FleeTarget" or "Primitive MaintainChebyshevDistanceTwo" or "Primitive StrafeClockwise" or "Primitive StrafeAnticlockwise" or "Primitive GiveTarget" or "Primitive TakeTarget" or "Primitive EnterTarget" or "Primitive ExitFacing") && !string.IsNullOrWhiteSpace(trace.Detail))
-            .Select(trace => trace.Detail!)
-            .Distinct()
-            .ToList();
-
-    private static IEnumerable<TraceNode> Descendants(TraceNode node)
-    {
-        foreach (var child in node.Children)
-        {
-            yield return child;
-
-            foreach (var descendant in Descendants(child))
-            {
-                yield return descendant;
-            }
         }
     }
 

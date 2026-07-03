@@ -22,6 +22,112 @@ public sealed class WorldState
 
     public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
 
+    public WorldState Clone()
+    {
+        var clone = new WorldState();
+        clone.CopyFrom(this);
+        return clone;
+    }
+
+    public void RestoreFrom(WorldState snapshot) => CopyFrom(snapshot);
+
+    private void CopyFrom(WorldState source)
+    {
+        TurnNumber = source.TurnNumber;
+        LastTrace = CloneTrace(source.LastTrace);
+        LastTurnReport = CloneTurnReport(source.LastTurnReport);
+
+        Entities.Clear();
+        foreach (var (id, entity) in source.Entities)
+        {
+            Entities[id] = entity;
+        }
+
+        Planes.Clear();
+        foreach (var (id, plane) in source.Planes)
+        {
+            Planes[id] = plane;
+        }
+
+        Nodes.Clear();
+        _nodeByCoord.Clear();
+        foreach (var (id, node) in source.Nodes)
+        {
+            Nodes[id] = node;
+            _nodeByCoord[new PlaneCoord(node.PlaneId, node.Coord)] = id;
+        }
+
+        Occupancy.Clear();
+        foreach (var (nodeId, entityId) in source.Occupancy)
+        {
+            Occupancy[nodeId] = entityId;
+        }
+
+        InventoryPlanes.Clear();
+        foreach (var (entityId, planeId) in source.InventoryPlanes)
+        {
+            InventoryPlanes[entityId] = planeId;
+        }
+
+        ActionStates.Clear();
+        foreach (var (entityId, state) in source.ActionStates)
+        {
+            ActionStates[entityId] = CloneActionState(state);
+        }
+    }
+
+    private static EntityActionState CloneActionState(EntityActionState source)
+    {
+        var clone = new EntityActionState
+        {
+            Facing = source.Facing,
+            Target = source.Target
+        };
+
+        foreach (var (slot, targetId) in source.Targets)
+        {
+            clone.Targets[slot] = targetId;
+        }
+
+        return clone;
+    }
+
+    private static TraceNode? CloneTrace(TraceNode? source)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        var clone = new TraceNode(source.Label, source.Status, source.Reason, source.Detail);
+        foreach (var child in source.Children)
+        {
+            clone.Add(CloneTrace(child)!);
+        }
+
+        return clone;
+    }
+
+    private static SimulationTurnReport? CloneTurnReport(SimulationTurnReport? source)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        return new SimulationTurnReport(
+            source.TurnNumber,
+            source.Actions
+                .Select(action => new TurnActionReport(
+                    action.ActorId,
+                    action.ActorName,
+                    action.Succeeded,
+                    action.ConsumedTurn,
+                    action.Summary,
+                    CloneTrace(action.Trace)!))
+                .ToList());
+    }
+
     public EntityActionState GetOrCreateActionState(EntityId entityId)
     {
         if (!ActionStates.TryGetValue(entityId, out var state))

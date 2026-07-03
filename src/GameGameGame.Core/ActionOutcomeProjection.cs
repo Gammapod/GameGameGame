@@ -16,7 +16,12 @@ public sealed record ActionOutcome(
     string Sentence,
     IReadOnlySet<EntityId> AnchorEntityIds,
     IReadOnlySet<PlaneId> AnchorPlaneIds,
-    TraceNode Trace);
+    TraceNode Trace)
+{
+    public bool ConsumedTurn { get; init; }
+
+    public IReadOnlyList<ActionStepAttempt> ActionStepAttempts { get; init; } = [];
+}
 
 public static class ActionOutcomeProjection
 {
@@ -63,7 +68,44 @@ public static class ActionOutcomeProjection
             sentence,
             anchorEntityIds,
             anchorPlaneIds,
-            result.Trace);
+            result.Trace)
+        {
+            ConsumedTurn = result.ConsumedTurn,
+            ActionStepAttempts = ExtractActionStepAttempts(result.Trace)
+        };
+    }
+
+    public static ActionOutcome FromActorLog(WorldState world, int? turnNumber, SimulationHistoryActorLog log)
+    {
+        var attempts = ExtractActionStepAttempts(log.Trace);
+        var anchorEntityIds = new HashSet<EntityId> { log.ActorId };
+        var anchorPlaneIds = new HashSet<PlaneId>();
+        if (world.Entities.ContainsKey(log.ActorId))
+        {
+            anchorPlaneIds.Add(world.GetEntityLocation(log.ActorId).PlaneId);
+        }
+
+        return new ActionOutcome(
+            turnNumber,
+            log.ActorId,
+            log.ActorName,
+            attempts.Count > 0 ? ToActionKind(attempts[0].StepKind) : "turn",
+            log.Succeeded,
+            TargetId: null,
+            TargetName: null,
+            Source: null,
+            Destination: null,
+            Direction: null,
+            FailureReason: FindFailureReason(log.Trace),
+            FailureDetail: log.Succeeded ? null : FindFailureDetail(log.Trace),
+            $"{log.ActorName}: {log.Summary}",
+            anchorEntityIds,
+            anchorPlaneIds,
+            log.Trace)
+        {
+            ConsumedTurn = log.ConsumedTurn,
+            ActionStepAttempts = attempts
+        };
     }
 
     private static string ToActionKind(ControlledActorCommandKind kind) => kind switch
@@ -75,6 +117,10 @@ public static class ActionOutcomeProjection
         ControlledActorCommandKind.Exit => "exit",
         _ => kind.ToString().ToLowerInvariant()
     };
+
+    private static string ToActionKind(string stepKind) => stepKind.Length == 0
+        ? "turn"
+        : char.ToLowerInvariant(stepKind[0]) + stepKind[1..];
 
     private static string SuccessSentence(string actorName, string actionKind, string? targetName, Direction? direction) => actionKind switch
     {
@@ -117,11 +163,75 @@ public static class ActionOutcomeProjection
             planes.Add(concrete.PlaneId);
         }
     }
+
+    private static IReadOnlyList<ActionStepAttempt> ExtractActionStepAttempts(TraceNode trace)
+    {
+        if (trace.Children.Any(child => child.Label.StartsWith("Action Step ", StringComparison.Ordinal)))
+        {
+            return ActionStepAttemptProjection.Project(trace);
+        }
+
+        var planTrace = trace.Children.FirstOrDefault(child => child.Label.StartsWith("Plan ", StringComparison.Ordinal));
+        return planTrace is null ? [] : ActionStepAttemptProjection.Project(planTrace);
+    }
+
+    private static FailureReason? FindFailureReason(TraceNode trace)
+    {
+        var failure = DescendantsAndSelf(trace).FirstOrDefault(node => node.Status == TraceStatus.Failure && node.Reason != FailureReason.None);
+        return failure?.Reason;
+    }
+
+    private static string? FindFailureDetail(TraceNode trace) =>
+        DescendantsAndSelf(trace).FirstOrDefault(node => node.Status == TraceStatus.Failure && !string.IsNullOrWhiteSpace(node.Detail))?.Detail;
+
+    private static IEnumerable<TraceNode> DescendantsAndSelf(TraceNode trace)
+    {
+        yield return trace;
+        foreach (var child in trace.Children)
+        {
+            foreach (var descendant in DescendantsAndSelf(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
 }
 
 public sealed record ActionLogProjection(IReadOnlyList<ActionOutcome> Chronological)
 {
     public static ActionLogProjection FromOutcomes(IReadOnlyList<ActionOutcome> outcomes) => new(outcomes);
+
+    public static ActionLogProjection FromHistory(SimulationHistorySession history)
+    {
+        var outcomes = new List<ActionOutcome>();
+
+        foreach (var frame in history.Frames)
+        {
+            outcomes.AddRange(history
+                .GetFrameLogEntries(frame.FrameIndex)
+                .Select(entry => ActionOutcomeProjection.FromCommandResult(frame.Snapshot, entry.ControlledResult)));
+
+            outcomes.AddRange(history.Intervals
+                .Where(interval => interval.FromFrameIndex == frame.FrameIndex)
+                .SelectMany(interval =>
+                {
+                    var intervalSnapshot = history.Frames[interval.ToFrameIndex].Snapshot;
+                    var turnNumber = interval.ControlledResult?.TurnReport?.TurnNumber ?? history.Frames[interval.ToFrameIndex].WorldTurnNumber;
+                    var rows = new List<ActionOutcome>();
+                    if (interval.ControlledResult is { } controlled)
+                    {
+                        rows.Add(ActionOutcomeProjection.FromCommandResult(intervalSnapshot, controlled));
+                    }
+
+                    rows.AddRange(interval.ActorLogs
+                        .Where(log => interval.ControlledResult?.ActorId != log.ActorId)
+                        .Select(log => ActionOutcomeProjection.FromActorLog(intervalSnapshot, turnNumber, log)));
+                    return rows;
+                }));
+        }
+
+        return new ActionLogProjection(outcomes);
+    }
 
     public IReadOnlyList<ActionOutcome> ForEntity(EntityId entityId) =>
         Chronological.Where(outcome => outcome.AnchorEntityIds.Contains(entityId)).ToList();

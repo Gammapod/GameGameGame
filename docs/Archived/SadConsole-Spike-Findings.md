@@ -1,6 +1,6 @@
 # SadConsole Spike Findings
 
-Status: Findings document for ending the SadConsole prototype spike. Superseded for next-work selection by `docs/Plans/SadConsole-Frontend-Roadmap.md`; retain this document as evidence/reference for the roadmap.
+Status: Archived findings document for the completed SadConsole prototype spike. Superseded for next-work selection by `docs/Plans/SadConsole-Frontend-Roadmap.md`; retained as evidence/reference for the roadmap.
 
 Read when:
 
@@ -102,7 +102,7 @@ Candidate responsibilities:
    - Let frontends decide how much to show, but keep classification shared.
 
 3. **Report/log projection helpers**
-   - Build on turn reports, scenario recorder outputs, local turn order, and traces.
+   - Build on turn reports, legacy scenario recorder outputs, local turn order, and traces.
    - Provide frontend-neutral projections for full chronological logs and local context summaries.
 
 Headless should remain frontend-agnostic: no SadConsole cell geometry, key concepts, or visual-only state.

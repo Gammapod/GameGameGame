@@ -33,7 +33,8 @@ internal sealed record SadConsoleSessionViewBuilderState(
     EntityId? InspectedEntity,
     GridCoord WorldCursor,
     GridCoord InventoryCursor,
-    ActionLogProjection? ActionLog);
+    ActionLogProjection? ActionLog,
+    bool CanUndo = false);
 
 internal readonly record struct SadConsoleRect(int Left, int Top, int Width, int Bottom)
 {
@@ -145,12 +146,12 @@ internal sealed class SadConsoleSessionViewBuilder(
             state.Message,
             FormatAffordances(actorAffordances),
             selectedSummary,
-            FormatPromptHint(state.Mode, state.SelectedEntity, actorAffordances),
+            FormatPromptHint(state.Mode, state.SelectedEntity, actorAffordances, state.CanUndo),
             panels,
             new SadConsoleLogView(
-                "Global controlled-command log",
+                "Global action log",
                 SadConsoleSessionLayout.GlobalLogRect,
-                "No controlled commands submitted yet.",
+                "No action outcomes recorded yet.",
                 state.ActionLog?.Chronological ?? []),
             actorAffordances);
     }
@@ -212,11 +213,11 @@ internal sealed class SadConsoleSessionViewBuilder(
         return $"Valid moves: {(string.IsNullOrWhiteSpace(moves) ? "none" : moves)} | pickups: {affordances.PickupSources.Count(a => a.CanExecute)} | drops: {affordances.DropSources.Count(a => a.CanExecute)} | enter: {affordances.EnterTargets.Count(a => a.CanExecute)} | exit: {affordances.ExitDirections.Count(a => a.CanExecute)}";
     }
 
-    private static string FormatPromptHint(ShellMode mode, EntityId? selectedEntity, ControlledActorAffordances affordances)
+    private static string FormatPromptHint(ShellMode mode, EntityId? selectedEntity, ControlledActorAffordances affordances, bool canUndo)
     {
         return mode switch
         {
-            ShellMode.Play => "Highlights: green valid action target, red blocked move, blue controlled entity, purple current target, gold cursor. Facing/target appear in text.",
+            ShellMode.Play => $"Arrows move. I inspect. P pickup. D drop. E enter. X exit. U undo ({(canUndo ? "available" : "unavailable at frame 0")}). Highlights: green valid action target, red blocked move, blue controlled entity, purple current target, gold cursor. Facing/target appear in text.",
             ShellMode.PickupSource => FormatEntityAffordanceHint("Pickup source", affordances.PickupSources),
             ShellMode.PickupDestination when selectedEntity is { } target => FormatDestinationAffordanceHint("Pickup destination", affordances.PickupDestinations(target)),
             ShellMode.DropSource => FormatEntityAffordanceHint("Drop source", affordances.DropSources),
@@ -291,9 +292,48 @@ internal static class PromptChoiceCycler
 
 internal sealed record LocalActivityRow(string Text, bool IsHeader = false, bool IsPositive = false, bool IsWarning = false, bool IsMuted = false);
 
+internal static class ActionOutcomeTextFormatter
+{
+    public static string FormatGlobal(ActionOutcome outcome)
+    {
+        var turn = outcome.TurnNumber is { } turnNumber ? $"T{turnNumber}: " : string.Empty;
+        var status = outcome.Succeeded ? "OK" : "FAIL";
+        return $"{turn}{status}: {FormatCore(outcome)}";
+    }
+
+    public static string FormatLocal(ActionOutcome outcome)
+    {
+        var status = outcome.Succeeded ? "OK" : "FAIL";
+        return $"{status}: {FormatCore(outcome)}";
+    }
+
+    private static string FormatCore(ActionOutcome outcome)
+    {
+        var noTurn = outcome.ConsumedTurn ? string.Empty : " (no turn)";
+        var attempt = outcome.Succeeded ? string.Empty : FormatFailedAttempt(outcome.ActionStepAttempts);
+        return $"{outcome.Sentence}{noTurn}{attempt}";
+    }
+
+    private static string FormatFailedAttempt(IReadOnlyList<ActionStepAttempt> attempts)
+    {
+        var failed = attempts.FirstOrDefault(attempt => attempt.Status == TraceStatus.Failure);
+        if (failed is null)
+        {
+            return string.Empty;
+        }
+
+        var reason = !string.IsNullOrWhiteSpace(failed.Detail)
+            ? failed.Detail
+            : failed.FailureReason?.ToString();
+        return string.IsNullOrWhiteSpace(reason)
+            ? $" [{failed.StepKind} failed]"
+            : $" [{failed.StepKind} failed: {reason}]";
+    }
+}
+
 internal static class LocalActivityViewBuilder
 {
-    public const string EmptyText = "No visible contents or controlled-command snippets.";
+    public const string EmptyText = "No visible contents or local action snippets.";
 
     public static IReadOnlyList<LocalActivityRow> Build(EntityPanelProjection panel, int maxRows)
     {
@@ -316,8 +356,12 @@ internal static class LocalActivityViewBuilder
                 return rows;
             }
 
-            if (!string.IsNullOrWhiteSpace(row.PreviousAction)
-                && !AddIfRoom(rows, new LocalActivityRow($"└ {row.PreviousAction}", IsPositive: true), maxRows))
+            var latestOutcome = panel.LocalLog.LastOrDefault(outcome => outcome.AnchorEntityIds.Contains(row.EntityId));
+            var snippet = latestOutcome is null ? row.PreviousAction : ActionOutcomeTextFormatter.FormatLocal(latestOutcome);
+            var isPositive = latestOutcome?.Succeeded ?? !string.IsNullOrWhiteSpace(row.PreviousAction);
+            var isWarning = latestOutcome?.Succeeded == false;
+            if (!string.IsNullOrWhiteSpace(snippet)
+                && !AddIfRoom(rows, new LocalActivityRow($"└ {snippet}", IsPositive: isPositive, IsWarning: isWarning), maxRows))
             {
                 return rows;
             }
@@ -329,7 +373,7 @@ internal static class LocalActivityViewBuilder
                      .Where(outcome => !outcome.AnchorEntityIds.Any(contentEntityIds.Contains))
                      .TakeLast(remainingRows))
         {
-            if (!AddIfRoom(rows, new LocalActivityRow($"└ {outcome.Sentence}", IsPositive: outcome.Succeeded, IsWarning: !outcome.Succeeded), maxRows))
+            if (!AddIfRoom(rows, new LocalActivityRow($"└ {ActionOutcomeTextFormatter.FormatLocal(outcome)}", IsPositive: outcome.Succeeded, IsWarning: !outcome.Succeeded), maxRows))
             {
                 return rows;
             }

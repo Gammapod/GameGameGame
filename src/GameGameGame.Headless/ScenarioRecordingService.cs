@@ -155,7 +155,7 @@ public static class ScenarioRecordingService
                 }
 
                 TargetingService.RefreshTargets(world, registry, actorId);
-                var resolution = ResolvePlan(world, actorId, actionPlan.PlanTurn(world, actorId, movement), movement);
+                var resolution = ActorTurnResolver.ResolvePlan(world, actorId, actionPlan.PlanTurn(world, actorId, movement), movement);
                 PostActionStateUpdater.ApplyFacingFromMovement(world, actorId, resolution.ActorMovementDirection);
                 world.RecordTrace(resolution.Trace);
 
@@ -187,36 +187,6 @@ public static class ScenarioRecordingService
             .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
             .Select(entry => entry.EntityId)
             .ToList();
-
-    private static ActionResolution ResolvePlan(WorldState world, EntityId actorId, PlannedActionPlan plan, MovementService movement)
-    {
-        var actorName = world.Entities.TryGetValue(actorId, out var actor) ? actor.Name : actorId.ToString();
-        var root = new TraceNode($"Resolve plan for {actorName}", TraceStatus.Info);
-
-        foreach (var option in plan.Options)
-        {
-            var resolution = option.Resolve(world, actorId, movement);
-            root.Add(resolution.Trace);
-
-            if (resolution.ConsumesTurn)
-            {
-                root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
-                root.Detail = $"resolved {option.GetType().Name}";
-                    return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
-            }
-
-            if (!resolution.ContinuePlan)
-            {
-                root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
-                root.Detail = $"stopped at {option.GetType().Name}";
-                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
-            }
-        }
-
-        root.Status = TraceStatus.Failure;
-        root.Detail = "no planned action could execute";
-        return new ActionResolution(false, ConsumesTurn: false, ContinuePlan: false, root);
-    }
 
     private static void AddFrame(List<ScenarioRecordingFrame> frames, string outputDirectory, string baseName, int frameIndex, int turnNumber, Action<string> writeFrame)
     {

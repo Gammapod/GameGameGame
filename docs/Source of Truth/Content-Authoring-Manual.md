@@ -39,7 +39,7 @@ Default workflow:
 3. Use currently authorable Action Steps from this manual.
 4. Validate after edits.
 5. Preview action plans when behavior changes.
-6. Materialize, run, or record scenarios when behavior needs inspection.
+6. Materialize or run scenarios when behavior needs inspection; use SadConsole/manual play for visual inspection and treat the current PNG/GIF recorder as legacy fallback tooling.
 7. Log a capability gap when desired content cannot be expressed cleanly with the authoring surface listed here.
 
 ## Authoring decision rules
@@ -68,7 +68,7 @@ Default workflow:
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
 | Playable session launch | Create frontend-neutral playable sessions from persisted scenarios or catalog entries through the shared Content launcher, including world, registry/presentation lookup, action plans, player entity, active plane/container, diagnostics, runtime failures, and capability gaps. |
 | Scenario execution | Launch persisted scenarios in Console directly by content file/scenario ID or through the Console scenario list populated from one file, folder discovery, or a generated manifest/cache; Console uses the shared playable session launcher for fallback play. Run persisted scenario reports by scenario ID headlessly with final-state and inventory/containment summaries; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
-| Scenario recording | Record persisted scenarios to PNG frames and GIF artifacts. |
+| Scenario recording | Legacy fallback: record persisted scenarios to PNG frames and GIF artifacts when reports/SadConsole are insufficient. Future visual recording should prefer history playback / SadConsole-rendered export. |
 | Gap logging | Record unsupported desired behavior in the active capability gap log. |
 
 For maintainer-facing layer coverage, support tiers, and parity details, use `docs/Source of Truth/Engine-Editor-Capabilities.md`.
@@ -243,7 +243,7 @@ Preferred scenario workflow:
 4. Create a persisted scenario using scenario root, player template, player entity ID, and start coordinate.
 5. Validate the content document.
 6. Materialize and run the scenario.
-7. Record frames/GIF when spatial behavior needs visual review.
+7. Use SadConsole/manual play when spatial behavior needs visual review; use legacy frames/GIF recording only when an artifact is specifically needed.
 8. Log gaps for unsupported behavior or insufficient reporting.
 
 Keep scenarios focused. Prefer multiple small vignettes over one scenario that depends on unclear interactions or unsupported filters.
@@ -259,7 +259,7 @@ Use the shortest review loop that answers the content question.
 | Check scenario setup/player insertion | Materialize the persisted scenario. |
 | Inspect turn-by-turn behavior | Run a persisted headless scenario report by scenario ID when scenario setup/player insertion matters; use root-only compatibility runs only for scenario-root template isolation. |
 | Review a scenario end-to-end | Request a combined persisted scenario review report for document validation, canonical validation, action-plan previews, scenario materialization, run traces, final state, inventory summaries, and diagnostics. |
-| Inspect spatial layout over time | Record scenario frames/GIF. |
+| Inspect spatial layout over time | Prefer SadConsole/manual play; use legacy scenario frames/GIF only when a shareable artifact is specifically needed. |
 | Confirm Console playability | Launch Console with content file and scenario ID, or use the Console scenario list. Folder discovery refreshes `Manifest.yaml` in the scanned folder and preserves optional manifest-only `description` annotations for unchanged entries. By default, Console reads `src\GameGameGame.Content\Beta\Manifest.yaml` when present and otherwise discovers scenarios under `src\GameGameGame.Content\Beta` and writes that default manifest. |
 
 Treat validation diagnostics and runtime observations as content feedback. Expected in-simulation inability to act is not automatically a failed scenario; decide based on the vignette goal.

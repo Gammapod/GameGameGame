@@ -40,8 +40,46 @@ public sealed class LocalActivityViewBuilderTests
                 localLog: [Outcome("Crate already shown", true, contentEntity), Outcome("Spark fizzled", false, separateEntity)]),
             maxRows: 6);
 
-        Assert.Equal(["Local activity", "0. c Crate [Inert]", "└ Spark fizzled"], rows.Select(row => row.Text));
+        Assert.Equal(["Local activity", "0. c Crate [Inert]", "└ OK: Crate already shown (no turn)", "└ FAIL: Spark fizzled (no turn)"], rows.Select(row => row.Text));
+        Assert.True(rows[2].IsPositive);
+        Assert.True(rows[3].IsWarning);
+    }
+
+    [Fact]
+    public void BuildShowsAutonomousFailureForAnchoredContentRowWithFailureStyling()
+    {
+        var slime = new EntityId("slime");
+        var failure = Outcome("Slime: tried to move East, but blocked", false, slime) with
+        {
+            ConsumedTurn = true,
+            ActionStepAttempts = [Attempt("MoveTarget", TraceStatus.Failure, FailureReason.MoveBlocked, "blocked")]
+        };
+
+        var rows = LocalActivityViewBuilder.Build(
+            Panel(
+                contents: [ContentRow(0, slime, "Slime", 's', "stale previous action")],
+                localLog: [failure]),
+            maxRows: 4);
+
+        Assert.Equal(["Local activity", "0. s Slime [Actor]", "└ FAIL: Slime: tried to move East, but blocked [MoveTarget failed: blocked]"], rows.Select(row => row.Text));
         Assert.True(rows[2].IsWarning);
+        Assert.False(rows[2].IsPositive);
+    }
+
+    [Fact]
+    public void BuildShowsAutonomousSuccessForAnchoredContentRow()
+    {
+        var slime = new EntityId("slime");
+        var success = Outcome("Slime: moved East", true, slime) with { ConsumedTurn = true };
+
+        var rows = LocalActivityViewBuilder.Build(
+            Panel(
+                contents: [ContentRow(0, slime, "Slime", 's')],
+                localLog: [success]),
+            maxRows: 4);
+
+        Assert.Equal(["Local activity", "0. s Slime [Inert]", "└ OK: Slime: moved East"], rows.Select(row => row.Text));
+        Assert.True(rows[2].IsPositive);
     }
 
     private static EntityPanelProjection Panel(IReadOnlyList<EntityPanelContentRow> contents, IReadOnlyList<ActionOutcome> localLog) => new(
@@ -84,4 +122,17 @@ public sealed class LocalActivityViewBuilderTests
         new HashSet<EntityId> { anchor },
         new HashSet<PlaneId>(),
         TraceNode.Info("test"));
+
+    private static ActionStepAttempt Attempt(string stepKind, TraceStatus status, FailureReason? reason, string? detail) => new(
+        1,
+        stepKind,
+        status,
+        reason,
+        detail,
+        Continued: false,
+        Stopped: true,
+        [],
+        [],
+        [],
+        TraceNode.Info(stepKind));
 }

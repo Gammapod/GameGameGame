@@ -1,6 +1,6 @@
 # SadConsole Entity Panel Prototype
 
-Status: Completed / archived experimental spike plan. Only the findings were carried forward to main; the old prototype project is not current source. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated end-of-spike architecture findings.
+Status: Completed / archived experimental spike plan. Only the findings were carried forward to main; the old prototype project is not current source. See `docs/Archived/SadConsole-Spike-Findings.md` for the consolidated end-of-spike architecture findings.
 
 Read when:
 
@@ -21,7 +21,7 @@ Created a small SadConsole prototype that renders existing simulation state thro
 
 The spike is now stopped. The prototype findings remain useful reference material, but the prototype source should not be treated as current main-branch code. Future SadConsole implementation should start fresh as `src/GameGameGame.SadConsole` after shared frontend contracts are selected.
 
-The proposed follow-up explorations were panel-specific log filters, a manifest/scenario selection menu, and itch.io HTML5/browser feasibility. The timebox is now closed. `docs/Plans/SadConsole-Spike-Findings.md` carries forward the post-spike decision inputs and architectural splits.
+The proposed follow-up explorations were panel-specific log filters, a manifest/scenario selection menu, and itch.io HTML5/browser feasibility. The timebox is now closed. `docs/Archived/SadConsole-Spike-Findings.md` carries forward the post-spike decision inputs and architectural splits.
 
 ## Non-goals
 

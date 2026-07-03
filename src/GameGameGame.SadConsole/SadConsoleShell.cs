@@ -20,8 +20,8 @@ internal sealed class SadConsoleShell : Console
     private readonly ScenarioCatalogResult? _catalog;
     private PlayableScenarioSession? _session;
     private ControlledActorCommandService? _commands;
+    private SimulationHistorySession? _history;
     private ActionLogProjection? _actionLog;
-    private readonly List<ActionOutcome> _outcomes = [];
     private ShellMode _mode;
     private int _selectedScenarioIndex;
     private GridCoord _worldCursor = new(0, 0);
@@ -124,7 +124,7 @@ internal sealed class SadConsoleShell : Console
 
     private void HandleSessionInput(Keyboard keyboard)
     {
-        if (_session is null || _commands is null)
+        if (_session is null || _commands is null || _history is null)
         {
             return;
         }
@@ -173,6 +173,10 @@ internal sealed class SadConsoleShell : Console
             _mode = ShellMode.InspectSource;
             MoveWorldCursorToFirstValid(InspectCandidates(PlayerLocation().PlaneId));
             _message = "Inspect mode: Tab cycles visible entities, arrows move cursor, Enter inspects.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.U))
+        {
+            UndoPreviousFrame();
         }
         else if (keyboard.IsKeyReleased(Keys.P))
         {
@@ -362,9 +366,8 @@ internal sealed class SadConsoleShell : Console
 
     private void Execute(ControlledActorCommand command, string successMessage)
     {
-        var result = _commands!.Execute(_session!.World, _session.PlayerEntityId, command);
-        _outcomes.Add(ActionOutcomeProjection.FromCommandResult(_session.World, result));
-        _actionLog = ActionLogProjection.FromOutcomes(_outcomes);
+        var result = _history!.SubmitControlledCommand(_commands!, command);
+        _actionLog = ActionLogProjection.FromHistory(_history);
         _mode = ShellMode.Play;
         _selectedEntity = null;
         _selectedExitDirection = null;
@@ -372,20 +375,47 @@ internal sealed class SadConsoleShell : Console
         _message = result.Succeeded ? successMessage : FormatFailure(result);
     }
 
+    private void UndoPreviousFrame()
+    {
+        if (_history is null || _session is null)
+        {
+            return;
+        }
+
+        if (!_history.RollbackPreviousFrame())
+        {
+            _message = "Nothing to undo.";
+            return;
+        }
+
+        _actionLog = ActionLogProjection.FromHistory(_history);
+        _mode = ShellMode.Play;
+        _selectedEntity = null;
+        _selectedExitDirection = null;
+        _inspectedEntity = _session.PlayerEntityId;
+        _worldCursor = PlayerLocation().Coord;
+        _inventoryCursor = new GridCoord(0, 0);
+        _message = "Undid previous frame.";
+    }
+
     private void StartSession(PlayableScenarioSession session)
     {
         _session = session;
         _commands = new ControlledActorCommandService(_movement, session.ActionPlans, (world, entityId) => TargetingService.RefreshTargets(world, session.Registry, entityId));
+        _history = SimulationHistorySession.Start(
+            session.World,
+            session.PlayerEntityId,
+            session.ActivePlaneId,
+            session.ActiveContainerEntityId);
         _mode = ShellMode.Play;
         _selectedEntity = null;
         _selectedExitDirection = null;
         _inspectedEntity = session.PlayerEntityId;
         _worldCursor = PlayerLocation().Coord;
         _inventoryCursor = new GridCoord(0, 0);
-        _outcomes.Clear();
-        _actionLog = null;
+        _actionLog = ActionLogProjection.FromHistory(_history);
         _message = session.ValidationDiagnostics.Count == 0 && session.RuntimeFailures.Count == 0
-            ? $"Scenario {session.ScenarioId}. Arrows move. I inspect. P pickup. D drop. E enter. X exit. Esc returns."
+            ? $"Scenario {session.ScenarioId}. Arrows move. I inspect. P pickup. D drop. E enter. X exit. U undo (unavailable at frame 0). Esc returns."
             : $"Scenario {session.ScenarioId} diagnostics: {string.Join(" | ", session.ValidationDiagnostics.Concat(session.RuntimeFailures))}";
     }
 
@@ -399,7 +429,7 @@ internal sealed class SadConsoleShell : Console
 
         _session = null;
         _commands = null;
-        _outcomes.Clear();
+        _history = null;
         _actionLog = null;
         _mode = ShellMode.Menu;
         _message = "Returned to scenario list. Enter launches. Esc quits.";
@@ -483,7 +513,8 @@ internal sealed class SadConsoleShell : Console
                 _inspectedEntity,
                 _worldCursor,
                 _inventoryCursor,
-                _actionLog));
+                _actionLog,
+                _history?.CanRollback ?? false));
     }
 
     private void DrawPanel(SadConsolePanelView view, ControlledActorAffordances affordances)
@@ -596,8 +627,7 @@ internal sealed class SadConsoleShell : Console
         var y = log.Bounds.Top + 1;
         foreach (var outcome in log.Rows.TakeLast(log.Bounds.Height - 1))
         {
-            var turn = outcome.TurnNumber is { } turnNumber ? $"T{turnNumber}: " : string.Empty;
-            PrintClipped(log.Bounds.Left, y++, log.Bounds.Width, $"{turn}{outcome.Sentence}", outcome.Succeeded ? Color.LightGreen : Color.Orange);
+            PrintClipped(log.Bounds.Left, y++, log.Bounds.Width, ActionOutcomeTextFormatter.FormatGlobal(outcome), outcome.Succeeded ? Color.LightGreen : Color.Orange);
         }
     }
 

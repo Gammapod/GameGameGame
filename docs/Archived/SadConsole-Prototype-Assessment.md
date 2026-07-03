@@ -1,6 +1,6 @@
 # SadConsole Prototype Assessment
 
-Status: Completed / archived assessment checkpoint after the SadConsole entity-panel/action prototype spike. See `docs/Plans/SadConsole-Spike-Findings.md` for the consolidated findings to merge forward.
+Status: Completed / archived assessment checkpoint after the SadConsole entity-panel/action prototype spike. See `docs/Archived/SadConsole-Spike-Findings.md` for the consolidated findings to merge forward.
 
 Read when:
 
@@ -14,7 +14,7 @@ Related source of truth:
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records broad frontend UX invariants.
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the entity-panel UX model.
 - `docs/Archived/SadConsole-Entity-Panel-Prototype.md` records the implementation spike and turn-by-turn findings.
-- `docs/Plans/SadConsole-Spike-Findings.md` records the end-of-spike architecture findings and recommended service splits.
+- `docs/Archived/SadConsole-Spike-Findings.md` records the end-of-spike architecture findings and recommended service splits.
 
 ## Current assessment
 
@@ -195,7 +195,7 @@ Debt that will compound soon:
 
 ## Recommendation
 
-Do not continue the SadConsole prototype by default before a frontend architecture plan addresses the shared-service splits recorded in `docs/Plans/SadConsole-Spike-Findings.md`.
+Do not continue the SadConsole prototype by default before a frontend architecture plan addresses the shared-service splits recorded in `docs/Archived/SadConsole-Spike-Findings.md`.
 
 Superseded recommendation: this section recorded the pre-close recommendation for a **shareable feedback build pass**. The current recommendation is to plan shared frontend-facing service contracts before more SadConsole feature work.
 

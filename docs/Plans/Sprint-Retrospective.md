@@ -4,6 +4,11 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What went well
 
+- The unified history/log/rollback sprint worked well as a sequence of thin vertical slices. Starting with `WorldState` snapshots, then history frames, then rollback, successful submissions, failed entries, interval actor logs, projection, SadConsole consumption, and undo kept each step testable and prevented a large risky rewrite.
+- Coordinating Core-owner and frontend-owner at ownership boundaries was effective: Core established shared history/projection/rollback semantics, then frontend-owner wired SadConsole presentation and input without inventing frontend-only simulation rules.
+- Calling content-editor to review the migrated headless scenario reports caught the correct acceptance question: preserve authoring-facing report usefulness while changing the backing model.
+- Treating the old PNG/GIF scenario recorder as legacy rather than forcing a deep migration avoided over-investing in superseded tooling and produced a better backlog direction: saved runlogs/history playback/SadConsole-rendered export.
+
 - Moving targeting and post-move facing into shared state services simplified canonical behavior chains without losing fallback composition. Plans can now consume target slots while target selection happens before the plan, and facing follows successful movement direction afterward.
 - Keeping target slots numeric with content-authored hints avoided baking semantic roles like enemy, food, or ally into Core while still giving authors enough structure for different entities to interpret slots differently.
 - Demoting legacy acquisition/turn-only steps instead of deleting runtime support preserved old content compatibility while making new editor/API authoring safer.
@@ -29,6 +34,10 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What was difficult
 
+- The roadmap had accumulated completed implementation sequences inline. During cleanup, active planning had to be separated from completed evidence. Future sprints should archive completed plans immediately instead of leaving long completed checklists in active roadmaps.
+- Some documentation lagged behind implementation quickly: frontend standards still said global logs were controlled-only after history projection had autonomous rows. Wrap-up should include stale-statement greps for old capability limitations.
+- The term “scenario recording” now refers to legacy tooling, while future desired work is history playback / visual export. Keeping those separate in docs is important to avoid accidentally extending the wrong surface.
+
 - Targeting touched several layers at once: runtime state, content templates, YAML/editable DTOs, validation, scenario runners, Console, editor/API helpers, and tests. Small seams such as `TurnService` pre-plan hooks were important to keep Core content-agnostic.
 - Existing beta fixture expectations had encoded old facing and target-acquisition behavior. Updating those tests required separating behavior we still want to guarantee from brittle beta-era implementation details.
 - Parallel test execution can still hit transient build output locks in this workspace; sequential final verification remains safer for wrap-up.
@@ -52,6 +61,11 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## Process improvements
 
+- For cross-layer refactors, keep using a numbered-slice checklist, but archive the checklist once complete and leave only follow-ups in active roadmaps.
+- When a legacy tool is intentionally not migrated, document both parts in the same cleanup: current legacy support status and the preferred replacement backlog item.
+- Use content-facing review for report/API migrations even when automated tests preserve shape; the key acceptance criterion is whether the report still answers authoring questions.
+- Prefer “small shared seam first” refactors, such as `ActorTurnResolver` and `ActionStepAttemptProjection`, before migrating larger loops or frontends.
+
 - For state-system refactors that replace action-plan scripting, explicitly list which old steps remain runtime-compatible but non-canonical before editing docs/tests. That prevents accidental preservation of old authoring patterns.
 - When adding generic slots, document both the engine invariant and the content-authoring convention in the same sprint so future work does not infer semantic slot names from examples.
 
@@ -60,7 +74,7 @@ Status: Living retrospective notes from the current wrap-up.
 - Add a lightweight prioritization check during wrap-up: did the ad-hoc work indicate the roadmap is stale, or did it merely surface a tactical bottleneck inside an existing bucket?
 - Generated/cache files under content directories should have an explicit policy before broad use: checked-in curated artifact, local cache ignored by git, or generated output outside source content.
 
-- For future showcase sprints, keep using the pattern: primitive request -> authored YAML -> fixture test -> `record-scenario` GIF -> sprint-plan note.
+- For future showcase sprints, replace the old `record-scenario` GIF step with saved runlog/history playback or SadConsole-rendered export when available; until then, use the legacy recorder only when a shareable visual artifact is specifically needed.
 - When two primitives are symmetric variants, request them together to reduce duplicated coordination and documentation effort.
 - For complex fallback-chain showcases, consider planning both a player-facing/readable scenario and a small mechanical proof scenario from the start.
 - Always record scenario GIFs to an external temp/artifact directory, not a repository-local `debug/` folder, unless the artifact is intentionally being checked in.

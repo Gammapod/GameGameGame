@@ -122,13 +122,14 @@ public static class ScenarioRunService
                 materialization.CapabilityGaps);
         }
 
-        var turns = new List<ScenarioTurnReport>();
         var runtimeObservations = new List<string>();
         var runtimeFailures = new List<string>();
         var movement = new MovementService();
+        var history = SimulationHistorySession.Start(world, ScenarioRootEntityId, scenarioPlaneId, ScenarioRootEntityId);
 
         for (var turn = 1; turn <= turnCount; turn++)
         {
+            var actorLogs = new List<SimulationHistoryActorLog>();
             for (var initiative = 0; initiative < actorOrder.Count; initiative++)
             {
                 var actor = actorOrder[initiative];
@@ -138,7 +139,7 @@ public static class ScenarioRunService
                 }
 
                 TargetingService.RefreshTargets(world, materialization.Registry, actor.EntityId);
-                var resolution = ResolvePlan(world, actor.EntityId, actionPlan.PlanTurn(world, actor.EntityId, movement), movement);
+                var resolution = ActorTurnResolver.ResolvePlan(world, actor.EntityId, actionPlan.PlanTurn(world, actor.EntityId, movement), movement);
                 PostActionStateUpdater.ApplyFacingFromMovement(world, actor.EntityId, resolution.ActorMovementDirection);
                 world.RecordTrace(resolution.Trace);
 
@@ -147,18 +148,25 @@ public static class ScenarioRunService
                     world.AdvanceTurn();
                 }
 
-                var formattedTrace = FormatScenarioTrace(resolution);
-                turns.Add(new ScenarioTurnReport(
-                    turn,
-                    initiative + 1,
+                actorLogs.Add(new SimulationHistoryActorLog(
+                    initiative,
                     actor.EntityId,
                     entity.Name,
-                    formattedTrace));
+                    resolution.Succeeded,
+                    resolution.ConsumesTurn,
+                    resolution.ContinuePlan,
+                    TurnActionSummaryFormatter.FormatTrace(resolution.Trace, resolution.Succeeded),
+                    resolution.Trace));
 
                 if (!resolution.Succeeded)
                 {
                     runtimeObservations.Add($"Turn {turn}, initiative {initiative + 1}: {entity.Name} could not act ({FindFailureDetail(resolution.Trace)}).");
                 }
+            }
+
+            if (actorLogs.Count > 0)
+            {
+                history.RecordActorInterval(actorLogs, scenarioPlaneId, ScenarioRootEntityId);
             }
         }
 
@@ -167,7 +175,7 @@ public static class ScenarioRunService
             scenarioPlaneId,
             world,
             actorOrder,
-            turns,
+            CreateTurnReports(history),
             setupLines,
             validationDiagnostics,
             runtimeObservations,
@@ -175,48 +183,28 @@ public static class ScenarioRunService
             materialization.CapabilityGaps);
     }
 
-    private static IReadOnlyList<string> FormatScenarioTrace(ActionResolution resolution)
+    private static IReadOnlyList<ScenarioTurnReport> CreateTurnReports(SimulationHistorySession history) =>
+        history.Intervals
+            .SelectMany(interval => interval.ActorLogs.Select(log => new ScenarioTurnReport(
+                interval.ToFrameIndex,
+                log.Order + 1,
+                log.ActorId,
+                log.ActorName,
+                FormatScenarioTrace(log))))
+            .ToList();
+
+    private static IReadOnlyList<string> FormatScenarioTrace(SimulationHistoryActorLog log)
     {
-        var planTrace = resolution.Trace.Children.Count == 1
-            && resolution.Trace.Children[0].Label.StartsWith("Plan ", StringComparison.Ordinal)
-                ? resolution.Trace.Children[0]
-                : resolution.Trace;
+        var planTrace = log.Trace.Children.Count == 1
+            && log.Trace.Children[0].Label.StartsWith("Plan ", StringComparison.Ordinal)
+                ? log.Trace.Children[0]
+                : log.Trace;
 
         return BehaviorChainTraceFormatter.Format(new PlanExecutionResult(
-            resolution.Succeeded,
-            resolution.ConsumesTurn,
-            resolution.ContinuePlan,
+            log.Succeeded,
+            log.ConsumedTurn,
+            log.ContinuePlan,
             planTrace));
-    }
-
-    private static ActionResolution ResolvePlan(WorldState world, EntityId actorId, PlannedActionPlan plan, MovementService movement)
-    {
-        var actorName = world.Entities.TryGetValue(actorId, out var actor) ? actor.Name : actorId.ToString();
-        var root = new TraceNode($"Resolve plan for {actorName}", TraceStatus.Info);
-
-        foreach (var option in plan.Options)
-        {
-            var resolution = option.Resolve(world, actorId, movement);
-            root.Add(resolution.Trace);
-
-            if (resolution.ConsumesTurn)
-            {
-                root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
-                root.Detail = $"resolved {option.GetType().Name}";
-                    return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
-            }
-
-            if (!resolution.ContinuePlan)
-            {
-                root.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
-                root.Detail = $"stopped at {option.GetType().Name}";
-                return new ActionResolution(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, root, resolution.ActorMovementDirection);
-            }
-        }
-
-        root.Status = TraceStatus.Failure;
-        root.Detail = "no planned action could execute";
-        return new ActionResolution(false, ConsumesTurn: false, ContinuePlan: false, root);
     }
 
     private static ScenarioRunReport CreateReport(

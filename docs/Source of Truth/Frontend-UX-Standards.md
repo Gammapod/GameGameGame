@@ -76,7 +76,7 @@ These standards are intentionally distinct from Core invariants. They should not
 4. **The global log should be concise.**
    - The global log should show successful outcomes for all simulated entities, not only the controlled/player entity.
    - Failures and deeper traces are better surfaced in local activity rows, expandable detail, or debug drilldown.
-   - Until autonomous turn outcomes are projected by shared services, frontends should label limited logs honestly, such as “controlled-command log,” rather than implying complete global simulation history.
+   - Now that shared history projection includes controlled outcomes and conservative autonomous actor outcomes, frontends may label the combined surface as a global action log while still avoiding claims that richer target/affected-entity anchoring is complete.
 
 ## Action highlighting and selection standards
 
@@ -200,8 +200,8 @@ The following ideas are intentionally deferred and should be reassessed only aft
 The Stage 7A SadConsole shell intentionally explored useful ideas quickly. The following current behaviors are exploratory and should be revised before treating the UI as canonical:
 
 - The Stage 7A shell initially changed the player glyph to direction arrows for facing. That violated the glyph identity standard and was corrected in Stage 7B by preserving entity glyphs and moving facing/target into text indicators. Future visual facing treatments should remain adjacent/layered/decorator-style rather than identity replacements.
-- Local logs currently show controlled-command outcomes and can appear broadly wherever the player/current plane is anchored. They are not yet true local per-entity activity rows.
-- The global log currently records controlled-command outcomes only. It is not yet a complete successful-outcome log for all simulated entities.
+- Local logs now consume shared history-backed controlled and conservative autonomous actor rows, but target/affected-entity anchoring is still incomplete for some autonomous outcomes.
+- The global log now records controlled outcomes plus conservative autonomous actor outcomes. It is not yet a complete affected-entity log until richer target/source/destination anchors exist.
 - Selection currently allows cursoring across arbitrary cells in several modes. Future action prompts should prefer cycling/constraining to valid choices.
 
 ## Backlog candidates promoted by these standards

@@ -7,25 +7,60 @@ namespace GameGameGame.SadConsole.Tests;
 public sealed class SadConsoleSessionViewBuilderTests
 {
     [Fact]
-    public void BuildLabelsGlobalLogAsControlledCommandLogWhenEmpty()
+    public void BuildLabelsGlobalLogAsActionLogWhenEmpty()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
         var view = Builder(session).Build(session, State(ShellMode.Play));
 
-        Assert.Equal("Global controlled-command log", view.GlobalLog.Title);
-        Assert.Equal("No controlled commands submitted yet.", view.GlobalLog.EmptyText);
+        Assert.Equal("Global action log", view.GlobalLog.Title);
+        Assert.Equal("No action outcomes recorded yet.", view.GlobalLog.EmptyText);
         Assert.Empty(view.GlobalLog.Rows);
     }
 
     [Fact]
-    public void BuildCarriesStructuredLogRowsWithoutChangingHonestTitle()
+    public void BuildCarriesStructuredLogRowsWithGeneralActionTitle()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
         var outcome = Outcome("Player moved East", succeeded: true, session.PlayerEntityId);
         var view = Builder(session).Build(session, State(ShellMode.Play, actionLog: new ActionLogProjection([outcome])));
 
-        Assert.Equal("Global controlled-command log", view.GlobalLog.Title);
+        Assert.Equal("Global action log", view.GlobalLog.Title);
         Assert.Equal([outcome], view.GlobalLog.Rows);
+    }
+
+    [Fact]
+    public void BuildCarriesAutonomousActorRowsInGlobalActionLog()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var slime = new EntityId("slime");
+        var autonomousFailure = Outcome("Slime: tried to move East, but blocked", succeeded: false, slime) with
+        {
+            ConsumedTurn = true,
+            ActionStepAttempts = [Attempt("MoveTarget", TraceStatus.Failure, FailureReason.MoveBlocked, "blocked")]
+        };
+
+        var view = Builder(session).Build(session, State(ShellMode.Play, actionLog: new ActionLogProjection([autonomousFailure])));
+
+        Assert.Equal([autonomousFailure], view.GlobalLog.Rows);
+        Assert.Equal("FAIL: Slime: tried to move East, but blocked [MoveTarget failed: blocked]", ActionOutcomeTextFormatter.FormatGlobal(autonomousFailure));
+    }
+
+    [Fact]
+    public void BuildPlayPromptPresentsUndoAsUnavailableAtFrameZero()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var view = Builder(session).Build(session, State(ShellMode.Play, canUndo: false));
+
+        Assert.Contains("U undo (unavailable at frame 0)", view.PromptHint);
+    }
+
+    [Fact]
+    public void BuildPlayPromptPresentsUndoAsAvailableWhenHistoryCanRollback()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var view = Builder(session).Build(session, State(ShellMode.Play, canUndo: true));
+
+        Assert.Contains("U undo (available)", view.PromptHint);
     }
 
     [Fact]
@@ -69,14 +104,16 @@ public sealed class SadConsoleSessionViewBuilderTests
         EntityId? inspectedEntity = null,
         GridCoord? worldCursor = null,
         GridCoord? inventoryCursor = null,
-        ActionLogProjection? actionLog = null) => new(
+        ActionLogProjection? actionLog = null,
+        bool canUndo = false) => new(
         mode,
         "test message",
         selectedEntity,
         inspectedEntity,
         worldCursor ?? new GridCoord(0, 0),
         inventoryCursor ?? new GridCoord(0, 0),
-        actionLog);
+        actionLog,
+        canUndo);
 
     private static ActionOutcome Outcome(string sentence, bool succeeded, EntityId anchor) => new(
         null,
@@ -95,4 +132,17 @@ public sealed class SadConsoleSessionViewBuilderTests
         new HashSet<EntityId> { anchor },
         new HashSet<PlaneId>(),
         TraceNode.Info("test"));
+
+    private static ActionStepAttempt Attempt(string stepKind, TraceStatus status, FailureReason? reason, string? detail) => new(
+        1,
+        stepKind,
+        status,
+        reason,
+        detail,
+        Continued: false,
+        Stopped: true,
+        [],
+        [],
+        [],
+        TraceNode.Info(stepKind));
 }
