@@ -30,7 +30,7 @@ public sealed class LocalActivityViewBuilderTests
     }
 
     [Fact]
-    public void BuildPlacesRemainingUnanchoredLocalLogRowsAfterContents()
+    public void BuildSuppressesLocalLogRowsThatDoNotBelongToVisibleContent()
     {
         var contentEntity = new EntityId("content");
         var separateEntity = new EntityId("separate");
@@ -40,9 +40,23 @@ public sealed class LocalActivityViewBuilderTests
                 localLog: [Outcome("Crate already shown", true, contentEntity), Outcome("Spark fizzled", false, separateEntity)]),
             maxRows: 6);
 
-        Assert.Equal(["Local activity", "0. c Crate [Inert]", "└ OK: Crate already shown (no turn)", "└ FAIL: Spark fizzled (no turn)"], rows.Select(row => row.Text));
+        Assert.Equal(["Local activity", "0. c Crate [Inert]", "└ OK: Crate already shown (no turn)"], rows.Select(row => row.Text));
         Assert.True(rows[2].IsPositive);
-        Assert.True(rows[3].IsWarning);
+    }
+
+    [Fact]
+    public void BuildShowsEmptyTextWhenOnlyPanelEntityLogExistsWithoutVisibleContents()
+    {
+        var player = new EntityId("player");
+
+        var rows = LocalActivityViewBuilder.Build(
+            Panel(
+                contents: [],
+                localLog: [Outcome("Player moved East", true, player)]),
+            maxRows: 4);
+
+        Assert.Equal(["Local activity", LocalActivityViewBuilder.EmptyText], rows.Select(row => row.Text));
+        Assert.True(rows[1].IsMuted);
     }
 
     [Fact]
@@ -61,9 +75,58 @@ public sealed class LocalActivityViewBuilderTests
                 localLog: [failure]),
             maxRows: 4);
 
-        Assert.Equal(["Local activity", "0. s Slime [Actor]", "└ FAIL: Slime: tried to move East, but blocked [MoveTarget failed: blocked]"], rows.Select(row => row.Text));
+        Assert.Equal(["Local activity", "0. s Slime [Actor]", "└ FAIL: 1. MoveTarget - blocked [stopped]"], rows.Select(row => row.Text));
         Assert.True(rows[2].IsWarning);
         Assert.False(rows[2].IsPositive);
+    }
+
+    [Fact]
+    public void BuildShowsFullCanonicalActionStepChainForAnchoredContentRow()
+    {
+        var slime = new EntityId("slime");
+        var outcome = Outcome("Big Slime: ReverseFacing", true, slime) with
+        {
+            ConsumedTurn = true,
+            ActionStepAttempts =
+            [
+                Attempt(
+                    1,
+                    "MoveFacing",
+                    TraceStatus.Failure,
+                    FailureReason.InvalidPlacement,
+                    "blocked by wall",
+                    continued: true,
+                    stopped: false,
+                    stateReads: ["Facing=East"],
+                    stateWrites: ["Target=wall"]),
+                Attempt(
+                    2,
+                    "ReverseFacing",
+                    TraceStatus.Success,
+                    null,
+                    null,
+                    continued: false,
+                    stopped: true,
+                    stateWrites: ["Facing=West"])
+            ]
+        };
+
+        var rows = LocalActivityViewBuilder.Build(
+            Panel(
+                contents: [ContentRow(1, slime, "Big Slime", 'S', "stale previous action")],
+                localLog: [outcome]),
+            maxRows: 8);
+
+        Assert.Equal(
+            [
+                "Local activity",
+                "1. S Big Slime [Actor]",
+                "├ FAIL: 1. MoveFacing - blocked by wall [continued]",
+                "└ OK: 2. ReverseFacing [stopped]"
+            ],
+            rows.Select(row => row.Text));
+        Assert.True(rows[2].IsWarning);
+        Assert.True(rows[3].IsPositive);
     }
 
     [Fact]
@@ -123,16 +186,29 @@ public sealed class LocalActivityViewBuilderTests
         new HashSet<PlaneId>(),
         TraceNode.Info("test"));
 
-    private static ActionStepAttempt Attempt(string stepKind, TraceStatus status, FailureReason? reason, string? detail) => new(
-        1,
+    private static ActionStepAttempt Attempt(string stepKind, TraceStatus status, FailureReason? reason, string? detail) =>
+        Attempt(1, stepKind, status, reason, detail, continued: false, stopped: true);
+
+    private static ActionStepAttempt Attempt(
+        int order,
+        string stepKind,
+        TraceStatus status,
+        FailureReason? reason,
+        string? detail,
+        bool continued,
+        bool stopped,
+        IReadOnlyList<string>? stateReads = null,
+        IReadOnlyList<string>? stateWrites = null,
+        IReadOnlyList<string>? results = null) => new(
+        order,
         stepKind,
         status,
         reason,
         detail,
-        Continued: false,
-        Stopped: true,
-        [],
-        [],
-        [],
+        continued,
+        stopped,
+        stateReads ?? [],
+        stateWrites ?? [],
+        results ?? [],
         TraceNode.Info(stepKind));
 }

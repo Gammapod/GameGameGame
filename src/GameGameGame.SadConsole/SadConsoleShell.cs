@@ -598,10 +598,11 @@ internal sealed class SadConsoleShell : Console
     {
         foreach (var row in LocalActivityViewBuilder.Build(panel, bottom - y))
         {
-            var x = row.IsHeader ? left : row.Text.StartsWith('└') ? left + 2 : left;
-            var rowWidth = row.Text.StartsWith('└') ? Math.Max(0, width - 2) : width;
+            var isDetailRow = IsLocalActivityDetailRow(row.Text);
+            var x = row.IsHeader ? left : isDetailRow ? left + 2 : left;
+            var rowWidth = isDetailRow ? Math.Max(0, width - 2) : width;
             var text = row.Text;
-            if (!row.IsHeader && !row.Text.StartsWith('└'))
+            if (!row.IsHeader && !isDetailRow)
             {
                 var content = panel.Contents.FirstOrDefault(contentRow => row.Text.StartsWith($"{contentRow.Order}. {contentRow.Glyph} {contentRow.EntityName}"));
                 if (content is not null)
@@ -614,6 +615,9 @@ internal sealed class SadConsoleShell : Console
             PrintClipped(x, y++, rowWidth, text, color);
         }
     }
+
+    private static bool IsLocalActivityDetailRow(string text) =>
+        text.StartsWith('└') || text.StartsWith('├');
 
     private void DrawGlobalLog(SadConsoleLogView log)
     {

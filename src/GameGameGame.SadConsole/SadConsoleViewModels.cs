@@ -343,7 +343,7 @@ internal static class LocalActivityViewBuilder
         }
 
         var rows = new List<LocalActivityRow> { new("Local activity", IsHeader: true) };
-        if (panel.Contents.Count == 0 && panel.LocalLog.Count == 0)
+        if (panel.Contents.Count == 0)
         {
             AddIfRoom(rows, new LocalActivityRow(EmptyText, IsMuted: true), maxRows);
             return rows;
@@ -357,29 +357,68 @@ internal static class LocalActivityViewBuilder
             }
 
             var latestOutcome = panel.LocalLog.LastOrDefault(outcome => outcome.AnchorEntityIds.Contains(row.EntityId));
-            var snippet = latestOutcome is null ? row.PreviousAction : ActionOutcomeTextFormatter.FormatLocal(latestOutcome);
-            var isPositive = latestOutcome?.Succeeded ?? !string.IsNullOrWhiteSpace(row.PreviousAction);
-            var isWarning = latestOutcome?.Succeeded == false;
-            if (!string.IsNullOrWhiteSpace(snippet)
-                && !AddIfRoom(rows, new LocalActivityRow($"└ {snippet}", IsPositive: isPositive, IsWarning: isWarning), maxRows))
+            if (latestOutcome is not null)
             {
-                return rows;
+                if (!AddOutcomeRows(rows, latestOutcome, maxRows))
+                {
+                    return rows;
+                }
             }
-        }
-
-        var contentEntityIds = panel.Contents.Select(row => row.EntityId).ToHashSet();
-        var remainingRows = Math.Max(0, maxRows - rows.Count);
-        foreach (var outcome in panel.LocalLog
-                     .Where(outcome => !outcome.AnchorEntityIds.Any(contentEntityIds.Contains))
-                     .TakeLast(remainingRows))
-        {
-            if (!AddIfRoom(rows, new LocalActivityRow($"└ {ActionOutcomeTextFormatter.FormatLocal(outcome)}", IsPositive: outcome.Succeeded, IsWarning: !outcome.Succeeded), maxRows))
+            else if (!string.IsNullOrWhiteSpace(row.PreviousAction)
+                     && !AddIfRoom(rows, new LocalActivityRow($"└ {row.PreviousAction}", IsPositive: true), maxRows))
             {
                 return rows;
             }
         }
 
         return rows;
+    }
+
+    private static bool AddOutcomeRows(List<LocalActivityRow> rows, ActionOutcome outcome, int maxRows)
+    {
+        if (outcome.ActionStepAttempts.Count == 0)
+        {
+            return AddIfRoom(rows, new LocalActivityRow($"└ {ActionOutcomeTextFormatter.FormatLocal(outcome)}", IsPositive: outcome.Succeeded, IsWarning: !outcome.Succeeded), maxRows);
+        }
+
+        for (var index = 0; index < outcome.ActionStepAttempts.Count; index++)
+        {
+            var attempt = outcome.ActionStepAttempts[index];
+            var connector = index == outcome.ActionStepAttempts.Count - 1 ? "└" : "├";
+            if (!AddIfRoom(rows, new LocalActivityRow(
+                    $"{connector} {FormatAttempt(attempt)}",
+                    IsPositive: attempt.Status == TraceStatus.Success,
+                    IsWarning: attempt.Status == TraceStatus.Failure),
+                    maxRows))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string FormatAttempt(ActionStepAttempt attempt)
+    {
+        var status = attempt.Status == TraceStatus.Success ? "OK" : attempt.Status == TraceStatus.Failure ? "FAIL" : attempt.Status.ToString().ToUpperInvariant();
+        var reason = FormatAttemptReason(attempt);
+        var fallback = attempt.Continued ? "continued" : "stopped";
+        return $"{status}: {attempt.Order}. {attempt.StepKind}{reason} [{fallback}]";
+    }
+
+    private static string FormatAttemptReason(ActionStepAttempt attempt)
+    {
+        if (attempt.Status != TraceStatus.Failure)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(attempt.Detail))
+        {
+            return $" - {attempt.Detail}";
+        }
+
+        return attempt.FailureReason is { } reason ? $" - {reason}" : string.Empty;
     }
 
     private static bool AddIfRoom(List<LocalActivityRow> rows, LocalActivityRow row, int maxRows)
