@@ -1,13 +1,13 @@
 # GameGameGame
 
-GameGameGame is a .NET game prototype with a shared engine, YAML-backed content model, console gameplay shell, and Avalonia content editor.
+GameGameGame is a .NET game prototype with a shared engine, YAML-backed content model, SadConsole debug/browser frontend, console fallback tooling, and Avalonia content editor.
 
 ## Projects
 
 - `src/GameGameGame.Core` — engine/runtime model and gameplay services.
 - `src/GameGameGame.Content` — content loading, editable content documents, validation, prototype content, and editor service operations.
-- `src/GameGameGame.Console` — console gameplay shell for exercising the prototype runtime.
-- `src/GameGameGame.SadConsole` — SadConsole debug/browser frontend shell over shared scenario/action/panel contracts.
+- `src/GameGameGame.SadConsole` — official SadConsole debug/browser frontend shell over shared scenario/action/panel contracts.
+- `src/GameGameGame.Console` — fallback console gameplay shell and CLI/debug tooling.
 - `src/GameGameGame.Editor` — Avalonia editor for authoring and validating content.
 - `tests/GameGameGame.Tests` — xUnit coverage for core behavior, content loading/validation, editor services, and editor view-model behavior.
 
@@ -70,34 +70,34 @@ Basic controls shown by the app include:
 
 ## Run and author scenarios
 
-Run the default console prototype:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj
-```
-
-Run a specific authored scenario from a content YAML file:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- <content-file> <scenario-id>
-```
-
-Example:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke
-```
-
-Run the first-pass SadConsole debug/browser shell:
+Run the official SadConsole debug/browser frontend:
 
 ```bash
 dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
 ```
 
-SadConsole accepts the same direct scenario-launch shape as Console:
+Run a specific authored scenario from a content YAML file:
 
 ```bash
 dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -- <content-file> <scenario-id>
+```
+
+Example:
+
+```bash
+dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -- src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke
+```
+
+Run the fallback console shell:
+
+```bash
+dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj
+```
+
+Console accepts the same direct scenario-launch shape as SadConsole:
+
+```bash
+dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- <content-file> <scenario-id>
 ```
 
 Record a scenario to PNG frames and a GIF:
@@ -130,7 +130,7 @@ dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
 dotnet build src/GameGameGame.Editor/GameGameGame.Editor.csproj
 ```
 
-Run the normal non-Editor test project for Core, Content, Console, and Headless coverage:
+Run the normal non-Editor test project for Core, Content, Console fallback, and Headless coverage:
 
 ```bash
 dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj
@@ -142,12 +142,18 @@ Run legacy/current Avalonia editor-specific tests separately:
 dotnet test tests/GameGameGame.Editor.Tests/GameGameGame.Editor.Tests.csproj
 ```
 
-## Feedback build
-
-Create a self-contained Windows feedback build with the console app and inspectable scenario YAML files:
+Run SadConsole frontend tests separately:
 
 ```bash
-dotnet publish src/GameGameGame.Console/GameGameGame.Console.csproj -c Release -r win-x64 --self-contained true -o artifacts/GameGameGame-win-x64
+dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj
+```
+
+## Feedback build
+
+Create a self-contained Windows feedback build with the official SadConsole frontend and inspectable scenario YAML files:
+
+```bash
+dotnet publish src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -c Release -r win-x64 --self-contained true -o artifacts/GameGameGame-win-x64
 ```
 
 Run `artifacts/GameGameGame-win-x64/GameGameGame.exe` to open the interactive scenario list. Packaged scenarios are copied to `artifacts/GameGameGame-win-x64/Content/Beta`.
@@ -158,10 +164,10 @@ Create a shareable zip:
 Compress-Archive -Path artifacts/GameGameGame-win-x64/* -DestinationPath artifacts/GameGameGame-win-x64.zip -Force
 ```
 
-Create a self-contained Linux feedback build:
+Create a self-contained Linux feedback build with the official SadConsole frontend:
 
 ```bash
-dotnet publish src/GameGameGame.Console/GameGameGame.Console.csproj -c Release -r linux-x64 --self-contained true -o artifacts/GameGameGame-linux-x64
+dotnet publish src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -c Release -r linux-x64 --self-contained true -o artifacts/GameGameGame-linux-x64
 ```
 
 Run `artifacts/GameGameGame-linux-x64/GameGameGame` to open the interactive scenario list.

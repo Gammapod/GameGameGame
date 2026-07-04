@@ -176,7 +176,7 @@ Scope:
 1. Mouse hit-testing over centralized panel/cell geometry.
 2. Click to inspect, select action targets, expand/collapse panels, and focus panels.
 3. Packaging/distribution pass for downloadable builds.
-4. Investigate browser/HTML5 feasibility as a technology-risk item, not a blocker for debug-browser usefulness.
+4. Package SadConsole as the default feedback build; investigate browser/HTML5 feasibility only if later distribution needs re-promote it as a technology-risk item.
 5. Compare SadConsole against Godot/other options only if packaging, editor-widget, mouse, or layout constraints become significant.
 
 Exit criteria:

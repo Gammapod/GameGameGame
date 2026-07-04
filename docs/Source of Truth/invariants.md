@@ -51,7 +51,7 @@ This document records minimal functional requirements that should influence test
 - Content editor operations preserve declared IDs, presentations, carried layouts, Action Plans/behavior assignments, legacy action plans, and validation results.
 - Built-in content must load and validate, but tests should not pin valid design choices such as balance values, glyphs, positions, or action plan behavior.
 - Persisted scenario definitions materialize through the shared content materialization path, reference normal content templates, insert the selected player at the requested start, and report authoring diagnostics before simulation.
-- Playable frontend sessions launch through a shared Content-level session launcher that consumes scenario materialization outputs rather than hardcoded prototype player or plane IDs; Console is a fallback consumer of that shared launcher.
+- Playable frontend sessions launch through a shared Content-level session launcher that consumes scenario materialization outputs rather than hardcoded prototype player or plane IDs; SadConsole is the official debug/browser frontend consumer, and Console is a fallback consumer of that shared launcher.
 - Root-only scenario materialization remains compatibility behavior while supported and must be distinguishable from persisted scenario/player materialization.
 
 ## Scenario Tooling

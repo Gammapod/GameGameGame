@@ -112,10 +112,10 @@ Active frontend planning documents:
 
 Immediate frontend priority:
 
-- Carry the completed SadConsole spike findings into a frontend architecture plan before more frontend feature work.
-- Use the SadConsole frontend roadmap to pave shared session/action/target/log/entity-panel contracts before handing rich UI work to frontend-owner.
+- Carry the completed SadConsole spike findings into the current SadConsole frontend and packaging path.
+- Use the SadConsole frontend roadmap to keep shared session/action/target/log/entity-panel contracts aligned while frontend-owner polishes the canonical debug/browser shell.
 - Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so future Console, SadConsole, Godot, or editor-facing surfaces consume the same capabilities.
-- Keep Console as the supported minimal demo surface until a replacement frontend is selected.
+- Make SadConsole the supported shareable demo/frontend surface; keep Console as fallback/minimal CLI and debug tooling.
 
 Planned next sprint:
 
@@ -420,7 +420,7 @@ Promotion trigger:
 
 ### Bucket 8: Unified frontend, inspection UX, and integrated editor
 
-Status: Active strategic bucket with the SadConsole prototype spike concluded as research findings only. The old prototype project is not current source; future SadConsole implementation should start fresh as `GameGameGame.SadConsole` after shared contracts are selected. Current Avalonia GUI remains legacy-priority / maintenance-mode; Console remains the supported minimal frontend until a replacement is selected.
+Status: Active strategic bucket with SadConsole now serving as the canonical debug/browser frontend project. Current Avalonia GUI remains legacy-priority / maintenance-mode; Console remains fallback/minimal CLI and debug tooling.
 
 Consolidated scope:
 
@@ -439,8 +439,8 @@ Priority order:
 6. Facing/target/active-actor visualization for play and dense debug simulations, including alternate render styles such as 2x2 color blocks, larger bordered glyph tiles, configurable themes/layouts, and active-actor/focus display.
 7. Saved runlog/playback UX: test inspector or runlog stepper with forward/back controls, plus richer visual state debugging backed by shared history.
 8. History playback / SadConsole-rendered visual export for shareable debug artifacts.
-9. Distribution for a future build: investigate and implement an itch.io-friendly browser/HTML5 path if the selected frontend stack can support it; otherwise record the blocker and provide the best shareable fallback while reassessing frontend technology risk.
-10. Future integrated editor affordances: `Run in Console` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
+9. Distribution for SadConsole feedback builds; browser/HTML5 hosting is deferred unless a later frontend-technology checkpoint re-promotes it.
+10. Future integrated editor affordances: `Run in SadConsole` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
 11. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
 12. Retire or replace the current Avalonia GUI only when the future frontend/editor surface is viable.
 
@@ -450,8 +450,8 @@ This table summarizes findings from the completed spike; it does not imply that 
 
 | Roadmap need | Current coverage |
 | --- | --- |
-| Direct scenario launch and materialization reuse | Partially covered by prototype command-line launch; production Console catalog/menu remains separate. |
-| Manifest/scenario selection menu | Not covered in SadConsole; production Console has shared scenario catalog/menu concepts to reuse. |
+| Direct scenario launch and materialization reuse | Covered by production SadConsole command-line launch through the shared playable session launcher. |
+| Manifest/scenario selection menu | Covered in production SadConsole through the shared scenario catalog/menu path; Console retains fallback/CLI scan support. |
 | Entity panel chain from containment path | Partially covered; panels render from inspection path and auto-focus newly inspected panels. |
 | Expand/collapse panels and keyboard focus | Partially covered; prototype supports collapse/expand and Tab focus, but layout/focus rules are not production-ready. |
 | Keyboard-first play/inspect/action modes | Partially covered; Play, Inspect, pickup/drop/enter/exit prompt modes exist and need polish. |
@@ -459,7 +459,7 @@ This table summarizes findings from the completed spike; it does not imply that 
 | Mouse hit-testing/click inspection | Not covered. |
 | Facing/target/active-actor visualization | Partially covered elsewhere by headless debug rendering; not yet a strong SadConsole UX. |
 | Local per-panel logs from universal turn trace | Partially covered in production SadConsole through history-backed global/local action logs with conservative autonomous anchors. |
-| Itch.io browser/HTML5 distribution | Not covered; current prototype targets `net10.0` with `MonoGame.Framework.DesktopGL`, so browser export needs investigation before assuming feasibility. |
+| Itch.io browser/HTML5 distribution | Deferred; current SadConsole feedback builds target desktop `net10.0` with `MonoGame.Framework.DesktopGL`, so browser export remains a later technology-risk investigation rather than a current requirement. |
 | Reusable panel layout geometry/view models | Partially covered; view models exist, but panel geometry and hit-testing are not centralized. |
 | Runlog stepper / debug playback frontend | Not covered; backlog now prefers saved runlogs/history playback over extending the legacy recorder. |
 | Integrated editor affordances | Not covered; must reuse existing editor/API concepts when promoted. |
@@ -470,17 +470,16 @@ Dependencies:
 - Depends on shared Core/Content/Headless/Editor service/API contracts staying frontend-agnostic.
 - Frontend behavior must not contradict engine/editor capability contracts or add frontend-only simulation semantics.
 - Final frontend-engine choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer; short-term work should still pave SadConsole as the canonical debug/browser direction.
-- Gamma Console breadcrumb work may continue as the supported minimal demo path, but interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated frontend bucket.
+- Console breadcrumb work may continue only as explicitly selected fallback polish; interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated SadConsole/frontend bucket.
 
 Promotion trigger:
 
-- Promote when SadConsole/frontend contract paving needs shared Core/Content/Headless work, when Gamma tester feedback shows current fallback Console cannot adequately support play/inspection/debug workflows, or when interactive breadcrumb/multi-panel UI becomes central enough to expand the SadConsole debug/browser surface.
+- Promote when SadConsole/frontend contract paving needs shared Core/Content/Headless work, when tester feedback shows current SadConsole feedback builds need stronger play/inspection/debug workflows, or when interactive breadcrumb/multi-panel UI becomes central enough to expand the SadConsole debug/browser surface.
 
 Decision checkpoint after the timebox:
 
-- **Replace Console as debug/prototype frontend** only if SadConsole proves it can cover debug play, scenario selection, logs, packaging, and developer ergonomics without losing important Console workflows.
-- **Stay alongside Console as the main shareable frontend** if SadConsole is clearly better for testers but Console remains valuable as the minimal CLI/debug fallback.
-- **Postmortem/R&D only** if the log/menu/package explorations reveal enough friction, especially around browser delivery, to justify starting a different shareable frontend path.
+- **Continue with SadConsole as the main shareable frontend** if feedback builds cover debug play, scenario selection, logs, packaging, and developer ergonomics while Console remains useful as minimal CLI/debug fallback.
+- **Reassess frontend technology** only if packaging, editor-widget, mouse, layout, or browser-delivery constraints become significant enough to justify starting a different shareable frontend path.
 
 ### Bucket 9: Reactions and cross-entity behavior
 
