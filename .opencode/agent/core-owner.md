@@ -19,6 +19,7 @@ permission:
     "tests/**": allow
     "*": ask
   task:
+    "core-imp": allow
     "frontend-owner": allow
     "content-editor": allow
 ---
@@ -57,3 +58,14 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 - For changes to existing behavior, ensure the plan traces affected invariants from `docs/Source of Truth/invariants.md` to the existing tests that cover them, or explicitly records `None`.
 - Before implementation, revise the traced existing tests where appropriate and/or add new tests so the planned behavior is represented by intentionally failing tests.
 - Implement the smallest coordinated Core/Content/Editor change needed to make those tests pass, then run targeted and relevant broader test suites.
+
+## `core-imp` Delegation Workflow
+- Use `core-imp` as a narrowly-scoped implementation executor after Core-Owner has completed architecture assessment, invariant/test tracing, acceptance criteria, and failing TDD tests.
+- Do not ask `core-imp` to own feature design, cross-system trade-offs, documentation policy, sprint scope, content authoring decisions, or final review.
+- Prefer delegating small implementation chunks with explicit file paths, named failing tests, expected behavior, non-goals, and patterns to follow.
+- Keep one handoff focused on one verifiable outcome where possible, such as runtime state storage, clone/restore support, a service extraction, or an editor parity update.
+- Do not delegate broad prompts such as "implement the feature" when behavior spans scheduling, history, projections, editor validation, and frontend integration.
+- Tell `core-imp` to stop and report uncertainty when the requested change requires new architecture, ambiguous behavior ordering, trace-shape decisions, or edits outside the assigned scope.
+- Review `core-imp` results before further delegation: inspect changed files, test output, assumptions, and any reported uncertainty.
+- Core-Owner remains responsible for updating Source of Truth docs, capability matrices, content-authoring guidance, and invariant/test trace maps unless explicitly delegating a narrow doc edit.
+- Core-Owner remains responsible for final targeted and relevant broader test runs and for deciding whether additional Editor/Content/Console/frontend-owner coordination is needed.
