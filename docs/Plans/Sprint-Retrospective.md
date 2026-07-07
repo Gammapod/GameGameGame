@@ -4,6 +4,8 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What went well
 
+- Runtime action-plan override MVP landed as a tight Core/Content/Editor vertical slice: one-turn pre/main/post slots, canonical producer Action Steps, YAML/editor/API validation, and a manual-test scenario all share the same simple `targetSlot` + `planId` model.
+- Splitting the work into runtime spine, authorable pre-plan slice, content exercise, then symmetric main/post producers kept the sprint easy to validate and avoided prematurely designing passive items, possession, or dynamic target-plan copying.
 - The unified history/log/rollback sprint worked well as a sequence of thin vertical slices. Starting with `WorldState` snapshots, then history frames, then rollback, successful submissions, failed entries, interval actor logs, projection, SadConsole consumption, and undo kept each step testable and prevented a large risky rewrite.
 - Coordinating Core-owner and frontend-owner at ownership boundaries was effective: Core established shared history/projection/rollback semantics, then frontend-owner wired SadConsole presentation and input without inventing frontend-only simulation rules.
 - Calling content-editor to review the migrated headless scenario reports caught the correct acceptance question: preserve authoring-facing report usefulness while changing the backing model.
@@ -34,6 +36,9 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## What was difficult
 
+- The main-plan override semantics had a subtle trap: scheduled entity plans were being materialized before the override chain was composed. A targeted test made clear that `Main` override should avoid planning the default entity plan at all for that turn.
+- Scenario recording/folder discovery can still mutate `Beta/Manifest.yaml` as a side effect. During wrap-up this had to be reverted to preserve the no-modify-existing-content rule while keeping the new showcase file.
+- The initial spike vocabulary described behavior-provider entity overrides, while the MVP implemented referenced plan-slot overrides. Naming and docs needed careful cleanup so future readers do not assume dynamic target-plan copying or passive inventory overrides are already supported.
 - The roadmap had accumulated completed implementation sequences inline. During cleanup, active planning had to be separated from completed evidence. Future sprints should archive completed plans immediately instead of leaving long completed checklists in active roadmaps.
 - Some documentation lagged behind implementation quickly: frontend standards still said global logs were controlled-only after history projection had autonomous rows. Wrap-up should include stale-statement greps for old capability limitations.
 - The term “scenario recording” now refers to legacy tooling, while future desired work is history playback / visual export. Keeping those separate in docs is important to avoid accidentally extending the wrong surface.
@@ -61,6 +66,8 @@ Status: Living retrospective notes from the current wrap-up.
 
 ## Process improvements
 
+- For override/status-like features, explicitly distinguish “destination model supports this” from “content can author this now.” That distinction helped keep mimic target-plan copying, passive inventory contribution, and player possession out of the MVP.
+- When validating content scenarios with tooling that scans/discovers folders, check for generated manifest/cache edits before handoff.
 - For cross-layer refactors, keep using a numbered-slice checklist, but archive the checklist once complete and leave only follow-ups in active roadmaps.
 - When a legacy tool is intentionally not migrated, document both parts in the same cleanup: current legacy support status and the preferred replacement backlog item.
 - Use content-facing review for report/API migrations even when automated tests preserve shape; the key acceptance criterion is whether the report still answers authoring questions.

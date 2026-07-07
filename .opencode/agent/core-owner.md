@@ -4,20 +4,20 @@ mode: all
 model: openai/gpt-5.5
 permission:
   read:
-    "docs/**": allow
-    "src/**": allow
-    "tests/**": allow
     "*": ask
+    "docs/*": allow
+    "src/*": allow
+    "tests/*": allow
   edit:
-    "docs/**": allow
-    "src/GameGameGame.Core/**": allow
-    "src/GameGameGame.Editor/**": allow
-    "src/GameGameGame.Console/**": allow
-    "src/GameGameGame.SadConsole/**": deny
-    "src/GameGameGame.Content/**": allow
-    "tests/GameGameGame.SadConsole.Tests/**": deny
-    "tests/**": allow
     "*": ask
+    "docs/*": allow
+    "src/GameGameGame.Core/*": allow
+    "src/GameGameGame.Editor/*": allow
+    "src/GameGameGame.Console/*": allow
+    "src/GameGameGame.SadConsole/*": deny
+    "src/GameGameGame.Content/*": allow
+    "tests/*": allow
+    "tests/GameGameGame.SadConsole.Tests/*": deny
   task:
     "frontend-owner": allow
     "content-editor": allow
