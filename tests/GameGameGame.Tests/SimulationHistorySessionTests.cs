@@ -11,6 +11,7 @@ public sealed class SimulationHistorySessionTests
         world.AdvanceTurn();
         world.SetActionFacing(TestWorld.PlayerId, Direction.East);
         world.SetActionTarget(TestWorld.PlayerId, 2, TestWorld.SlimeId);
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
         var trace = TraceNode.Success("original trace", "before clone");
         trace.Add(TraceNode.Info("child trace"));
         world.RecordTrace(trace);
@@ -25,12 +26,14 @@ public sealed class SimulationHistorySessionTests
         Assert.Equal(TestWorld.PlayerInventoryPlaneId, clone.GetRegisteredInventoryPlaneId(TestWorld.PlayerId));
         Assert.Equal(Direction.East, clone.GetActionFacing(TestWorld.PlayerId));
         Assert.Equal(TestWorld.SlimeId, clone.GetActionTarget(TestWorld.PlayerId, 2));
+        Assert.Equal(TestWorld.RockId, clone.GetBehaviorProvider(TestWorld.SlimeId));
         Assert.Equal("original trace", clone.LastTrace?.Label);
         Assert.Equal("child trace", clone.LastTrace?.Children.Single().Label);
         Assert.Equal("Player moved.", clone.LastTurnReport?.Actions.Single().Summary);
         Assert.NotSame(world.Entities, clone.Entities);
         Assert.NotSame(world.Occupancy, clone.Occupancy);
         Assert.NotSame(world.ActionStates[TestWorld.PlayerId], clone.ActionStates[TestWorld.PlayerId]);
+        Assert.NotSame(world.BehaviorProviders, clone.BehaviorProviders);
         Assert.NotSame(world.LastTrace, clone.LastTrace);
         Assert.NotSame(world.LastTurnReport?.Actions.Single().Trace, clone.LastTurnReport?.Actions.Single().Trace);
 

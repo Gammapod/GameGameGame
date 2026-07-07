@@ -22,6 +22,8 @@ public sealed class WorldState
 
     public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
 
+    public Dictionary<EntityId, EntityId> BehaviorProviders { get; } = [];
+
     public WorldState Clone()
     {
         var clone = new WorldState();
@@ -73,6 +75,12 @@ public sealed class WorldState
         foreach (var (entityId, state) in source.ActionStates)
         {
             ActionStates[entityId] = CloneActionState(state);
+        }
+
+        BehaviorProviders.Clear();
+        foreach (var (actorId, providerId) in source.BehaviorProviders)
+        {
+            BehaviorProviders[actorId] = providerId;
         }
     }
 
@@ -191,6 +199,17 @@ public sealed class WorldState
 
         return slot == 1 ? state.Target : null;
     }
+
+    public void SetBehaviorProvider(EntityId actorId, EntityId providerId) =>
+        BehaviorProviders[actorId] = providerId;
+
+    public bool ClearBehaviorProvider(EntityId actorId) => BehaviorProviders.Remove(actorId);
+
+    public EntityId? GetBehaviorProvider(EntityId actorId) =>
+        BehaviorProviders.TryGetValue(actorId, out var providerId) ? providerId : null;
+
+    public bool IsAssignedBehaviorProvider(EntityId entityId) =>
+        BehaviorProviders.Values.Contains(entityId);
 
     public NodeId AddNode(PlaneId planeId, GridCoord coord)
     {

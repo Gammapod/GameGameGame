@@ -515,6 +515,7 @@ Concept:
 - When simulation reaches `PlayerInputStep`, the engine/frontend would pause for player input rather than automatically resolving the chain.
 - Subsequent Action Steps in the plan could describe available player choices, such as move, pickup, drop, or interact, instead of behaving as ordinary fallback attempts.
 - This would allow any entity to become player-controlled through authored behavior rather than through a special hardcoded player entity.
+- Deferred design item: a future `Use` action may let an actor use a carried entity as an action source, for example using a carried goblin's special action against an adjacent target. This is intentionally not part of the runtime behavior-override spike because it needs explicit actor/source attribution, target legality, selected Action Step semantics, trace/log shape, and turn-consumption decisions.
 
 Dependencies:
 

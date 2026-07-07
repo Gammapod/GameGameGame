@@ -204,8 +204,8 @@ internal sealed class SadConsoleSessionViewBuilder(
             : session.PlayerEntityId;
     }
 
-    private static bool UsesWorldCursor(ShellMode mode) => mode is ShellMode.PickupSource or ShellMode.DropDestination or ShellMode.InspectSource or ShellMode.EnterSource or ShellMode.ExitDirection;
-    private static bool UsesInventoryCursor(ShellMode mode) => mode is ShellMode.PickupDestination or ShellMode.DropSource;
+    private static bool UsesWorldCursor(ShellMode mode) => mode is ShellMode.PickupSource or ShellMode.DropDestination or ShellMode.InspectSource or ShellMode.EnterSource or ShellMode.ExitDirection or ShellMode.OverwriteTarget or ShellMode.TakeOverwriteTarget;
+    private static bool UsesInventoryCursor(ShellMode mode) => mode is ShellMode.PickupDestination or ShellMode.DropSource or ShellMode.OverwriteProviderSource or ShellMode.TakeOverwriteDestination;
 
     private static string FormatAffordances(ControlledActorAffordances affordances)
     {
@@ -217,7 +217,7 @@ internal sealed class SadConsoleSessionViewBuilder(
     {
         return mode switch
         {
-            ShellMode.Play => $"Arrows move. I inspect. P pickup. D drop. E enter. X exit. U undo ({(canUndo ? "available" : "unavailable at frame 0")}). Highlights: green valid action target, red blocked move, blue controlled entity, purple current target, gold cursor. Facing/target appear in text.",
+            ShellMode.Play => $"Arrows move. I inspect. P pickup. D drop. E enter. X exit. G give-overwrite. T take-overwrite. U undo ({(canUndo ? "available" : "unavailable at frame 0")}). Highlights: green valid action target, red blocked move, blue controlled entity, purple current target, gold cursor. Facing/target appear in text.",
             ShellMode.PickupSource => FormatEntityAffordanceHint("Pickup source", affordances.PickupSources),
             ShellMode.PickupDestination when selectedEntity is { } target => FormatDestinationAffordanceHint("Pickup destination", affordances.PickupDestinations(target)),
             ShellMode.DropSource => FormatEntityAffordanceHint("Drop source", affordances.DropSources),
@@ -225,6 +225,10 @@ internal sealed class SadConsoleSessionViewBuilder(
             ShellMode.EnterSource => FormatEntityAffordanceHint("Enter target", affordances.EnterTargets),
             ShellMode.ExitDirection => FormatDirectionAffordanceHint("Exit", affordances.ExitDirections),
             ShellMode.InspectSource => "Inspect: gold cursor selects visible entities in the current container panel.",
+            ShellMode.OverwriteProviderSource => "GiveOverwrite: gold cursor selects a carried provider from inventory.",
+            ShellMode.OverwriteTarget => "GiveOverwrite: gold cursor selects adjacent entity to overwrite.",
+            ShellMode.TakeOverwriteTarget => "TakeOverwrite: gold cursor selects adjacent overridden entity.",
+            ShellMode.TakeOverwriteDestination => "TakeOverwrite: gold cursor selects inventory destination for returned provider.",
             _ => string.Empty
         };
     }

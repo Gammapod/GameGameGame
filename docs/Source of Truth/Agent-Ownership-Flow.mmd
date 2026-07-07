@@ -1,44 +1,92 @@
-flowchart TD
-%% Intended to show the edges between agent workflows, does not define the full responsibilities within an agent's ownership.
-  subgraph core["core-owner"]
-    feature_start(("New Feature Needed"))
-    planning?{"Already planned?"}
-    simulation_work[["Implement core simulation"]]
-    %%  Including TDD workflow and Editor parity
+swimlane-beta LR
+%% Intended to be a BPMN-style ownership chart, not define the full responsibilities within an agent's ownership.
+%% Each workflow is started and overseen by a human, not fully autonomous.
+ 
+
+  subgraph frontend["Swimlane: frontend-owner"]
+    frontend-owner[/"`frontend-owner
+      Model: GPT-5.5
+      Read: SadConsole, Tests
+      Write: SadConsole, Tests`"\]
+
+    visuals_start(("Start: New Visuals"))
+    contract?{"Clear simulation model exposed?"}
+    component_edit[["Create/change component(s)"]]
+    visuals_end((("End: New Visuals")))
+    feature_start2((("goto New Feature")))
+  end
+  frontend-owner ==o visuals_start
+  visuals_start --> contract?
+  contract? -->|yes| component_edit
+  contract? -.->|no| feature_start2
+  component_edit --> visuals_end
+  
+  %% capability_gap? -.->|"yes"| feature_start
+  
+  subgraph core["Swimlane: core-owner"]
+    core-owner[/"`core-owner
+      Model: GPT-5.5
+      Read: all
+      Write: Core, Editor, Tests`"\]
+
+    feature_start(("Start: New Feature"))
+    planning?{"`On roadmap?
+    Implementation planned?`"}
+  
+    subgraph prototype["Prototyping Spike"]
+      ad-hoc["Get it working"]
+      findings["Create findings doc"]
+      viable?{"Is the feature viable?"}
+      dont((("don't")))
+    end
+    ad-hoc --> findings
+    findings --> viable?
+    viable? --> |no| dont
+    viable? --> |yes| tdd
+
+    tdd["Create failing TDD tests"]
+    review["Review implementation"]
+    
     frontend?{"New visuals needed?"}
     gameplay?{"Needs authored content/scenario coverage?"}
-    spike_or_plan[["Planning Spike"]]
-    feature_end((("New Feature Made")))
+    feature_end((("End: New Feature")))
   end
+  core-owner ==o feature_start
   feature_start --> planning?
-  planning? -->|yes| simulation_work
-  planning? -->|no| spike_or_plan
-  spike_or_plan --> simulation_work
-  simulation_work --> gameplay?
-  gameplay? -->|yes| scenario_start
+  planning? -->|yes| core-imp
+  planning? -->|no| ad-hoc
+  review --> gameplay?
+  gameplay? -.->|yes| scenario_start
   gameplay? -->|no| frontend?
-  frontend? -->|yes| visuals_start
+  frontend? -.->|yes| visuals_start
   frontend? -->|no| feature_end
 
-  subgraph content["content-editor"]
-    scenario_start(("New Scenario Needed"))
+  subgraph implementation["Implement core simulation"]
+    core-imp[/"`core-implementor
+      Called only by core-owner
+      Model: MiMo V2.5 Free
+      Read: Core, Editor
+      Write: Core, Editor`"\]
+    implement["Implement until tests pass"]
+  end
+  core-imp ==o implement
+  tdd -.-> implement
+  implement <-.-> review
+
+  subgraph content["Swimlane: content-editor"]
+    content-data[/"`content-editor
+      Model: GPT-5.5
+      Read: Editor, Content
+      Write: Editor, Content`"\]
+
+    scenario_start(("Start: New Scenario"))
     create_scenario[["Create scenario"]]
     %% Including templates, presentation, action plans, validation, etc
     capability_gap?{"Capability Gap?"}
-    scenario_end((("New Scenario Made")))
+    scenario_end((("End: New Scenario")))
   end
+  content-data ==o scenario_start
   scenario_start --> capability_gap?
-  capability_gap? -->|"yes"| feature_start
   capability_gap? -->|"no"| create_scenario
   create_scenario --> scenario_end
 
-  subgraph frontend["frontend-owner"]
-    visuals_start(("New Visuals Needed"))
-    component_edit[["Create/change component(s)"]]
-    contract?{"Clear simulation model exposed?"}
-    visuals_end((("New Visuals Made")))
-  end
-  visuals_start --> contract?
-  contract? -->|yes| component_edit
-  contract? -->|no| feature_start
-  component_edit --> visuals_end

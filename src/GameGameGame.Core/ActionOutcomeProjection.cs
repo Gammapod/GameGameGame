@@ -39,6 +39,11 @@ public static class ActionOutcomeProjection
             anchorEntityIds.Add(concreteTargetId);
         }
 
+        if (result.SecondaryTargetId is { } concreteSecondaryTargetId)
+        {
+            anchorEntityIds.Add(concreteSecondaryTargetId);
+        }
+
         var anchorPlaneIds = new HashSet<PlaneId>();
         AddPlane(anchorPlaneIds, result.Source);
         AddPlane(anchorPlaneIds, result.Destination);
@@ -50,6 +55,11 @@ public static class ActionOutcomeProjection
         if (result.TargetId is { } target && world.Entities.ContainsKey(target))
         {
             anchorPlaneIds.Add(world.GetEntityLocation(target).PlaneId);
+        }
+
+        if (result.SecondaryTargetId is { } secondaryTarget && world.Entities.ContainsKey(secondaryTarget))
+        {
+            anchorPlaneIds.Add(world.GetEntityLocation(secondaryTarget).PlaneId);
         }
 
         return new ActionOutcome(
@@ -115,6 +125,8 @@ public static class ActionOutcomeProjection
         ControlledActorCommandKind.Drop => "drop",
         ControlledActorCommandKind.Enter => "enter",
         ControlledActorCommandKind.Exit => "exit",
+        ControlledActorCommandKind.GiveOverwrite => "give-overwrite",
+        ControlledActorCommandKind.TakeOverwrite => "take-overwrite",
         _ => kind.ToString().ToLowerInvariant()
     };
 
@@ -129,6 +141,8 @@ public static class ActionOutcomeProjection
         "drop" => targetName is { } dropTarget ? $"{actorName} dropped {dropTarget}" : $"{actorName} dropped target",
         "enter" => targetName is { } enterTarget ? $"{actorName} entered {enterTarget}" : $"{actorName} entered target",
         "exit" => direction is { } exitDirection ? $"{actorName} exited {exitDirection}" : $"{actorName} exited",
+        "give-overwrite" => targetName is { } provider ? $"{actorName} gave overwrite provider {provider}" : $"{actorName} gave overwrite provider",
+        "take-overwrite" => targetName is { } target ? $"{actorName} took overwrite provider from {target}" : $"{actorName} took overwrite provider",
         _ => $"{actorName} {actionKind}ed"
     };
 

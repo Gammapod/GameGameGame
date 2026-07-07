@@ -41,9 +41,9 @@ public sealed class TurnService(
     {
         world.AdvanceTurn();
 
-        foreach (var (entityId, actionPlan) in actionPlans)
+        foreach (var entityId in GetScheduledActorIds(world))
         {
-            if (world.Entities.ContainsKey(entityId))
+            if (world.Entities.ContainsKey(entityId) && TryGetEffectiveActionPlan(world, entityId, out var actionPlan))
             {
                 beforePlan?.Invoke(world, entityId);
                 var result = ActorTurnResolver.ResolvePlan(world, entityId, actionPlan.PlanTurn(world, entityId, movement), movement);
@@ -52,6 +52,37 @@ public sealed class TurnService(
                 actions.Add(CreateActionReport(world, entityId, result));
             }
         }
+    }
+
+    private IEnumerable<EntityId> GetScheduledActorIds(WorldState world)
+    {
+        var seen = new HashSet<EntityId>();
+
+        foreach (var entityId in actionPlans.Keys.Concat(world.BehaviorProviders.Keys))
+        {
+            if (!seen.Add(entityId))
+            {
+                continue;
+            }
+
+            if (world.IsAssignedBehaviorProvider(entityId))
+            {
+                continue;
+            }
+
+            yield return entityId;
+        }
+    }
+
+    private bool TryGetEffectiveActionPlan(WorldState world, EntityId actorId, out IEntityActionPlan actionPlan)
+    {
+        if (world.GetBehaviorProvider(actorId) is { } providerId && actionPlans.TryGetValue(providerId, out var providerPlan))
+        {
+            actionPlan = providerPlan;
+            return true;
+        }
+
+        return actionPlans.TryGetValue(actorId, out actionPlan!);
     }
 
     public bool ResolvePlan(WorldState world, EntityId actorId, PlannedActionPlan plan)

@@ -75,6 +75,94 @@ public sealed class CoreInvariantTests
     }
 
     [Fact]
+    public void ActorUsesBehaviorProviderDefaultPlanWhenOverrideIsAssigned()
+    {
+        var world = TestWorld.CreateWorld();
+        var actorPlan = new RecordingEntityActionPlan(new RecordingIntent("actor plan"));
+        var providerPlan = new RecordingEntityActionPlan(new RecordingIntent("provider plan"));
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        var turns = new TurnService(
+            new MovementService(),
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [TestWorld.SlimeId] = actorPlan,
+                [TestWorld.RockId] = providerPlan
+            });
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal(0, actorPlan.TurnsPlanned);
+        Assert.Equal(1, providerPlan.TurnsPlanned);
+        Assert.Equal(TestWorld.SlimeId, providerPlan.LastPlannedFor);
+        Assert.Contains(world.LastTrace!.Children, child => child.Label.Contains("Slime") && TraceContains(child, "provider plan"));
+    }
+
+    [Fact]
+    public void BehaviorProviderIsNotScheduledIndependentlyWhileAssigned()
+    {
+        var world = TestWorld.CreateWorld();
+        var actorPlan = new RecordingEntityActionPlan(new RecordingIntent("actor plan"));
+        var providerPlan = new RecordingEntityActionPlan(new RecordingIntent("provider plan"));
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        var turns = new TurnService(
+            new MovementService(),
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [TestWorld.SlimeId] = actorPlan,
+                [TestWorld.RockId] = providerPlan
+            });
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal(1, providerPlan.TurnsPlanned);
+        Assert.DoesNotContain(world.LastTrace!.Children, child => child.Label.Contains("Rock"));
+    }
+
+    [Fact]
+    public void RemovingBehaviorProviderRestoresActorDefaultPlan()
+    {
+        var world = TestWorld.CreateWorld();
+        var actorPlan = new RecordingEntityActionPlan(new RecordingIntent("actor plan"));
+        var providerPlan = new RecordingEntityActionPlan(new RecordingIntent("provider plan"));
+        var turns = new TurnService(
+            new MovementService(),
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [TestWorld.SlimeId] = actorPlan,
+                [TestWorld.RockId] = providerPlan
+            });
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        turns.AdvanceAfterPlayerTurn(world);
+
+        world.ClearBehaviorProvider(TestWorld.SlimeId);
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal(1, actorPlan.TurnsPlanned);
+        Assert.Contains(world.LastTrace!.Children, child => child.Label.Contains("Slime") && TraceContains(child, "actor plan"));
+    }
+
+    [Fact]
+    public void BehaviorOverridePreservesActorTargetingAndActionState()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.SlimeId, Direction.East);
+        world.SetActionFacing(TestWorld.RockId, Direction.West);
+        var providerPlan = new RecordingEntityActionPlan(new ReadFacingIntent(Direction.East));
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        var turns = new TurnService(
+            new MovementService(),
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [TestWorld.RockId] = providerPlan
+            });
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal(TestWorld.SlimeId, providerPlan.LastPlannedFor);
+        Assert.True(world.LastTurnReport!.Actions.Single().Succeeded);
+    }
+
+    [Fact]
     public void TurnServiceUpdatesFacingAfterSuccessfulDirectionalMovement()
     {
         var world = TestWorld.CreateWorld();
@@ -109,11 +197,45 @@ public sealed class CoreInvariantTests
     {
         public int TurnsPlanned { get; private set; }
 
+        public EntityId? LastPlannedFor { get; private set; }
+
         public PlannedActionPlan PlanTurn(WorldState world, EntityId entityId, MovementService movement)
         {
             TurnsPlanned++;
+            LastPlannedFor = entityId;
 
             return PlannedActionPlan.Single(action);
+        }
+    }
+
+    private sealed class RecordingIntent(string label) : IActionIntent
+    {
+        public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement) =>
+            new(true, TraceNode.Success(label));
+
+        public void Execute(WorldState world, EntityId actorId, MovementService movement)
+        {
+        }
+
+        public ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement) =>
+            new(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success(label));
+    }
+
+    private sealed class ReadFacingIntent(Direction expectedFacing) : IActionIntent
+    {
+        public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement) =>
+            new(true, TraceNode.Success("read actor facing"));
+
+        public void Execute(WorldState world, EntityId actorId, MovementService movement)
+        {
+        }
+
+        public ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement)
+        {
+            var actualFacing = world.GetActionFacing(actorId);
+            return actualFacing == expectedFacing
+                ? new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("read actor facing", actualFacing.ToString()))
+                : new ActionResolution(false, ConsumesTurn: true, ContinuePlan: false, TraceNode.Failure("read actor facing", FailureReason.None, actualFacing?.ToString() ?? "missing"));
         }
     }
 }

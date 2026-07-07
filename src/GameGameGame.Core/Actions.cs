@@ -368,6 +368,109 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
     }
 }
 
+public sealed record GiveOverwriteAction(EntityId ProviderId, EntityId TargetActorId) : IActionIntent
+{
+    public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"GiveOverwrite {ProviderId} -> {TargetActorId}", TraceStatus.Info);
+
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+        }
+
+        if (!world.Entities.ContainsKey(ProviderId) || !world.Entities.ContainsKey(TargetActorId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetMissing, "provider or target actor does not exist");
+        }
+
+        if (ProviderId == actorId || TargetActorId == actorId || ProviderId == TargetActorId)
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetIsActor, "overwrite provider, target actor, and controlled actor must be distinct");
+        }
+
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId || world.GetEntityLocation(ProviderId).PlaneId != inventoryPlaneId)
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetNotInInventory, $"provider {ProviderId} is not carried by {actorId}");
+        }
+
+        if (!movement.AreAdjacent(world, actorId, TargetActorId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"target actor {TargetActorId} is not adjacent to {actorId}");
+        }
+
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"{ProviderId} will override {TargetActorId}'s action plan";
+        return new ActionEvaluation(true, trace);
+    }
+
+    public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
+        world.SetBehaviorProvider(TargetActorId, ProviderId);
+}
+
+public sealed record TakeOverwriteAction(EntityId TargetActorId, PlaneCoord Destination) : IActionIntent
+{
+    public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"TakeOverwrite {TargetActorId} -> {Destination}", TraceStatus.Info);
+
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+        }
+
+        if (!world.Entities.ContainsKey(TargetActorId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetMissing, $"target actor {TargetActorId} does not exist");
+        }
+
+        if (world.GetBehaviorProvider(TargetActorId) is not { } providerId || !world.Entities.ContainsKey(providerId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetMissing, $"target actor {TargetActorId} has no behavior provider");
+        }
+
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId || Destination.PlaneId != inventoryPlaneId)
+        {
+            return ActionTrace.Fail(trace, FailureReason.InvalidInventoryDestination, $"destination must be inside {actorId}'s inventory");
+        }
+
+        if (!movement.AreAdjacent(world, actorId, TargetActorId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"target actor {TargetActorId} is not adjacent to {actorId}");
+        }
+
+        var providerLocation = world.GetEntityLocation(providerId);
+        if (providerLocation != Destination)
+        {
+            var relocation = new ConstrainedInventoryRelocationService(movement).Evaluate(world, providerId, MovementDestination.Plane(Destination));
+            trace.Add(relocation.Trace);
+            if (!relocation.CanRelocate)
+            {
+                return ActionTrace.Fail(trace, relocation.Trace.Reason, relocation.Trace.Detail ?? $"cannot return provider {providerId} to {Destination}");
+            }
+        }
+
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"{providerId} will stop overriding {TargetActorId}'s action plan";
+        return new ActionEvaluation(true, trace);
+    }
+
+    public void Execute(WorldState world, EntityId actorId, MovementService movement)
+    {
+        if (world.GetBehaviorProvider(TargetActorId) is not { } providerId)
+        {
+            return;
+        }
+
+        if (world.GetEntityLocation(providerId) != Destination)
+        {
+            new ConstrainedInventoryRelocationService(movement).TryRelocate(world, providerId, MovementDestination.Plane(Destination));
+        }
+
+        world.ClearBehaviorProvider(TargetActorId);
+    }
+}
+
 internal static class ActionTrace
 {
     public static ActionEvaluation Fail(TraceNode trace, FailureReason reason, string detail)

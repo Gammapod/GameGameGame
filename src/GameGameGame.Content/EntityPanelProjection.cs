@@ -57,10 +57,33 @@ public sealed class EntityPanelProjectionService(Func<EntityId, EntityInspection
             breadcrumb,
             panel.Properties,
             BuildActionState(world, entityId),
-            actionPlans.ContainsKey(entityId) ? actionPlans[entityId].GetType().Name : null,
+            BuildActionPlanSummary(world, entityId, actionPlans),
             panel.InventoryGrid,
             contents,
             localLog);
+    }
+
+    private static string? BuildActionPlanSummary(
+        WorldState world,
+        EntityId entityId,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans)
+    {
+        var ownPlan = actionPlans.TryGetValue(entityId, out var plan) ? plan.GetType().Name : null;
+        if (world.GetBehaviorProvider(entityId) is not { } providerId)
+        {
+            return ownPlan;
+        }
+
+        var providerName = world.Entities.TryGetValue(providerId, out var provider)
+            ? provider.Name
+            : providerId.ToString();
+        var providerPlan = actionPlans.TryGetValue(providerId, out var providedPlan)
+            ? providedPlan.GetType().Name
+            : "no action plan";
+
+        return ownPlan is null
+            ? $"Active override: {providerName} ({providerPlan})"
+            : $"Own: {ownPlan}; Active override: {providerName} ({providerPlan})";
     }
 
     private static EntityPanelActionStateProjection BuildActionState(WorldState world, EntityId entityId)

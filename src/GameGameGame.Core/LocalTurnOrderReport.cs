@@ -57,7 +57,7 @@ public sealed record LocalTurnOrderReport(
         }
 
         orderedActors.AddRange(occupants
-            .Where(entry => actionPlans.ContainsKey(entry.EntityId) && entry.EntityId != playerId)
+            .Where(entry => HasEffectiveActionPlan(world, entry.EntityId, actionPlans) && entry.EntityId != playerId && !world.IsAssignedBehaviorProvider(entry.EntityId))
             .Select(entry => (entry.EntityId, entry.Location, LocalTurnParticipation.Actor)));
 
         for (var index = 0; index < orderedActors.Count; index++)
@@ -72,6 +72,19 @@ public sealed record LocalTurnOrderReport(
         }
 
         return new LocalTurnOrderReport(planeId, rows);
+    }
+
+    private static bool HasEffectiveActionPlan(
+        WorldState world,
+        EntityId entityId,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans)
+    {
+        if (actionPlans.ContainsKey(entityId))
+        {
+            return true;
+        }
+
+        return world.GetBehaviorProvider(entityId) is { } providerId && actionPlans.ContainsKey(providerId);
     }
 
     private static LocalTurnOrderRow CreateRow(

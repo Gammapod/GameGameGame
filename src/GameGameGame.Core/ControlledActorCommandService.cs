@@ -6,13 +6,16 @@ public enum ControlledActorCommandKind
     Pickup,
     Drop,
     Enter,
-    Exit
+    Exit,
+    GiveOverwrite,
+    TakeOverwrite
 }
 
 public sealed record ControlledActorCommand(
     ControlledActorCommandKind Kind,
     Direction? Direction = null,
     EntityId? TargetId = null,
+    EntityId? SecondaryTargetId = null,
     PlaneCoord? Source = null,
     PlaneCoord? Destination = null)
 {
@@ -30,6 +33,12 @@ public sealed record ControlledActorCommand(
 
     public static ControlledActorCommand Exit(Direction direction) =>
         new(ControlledActorCommandKind.Exit, Direction: direction);
+
+    public static ControlledActorCommand GiveOverwrite(EntityId providerId, EntityId targetActorId) =>
+        new(ControlledActorCommandKind.GiveOverwrite, TargetId: providerId, SecondaryTargetId: targetActorId);
+
+    public static ControlledActorCommand TakeOverwrite(EntityId targetActorId, PlaneCoord destination) =>
+        new(ControlledActorCommandKind.TakeOverwrite, TargetId: targetActorId, Destination: destination);
 }
 
 public sealed record ControlledActorCommandResult(
@@ -37,6 +46,7 @@ public sealed record ControlledActorCommandResult(
     ControlledActorCommandKind Kind,
     Direction? Direction,
     EntityId? TargetId,
+    EntityId? SecondaryTargetId,
     PlaneCoord? Source,
     PlaneCoord? Destination,
     bool Succeeded,
@@ -54,6 +64,10 @@ public sealed class ControlledActorCommandService(
 {
     public ControlledActorCommandResult Execute(WorldState world, EntityId actorId, ControlledActorCommand command)
     {
+        var secondaryTargetId = command.SecondaryTargetId
+            ?? (command.Kind == ControlledActorCommandKind.TakeOverwrite && command.TargetId is { } overwriteTarget
+                ? world.GetBehaviorProvider(overwriteTarget)
+                : null);
         var action = CreateAction(command);
         var evaluation = action.Evaluate(world, actorId, movement);
 
@@ -66,6 +80,7 @@ public sealed class ControlledActorCommandService(
                 command.Kind,
                 command.Direction,
                 command.TargetId,
+                secondaryTargetId,
                 command.Source,
                 command.Destination,
                 Succeeded: false,
@@ -84,6 +99,7 @@ public sealed class ControlledActorCommandService(
             command.Kind,
             command.Direction,
             command.TargetId,
+            secondaryTargetId,
             command.Source,
             command.Destination,
             succeeded,
@@ -103,6 +119,8 @@ public sealed class ControlledActorCommandService(
             ControlledActorCommandKind.Drop when command.TargetId is { } targetId && command.Destination is { } destination => new DropAction(targetId, destination),
             ControlledActorCommandKind.Enter when command.TargetId is { } targetId => new EnterAction(targetId),
             ControlledActorCommandKind.Exit when command.Direction is { } direction => new ExitAction(direction),
+            ControlledActorCommandKind.GiveOverwrite when command.TargetId is { } providerId && command.SecondaryTargetId is { } targetActorId => new GiveOverwriteAction(providerId, targetActorId),
+            ControlledActorCommandKind.TakeOverwrite when command.TargetId is { } targetActorId && command.Destination is { } destination => new TakeOverwriteAction(targetActorId, destination),
             _ => throw new InvalidOperationException($"Controlled command {command.Kind} is missing required command data.")
         };
 

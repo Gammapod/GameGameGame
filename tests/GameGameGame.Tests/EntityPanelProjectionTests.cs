@@ -57,6 +57,41 @@ public sealed class EntityPanelProjectionTests
         Assert.Contains(playerProjection.Contents, row => row.EntityId == crateId && row.PreviousAction == "Projection Player picked up Projection Crate");
     }
 
+    [Fact]
+    public void EntityPanelProjectionShowsBehaviorOverrideSource()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        var service = new EntityPanelProjectionService();
+        var actionPlans = new Dictionary<EntityId, IEntityActionPlan>
+        {
+            [TestWorld.SlimeId] = new ProjectionTestActionPlan(),
+            [TestWorld.RockId] = new ProjectionProviderActionPlan()
+        };
+
+        var projection = service.Project(world, TestWorld.SlimeId, actionPlans);
+
+        Assert.Equal("Own: ProjectionTestActionPlan; Active override: Rock (ProjectionProviderActionPlan)", projection.ActionPlanSummary);
+    }
+
+    [Fact]
+    public void EntityPanelProjectionContentsTreatBehaviorProviderAsInertAndOverrideActorAsActor()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        world.RegisterInventoryPlane(TestWorld.PlayerId, TestWorld.WorldPlaneId);
+        var service = new EntityPanelProjectionService();
+        var actionPlans = new Dictionary<EntityId, IEntityActionPlan>
+        {
+            [TestWorld.RockId] = new ProjectionProviderActionPlan()
+        };
+
+        var projection = service.Project(world, TestWorld.PlayerId, actionPlans);
+
+        Assert.Contains(projection.Contents, row => row.EntityId == TestWorld.SlimeId && row.Participation == LocalTurnParticipation.Actor);
+        Assert.Contains(projection.Contents, row => row.EntityId == TestWorld.RockId && row.Participation == LocalTurnParticipation.Inert);
+    }
+
     private static EditableContentDocument CreateProjectionDocument()
     {
         var document = new EditableContentDocument();
@@ -86,5 +121,30 @@ public sealed class EntityPanelProjectionTests
             new EntityId("projectionPlayer"),
             new GridCoord(0, 0)));
         return document;
+    }
+
+    private sealed class ProjectionTestActionPlan : IEntityActionPlan
+    {
+        public PlannedActionPlan PlanTurn(WorldState world, EntityId entityId, MovementService movement) =>
+            PlannedActionPlan.Single(new ProjectionTestIntent("projection test"));
+    }
+
+    private sealed class ProjectionProviderActionPlan : IEntityActionPlan
+    {
+        public PlannedActionPlan PlanTurn(WorldState world, EntityId entityId, MovementService movement) =>
+            PlannedActionPlan.Single(new ProjectionTestIntent("projection provider"));
+    }
+
+    private sealed class ProjectionTestIntent(string label) : IActionIntent
+    {
+        public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement) =>
+            new(true, TraceNode.Success(label));
+
+        public void Execute(WorldState world, EntityId actorId, MovementService movement)
+        {
+        }
+
+        public ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement) =>
+            new(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success(label));
     }
 }

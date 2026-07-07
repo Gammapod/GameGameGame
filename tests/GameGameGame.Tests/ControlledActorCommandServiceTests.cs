@@ -63,4 +63,57 @@ public sealed class ControlledActorCommandServiceTests
         Assert.Equal(destination, world.GetEntityLocation(TestWorld.SlimeId));
         Assert.True(result.AdvancedTurn);
     }
+
+    [Fact]
+    public void ControlledActorCommandGiveOverwriteAssignsCarriedProviderToAdjacentTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var inventoryDestination = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
+        Assert.True(movement.TryRelocate(world, TestWorld.RockId, MovementDestination.Plane(inventoryDestination)));
+        var service = new ControlledActorCommandService(movement, new Dictionary<EntityId, IEntityActionPlan>());
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.GiveOverwrite(TestWorld.RockId, TestWorld.SlimeId));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ControlledActorCommandKind.GiveOverwrite, result.Kind);
+        Assert.Equal(TestWorld.RockId, result.TargetId);
+        Assert.Equal(TestWorld.SlimeId, result.SecondaryTargetId);
+        Assert.Equal(TestWorld.RockId, world.GetBehaviorProvider(TestWorld.SlimeId));
+        Assert.True(result.AdvancedTurn);
+    }
+
+    [Fact]
+    public void ControlledActorCommandTakeOverwriteClearsProviderAndKeepsOrReturnsItToInventory()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var inventoryDestination = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
+        Assert.True(movement.TryRelocate(world, TestWorld.RockId, MovementDestination.Plane(inventoryDestination)));
+        world.SetBehaviorProvider(TestWorld.SlimeId, TestWorld.RockId);
+        var service = new ControlledActorCommandService(movement, new Dictionary<EntityId, IEntityActionPlan>());
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.TakeOverwrite(TestWorld.SlimeId, inventoryDestination));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ControlledActorCommandKind.TakeOverwrite, result.Kind);
+        Assert.Equal(TestWorld.SlimeId, result.TargetId);
+        Assert.Equal(TestWorld.RockId, result.SecondaryTargetId);
+        Assert.Null(world.GetBehaviorProvider(TestWorld.SlimeId));
+        Assert.Equal(inventoryDestination, world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(result.AdvancedTurn);
+    }
+
+    [Fact]
+    public void ControlledActorCommandGiveOverwriteFailsWhenProviderIsNotCarried()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.GiveOverwrite(TestWorld.RockId, TestWorld.SlimeId));
+
+        Assert.False(result.Succeeded);
+        Assert.False(result.AdvancedTurn);
+        Assert.Null(world.GetBehaviorProvider(TestWorld.SlimeId));
+    }
 }

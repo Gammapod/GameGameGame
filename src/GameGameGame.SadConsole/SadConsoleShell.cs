@@ -155,6 +155,18 @@ internal sealed class SadConsoleShell : Console
             case ShellMode.ExitDirection:
                 HandleExitDirectionInput(keyboard);
                 break;
+            case ShellMode.OverwriteProviderSource:
+                HandleOverwriteProviderSourceInput(keyboard);
+                break;
+            case ShellMode.OverwriteTarget:
+                HandleOverwriteTargetInput(keyboard);
+                break;
+            case ShellMode.TakeOverwriteTarget:
+                HandleTakeOverwriteTargetInput(keyboard);
+                break;
+            case ShellMode.TakeOverwriteDestination:
+                HandleTakeOverwriteDestinationInput(keyboard);
+                break;
         }
     }
 
@@ -207,6 +219,21 @@ internal sealed class SadConsoleShell : Console
             MoveWorldCursorToExitDestination(exits, _selectedExitDirection);
             _mode = ShellMode.ExitDirection;
             _message = "Exit mode: Tab cycles valid exits, Enter exits, arrows still choose a direction.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.G))
+        {
+            _inventoryCursor = new GridCoord(0, 0);
+            _inspectedEntity = _session!.PlayerEntityId;
+            MoveInventoryCursorToFirstValid(CarriedEntityCandidates());
+            _mode = ShellMode.OverwriteProviderSource;
+            _message = "GiveOverwrite: choose carried behavior provider. Tab cycles carried entities, Enter selects.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.T))
+        {
+            _worldCursor = PlayerLocation().Coord;
+            MoveWorldCursorToFirstValid(TakeOverwriteTargetCandidates());
+            _mode = ShellMode.TakeOverwriteTarget;
+            _message = "TakeOverwrite: choose adjacent overridden entity. Tab cycles targets, Enter selects.";
         }
     }
 
@@ -364,6 +391,96 @@ internal sealed class SadConsoleShell : Console
         }
     }
 
+    private void HandleOverwriteProviderSourceInput(Keyboard keyboard)
+    {
+        var inventoryPlaneId = _session!.World.GetInventoryPlaneId(_session.PlayerEntityId);
+        if (inventoryPlaneId is null)
+        {
+            _mode = ShellMode.Play;
+            _message = "Player has no inventory.";
+            return;
+        }
+
+        if (CycleInventoryCursor(keyboard, CarriedEntityCandidates(), inventoryPlaneId.Value, "Overwrite provider")) return;
+
+        MoveCursor(keyboard, inventoryPlaneId.Value, ref _inventoryCursor);
+        if (!keyboard.IsKeyReleased(Keys.Enter)) return;
+
+        var provider = _session.World.GetOccupant(new PlaneCoord(inventoryPlaneId.Value, _inventoryCursor));
+        if (provider is null)
+        {
+            _message = "No carried provider at that inventory cell.";
+            return;
+        }
+
+        _selectedEntity = provider;
+        _worldCursor = PlayerLocation().Coord;
+        MoveWorldCursorToFirstValid(OverwriteTargetCandidates());
+        _mode = ShellMode.OverwriteTarget;
+        _message = $"Choose adjacent entity to overwrite with {_session.World.Entities[provider.Value].Name}. Tab cycles targets.";
+    }
+
+    private void HandleOverwriteTargetInput(Keyboard keyboard)
+    {
+        var playerPlaneId = PlayerLocation().PlaneId;
+        if (CycleWorldCursor(keyboard, OverwriteTargetCandidates(), playerPlaneId, "Overwrite target")) return;
+
+        MoveCursor(keyboard, playerPlaneId, ref _worldCursor);
+        if (!keyboard.IsKeyReleased(Keys.Enter) || _selectedEntity is not { } provider) return;
+
+        var target = _session!.World.GetOccupant(new PlaneCoord(playerPlaneId, _worldCursor));
+        if (target is null || target == _session.PlayerEntityId || target == provider)
+        {
+            _message = "No valid overwrite target at that cell.";
+            return;
+        }
+
+        Execute(ControlledActorCommand.GiveOverwrite(provider, target.Value), $"Gave overwrite provider {_session.World.Entities[provider].Name} to {_session.World.Entities[target.Value].Name}.");
+        _inspectedEntity = target;
+    }
+
+    private void HandleTakeOverwriteTargetInput(Keyboard keyboard)
+    {
+        var playerPlaneId = PlayerLocation().PlaneId;
+        if (CycleWorldCursor(keyboard, TakeOverwriteTargetCandidates(), playerPlaneId, "TakeOverwrite target")) return;
+
+        MoveCursor(keyboard, playerPlaneId, ref _worldCursor);
+        if (!keyboard.IsKeyReleased(Keys.Enter)) return;
+
+        var target = _session!.World.GetOccupant(new PlaneCoord(playerPlaneId, _worldCursor));
+        if (target is null || _session.World.GetBehaviorProvider(target.Value) is null)
+        {
+            _message = "No overridden entity at that cell.";
+            return;
+        }
+
+        _selectedEntity = target;
+        _inventoryCursor = new GridCoord(0, 0);
+        _inspectedEntity = _session.PlayerEntityId;
+        MoveInventoryCursorToFirstValid(TakeOverwriteDestinationCandidates(target.Value));
+        _mode = ShellMode.TakeOverwriteDestination;
+        _message = $"Choose inventory destination for overwrite provider from {_session.World.Entities[target.Value].Name}.";
+    }
+
+    private void HandleTakeOverwriteDestinationInput(Keyboard keyboard)
+    {
+        var inventoryPlaneId = _session!.World.GetInventoryPlaneId(_session.PlayerEntityId);
+        if (inventoryPlaneId is null)
+        {
+            _mode = ShellMode.Play;
+            _message = "Player has no inventory.";
+            return;
+        }
+
+        if (_selectedEntity is { } target && CycleInventoryCursor(keyboard, TakeOverwriteDestinationCandidates(target), inventoryPlaneId.Value, "TakeOverwrite destination")) return;
+
+        MoveCursor(keyboard, inventoryPlaneId.Value, ref _inventoryCursor);
+        if (!keyboard.IsKeyReleased(Keys.Enter) || _selectedEntity is not { } targetActor) return;
+
+        Execute(ControlledActorCommand.TakeOverwrite(targetActor, new PlaneCoord(inventoryPlaneId.Value, _inventoryCursor)), "Took overwrite provider back.");
+        _inspectedEntity = _session.PlayerEntityId;
+    }
+
     private void Execute(ControlledActorCommand command, string successMessage)
     {
         var result = _history!.SubmitControlledCommand(_commands!, command);
@@ -415,7 +532,7 @@ internal sealed class SadConsoleShell : Console
         _inventoryCursor = new GridCoord(0, 0);
         _actionLog = ActionLogProjection.FromHistory(_history);
         _message = session.ValidationDiagnostics.Count == 0 && session.RuntimeFailures.Count == 0
-            ? $"Scenario {session.ScenarioId}. Arrows move. I inspect. P pickup. D drop. E enter. X exit. U undo (unavailable at frame 0). Esc returns."
+            ? $"Scenario {session.ScenarioId}. Arrows move. I inspect. P pickup. D drop. E enter. X exit. G give-overwrite. T take-overwrite. U undo (unavailable at frame 0). Esc returns."
             : $"Scenario {session.ScenarioId} diagnostics: {string.Join(" | ", session.ValidationDiagnostics.Concat(session.RuntimeFailures))}";
     }
 
@@ -701,6 +818,34 @@ internal sealed class SadConsoleShell : Console
                     AddHighlight(highlights, exit.Destination!.Value.Coord, exit.CanExecute ? CellHighlight.Valid : CellHighlight.Invalid);
                 }
                 break;
+
+            case ShellMode.OverwriteProviderSource:
+                foreach (var candidate in CarriedEntityCandidates().Where(candidate => candidate?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, candidate!.Value.Coord, CellHighlight.Valid);
+                }
+                break;
+
+            case ShellMode.OverwriteTarget:
+                foreach (var candidate in OverwriteTargetCandidates().Where(candidate => candidate?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, candidate!.Value.Coord, CellHighlight.Valid);
+                }
+                break;
+
+            case ShellMode.TakeOverwriteTarget:
+                foreach (var candidate in TakeOverwriteTargetCandidates().Where(candidate => candidate?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, candidate!.Value.Coord, CellHighlight.Valid);
+                }
+                break;
+
+            case ShellMode.TakeOverwriteDestination when _selectedEntity is { } target:
+                foreach (var candidate in TakeOverwriteDestinationCandidates(target).Where(candidate => candidate?.PlaneId == planeId))
+                {
+                    AddHighlight(highlights, candidate!.Value.Coord, CellHighlight.Valid);
+                }
+                break;
         }
 
         return highlights;
@@ -807,6 +952,80 @@ internal sealed class SadConsoleShell : Console
             .OrderBy(coord => coord!.Value.Coord.Y)
             .ThenBy(coord => coord!.Value.Coord.X)
             .ToList();
+    }
+
+    private IReadOnlyList<PlaneCoord?> CarriedEntityCandidates()
+    {
+        if (_session?.World.GetInventoryPlaneId(_session.PlayerEntityId) is not { } inventoryPlaneId)
+        {
+            return [];
+        }
+
+        return _session.World.Occupancy
+            .Where(entry => _session.World.Nodes.TryGetValue(entry.Key, out var node) && node.PlaneId == inventoryPlaneId)
+            .Select(entry => (PlaneCoord?)_session.World.GetEntityLocation(entry.Value))
+            .OrderBy(coord => coord!.Value.Coord.Y)
+            .ThenBy(coord => coord!.Value.Coord.X)
+            .ToList();
+    }
+
+    private IReadOnlyList<PlaneCoord?> OverwriteTargetCandidates()
+    {
+        if (_session is null)
+        {
+            return [];
+        }
+
+        var playerLocation = PlayerLocation();
+        return _session.World.Occupancy.Values
+            .Where(entityId => entityId != _session.PlayerEntityId && entityId != _selectedEntity)
+            .Where(entityId => _session.World.GetEntityLocation(entityId).PlaneId == playerLocation.PlaneId && _movement.AreAdjacent(_session.World, _session.PlayerEntityId, entityId))
+            .Select(entityId => (PlaneCoord?)_session.World.GetEntityLocation(entityId))
+            .OrderBy(coord => coord!.Value.Coord.Y)
+            .ThenBy(coord => coord!.Value.Coord.X)
+            .ToList();
+    }
+
+    private IReadOnlyList<PlaneCoord?> TakeOverwriteTargetCandidates()
+    {
+        if (_session is null)
+        {
+            return [];
+        }
+
+        var playerLocation = PlayerLocation();
+        return _session.World.BehaviorProviders.Keys
+            .Where(entityId => _session.World.Entities.ContainsKey(entityId))
+            .Where(entityId => _session.World.GetEntityLocation(entityId).PlaneId == playerLocation.PlaneId && _movement.AreAdjacent(_session.World, _session.PlayerEntityId, entityId))
+            .Select(entityId => (PlaneCoord?)_session.World.GetEntityLocation(entityId))
+            .OrderBy(coord => coord!.Value.Coord.Y)
+            .ThenBy(coord => coord!.Value.Coord.X)
+            .ToList();
+    }
+
+    private IReadOnlyList<PlaneCoord?> TakeOverwriteDestinationCandidates(EntityId targetActorId)
+    {
+        if (_session?.World.GetInventoryPlaneId(_session.PlayerEntityId) is not { } inventoryPlaneId || !_session.World.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        {
+            return [];
+        }
+
+        var providerId = _session.World.GetBehaviorProvider(targetActorId);
+        var result = new List<PlaneCoord?>();
+        for (var y = 0; y < inventoryPlane.Height; y++)
+        {
+            for (var x = 0; x < inventoryPlane.Width; x++)
+            {
+                var coord = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
+                var occupant = _session.World.GetOccupant(coord);
+                if (occupant is null || occupant == providerId)
+                {
+                    result.Add(coord);
+                }
+            }
+        }
+
+        return result;
     }
 
     private bool CycleWorldCursor(Keyboard keyboard, IEnumerable<PlaneCoord?> candidates, PlaneId planeId, string label)
@@ -978,7 +1197,11 @@ internal enum ShellMode
     DropSource,
     DropDestination,
     EnterSource,
-    ExitDirection
+    ExitDirection,
+    OverwriteProviderSource,
+    OverwriteTarget,
+    TakeOverwriteTarget,
+    TakeOverwriteDestination
 }
 
 internal enum CellHighlight
