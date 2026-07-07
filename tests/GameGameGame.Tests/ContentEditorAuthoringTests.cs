@@ -75,6 +75,9 @@ public sealed class ContentEditorAuthoringTests
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TakeTarget && step.DisplayName == "Take Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.EnterTarget && step.DisplayName == "Enter Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ExitFacing && step.DisplayName == "Exit Facing");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ApplyPrePlan && step.DisplayName == "Apply Pre-Plan");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ApplyMainPlan && step.DisplayName == "Apply Main Plan");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ApplyPostPlan && step.DisplayName == "Apply Post-Plan");
     }
 
     [Fact]

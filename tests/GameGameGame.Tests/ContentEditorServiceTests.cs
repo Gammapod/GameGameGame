@@ -602,6 +602,33 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceSetsBehaviorStepPlanId()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              fear:
+                id: fear
+                behavior:
+                  steps:
+                    - kind: Backstep
+              caster:
+                id: caster
+                behavior:
+                  steps:
+                    - kind: ApplyPrePlan
+            """));
+
+        editor.SetActionPlanBehaviorStepPlanId(new ActionPlanTemplateId("caster"), stepIndex: 0, new ActionPlanId("fear"));
+        var descriptor = editor.ListActionPlans().Single(plan => plan.TemplateId == new ActionPlanTemplateId("caster")).Descriptor;
+
+        Assert.Equal(new ActionPlanId("fear"), descriptor.Behavior!.Steps[0].PlanId);
+        Assert.Contains("planId: fear", editor.Document.SaveYaml());
+    }
+
+    [Fact]
     public void ContentEditorServiceListsCanonicalActionStepMetadata()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
@@ -627,6 +654,9 @@ public sealed class ContentEditorServiceTests
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo && step.DisplayName == "Maintain Chebyshev Distance Two");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeClockwise && step.DisplayName == "Strafe Clockwise");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeAnticlockwise && step.DisplayName == "Strafe Anticlockwise");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ApplyPrePlan && step.DisplayName == "Apply Pre-Plan");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ApplyMainPlan && step.DisplayName == "Apply Main Plan");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.ApplyPostPlan && step.DisplayName == "Apply Post-Plan");
     }
 
     [Fact]

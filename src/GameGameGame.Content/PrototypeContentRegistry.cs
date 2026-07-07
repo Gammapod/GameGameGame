@@ -356,6 +356,7 @@ public sealed class PrototypeContentRegistry(
 
             ValidateActionPlanShape(diagnostics, templateId, descriptor);
             ValidateBehaviorTargetSlots(diagnostics, templateId, descriptor);
+            ValidateBehaviorPlanReferences(diagnostics, templateId, descriptor);
             ValidatePrimitiveFallback(diagnostics, templateId, descriptor);
 
             foreach (var step in descriptor.Steps)
@@ -437,6 +438,53 @@ public sealed class PrototypeContentRegistry(
                 }
             }
         }
+
+        void ValidateBehaviorPlanReferences(
+            List<ContentDiagnostic> validationDiagnostics,
+            ActionPlanTemplateId actionPlanTemplateId,
+            ActionPlanDescriptor descriptor)
+        {
+            if (descriptor.Behavior is not { } behavior)
+            {
+                return;
+            }
+
+            for (var index = 0; index < behavior.Steps.Count; index++)
+            {
+                var step = behavior.Steps[index];
+                if (!IsApplyPlanOverrideStep(step.Kind))
+                {
+                    continue;
+                }
+
+                if (step.PlanId is not { } planId)
+                {
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingActionPlanReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} requires planId.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: index));
+                    continue;
+                }
+
+                if (!planIds.Contains(planId))
+                {
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingActionPlanReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} references missing plan {planId}.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        referencedActionPlanId: planId,
+                        stepIndex: index));
+                }
+            }
+        }
+
+        static bool IsApplyPlanOverrideStep(ActionPlanBehaviorStepKind kind) =>
+            kind is ActionPlanBehaviorStepKind.ApplyPrePlan
+                or ActionPlanBehaviorStepKind.ApplyMainPlan
+                or ActionPlanBehaviorStepKind.ApplyPostPlan;
 
         void ValidatePrimitiveFallback(
             List<ContentDiagnostic> validationDiagnostics,

@@ -61,6 +61,8 @@ public sealed class EntityActionState
     public EntityId? Target { get; set; }
 
     public Dictionary<int, EntityId> Targets { get; } = [];
+
+    public Dictionary<ActionPlanOverrideSlot, PlannedActionPlan> ActionPlanOverrides { get; } = [];
 }
 
 public sealed record Plane(

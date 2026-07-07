@@ -224,6 +224,9 @@ public sealed class YamlContentLoaderTests
                     - kind: MaintainChebyshevDistanceTwo
                     - kind: StrafeClockwise
                     - kind: StrafeAnticlockwise
+                    - kind: ApplyPrePlan
+                      targetSlot: 3
+                      planId: behaviorChain
             """);
 
         var registry = document.ToRegistry();
@@ -242,7 +245,8 @@ public sealed class YamlContentLoaderTests
                 ActionPlanBehaviorStepKind.FleeTarget,
                 ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo,
                 ActionPlanBehaviorStepKind.StrafeClockwise,
-                ActionPlanBehaviorStepKind.StrafeAnticlockwise
+                ActionPlanBehaviorStepKind.StrafeAnticlockwise,
+                ActionPlanBehaviorStepKind.ApplyPrePlan
             ],
             descriptor.Behavior!.Steps.Select(step => step.Kind).ToArray());
         Assert.Contains("behavior:", saved);
@@ -254,11 +258,16 @@ public sealed class YamlContentLoaderTests
         Assert.Contains("kind: MaintainChebyshevDistanceTwo", saved);
         Assert.Contains("kind: StrafeClockwise", saved);
         Assert.Contains("kind: StrafeAnticlockwise", saved);
+        Assert.Contains("kind: ApplyPrePlan", saved);
+        Assert.Contains("planId: behaviorChain", saved);
         Assert.Equal(ActionPlanBehaviorStepKind.FleeTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[6].Kind);
         Assert.Equal(2, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[6].TargetSlot);
         Assert.Equal(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[7].Kind);
         Assert.Equal(ActionPlanBehaviorStepKind.StrafeClockwise, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[8].Kind);
         Assert.Equal(ActionPlanBehaviorStepKind.StrafeAnticlockwise, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[9].Kind);
+        Assert.Equal(ActionPlanBehaviorStepKind.ApplyPrePlan, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[10].Kind);
+        Assert.Equal(3, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[10].TargetSlot);
+        Assert.Equal(new ActionPlanId("behaviorChain"), reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("behaviorChain")).Behavior!.Steps[10].PlanId);
     }
 
     [Fact]

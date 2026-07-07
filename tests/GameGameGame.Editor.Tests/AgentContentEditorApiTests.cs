@@ -189,6 +189,46 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsApplyPrePlanBehavior()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var fearPlanId = AssertSuccess(api.CreateActionPlan("Fear"));
+        AssertSuccess(api.SetActionPlanBehavior(fearPlanId, [ActionPlanBehaviorStepKind.Backstep]));
+        var casterPlanId = AssertSuccess(api.CreateActionPlan("Caster"));
+        AssertSuccess(api.ClearActionPlanBehavior(casterPlanId));
+        AssertSuccess(api.AddActionPlanBehaviorStep(casterPlanId, ActionPlanBehaviorStepKind.ApplyPrePlan));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetSlot(casterPlanId, stepIndex: 0, targetSlot: 2));
+        AssertSuccess(api.SetActionPlanBehaviorStepPlanId(casterPlanId, stepIndex: 0, new ActionPlanId(fearPlanId.Value)));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("kind: ApplyPrePlan", snapshot.YamlPreview);
+        Assert.Contains("targetSlot: 2", snapshot.YamlPreview);
+        Assert.Contains("planId: fear", snapshot.YamlPreview);
+    }
+
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.ApplyMainPlan, "kind: ApplyMainPlan")]
+    [InlineData(ActionPlanBehaviorStepKind.ApplyPostPlan, "kind: ApplyPostPlan")]
+    public void AgentContentEditorApiAuthorsMainAndPostPlanOverrideBehavior(ActionPlanBehaviorStepKind stepKind, string yamlKind)
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var overridePlanId = AssertSuccess(api.CreateActionPlan("Override Plan"));
+        AssertSuccess(api.SetActionPlanBehavior(overridePlanId, [ActionPlanBehaviorStepKind.Backstep]));
+        var casterPlanId = AssertSuccess(api.CreateActionPlan("Override Caster"));
+        AssertSuccess(api.ClearActionPlanBehavior(casterPlanId));
+        AssertSuccess(api.AddActionPlanBehaviorStep(casterPlanId, stepKind));
+        AssertSuccess(api.SetActionPlanBehaviorStepPlanId(casterPlanId, stepIndex: 0, new ActionPlanId(overridePlanId.Value)));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains(yamlKind, snapshot.YamlPreview);
+        Assert.Contains("planId: overridePlan", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiRunsPersistedScenarioById()
     {
         var api = AgentContentEditorApi.CreateNew();

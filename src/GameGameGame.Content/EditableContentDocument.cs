@@ -553,13 +553,17 @@ public sealed class EditableContentDocument
 
         public int? TargetSlot { get; set; }
 
+        public string? PlanId { get; set; }
+
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
-            TargetSlot = descriptor.TargetSlot
+            TargetSlot = descriptor.TargetSlot,
+            PlanId = descriptor.PlanId?.Value
         };
 
-        public ActionPlanBehaviorStepDescriptor ToDescriptor() => new(Kind, TargetSlot);
+        public ActionPlanBehaviorStepDescriptor ToDescriptor() =>
+            new(Kind, TargetSlot, PlanId is null ? null : new ActionPlanId(PlanId));
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

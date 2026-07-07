@@ -100,6 +100,116 @@ public sealed class CoreInvariantTests
         Assert.Equal(Direction.North, world.GetActionFacing(TestWorld.PlayerId));
     }
 
+    [Fact]
+    public void PreActionPlanOverrideRunsBeforeMainPlanAndClearsAfterTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var pre = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("pre override")));
+        var main = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("main plan")));
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre, PlannedActionPlan.Single(pre));
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(main));
+
+        Assert.True(acted);
+        Assert.Equal(1, pre.Resolutions);
+        Assert.Equal(0, main.Resolutions);
+        Assert.Null(world.GetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre));
+        Assert.True(TraceContains(world.LastTrace!, "pre override"));
+        Assert.False(TraceContains(world.LastTrace!, "main plan"));
+    }
+
+    [Fact]
+    public void PreActionPlanOverrideFallsThroughToMainPlan()
+    {
+        var world = TestWorld.CreateWorld();
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var pre = new RecordingIntent(new ActionResolution(false, ConsumesTurn: false, ContinuePlan: true, TraceNode.Failure("pre override", FailureReason.None)));
+        var main = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("main plan")));
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre, PlannedActionPlan.Single(pre));
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(main));
+
+        Assert.True(acted);
+        Assert.Equal(1, pre.Resolutions);
+        Assert.Equal(1, main.Resolutions);
+        Assert.Equal(["pre override", "main plan"], world.LastTrace!.Children.Select(child => child.Label));
+    }
+
+    [Fact]
+    public void SettingOccupiedPreActionPlanOverrideReplacesExistingOverride()
+    {
+        var world = TestWorld.CreateWorld();
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var first = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("first pre")));
+        var second = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("second pre")));
+        var main = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("main plan")));
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre, PlannedActionPlan.Single(first));
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre, PlannedActionPlan.Single(second));
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(main));
+
+        Assert.True(acted);
+        Assert.Equal(0, first.Resolutions);
+        Assert.Equal(1, second.Resolutions);
+        Assert.Equal(0, main.Resolutions);
+    }
+
+    [Fact]
+    public void MainActionPlanOverrideReplacesDefaultMainPlanForOneTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var mainOverride = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("main override")));
+        var defaultMain = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("default main")));
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Main, PlannedActionPlan.Single(mainOverride));
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(defaultMain));
+
+        Assert.True(acted);
+        Assert.Equal(1, mainOverride.Resolutions);
+        Assert.Equal(0, defaultMain.Resolutions);
+        Assert.Null(world.GetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Main));
+    }
+
+    [Fact]
+    public void ScheduledMainActionPlanOverrideDoesNotPlanDefaultEntityPlan()
+    {
+        var world = TestWorld.CreateWorld();
+        var defaultPlan = new RecordingEntityActionPlan(new WaitAction());
+        var mainOverride = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("main override")));
+        world.SetActionPlanOverride(TestWorld.SlimeId, ActionPlanOverrideSlot.Main, PlannedActionPlan.Single(mainOverride));
+        var turns = new TurnService(
+            new MovementService(),
+            new Dictionary<EntityId, IEntityActionPlan>
+            {
+                [TestWorld.SlimeId] = defaultPlan
+            });
+
+        turns.AdvanceAfterPlayerTurn(world);
+
+        Assert.Equal(0, defaultPlan.TurnsPlanned);
+        Assert.Equal(1, mainOverride.Resolutions);
+    }
+
+    [Fact]
+    public void PostActionPlanOverrideRunsAfterMainPlanFallsThrough()
+    {
+        var world = TestWorld.CreateWorld();
+        var turns = new TurnService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var main = new RecordingIntent(new ActionResolution(false, ConsumesTurn: false, ContinuePlan: true, TraceNode.Failure("main plan", FailureReason.None)));
+        var post = new RecordingIntent(new ActionResolution(true, ConsumesTurn: true, ContinuePlan: false, TraceNode.Success("post override")));
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Post, PlannedActionPlan.Single(post));
+
+        var acted = turns.ResolvePlan(world, TestWorld.PlayerId, PlannedActionPlan.Single(main));
+
+        Assert.True(acted);
+        Assert.Equal(1, main.Resolutions);
+        Assert.Equal(1, post.Resolutions);
+        Assert.Null(world.GetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Post));
+        Assert.Equal(["main plan", "post override"], world.LastTrace!.Children.Select(child => child.Label));
+    }
+
     private static bool TraceContains(TraceNode trace, string label)
     {
         return trace.Label == label || trace.Children.Any(child => TraceContains(child, label));
@@ -114,6 +224,24 @@ public sealed class CoreInvariantTests
             TurnsPlanned++;
 
             return PlannedActionPlan.Single(action);
+        }
+    }
+
+    private sealed class RecordingIntent(ActionResolution resolution) : IActionIntent
+    {
+        public int Resolutions { get; private set; }
+
+        public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement) =>
+            new(true, TraceNode.Success("unused"));
+
+        public void Execute(WorldState world, EntityId actorId, MovementService movement)
+        {
+        }
+
+        public ActionResolution Resolve(WorldState world, EntityId actorId, MovementService movement)
+        {
+            Resolutions++;
+            return resolution;
         }
     }
 }

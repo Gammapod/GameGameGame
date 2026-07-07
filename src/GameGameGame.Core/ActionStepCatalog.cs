@@ -154,7 +154,25 @@ public static class ActionStepCatalog
             "Exit Facing",
             "Moves the actor out of its containing entity inventory to the cell adjacent to the container in the actor's persistent Facing direction; falls through when no containing inventory, destination, or aperture check allows exit.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)])
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.ApplyPrePlan,
+            "Apply Pre-Plan",
+            "Reads the persistent Target and applies the referenced Action Plan as that target's one-turn Pre override, replacing any existing Pre override on the target.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.ApplyMainPlan,
+            "Apply Main Plan",
+            "Reads the persistent Target and applies the referenced Action Plan as that target's one-turn Main override, replacing the target's default main plan for its next turn.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
+            ActionPlanBehaviorStepKind.ApplyPostPlan,
+            "Apply Post-Plan",
+            "Reads the persistent Target and applies the referenced Action Plan as that target's one-turn Post override, replacing any existing Post override on the target.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)])
     ];
 
     public static ActionStepDescriptor Get(ActionPlanBehaviorStepKind kind) =>

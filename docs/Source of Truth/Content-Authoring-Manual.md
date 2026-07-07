@@ -201,6 +201,9 @@ This table is the content-facing catalog of currently authorable canonical Actio
 |---|---|---|---|---|
 | `DestroyTarget` | `Target` | world/entity state | Destroy current target when valid; current first pass rejects self-destruction. | destructive actors, cleanup demos |
 | `CreateFacing` | `Facing` | world/entity state | Create a placeholder entity in the facing cell when open. | prototype creation/spawning demos |
+| `ApplyPrePlan` | target slot, default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn pre-plan, replacing any existing pre-plan override; the applying actor's turn is consumed on success. | fear/confusion-style temporary behavior override |
+| `ApplyMainPlan` | target slot, default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn main-plan override, replacing its default main behavior for the next turn. | temporary possession-like/simple behavior replacement |
+| `ApplyPostPlan` | target slot, default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn post-plan, tried after its main plan falls through. | temporary fallback/cleanup behavior |
 
 Common chain patterns:
 
@@ -211,6 +214,8 @@ Common chain patterns:
 | Flee a selected target | `FleeTarget`, with a template `targetingRules` slot selecting the desired target type |
 | Keep distance before fallback behavior | `MaintainChebyshevDistanceTwo -> StrafeClockwise`, with template `targetingRules` selecting the target |
 | Try to move, then push blocker | `MoveFacing -> PushFacing` |
+| Make a selected target try a temporary behavior next turn | `ApplyPrePlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn pre-plan |
+| Temporarily replace or append selected target behavior next turn | `ApplyMainPlan` or `ApplyPostPlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn override plan |
 | Drop carried entity forward, otherwise move | `DropFacing -> MoveFacing` |
 | Give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
 | Move into a bumped/targeted container, then later leave it | `MoveFacing -> EnterTarget`; contained actor can use `ExitFacing` |

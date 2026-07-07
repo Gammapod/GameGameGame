@@ -11,6 +11,8 @@ public sealed class SimulationHistorySessionTests
         world.AdvanceTurn();
         world.SetActionFacing(TestWorld.PlayerId, Direction.East);
         world.SetActionTarget(TestWorld.PlayerId, 2, TestWorld.SlimeId);
+        var overridePlan = PlannedActionPlan.Single(new WaitAction());
+        world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre, overridePlan);
         var trace = TraceNode.Success("original trace", "before clone");
         trace.Add(TraceNode.Info("child trace"));
         world.RecordTrace(trace);
@@ -25,6 +27,7 @@ public sealed class SimulationHistorySessionTests
         Assert.Equal(TestWorld.PlayerInventoryPlaneId, clone.GetRegisteredInventoryPlaneId(TestWorld.PlayerId));
         Assert.Equal(Direction.East, clone.GetActionFacing(TestWorld.PlayerId));
         Assert.Equal(TestWorld.SlimeId, clone.GetActionTarget(TestWorld.PlayerId, 2));
+        Assert.Same(overridePlan, clone.GetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre));
         Assert.Equal("original trace", clone.LastTrace?.Label);
         Assert.Equal("child trace", clone.LastTrace?.Children.Single().Label);
         Assert.Equal("Player moved.", clone.LastTurnReport?.Actions.Single().Summary);

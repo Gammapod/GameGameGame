@@ -86,12 +86,16 @@ public enum ActionPlanBehaviorStepKind
     GiveTarget,
     TakeTarget,
     EnterTarget,
-    ExitFacing
+    ExitFacing,
+    ApplyPrePlan,
+    ApplyMainPlan,
+    ApplyPostPlan
 }
 
 public sealed record ActionPlanBehaviorStepDescriptor(
     ActionPlanBehaviorStepKind Kind,
-    int? TargetSlot = null);
+    int? TargetSlot = null,
+    ActionPlanId? PlanId = null);
 
 public enum ActionPlanPrimitiveKind
 {

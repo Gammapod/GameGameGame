@@ -373,8 +373,20 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             for (var index = 0; index < steps.Count; index++)
             {
                 var step = steps[index];
-                if (step.OnSuccess?.Kind == PlanEffectKind.CallPlan && step.OnSuccess.PlanId == id.Value
-                    || step.OnFailure?.Kind == PlanEffectKind.CallPlan && step.OnFailure.PlanId == id.Value)
+                if ((step.OnSuccess?.Kind == PlanEffectKind.CallPlan && step.OnSuccess.PlanId == id.Value)
+                    || (step.OnFailure?.Kind == PlanEffectKind.CallPlan && step.OnFailure.PlanId == id.Value))
+                {
+                    references.Add(new ActionPlanReference(
+                        EntityTemplateId: null,
+                        ActionPlanTemplateId: new ActionPlanTemplateId(planId),
+                        StepIndex: index));
+                }
+            }
+
+            var behaviorSteps = plan.Behavior?.Steps ?? [];
+            for (var index = 0; index < behaviorSteps.Count; index++)
+            {
+                if (behaviorSteps[index].PlanId == id.Value)
                 {
                     references.Add(new ActionPlanReference(
                         EntityTemplateId: null,
@@ -461,6 +473,14 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         var steps = GetActionPlanBehaviorSteps(planId);
         _ = steps[stepIndex];
         steps[stepIndex].TargetSlot = targetSlot;
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        _ = steps[stepIndex];
+        steps[stepIndex].PlanId = referencedPlanId?.Value;
         onChanged?.Invoke();
     }
 
@@ -860,7 +880,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
                         metadata.Description,
                         metadata.RequiredState,
                         metadata.DefaultableState,
-                        metadata.StateWrites);
+                        metadata.StateWrites,
+                        step.TargetSlot,
+                        step.PlanId);
                 })
                 .ToList();
         }
@@ -1010,7 +1032,9 @@ public sealed record ActionPlanPreviewStep(
     string Hint,
     IReadOnlyList<PlanPrimitiveSlotDescriptor> RequiredState,
     IReadOnlyList<PlanPrimitiveSlotDescriptor> DefaultableState,
-    IReadOnlyList<PlanPrimitiveSlotDescriptor> StateWrites);
+    IReadOnlyList<PlanPrimitiveSlotDescriptor> StateWrites,
+    int? TargetSlot = null,
+    ActionPlanId? PlanId = null);
 
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
 

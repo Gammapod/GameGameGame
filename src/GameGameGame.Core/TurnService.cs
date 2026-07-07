@@ -10,7 +10,7 @@ public sealed class TurnService(
         var root = new TraceNode($"Turn {world.TurnNumber + 1}", TraceStatus.Info);
         var actions = new List<TurnActionReport>();
         beforePlan?.Invoke(world, actorId);
-        var actorResult = ActorTurnResolver.ResolvePlan(world, actorId, actorPlan, movement);
+        var actorResult = ResolveActorPlan(world, actorId, actorPlan);
         PostActionStateUpdater.ApplyFacingFromMovement(world, actorId, actorResult.ActorMovementDirection);
         root.Add(actorResult.Trace);
         actions.Add(CreateActionReport(world, actorId, actorResult));
@@ -46,7 +46,7 @@ public sealed class TurnService(
             if (world.Entities.ContainsKey(entityId))
             {
                 beforePlan?.Invoke(world, entityId);
-                var result = ActorTurnResolver.ResolvePlan(world, entityId, actionPlan.PlanTurn(world, entityId, movement), movement);
+                var result = ResolveActorPlan(world, entityId, () => actionPlan.PlanTurn(world, entityId, movement));
                 PostActionStateUpdater.ApplyFacingFromMovement(world, entityId, result.ActorMovementDirection);
                 root.Add(result.Trace);
                 actions.Add(CreateActionReport(world, entityId, result));
@@ -57,11 +57,47 @@ public sealed class TurnService(
     public bool ResolvePlan(WorldState world, EntityId actorId, PlannedActionPlan plan)
     {
         beforePlan?.Invoke(world, actorId);
-        var result = ActorTurnResolver.ResolvePlan(world, actorId, plan, movement);
+        var result = ResolveActorPlan(world, actorId, plan);
         PostActionStateUpdater.ApplyFacingFromMovement(world, actorId, result.ActorMovementDirection);
         world.RecordTrace(result.Trace);
 
         return result.Succeeded;
+    }
+
+    private ActionResolution ResolveActorPlan(WorldState world, EntityId actorId, PlannedActionPlan mainPlan) =>
+        ResolveActorPlan(world, actorId, () => mainPlan);
+
+    private ActionResolution ResolveActorPlan(WorldState world, EntityId actorId, Func<PlannedActionPlan> mainPlanFactory)
+    {
+        var overridesAtTurnStart = world.SnapshotActionPlanOverrides(actorId);
+        var effectivePlan = ComposeEffectivePlan(mainPlanFactory, overridesAtTurnStart);
+        var result = ActorTurnResolver.ResolvePlan(world, actorId, effectivePlan, movement);
+        world.ClearMatchingActionPlanOverrides(actorId, overridesAtTurnStart);
+
+        return result;
+    }
+
+    private static PlannedActionPlan ComposeEffectivePlan(
+        Func<PlannedActionPlan> mainPlanFactory,
+        IReadOnlyDictionary<ActionPlanOverrideSlot, PlannedActionPlan> overrides)
+    {
+        var options = new List<IActionIntent>();
+
+        if (overrides.TryGetValue(ActionPlanOverrideSlot.Pre, out var prePlan))
+        {
+            options.AddRange(prePlan.Options);
+        }
+
+        options.AddRange(overrides.TryGetValue(ActionPlanOverrideSlot.Main, out var mainOverride)
+            ? mainOverride.Options
+            : mainPlanFactory().Options);
+
+        if (overrides.TryGetValue(ActionPlanOverrideSlot.Post, out var postPlan))
+        {
+            options.AddRange(postPlan.Options);
+        }
+
+        return new PlannedActionPlan(options);
     }
 
     private static TurnActionReport CreateActionReport(WorldState world, EntityId actorId, ActionResolution resolution)

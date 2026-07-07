@@ -161,7 +161,7 @@ public static class YamlContentLoader
         new((behavior.Steps ?? []).Select(MaterializeBehaviorStep).ToList());
 
     private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(ActionPlanBehaviorStepDescriptorDto step) =>
-        new(step.Kind, step.TargetSlot);
+        new(step.Kind, step.TargetSlot, step.PlanId is null ? null : new ActionPlanId(step.PlanId));
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -366,6 +366,8 @@ public static class YamlContentLoader
         public ActionPlanBehaviorStepKind Kind { get; set; }
 
         public int? TargetSlot { get; set; }
+
+        public string? PlanId { get; set; }
     }
 
     private sealed class ActionPlanPrimitiveDescriptorDto

@@ -80,6 +80,75 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsMissingApplyPrePlanReference()
+    {
+        var missingPlanId = new ActionPlanId("missingFear");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("applyMissingPrePlan"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.ApplyPrePlan, PlanId: missingPlanId)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingActionPlanReference);
+        Assert.Equal(PrototypeContent.WanderingActionPlanTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("applyMissingPrePlan"), diagnostic.ActionPlanId);
+        Assert.Equal(missingPlanId, diagnostic.ReferencedActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+    }
+
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.ApplyMainPlan)]
+    [InlineData(ActionPlanBehaviorStepKind.ApplyPostPlan)]
+    public void PrototypeRegistryValidationReportsMissingApplyPlanReference(ActionPlanBehaviorStepKind stepKind)
+    {
+        var missingPlanId = new ActionPlanId("missingOverride");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("applyMissingOverride"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(stepKind, PlanId: missingPlanId)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingActionPlanReference);
+        Assert.Equal(missingPlanId, diagnostic.ReferencedActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsMissingApplyPrePlanPlanId()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("applyMissingPrePlanId"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.ApplyPrePlan)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingActionPlanReference);
+        Assert.Equal(new ActionPlanId("applyMissingPrePlanId"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingCalledPlan()
     {
         var missingPlanId = new ActionPlanId("missingNestedPlan");

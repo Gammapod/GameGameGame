@@ -1,0 +1,89 @@
+entityTemplates:
+  betaApplyPrePlanRoom:
+    name: Beta Apply Pre-Plan Room
+    inventoryWidth: 10
+    inventoryHeight: 5
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: fearWizard
+      templateId: betaFearWizard
+      coord:
+        x: 1
+        y: 2
+    - entityId: frightenedSlime
+      templateId: betaFearSlime
+      coord:
+        x: 4
+        y: 2
+  betaApplyPrePlanPlayer:
+    name: Beta Apply Pre-Plan Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    bulk: 1
+    aperture: 5
+    actionStateDefaults:
+      facing: West
+  betaFearWizard:
+    name: Fear Wizard
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+    defaultActionPlanId: betaApplyFearToSlime
+    targetingRules:
+    - slot: 1
+      hint: Fear Target
+      targetTemplateId: betaFearSlime
+      range: 3
+  betaFearSlime:
+    name: Frightened Slime
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 0
+    defaultActionPlanId: betaSlimeNormalAdvance
+    actionStateDefaults:
+      facing: West
+presentations:
+  betaApplyPrePlanRoom:
+    glyph: '#'
+    color: Gray
+  betaApplyPrePlanPlayer:
+    glyph: '@'
+    color: Yellow
+  betaFearWizard:
+    glyph: 'W'
+    color: Cyan
+  betaFearSlime:
+    glyph: 's'
+    color: Green
+actionPlans:
+  betaSlimeFearBackstep:
+    id: betaSlimeFearBackstep
+    behavior:
+      steps:
+      - kind: Backstep
+  betaApplyFearToSlime:
+    id: betaApplyFearToSlime
+    behavior:
+      steps:
+      - kind: ApplyPrePlan
+        targetSlot: 1
+        planId: betaSlimeFearBackstep
+  betaSlimeNormalAdvance:
+    id: betaSlimeNormalAdvance
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: PickupTarget
+      - kind: ReverseFacing
+scenarios:
+  beta-apply-pre-plan-fear:
+    name: Beta Apply Pre-Plan Fear
+    scenarioRootEntityTemplateId: betaApplyPrePlanRoom
+    playerEntityTemplateId: betaApplyPrePlanPlayer
+    playerEntityId: betaApplyPrePlanPlayer
+    playerStart:
+      x: 8
+      y: 4

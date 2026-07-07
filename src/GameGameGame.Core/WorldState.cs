@@ -89,6 +89,11 @@ public sealed class WorldState
             clone.Targets[slot] = targetId;
         }
 
+        foreach (var (slot, plan) in source.ActionPlanOverrides)
+        {
+            clone.ActionPlanOverrides[slot] = plan;
+        }
+
         return clone;
     }
 
@@ -190,6 +195,50 @@ public sealed class WorldState
         }
 
         return slot == 1 ? state.Target : null;
+    }
+
+    public void SetActionPlanOverride(EntityId entityId, ActionPlanOverrideSlot slot, PlannedActionPlan plan) =>
+        GetOrCreateActionState(entityId).ActionPlanOverrides[slot] = plan;
+
+    public PlannedActionPlan? GetActionPlanOverride(EntityId entityId, ActionPlanOverrideSlot slot) =>
+        ActionStates.TryGetValue(entityId, out var state) && state.ActionPlanOverrides.TryGetValue(slot, out var plan)
+            ? plan
+            : null;
+
+    public IReadOnlyDictionary<ActionPlanOverrideSlot, PlannedActionPlan> SnapshotActionPlanOverrides(EntityId entityId)
+    {
+        if (!ActionStates.TryGetValue(entityId, out var state))
+        {
+            return new Dictionary<ActionPlanOverrideSlot, PlannedActionPlan>();
+        }
+
+        return new Dictionary<ActionPlanOverrideSlot, PlannedActionPlan>(state.ActionPlanOverrides);
+    }
+
+    public void ClearActionPlanOverride(EntityId entityId, ActionPlanOverrideSlot slot)
+    {
+        if (ActionStates.TryGetValue(entityId, out var state))
+        {
+            state.ActionPlanOverrides.Remove(slot);
+        }
+    }
+
+    public void ClearMatchingActionPlanOverrides(
+        EntityId entityId,
+        IReadOnlyDictionary<ActionPlanOverrideSlot, PlannedActionPlan> overrides)
+    {
+        if (!ActionStates.TryGetValue(entityId, out var state))
+        {
+            return;
+        }
+
+        foreach (var (slot, plan) in overrides)
+        {
+            if (state.ActionPlanOverrides.TryGetValue(slot, out var current) && ReferenceEquals(current, plan))
+            {
+                state.ActionPlanOverrides.Remove(slot);
+            }
+        }
     }
 
     public NodeId AddNode(PlaneId planeId, GridCoord coord)
