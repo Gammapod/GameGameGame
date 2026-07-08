@@ -33,19 +33,80 @@ public sealed class FrontendEditorServiceTests
             Assert.Equal('#', room.Glyph);
             Assert.Equal(PresentationColor.Gray, room.Color);
             Assert.Equal(2, room.CarriedEntities.Count);
-            Assert.Contains(room.CarriedEntities, carried => carried.EntityId == "northWall" && carried.TemplateId == "wall");
+            var northWall = Assert.Single(room.CarriedEntities, carried => carried.EntityId == "northWall");
+            Assert.Equal("wall", northWall.TemplateId);
+            Assert.Equal("Wall", northWall.TemplateName);
+            Assert.Equal('#', northWall.Glyph);
+            Assert.Equal(PresentationColor.Earth, northWall.Color);
+            Assert.Equal(new GridCoord(0, 0), northWall.Coord);
 
             var player = Assert.Single(snapshot.EntityTemplates, template => template.TemplateId == "editorPlayer");
             Assert.Equal("moveEast", player.DefaultActionPlanId);
+            Assert.Equal(Direction.East, player.ActionStateDefaults.Facing);
+            Assert.Null(player.ActionStateDefaults.TargetEntityId);
+            var targetingRule = Assert.Single(player.TargetingRules);
+            Assert.Equal(1, targetingRule.Slot);
+            Assert.Equal("nearbywall", targetingRule.Label);
+            Assert.Equal("Obstacle", targetingRule.Hint);
+            Assert.Equal("wall", targetingRule.TargetTemplateId);
+            Assert.Equal("Wall", targetingRule.TargetTemplateName);
+            Assert.Equal(5, targetingRule.Range);
 
             var plan = Assert.Single(snapshot.ActionPlans);
             Assert.Equal("moveEast", plan.ActionPlanId);
             Assert.Equal("Canonical Behavior Chain", plan.Shape);
             Assert.Equal(["Move Facing"], plan.ActionStepNames);
+            Assert.Equal([ActionPlanBehaviorStepKind.MoveFacing], plan.ActionSteps.Select(step => step.Kind).ToArray());
+            Assert.Contains(snapshot.AvailableActionSteps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing && step.DisplayName == "Move Facing");
+            Assert.DoesNotContain(snapshot.AvailableActionSteps, step => step.Kind == ActionPlanBehaviorStepKind.AcquireNearestTarget);
 
             Assert.DoesNotContain(snapshot.ValidationDiagnostics, diagnostic => diagnostic.Severity == ContentDiagnosticSeverity.Error);
             Assert.Contains("editor-smoke", snapshot.YamlPreview);
             Assert.True(snapshot.YamlDiffLines.Count == 0);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SnapshotGroupsTemplateAndCarriedEntityDiagnosticsForEntityTemplatePanels()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              invalidRoom:
+                name: Invalid Room
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 10
+                carryingCapacity: 10
+                carriedEntities:
+                - entityId: missingRock
+                  templateId: missingTemplate
+                  coord:
+                    x: 2
+                    y: 0
+            presentations:
+              invalidRoom:
+                glyph: '#'
+                color: Gray
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var invalidRoom = Assert.Single(service.GetSnapshot().EntityTemplates);
+
+            Assert.Contains(invalidRoom.Diagnostics, diagnostic => diagnostic.EntityTemplateId == "invalidRoom");
+            var carried = Assert.Single(invalidRoom.CarriedEntities);
+            Assert.Equal("missingRock", carried.EntityId);
+            Assert.Equal("missingTemplate", carried.TemplateId);
+            Assert.Null(carried.TemplateName);
+            Assert.Contains(carried.Diagnostics, diagnostic => diagnostic.CarriedEntityId == "missingRock");
         }
         finally
         {
@@ -107,6 +168,870 @@ public sealed class FrontendEditorServiceTests
         }
     }
 
+    [Fact]
+    public void UpdateTemplatePresentationEditsNameGlyphAndColorThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.UpdateTemplatePresentation(
+                "wall",
+                new FrontendEditorTemplatePresentationUpdate(
+                    Name: "Stone Wall",
+                    GlyphText: "WX",
+                    Color: PresentationColor.White));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal("Stone Wall", wall.Name);
+            Assert.Equal('W', wall.Glyph);
+            Assert.Equal(PresentationColor.White, wall.Color);
+            Assert.Contains("Stone Wall", result.Snapshot.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateTemplatePresentationRejectsBlankGlyph(string? glyphText)
+    {
+        var service = FrontendEditorService.CreateNew();
+        var id = service.Session.Editor.CreateEntityPreset("Glyph Test");
+
+        var result = service.UpdateTemplatePresentation(
+            id.Value,
+            new FrontendEditorTemplatePresentationUpdate("Glyph Test", glyphText, PresentationColor.Gray));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("glyph", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SaveWritesCurrentEditorSessionAndReturnsCleanSnapshot()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+            service.UpdateTemplatePresentation(
+                "wall",
+                new FrontendEditorTemplatePresentationUpdate("Saved Wall", "W", PresentationColor.White));
+
+            var save = service.Save();
+
+            Assert.True(save.IsSuccess, save.StatusMessage);
+            Assert.False(save.Snapshot.IsDirty);
+            var reloaded = FrontendEditorService.OpenFile(path).Service!.GetSnapshot();
+            var wall = Assert.Single(reloaded.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal("Saved Wall", wall.Name);
+            Assert.Equal('W', wall.Glyph);
+            Assert.Equal(PresentationColor.White, wall.Color);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SaveWithoutFilePathReturnsFailureSnapshot()
+    {
+        var service = FrontendEditorService.CreateNew();
+
+        var save = service.Save();
+
+        Assert.False(save.IsSuccess);
+        Assert.Contains("Save As", save.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(save.Snapshot.IsDirty);
+    }
+
+    [Fact]
+    public void SetTemplateDefaultActionPlanAssignsExistingPlanThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetTemplateDefaultActionPlan("wall", "moveEast");
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal("moveEast", wall.DefaultActionPlanId);
+            Assert.Equal(Direction.West, wall.ActionStateDefaults.Facing);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateDefaultActionPlanRejectsMissingPlan()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var id = service.Session.Editor.CreateEntityPreset("Plan Test");
+
+        var result = service.SetTemplateDefaultActionPlan(id.Value, "missingPlan");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("missingPlan", result.StatusMessage);
+        var template = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == id.Value);
+        Assert.Null(template.DefaultActionPlanId);
+    }
+
+    [Fact]
+    public void ClearTemplateDefaultActionPlanClearsPlanThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.ClearTemplateDefaultActionPlan("editorPlayer");
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            var player = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorPlayer");
+            Assert.Null(player.DefaultActionPlanId);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateTargetingRuleWritesValidatedRuleThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetTemplateTargetingRule(
+                "wall",
+                new FrontendEditorTargetingRuleUpdate(1, "fears", "editorPlayer", 7));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            var rule = Assert.Single(wall.TargetingRules);
+            Assert.Equal(1, rule.Slot);
+            Assert.Equal("fears", rule.Label);
+            Assert.Equal("editorPlayer", rule.TargetTemplateId);
+            Assert.Equal("Editor Player", rule.TargetTemplateName);
+            Assert.Equal(7, rule.Range);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(0, "fears", "editorPlayer", 5, "slot")]
+    [InlineData(5, "fears", "editorPlayer", 5, "slot")]
+    [InlineData(1, "", "editorPlayer", 5, "label")]
+    [InlineData(1, "has space", "editorPlayer", 5, "lowercase alphanumeric")]
+    [InlineData(1, "Fear", "editorPlayer", 5, "lowercase alphanumeric")]
+    [InlineData(1, "fears", "missingTemplate", 5, "missingTemplate")]
+    [InlineData(1, "fears", "editorPlayer", -1, "range")]
+    [InlineData(1, "fears", "editorPlayer", 11, "range")]
+    public void SetTemplateTargetingRuleRejectsInvalidFrontendRules(
+        int slot,
+        string label,
+        string targetTemplateId,
+        int range,
+        string expectedMessagePart)
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetTemplateTargetingRule(
+                "wall",
+                new FrontendEditorTargetingRuleUpdate(slot, label, targetTemplateId, range));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains(expectedMessagePart, result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateTargetingRuleRejectsDuplicateLabelOnSameTemplate()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetTemplateTargetingRule(
+                "editorPlayer",
+                new FrontendEditorTargetingRuleUpdate(2, "nearbywall", "wall", 5));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("duplicate", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void ClearTemplateTargetingRuleRemovesExistingSlot()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.ClearTemplateTargetingRule("editorPlayer", 1);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var player = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorPlayer");
+            Assert.Empty(player.TargetingRules);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void PlaceTemplateInInventoryAddsGeneratedCarriedEntityThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.PlaceTemplateInInventory("editorRoom", "rock", new GridCoord(1, 0));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var room = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            var placed = Assert.Single(room.CarriedEntities, carried => carried.Coord == new GridCoord(1, 0));
+            Assert.StartsWith("editorRoomRock", placed.EntityId, StringComparison.Ordinal);
+            Assert.Equal("rock", placed.TemplateId);
+            Assert.Equal("Rock", placed.TemplateName);
+            Assert.Equal('*', placed.Glyph);
+            Assert.Equal(PresentationColor.Earth, placed.Color);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void PlaceTemplateInInventoryRejectsDirectSelfTemplatePlacement()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.PlaceTemplateInInventory("editorRoom", "editorRoom", new GridCoord(1, 0));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("itself", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var room = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            Assert.DoesNotContain(room.CarriedEntities, carried => carried.TemplateId == "editorRoom");
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("editorRoom", "rock", 0, 0, "occupied")]
+    [InlineData("editorRoom", "rock", 99, 0, "outside")]
+    [InlineData("wall", "rock", 0, 0, "no usable inventory")]
+    [InlineData("editorRoom", "missingTemplate", 1, 0, "missingTemplate")]
+    public void PlaceTemplateInInventoryReportsInvalidBrushPlacement(
+        string parentTemplateId,
+        string brushTemplateId,
+        int x,
+        int y,
+        string expectedMessagePart)
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.PlaceTemplateInInventory(parentTemplateId, brushTemplateId, new GridCoord(x, y));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains(expectedMessagePart, result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void ReplaceActionPlanStepReplacesExistingCanonicalStepThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.Backstep);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.Equal([ActionPlanBehaviorStepKind.Backstep], plan.ActionSteps.Select(step => step.Kind).ToArray());
+            Assert.Equal(["Backstep"], plan.ActionStepNames);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void InsertActionPlanStepInsertsCanonicalStepAtRequestedIndex()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.InsertActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.PickupTarget);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.Equal(
+                [ActionPlanBehaviorStepKind.PickupTarget, ActionPlanBehaviorStepKind.MoveFacing],
+                plan.ActionSteps.Select(step => step.Kind).ToArray());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void InsertActionPlanStepAllowsAppendAtEnd()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.InsertActionPlanStep("moveEast", 1, ActionPlanBehaviorStepKind.DropFacing);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.Equal(
+                [ActionPlanBehaviorStepKind.MoveFacing, ActionPlanBehaviorStepKind.DropFacing],
+                plan.ActionSteps.Select(step => step.Kind).ToArray());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void ActionPlanStepEditsRejectLegacyStepsAndInvalidIndexes()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var legacy = service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.AcquireNearestTarget);
+            var missing = service.ReplaceActionPlanStep("moveEast", 9, ActionPlanBehaviorStepKind.Backstep);
+            var badInsert = service.InsertActionPlanStep("moveEast", -1, ActionPlanBehaviorStepKind.Backstep);
+
+            Assert.False(legacy.IsSuccess);
+            Assert.Contains("not available", legacy.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(missing.IsSuccess);
+            Assert.Contains("index", missing.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(badInsert.IsSuccess);
+            Assert.Contains("index", badInsert.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void UpdateTemplateMetadataEditsInventoryDimensionsBulkAndAperture()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.UpdateTemplateMetadata(
+                "wall",
+                new FrontendEditorTemplateMetadataUpdate(InventoryWidth: 2, InventoryHeight: 3, Bulk: 4, Aperture: 5));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal(2, wall.InventoryWidth);
+            Assert.Equal(3, wall.InventoryHeight);
+            Assert.Equal(4, wall.Bulk);
+            Assert.Equal(5, wall.Aperture);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(-1, 1, 1, 1, "inventory")]
+    [InlineData(1, -1, 1, 1, "inventory")]
+    [InlineData(1, 1, -1, 1, "bulk")]
+    [InlineData(1, 1, 1, -1, "aperture")]
+    public void UpdateTemplateMetadataRejectsNegativeValues(
+        int width,
+        int height,
+        int bulk,
+        int aperture,
+        string expectedMessagePart)
+    {
+        var service = FrontendEditorService.CreateNew();
+        var id = service.Session.Editor.CreateEntityPreset("Metadata Test");
+
+        var result = service.UpdateTemplateMetadata(
+            id.Value,
+            new FrontendEditorTemplateMetadataUpdate(width, height, bulk, aperture));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(expectedMessagePart, result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SetAndClearTemplateInitialFacingMutatesActionStateDefaults()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var set = service.SetTemplateInitialFacing("wall", Direction.North);
+
+            Assert.True(set.IsSuccess, set.StatusMessage);
+            var wall = Assert.Single(set.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal(Direction.North, wall.ActionStateDefaults.Facing);
+
+            var clear = service.ClearTemplateInitialFacing("wall");
+
+            Assert.True(clear.IsSuccess, clear.StatusMessage);
+            wall = Assert.Single(clear.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Null(wall.ActionStateDefaults.Facing);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void RemoveCarriedEntityRemovesAuthoredInventoryEntry()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.RemoveCarriedEntity("editorRoom", "northWall");
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var room = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            Assert.DoesNotContain(room.CarriedEntities, carried => carried.EntityId == "northWall");
+            Assert.Contains(room.CarriedEntities, carried => carried.EntityId == "floorRock");
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void MoveCarriedEntityMovesAuthoredInventoryEntry()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.MoveCarriedEntity("editorRoom", "northWall", new GridCoord(1, 0));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var room = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            Assert.Contains(room.CarriedEntities, carried => carried.EntityId == "northWall" && carried.Coord == new GridCoord(1, 0));
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void ReplaceCarriedEntityTemplateChangesBrushReferenceWithoutMoving()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.ReplaceCarriedEntityTemplate("editorRoom", "northWall", "rock");
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var room = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            var carried = Assert.Single(room.CarriedEntities, carried => carried.EntityId == "northWall");
+            Assert.Equal("rock", carried.TemplateId);
+            Assert.Equal("Rock", carried.TemplateName);
+            Assert.Equal(new GridCoord(0, 0), carried.Coord);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void OverwriteCarriedEntityAtCoordinateRemovesOccupantAndPlacesBrush()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.OverwriteTemplateInInventory("editorRoom", "rock", new GridCoord(0, 0));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var room = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            Assert.DoesNotContain(room.CarriedEntities, carried => carried.EntityId == "northWall");
+            Assert.Single(room.CarriedEntities, carried => carried.Coord == new GridCoord(0, 0));
+            Assert.Contains(room.CarriedEntities, carried => carried.Coord == new GridCoord(0, 0) && carried.TemplateId == "rock");
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void CarriedEntityOperationsReportInvalidRequests()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var moveOccupied = service.MoveCarriedEntity("editorRoom", "northWall", new GridCoord(2, 1));
+            var replaceSelf = service.ReplaceCarriedEntityTemplate("editorRoom", "northWall", "editorRoom");
+            var removeMissing = service.RemoveCarriedEntity("editorRoom", "missingEntity");
+
+            Assert.False(moveOccupied.IsSuccess);
+            Assert.Contains("occupied", moveOccupied.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(replaceSelf.IsSuccess);
+            Assert.Contains("itself", replaceSelf.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(removeMissing.IsSuccess);
+            Assert.Contains("missingEntity", removeMissing.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void CreateEntityTemplateAddsDefaultTemplateAndPresentation()
+    {
+        var service = FrontendEditorService.CreateNew();
+
+        var result = service.CreateEntityTemplate("New Actor");
+
+        Assert.True(result.IsSuccess, result.StatusMessage);
+        Assert.True(result.Snapshot.IsDirty);
+        Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        var template = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "newActor");
+        Assert.Equal("New Actor", template.Name);
+        Assert.Equal('?', template.Glyph);
+        Assert.Equal(PresentationColor.Gray, template.Color);
+        Assert.Equal(0, template.InventoryWidth);
+        Assert.Equal(0, template.InventoryHeight);
+        Assert.Equal(0, template.Bulk);
+        Assert.Equal(0, template.Aperture);
+    }
+
+    [Fact]
+    public void CreateEntityTemplateRejectsBlankName()
+    {
+        var service = FrontendEditorService.CreateNew();
+
+        var result = service.CreateEntityTemplate("   ");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("name", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.Snapshot.EntityTemplates);
+    }
+
+    [Fact]
+    public void DuplicateEntityTemplateCopiesPresentationMetadataAndCarriedLayout()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.DuplicateEntityTemplate("editorRoom", "Copied Room");
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            var duplicate = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "copiedRoom");
+            Assert.Equal("Copied Room", duplicate.Name);
+            Assert.Equal('#', duplicate.Glyph);
+            Assert.Equal(PresentationColor.Gray, duplicate.Color);
+            Assert.Equal(3, duplicate.InventoryWidth);
+            Assert.Equal(2, duplicate.InventoryHeight);
+            Assert.Equal(2, duplicate.CarriedEntities.Count);
+            Assert.Contains(duplicate.CarriedEntities, carried => carried.EntityId == "copiedRoomNorthWall" && carried.TemplateId == "wall" && carried.Coord == new GridCoord(0, 0));
+            Assert.Contains(duplicate.CarriedEntities, carried => carried.EntityId == "copiedRoomFloorRock" && carried.TemplateId == "rock" && carried.Coord == new GridCoord(2, 1));
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void DuplicateEntityTemplateRejectsMissingSourceAndBlankName()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateEntityTemplate("Source");
+
+        var missing = service.DuplicateEntityTemplate("missing", "Copy");
+        var blank = service.DuplicateEntityTemplate("source", " ");
+
+        Assert.False(missing.IsSuccess);
+        Assert.Contains("missing", missing.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(blank.IsSuccess);
+        Assert.Contains("name", blank.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DeleteEntityTemplateRemovesUnreferencedTemplateAndPresentation()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateEntityTemplate("Temporary Template");
+
+        var result = service.DeleteEntityTemplate("temporaryTemplate");
+
+        Assert.True(result.IsSuccess, result.StatusMessage);
+        Assert.True(result.Snapshot.IsDirty);
+        Assert.DoesNotContain(result.Snapshot.EntityTemplates, template => template.TemplateId == "temporaryTemplate");
+        Assert.DoesNotContain("temporaryTemplate", result.Snapshot.YamlPreview, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeleteEntityTemplateRejectsReferencedOrMissingTemplates()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var referenced = service.DeleteEntityTemplate("wall");
+            var missing = service.DeleteEntityTemplate("missingTemplate");
+
+            Assert.False(referenced.IsSuccess);
+            Assert.Contains("referenced", referenced.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(referenced.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.False(missing.IsSuccess);
+            Assert.Contains("missingTemplate", missing.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void CreateActionPlanAddsEditableWaitPlan()
+    {
+        var service = FrontendEditorService.CreateNew();
+
+        var result = service.CreateActionPlan("New Plan");
+
+        Assert.True(result.IsSuccess, result.StatusMessage);
+        Assert.True(result.Snapshot.IsDirty);
+        Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "newPlan");
+        Assert.Equal("Legacy / Advanced Low-Level Steps", plan.Shape);
+        Assert.Equal(["wait"], plan.ActionStepNames);
+    }
+
+    [Fact]
+    public void CreatePassiveActionPlanAddsEmptyPassivePlan()
+    {
+        var service = FrontendEditorService.CreateNew();
+
+        var result = service.CreatePassiveActionPlan("Passive Plan");
+
+        Assert.True(result.IsSuccess, result.StatusMessage);
+        Assert.True(result.Snapshot.IsDirty);
+        var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "passivePlan");
+        Assert.Equal("Empty / Passive", plan.Shape);
+        Assert.Empty(plan.ActionStepNames);
+        Assert.Empty(plan.ActionSteps);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CreateActionPlanRejectsBlankName(bool passive)
+    {
+        var service = FrontendEditorService.CreateNew();
+
+        var result = passive
+            ? service.CreatePassiveActionPlan(" ")
+            : service.CreateActionPlan(" ");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("name", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(result.Snapshot.ActionPlans);
+    }
+
+    [Fact]
+    public void DuplicateActionPlanCopiesCanonicalBehaviorWithNewId()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.DuplicateActionPlan("moveEast", "Move East Copy");
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEastCopy");
+            Assert.Equal("Canonical Behavior Chain", plan.Shape);
+            var step = Assert.Single(plan.ActionSteps);
+            Assert.Equal(0, step.Index);
+            Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing, step.Kind);
+            Assert.Equal("Move Facing", step.DisplayName);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void DuplicateActionPlanRejectsMissingSourceAndBlankName()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateActionPlan("Source Plan");
+
+        var missing = service.DuplicateActionPlan("missingPlan", "Copy Plan");
+        var blank = service.DuplicateActionPlan("sourcePlan", " ");
+
+        Assert.False(missing.IsSuccess);
+        Assert.Contains("missingPlan", missing.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(blank.IsSuccess);
+        Assert.Contains("name", blank.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DeleteActionPlanRemovesUnreferencedPlan()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateActionPlan("Temporary Plan");
+
+        var result = service.DeleteActionPlan("temporaryPlan");
+
+        Assert.True(result.IsSuccess, result.StatusMessage);
+        Assert.True(result.Snapshot.IsDirty);
+        Assert.DoesNotContain(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "temporaryPlan");
+        Assert.DoesNotContain("temporaryPlan", result.Snapshot.YamlPreview, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DeleteActionPlanRejectsReferencedOrMissingPlans()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var referenced = service.DeleteActionPlan("moveEast");
+            var missing = service.DeleteActionPlan("missingPlan");
+
+            Assert.False(referenced.IsSuccess);
+            Assert.Contains("referenced", referenced.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(referenced.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.False(missing.IsSuccess);
+            Assert.Contains("missingPlan", missing.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
     private static string EditorFixtureYaml() =>
         """
         entityTemplates:
@@ -136,6 +1061,12 @@ public sealed class FrontendEditorServiceTests
             defaultActionPlanId: moveEast
             actionStateDefaults:
               facing: East
+            targetingRules:
+            - slot: 1
+              label: nearbywall
+              hint: Obstacle
+              targetTemplateId: wall
+              range: 5
           wall:
             name: Wall
             inventoryWidth: 0

@@ -2,7 +2,7 @@ using GameGameGame.Content;
 
 namespace GameGameGame.SadConsoleApp;
 
-internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error)
+internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null)
 {
     public static SadConsoleStartup FromArgs(string[] args)
     {
@@ -10,7 +10,7 @@ internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession,
         {
             try
             {
-                return new SadConsoleStartup(PlayableScenarioLauncher.CreateFromFile(args[0], args[1]), null, null);
+                return new SadConsoleStartup(null, null, null, args[0], args[1]);
             }
             catch (Exception ex)
             {

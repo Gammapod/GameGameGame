@@ -44,7 +44,7 @@ Each decision should include:
 - **Decision:** Breadcrumbs are not just text labels; future Simulation work should plan around breadcrumb nodes rendered as entity panels/cards, including collapsed cards for long chains.
 - **Reasoning:** The prototype's breadcrumb-as-panel-chain model was promising and fits the entity-panel standard.
 - **Implications:** Future layout work should support panel chains, collapsed/expanded panel states, focus/selection state, and reusable geometry before mouse hit-testing.
-- **Status:** Active / pending implementation.
+- **Status:** Active / initial SadConsole implementation. Editor mode now has an explicitly refreshed Preview section that renders compact turn-0 derived runtime facts and diagnostics; richer Simulation-grade panel/grid reuse remains follow-up.
 
 ### FED-004: The player entity is not visually special by default
 
@@ -65,7 +65,7 @@ Each decision should include:
 - **Decision:** The preferred near-term cross-mode model is Editor -> scenario preview -> Simulation -> return to Editor. Main-menu scenario play should open enough editor context to return to the backing content document.
 - **Reasoning:** This preserves clean content mutation/materialization/runtime boundaries while enabling the edit-preview-play loop.
 - **Implications:** Do not build Editor and Simulation as isolated apps with unrelated context stacks. Plan shared content document, scenario selection, and return navigation state.
-- **Status:** Active / pending implementation.
+- **Status:** Active / Phase 1 shell implemented in SadConsole. The current shell preserves backing content/scenario identity across catalog launch and Simulation return; richer Editor browsing, preview panels, and source jumps remain pending.
 
 ### FED-007: Scenario preview belongs in Editor mode
 
@@ -79,7 +79,7 @@ Each decision should include:
 - **Decision:** Simulation should eventually support navigation from runtime entity/log/diagnostic facts to authored templates/action plans/scenario source when provenance exists.
 - **Reasoning:** This is the useful part of “editing within Simulation” without blurring runtime state mutation and content authoring.
 - **Implications:** Need runtime-to-source binding visibility. Runtime debug mutation remains separate and deferred.
-- **Status:** Active / needs provenance investigation follow-up.
+- **Status:** Active / first SadConsole seed implemented for Preview runtime entity -> authored entity template jumps when registry provenance exists; broader Simulation/log/action-plan source jumps still need provenance follow-up.
 
 ### FED-009: Live hot-editing and runtime debug mutation are deferred debugger capabilities
 
@@ -87,3 +87,10 @@ Each decision should include:
 - **Reasoning:** Both weaken the simple materialized-runtime boundary and likely require Core/Content coordination.
 - **Implications:** Reassess after Editor -> Preview -> Simulation is established. A possible future path is debug-only actions/primitives with traceable Core-aware outcomes.
 - **Status:** Deferred.
+
+### FED-010: Cached Editor snapshots refresh explicitly and stale Preview is cleared
+
+- **Decision:** SadConsole Editor mode treats its read-only authored-content browser as a cached snapshot. `R` refreshes/revalidates through shared editor services and clears/marks Preview stale; `P` explicitly rematerializes turn-0 Preview.
+- **Reasoning:** This keeps redraws responsive and preserves the authored-content/materialized-runtime boundary before mutation UI exists.
+- **Implications:** Future mutations should use the same invalidation policy unless a shared service contract proves a preview remains valid. Mutation/save controls should remain absent or clearly disabled until a mutation design is promoted.
+- **Status:** Active / Phase 5A hardening implemented.

@@ -18,6 +18,7 @@ internal sealed class SadConsoleShell : Console
     private readonly ControlledActorAffordanceService _affordances;
     private readonly SadConsoleSessionViewBuilder _sessionViewBuilder;
     private readonly ScenarioCatalogResult? _catalog;
+    private SadConsoleEditorContext? _editorContext;
     private PlayableScenarioSession? _session;
     private ControlledActorCommandService? _commands;
     private SimulationHistorySession? _history;
@@ -45,7 +46,11 @@ internal sealed class SadConsoleShell : Console
         _affordances = new ControlledActorAffordanceService(_movement);
         _sessionViewBuilder = new SadConsoleSessionViewBuilder(_panelProjection, _affordances);
 
-        if (startup.DirectSession is { } direct)
+        if (!string.IsNullOrWhiteSpace(startup.DirectContentPath))
+        {
+            OpenEditorContext(startup.DirectContentPath, startup.DirectScenarioId, launchSimulation: false);
+        }
+        else if (startup.DirectSession is { } direct)
         {
             StartSession(direct);
         }
@@ -65,9 +70,26 @@ internal sealed class SadConsoleShell : Console
             {
                 SadConsole.Game.Instance.MonoGameInstance.Exit();
             }
+            else if (_mode == ShellMode.Editor)
+            {
+                if (_editorContext?.IsCommandMenuOpen == true)
+                {
+                    var result = _editorContext.CancelCommandMenu();
+                    _message = result.Message;
+                }
+                else if (_editorContext?.IsTemplateEditInputActive == true)
+                {
+                    var result = _editorContext.CancelEdit();
+                    _message = result.Message;
+                }
+                else
+                {
+                    ReturnToMenuOrExit();
+                }
+            }
             else if (_mode == ShellMode.Play)
             {
-                ReturnToMenuOrExit();
+                ReturnToEditorMenuOrExit();
             }
             else
             {
@@ -83,6 +105,10 @@ internal sealed class SadConsoleShell : Console
         if (_mode == ShellMode.Menu)
         {
             HandleMenuInput(keyboard);
+        }
+        else if (_mode == ShellMode.Editor)
+        {
+            HandleEditorInput(keyboard);
         }
         else
         {
@@ -111,14 +137,391 @@ internal sealed class SadConsoleShell : Console
         else if (keyboard.IsKeyReleased(Keys.Enter))
         {
             var entry = _catalog.Entries[_selectedScenarioIndex];
-            try
+            OpenEditorContext(entry.ContentPath, entry.ScenarioId, launchSimulation: true);
+        }
+        else if (keyboard.IsKeyReleased(Keys.O))
+        {
+            var entry = _catalog.Entries[_selectedScenarioIndex];
+            OpenEditorContext(entry.ContentPath, entry.ScenarioId, launchSimulation: false);
+        }
+    }
+
+    private void HandleEditorInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            ReturnToMenuOrExit();
+            return;
+        }
+
+        if (_editorContext.IsEditingTemplatePresentation)
+        {
+            HandleEditorTemplateTextEditInput(keyboard);
+            return;
+        }
+
+        if (_editorContext.IsPickingTemplateDefaultActionPlan)
+        {
+            HandleEditorTemplateDefaultActionPlanPickerInput(keyboard);
+            return;
+        }
+
+        if (_editorContext.IsEditingActionPlanSteps)
+        {
+            HandleEditorActionPlanStepInput(keyboard);
+            return;
+        }
+
+        if (_editorContext.IsEditingTemplateTargetingRule)
+        {
+            HandleEditorTemplateTargetingRuleInput(keyboard);
+            return;
+        }
+
+        if (_editorContext.IsTemplateInventoryBrushActive)
+        {
+            HandleEditorTemplateInventoryBrushInput(keyboard);
+            return;
+        }
+
+        if (_editorContext.IsCommandMenuOpen)
+        {
+            HandleEditorCommandMenuInput(keyboard);
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            _editorContext.MoveSelection(-1);
+            _message = "Editor browser selection moved. Template presentation edits apply only in Templates section.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            _editorContext.MoveSelection(1);
+            _message = "Editor browser selection moved. Template presentation edits apply only in Templates section.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Left))
+        {
+            _editorContext.MoveSection(-1);
+            _message = "Editor browser section changed.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Right))
+        {
+            _editorContext.MoveSection(1);
+            _message = "Editor browser section changed.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.T))
+        {
+            _editorContext.ToggleTextSurface();
+            _editorContext.SelectSection(SadConsoleEditorSection.YamlAndDiff);
+            _message = "Toggled read-only YAML/diff inspection surface.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.R))
+        {
+            var result = _editorContext.RefreshSnapshot();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.P))
+        {
+            _editorContext.SelectSection(SadConsoleEditorSection.Preview);
+            var preview = _editorContext.RefreshSelectedScenarioPreview();
+            _message = preview is null
+                ? "No authored scenario is selected for preview."
+                : $"Refreshed turn-0 derived runtime preview for {preview.ScenarioId}. Preview is not authored source.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.S))
+        {
+            var result = _editorContext.Save();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.J))
+        {
+            var result = _editorContext.JumpSelectedPreviewEntityToSourceTemplate();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.N))
+        {
+            var result = _editorContext.BeginTemplateNameEdit();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.G))
+        {
+            var result = _editorContext.BeginTemplateGlyphEdit();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.C))
+        {
+            var result = _editorContext.CycleSelectedTemplateColor();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.A))
+        {
+            var result = _editorContext.Section == SadConsoleEditorSection.ActionPlans
+                ? _editorContext.BeginActionPlanStepEditor()
+                : _editorContext.BeginTemplateDefaultActionPlanPicker();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Y))
+        {
+            var result = _editorContext.BeginTemplateTargetingRuleEditor();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.B))
+        {
+            var result = _editorContext.ToggleTemplateInventoryBrush();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.OpenCommandMenu();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.M))
+        {
+            LaunchSelectedEditorScenario();
+        }
+    }
+
+    private void HandleEditorCommandMenuInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            _editorContext.MoveCommandMenuSelection(-1);
+            _message = "Editor command menu selection moved. Enter activates; Esc cancels.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            _editorContext.MoveCommandMenuSelection(1);
+            _message = "Editor command menu selection moved. Enter activates; Esc cancels.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.ActivateSelectedCommand();
+            _message = result.Message;
+            if (result.RequestsSimulationLaunch)
             {
-                StartSession(PlayableScenarioLauncher.CreateFromCatalogEntry(entry));
+                LaunchSelectedEditorScenario();
             }
-            catch (Exception ex)
+        }
+    }
+
+    private void HandleEditorTemplateInventoryBrushInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            var result = _editorContext.MoveTemplateInventoryBrushCursor(0, -1);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            var result = _editorContext.MoveTemplateInventoryBrushCursor(0, 1);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Left))
+        {
+            var result = _editorContext.MoveTemplateInventoryBrushCursor(-1, 0);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Right))
+        {
+            var result = _editorContext.MoveTemplateInventoryBrushCursor(1, 0);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Tab) || keyboard.IsKeyReleased(Keys.E))
+        {
+            var result = _editorContext.CycleTemplateInventoryBrush();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.PlaceTemplateInventoryBrush();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.B))
+        {
+            var result = _editorContext.ToggleTemplateInventoryBrush();
+            _message = result.Message;
+        }
+    }
+
+    private void HandleEditorActionPlanStepInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            _editorContext.MoveSelection(-1);
+            _message = "Action-plan step editor moved. R replaces existing row; I inserts at selected position; Esc exits.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            _editorContext.MoveSelection(1);
+            _message = "Action-plan step editor moved. R replaces existing row; I inserts at selected position; Esc exits.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Tab) || keyboard.IsKeyReleased(Keys.Right))
+        {
+            var result = _editorContext.CycleActionStepEditorAvailable(1);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Left))
+        {
+            var result = _editorContext.CycleActionStepEditorAvailable(-1);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.R))
+        {
+            var result = _editorContext.ReplaceSelectedActionPlanStep();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.I))
+        {
+            var result = _editorContext.InsertSelectedActionPlanStep();
+            _message = result.Message;
+        }
+    }
+
+    private void HandleEditorTemplateTargetingRuleInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (_editorContext.IsEditingTargetingRuleLabel)
+        {
+            if (keyboard.IsKeyReleased(Keys.Enter))
             {
-                _message = $"Could not launch {entry.ScenarioId}: {ex.Message}";
+                var result = _editorContext.ConfirmTargetingRuleLabelEdit();
+                _message = result.Message;
+                return;
             }
+
+            if (keyboard.IsKeyReleased(Keys.Back))
+            {
+                var result = _editorContext.BackspaceTargetingRuleLabelText();
+                _message = result.Message;
+                return;
+            }
+
+            var typed = ReadTypedCharacters(keyboard);
+            if (typed.Length > 0)
+            {
+                var result = _editorContext.TypeTargetingRuleLabelText(typed);
+                _message = result.Message;
+            }
+
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            _editorContext.MoveSelection(-1);
+            _message = "Targeting rule editor moved to previous slot. Enter applies; Esc exits.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            _editorContext.MoveSelection(1);
+            _message = "Targeting rule editor moved to next slot. Enter applies; Esc exits.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.L))
+        {
+            var result = _editorContext.BeginTargetingRuleLabelEdit();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.E))
+        {
+            var result = _editorContext.CycleTargetingRuleTarget();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.ConfirmTemplateTargetingRuleEditor();
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.X) || keyboard.IsKeyReleased(Keys.Delete) || keyboard.IsKeyReleased(Keys.Back))
+        {
+            var result = _editorContext.ClearTemplateTargetingRuleSlot();
+            _message = result.Message;
+        }
+        else
+        {
+            var typed = ReadTypedCharacters(keyboard);
+            if (typed.Contains('+') || typed.Contains(']'))
+            {
+                var result = _editorContext.AdjustTargetingRuleRange(1);
+                _message = result.Message;
+            }
+            else if (typed.Contains('-') || typed.Contains('['))
+            {
+                var result = _editorContext.AdjustTargetingRuleRange(-1);
+                _message = result.Message;
+            }
+        }
+    }
+
+    private void HandleEditorTemplateDefaultActionPlanPickerInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            _editorContext.MoveSelection(-1);
+            _message = "Default action plan picker moved. Enter applies; Esc cancels.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            _editorContext.MoveSelection(1);
+            _message = "Default action plan picker moved. Enter applies; Esc cancels.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.ConfirmTemplateDefaultActionPlanPicker();
+            _message = result.Message;
+        }
+    }
+
+    private void HandleEditorTemplateTextEditInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.ConfirmEdit();
+            _message = result.Message;
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Back))
+        {
+            var result = _editorContext.BackspaceEditText();
+            _message = result.Message;
+            return;
+        }
+
+        var typed = ReadTypedCharacters(keyboard);
+        if (typed.Length > 0)
+        {
+            var result = _editorContext.TypeEditText(typed);
+            _message = result.Message;
         }
     }
 
@@ -419,6 +822,66 @@ internal sealed class SadConsoleShell : Console
             : $"Scenario {session.ScenarioId} diagnostics: {string.Join(" | ", session.ValidationDiagnostics.Concat(session.RuntimeFailures))}";
     }
 
+    private void OpenEditorContext(string contentPath, string? scenarioId, bool launchSimulation)
+    {
+        try
+        {
+            var result = SadConsoleEditorContext.Open(contentPath, scenarioId);
+            if (!result.IsSuccess || result.Context is null)
+            {
+                _message = result.ErrorMessage ?? $"Could not open content file {contentPath}.";
+                return;
+            }
+
+            _editorContext = result.Context;
+            _mode = ShellMode.Editor;
+            _session = null;
+            _commands = null;
+            _history = null;
+            _actionLog = null;
+            _message = launchSimulation
+                ? $"Opened authored content for {scenarioId}; launching derived Simulation."
+                : "Editor context opened. Template presentation edits are available; press P to materialize Preview manually.";
+
+            if (launchSimulation)
+            {
+                LaunchSelectedEditorScenario();
+            }
+        }
+        catch (Exception ex)
+        {
+            _message = $"Could not open editor context for {contentPath}: {ex.Message}";
+        }
+    }
+
+    private void LaunchSelectedEditorScenario()
+    {
+        if (_editorContext is null)
+        {
+            _message = "No editor context is open.";
+            return;
+        }
+
+        try
+        {
+            var preview = _editorContext.MaterializeSelectedScenarioForSimulation();
+            if (preview is null)
+            {
+                _message = "No authored scenario is selected.";
+                return;
+            }
+
+            StartSession(preview.Session);
+            _message = preview.CanPlay
+                ? $"Simulation mode: derived runtime session for {preview.ScenarioId}. Esc returns to Editor; runtime state is not written back."
+                : $"Derived Simulation for {preview.ScenarioId} has diagnostics: {string.Join(" | ", preview.ValidationDiagnostics.Concat(preview.RuntimeFailures).Concat(preview.CapabilityGaps))}";
+        }
+        catch (Exception ex)
+        {
+            _message = $"Could not launch selected authored scenario: {ex.Message}";
+        }
+    }
+
     private void ReturnToMenuOrExit()
     {
         if (_catalog is null)
@@ -435,12 +898,32 @@ internal sealed class SadConsoleShell : Console
         _message = "Returned to scenario list. Enter launches. Esc quits.";
     }
 
+    private void ReturnToEditorMenuOrExit()
+    {
+        if (_editorContext is not null)
+        {
+            _session = null;
+            _commands = null;
+            _history = null;
+            _actionLog = null;
+            _mode = ShellMode.Editor;
+            _message = "Returned to Editor context. Selected authored scenario was preserved; runtime state was discarded.";
+            return;
+        }
+
+        ReturnToMenuOrExit();
+    }
+
     private void Redraw()
     {
         ClearSurface();
         if (_mode == ShellMode.Menu)
         {
             DrawMenu();
+        }
+        else if (_mode == ShellMode.Editor)
+        {
+            DrawEditor();
         }
         else
         {
@@ -451,8 +934,9 @@ internal sealed class SadConsoleShell : Console
 
     private void DrawMenu()
     {
-        PrintText(1, 0, "GameGameGame SadConsole debug browser", Color.Yellow);
+        PrintText(1, 0, "GameGameGame SadConsole debug/editor browser", Color.Yellow);
         PrintClipped(1, 1, Width - 2, _message, Color.White);
+        PrintClipped(1, 2, Width - 2, "Enter: Play Scenario from Catalog (opens backing Editor context first). O: Open selected content file in Editor. Esc quits.", Color.DarkGray);
 
         if (_catalog is null)
         {
@@ -464,7 +948,7 @@ internal sealed class SadConsoleShell : Console
         for (var index = first; index < _catalog.Entries.Count && index < first + maxEntries; index++)
         {
             var entry = _catalog.Entries[index];
-            var y = 4 + index - first;
+            var y = 5 + index - first;
             var selected = index == _selectedScenarioIndex;
             PrintClipped(2, y, Width - 4, $"{(selected ? '>' : ' ')} {entry.Name} ({entry.ScenarioId}) - {entry.ContentPath}", selected ? Color.Yellow : Color.White);
             if (!string.IsNullOrWhiteSpace(entry.Description) && y + 1 < Height)
@@ -477,6 +961,53 @@ internal sealed class SadConsoleShell : Console
         foreach (var diagnostic in _catalog.Diagnostics.Take(3))
         {
             PrintClipped(1, diagnosticY++, Width - 2, $"Catalog diagnostic: {diagnostic}", Color.Orange);
+        }
+    }
+
+    private void DrawEditor()
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        var view = SadConsoleEditorViewBuilder.Build(_editorContext, _message);
+        PrintText(1, 0, view.Header, Color.Yellow);
+        PrintClipped(1, 1, Width - 2, view.Message, Color.White);
+        PrintClipped(1, 3, Width - 2, view.FileLine, Color.Cyan);
+        PrintClipped(1, 4, Width - 2, view.DirtyLine, Color.Gray);
+        PrintClipped(1, 5, Width - 2, view.CountLine, Color.Gray);
+        PrintClipped(1, 6, Width - 2, view.SelectedScenarioLine, Color.White);
+        PrintClipped(1, 7, Width - 2, view.PromptHint, Color.DarkGray);
+        PrintClipped(1, 8, Width - 2, view.SectionLine, Color.Cyan);
+
+        PrintText(1, 10, "Authored scenarios (quick launch list)", Color.Yellow);
+        var y = 11;
+        foreach (var row in view.ScenarioRows)
+        {
+            PrintClipped(2, y++, Width - 4, row, row.StartsWith('>') ? Color.Yellow : Color.White);
+        }
+
+        y = 26;
+        PrintText(1, y++, view.DetailHeader, Color.Yellow);
+        foreach (var row in view.DetailRows)
+        {
+            PrintClipped(2, y++, Width - 4, row, row.StartsWith('>') ? Color.Yellow : Color.White);
+        }
+
+        y = Math.Max(y + 1, 45);
+        if (y < Height)
+        {
+            PrintText(1, y++, "Editor-service diagnostics", Color.Yellow);
+            foreach (var row in view.DiagnosticRows)
+            {
+                if (y >= Height)
+                {
+                    break;
+                }
+
+                PrintClipped(2, y++, Width - 4, row, row.StartsWith("Error", StringComparison.OrdinalIgnoreCase) ? Color.Orange : Color.Gray);
+            }
         }
     }
 
@@ -902,6 +1433,20 @@ internal sealed class SadConsoleShell : Console
         keyboard.IsKeyReleased(Keys.Right) ? GggDirection.East :
         null;
 
+    private static string ReadTypedCharacters(Keyboard keyboard)
+    {
+        var chars = new List<char>();
+        foreach (var key in keyboard.KeysPressed)
+        {
+            if (key.Character != 0 && !char.IsControl(key.Character))
+            {
+                chars.Add(key.Character);
+            }
+        }
+
+        return new string(chars.ToArray());
+    }
+
     private void PrintClipped(int x, int y, int width, string text, Color color)
     {
         if (y < 0 || y >= Height || x >= Width) return;
@@ -971,6 +1516,7 @@ internal sealed class SadConsoleShell : Console
 internal enum ShellMode
 {
     Menu,
+    Editor,
     Play,
     InspectSource,
     PickupSource,

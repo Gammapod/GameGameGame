@@ -81,7 +81,7 @@ Author entity templates as reusable normal content. Current safe operations incl
 - assign presentation data;
 - assign or clear a default action plan;
 - configure inventory dimensions, bulk, and aperture;
-- place carried entities in authored inventory layouts;
+- place, remove, move, replace, and overwrite carried entities in authored inventory layouts through supported editor/API workflows;
 - set initial actor `Facing` when the template acts through action plans;
 - configure target-selection rules for target-consuming Action Steps.
 
@@ -94,7 +94,7 @@ Current inventory authoring supports:
 - inventory dimensions;
 - entity bulk;
 - aperture;
-- authored carried-entity layout;
+- authored carried-entity layout, including placement, removal, movement, template replacement, and coordinate overwrite through supported editor/API workflows;
 - pickup/drop-oriented content using supported Action Steps.
 
 Use constrained inventory behavior where possible:
@@ -144,6 +144,7 @@ actionPlans:
 Authoring model:
 
 - An entity template may assign a default action plan.
+- Supported editor/API workflows may create, duplicate, delete unreferenced, and create passive action plans.
 - A canonical behavior chain is an ordered list of engine-defined Action Steps.
 - Steps are attempted in order.
 - A successful turn-consuming step produces the observable action for that root resolution.

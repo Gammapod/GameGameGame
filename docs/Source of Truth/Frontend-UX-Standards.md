@@ -151,7 +151,7 @@ The preview should:
 - make it clear that preview state is derived from authored content and is not itself the authored source;
 - eventually support a direct “Launch Simulation” action from the preview.
 
-Refresh policy is a design choice for later implementation. Manual refresh is safest first; auto-refresh can be considered once performance and dirty-document semantics are understood.
+SadConsole Editor mode uses an explicit manual refresh policy for the first cached browser implementation: `R` refreshes/revalidates the cached authored snapshot through shared editor services and marks any preview stale/not materialized, while `P` explicitly materializes or rematerializes the selected scenario preview. Auto-refresh remains deferred until performance and dirty-document semantics are understood.
 
 ### Simulation -> Editor source jumps
 
