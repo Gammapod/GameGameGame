@@ -166,7 +166,14 @@ public sealed class ActionPlanInterpreter
         for (var index = 0; index < steps.Count; index++)
         {
             var step = steps[index];
-            context.UseTargetSlot(step.TargetSlot ?? 1);
+            if (!string.IsNullOrWhiteSpace(step.TargetLabel))
+            {
+                context.UseTargetLabel(step.TargetLabel);
+            }
+            else
+            {
+                context.UseTargetSlot(step.TargetSlot ?? 1);
+            }
             var stepTrace = new TraceNode($"Action Step {step.Kind}", TraceStatus.Info);
             root.Add(stepTrace);
 

@@ -25,10 +25,18 @@ public static class TargetingService
             if (selected is { } targetId)
             {
                 world.SetActionTarget(actorId, rule.Slot, targetId);
+                if (!string.IsNullOrWhiteSpace(rule.Label))
+                {
+                    world.SetActionTarget(actorId, rule.Label, targetId);
+                }
             }
             else
             {
                 world.ClearActionTarget(actorId, rule.Slot);
+                if (!string.IsNullOrWhiteSpace(rule.Label))
+                {
+                    world.ClearActionTarget(actorId, rule.Label);
+                }
             }
         }
     }

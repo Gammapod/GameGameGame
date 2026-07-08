@@ -422,6 +422,8 @@ public sealed class EditableContentDocument
 
         public string? Hint { get; set; }
 
+        public string? Label { get; set; }
+
         public string? TargetTemplateId { get; set; }
 
         public int Range { get; set; }
@@ -430,6 +432,7 @@ public sealed class EditableContentDocument
         {
             Slot = rule.Slot,
             Hint = rule.Hint,
+            Label = rule.Label,
             TargetTemplateId = rule.TargetTemplateId.Value,
             Range = rule.Range
         };
@@ -553,17 +556,20 @@ public sealed class EditableContentDocument
 
         public int? TargetSlot { get; set; }
 
+        public string? TargetLabel { get; set; }
+
         public string? PlanId { get; set; }
 
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
             TargetSlot = descriptor.TargetSlot,
+            TargetLabel = descriptor.TargetLabel,
             PlanId = descriptor.PlanId?.Value
         };
 
         public ActionPlanBehaviorStepDescriptor ToDescriptor() =>
-            new(Kind, TargetSlot, PlanId is null ? null : new ActionPlanId(PlanId));
+            new(Kind, TargetSlot, TargetLabel, PlanId is null ? null : new ActionPlanId(PlanId));
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

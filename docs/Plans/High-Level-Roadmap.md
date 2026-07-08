@@ -105,36 +105,41 @@ Recently completed supporting documents:
 - [Sprint 22: Gamma Containment Path Service](../Archived/Sprint-22-Gamma-Containment-Path-Service.md)
 - [Beta Content Exploration Plan](../Archived/Beta-Content-Exploration-Plan.md)
 
-Active frontend planning documents:
+Active Gamma/frontend planning documents:
 
+- [Gamma Editor MVP Plan](Gamma-Editor-MVP-Plan.md)
 - [Gamma Frontend Demo Plan](Gamma-Frontend-Demo-Plan.md)
 - [SadConsole Frontend Roadmap](SadConsole-Frontend-Roadmap.md)
 
-Immediate frontend priority:
+Immediate Gamma priority:
 
-- Carry the completed SadConsole spike findings into the current SadConsole frontend and packaging path.
-- Use the SadConsole frontend roadmap to keep shared session/action/target/log/entity-panel contracts aligned while frontend-owner polishes the canonical debug/browser shell.
+- Use the Gamma Editor MVP plan as the release checkpoint: SadConsole should prove the Editor -> Preview -> Simulation -> Return loop over shared content/editor and runtime services.
+- Carry the completed SadConsole spike findings into the current SadConsole editor/debug-browser path.
+- Use the SadConsole frontend roadmap to keep shared session/action/target/log/entity-panel contracts aligned while frontend-owner polishes the canonical debug/editor browser shell.
 - Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so future Console, SadConsole, Godot, or editor-facing surfaces consume the same capabilities.
-- Make SadConsole the supported shareable demo/frontend surface; keep Console as fallback/minimal CLI and debug tooling.
+- Make SadConsole the supported shareable editor/debug frontend surface; keep Console as fallback/minimal CLI and debug tooling.
 
 Planned next sprint:
 
-- Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` have paved the initial frontend contracts: frontend UX source-of-truth docs, Content's frontend-neutral `PlayableScenarioLauncher`, Core's `ControlledActorCommandService`, Core's `ControlledActorAffordanceService`, controlled-command outcome/log projection, and Content's first-pass `EntityPanelProjectionService`. The selected contract polish gap is now the SadConsole-shaped unified simulation history/log/rollback sequence recorded in the SadConsole roadmap before relying on the current frontend-owned controlled-command log as durable state. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole debug-browser path unless explicitly re-selected as fallback polish.
+- Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` paved the initial frontend contracts: frontend UX source-of-truth docs, Content's frontend-neutral `PlayableScenarioLauncher`, Core's `ControlledActorCommandService`, Core's `ControlledActorAffordanceService`, controlled-command outcome/log projection, Content's first-pass `EntityPanelProjectionService`, and the shared simulation history/log/rollback foundation. The selected Gamma work is now the Editor MVP sequence in `docs/Plans/Gamma-Editor-MVP-Plan.md`: align/inventory, establish Editor context shell, add read-only browser and diagnostics, add scenario preview, complete Simulation handoff/return with source-jump seed, then harden for release. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole editor/debug-browser path unless explicitly re-selected as fallback polish.
 
-Gamma/frontend target statement:
+Gamma/editor target statement:
 
-- The project can be shared with test players through a scenario-list-driven frontend/debug browser path.
+- The project can be shared with test players and content/debug users through a SadConsole editor/debug browser path.
+- Users can open content, browse authored scenarios/templates/action plans, inspect validation diagnostics, preview a scenario at turn 0, launch Simulation, and return to the same editor context.
 - Testers can choose curated scenarios, understand what they are looking at, and give useful feedback without reading development docs.
 - SadConsole is now the preferred canonical debug/editor browser direction; Console remains fallback/minimal tooling.
 - Short-term work should preserve shared UI-agnostic query/catalog/session/action/log contracts that Console, SadConsole, or a later frontend engine can consume.
 
-Gamma/frontend promoted stages:
+Gamma/editor promoted stages:
 
 1. Completed in Sprint 22: read-only Core inspection path service that produces cycle-safe structural containment paths for entities, including upward, root-relative, max-depth, and shared-root queries.
 2. SadConsole roadmap Stage 0/1 contract paving: frontend UX source-of-truth cleanup, debt inventory, and shared playable-session launch extraction.
 3. Shared controlled action / Action Choice-compatible command result, action target/affordance queries, structured outcome/log projection, and entity panel projection.
-4. SadConsole debug/browser shell and information-density pass once shared contracts are ready for frontend-owner consumption.
-5. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy entries, or naming issues make it necessary.
+4. SadConsole Editor MVP Phase 1: Editor context shell and Simulation return path.
+5. SadConsole Editor MVP Phase 2: read-only content browser, validation diagnostics, YAML/diff visibility.
+6. SadConsole Editor MVP Phase 3/4: turn-0 scenario preview, Simulation handoff, history/log continuity, and first provenance-backed source jump.
+7. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy entries, or naming issues make it necessary.
 
 Deferred to the consolidated frontend bucket:
 

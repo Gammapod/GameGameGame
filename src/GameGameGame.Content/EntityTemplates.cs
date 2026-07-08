@@ -28,7 +28,8 @@ public sealed record EntityTargetingRule(
     int Slot,
     EntityTemplateId TargetTemplateId,
     int Range,
-    string? Hint = null);
+    string? Hint = null,
+    string? Label = null);
 
 public sealed record ActorActionStateDefaults(
     Direction? Facing = null,

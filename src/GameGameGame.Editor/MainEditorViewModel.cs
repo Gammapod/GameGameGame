@@ -1467,6 +1467,7 @@ public sealed class MainEditorViewModel : INotifyPropertyChanged
                 index,
                 step.Kind,
                 step.TargetSlot,
+                step.TargetLabel,
                 step.PlanId,
                 metadata.DisplayName,
                 metadata.Description,
@@ -1955,6 +1956,7 @@ public sealed record ActionPlanBehaviorStepListItem(
     int Index,
     ActionPlanBehaviorStepKind Kind,
     int? TargetSlot,
+    string? TargetLabel,
     ActionPlanId? PlanId,
     string DisplayName,
     string Description,
@@ -1965,8 +1967,9 @@ public sealed record ActionPlanBehaviorStepListItem(
     public override string ToString()
     {
         var targetSlot = TargetSlot is { } slot ? $" | Target Slot: {slot}" : string.Empty;
+        var targetLabel = TargetLabel is { } label ? $" | Target Label: {label}" : string.Empty;
         var planId = PlanId is { } plan ? $" | Plan: {plan}" : string.Empty;
-        return $"{Index}: {DisplayName}{targetSlot}{planId} | {RequiredStateSummary} | {DefaultStateSummary} | {StateWritesSummary}";
+        return $"{Index}: {DisplayName}{targetSlot}{targetLabel}{planId} | {RequiredStateSummary} | {DefaultStateSummary} | {StateWritesSummary}";
     }
 }
 

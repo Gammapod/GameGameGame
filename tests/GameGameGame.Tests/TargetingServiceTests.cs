@@ -19,6 +19,7 @@ public sealed class TargetingServiceTests
         TargetingService.RefreshTargets(world, registry, new EntityId("mouse"));
 
         Assert.Equal(new EntityId("nearCat"), world.GetActionTarget(new EntityId("mouse"), slot: 1));
+        Assert.Equal(new EntityId("nearCat"), world.GetActionTarget(new EntityId("mouse"), label: "danger"));
         Assert.Equal(new EntityId("nearCat"), world.GetActionTarget(new EntityId("mouse")));
     }
 
@@ -35,6 +36,7 @@ public sealed class TargetingServiceTests
         TargetingService.RefreshTargets(world, registry, mouse);
 
         Assert.Null(world.GetActionTarget(mouse, slot: 1));
+        Assert.Null(world.GetActionTarget(mouse, label: "danger"));
         Assert.Null(world.GetActionTarget(mouse));
     }
 
@@ -73,6 +75,7 @@ public sealed class TargetingServiceTests
                 carryingCapacity: 0
                 targetingRules:
                   - slot: 1
+                    label: danger
                     hint: Danger
                     targetTemplateId: cat
                     range: 3

@@ -89,6 +89,11 @@ public sealed class WorldState
             clone.Targets[slot] = targetId;
         }
 
+        foreach (var (label, targetId) in source.LabeledTargets)
+        {
+            clone.LabeledTargets[label] = targetId;
+        }
+
         foreach (var (slot, plan) in source.ActionPlanOverrides)
         {
             clone.ActionPlanOverrides[slot] = plan;
@@ -167,6 +172,16 @@ public sealed class WorldState
         }
     }
 
+    public void SetActionTarget(EntityId entityId, string label, EntityId targetId)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return;
+        }
+
+        GetOrCreateActionState(entityId).LabeledTargets[label] = targetId;
+    }
+
     public void ClearActionTarget(EntityId entityId, int slot)
     {
         if (!ActionStates.TryGetValue(entityId, out var state))
@@ -182,6 +197,16 @@ public sealed class WorldState
         }
     }
 
+    public void ClearActionTarget(EntityId entityId, string label)
+    {
+        if (string.IsNullOrWhiteSpace(label) || !ActionStates.TryGetValue(entityId, out var state))
+        {
+            return;
+        }
+
+        state.LabeledTargets.Remove(label);
+    }
+
     public EntityId? GetActionTarget(EntityId entityId, int slot)
     {
         if (!ActionStates.TryGetValue(entityId, out var state))
@@ -195,6 +220,16 @@ public sealed class WorldState
         }
 
         return slot == 1 ? state.Target : null;
+    }
+
+    public EntityId? GetActionTarget(EntityId entityId, string label)
+    {
+        if (string.IsNullOrWhiteSpace(label) || !ActionStates.TryGetValue(entityId, out var state))
+        {
+            return null;
+        }
+
+        return state.LabeledTargets.TryGetValue(label, out var targetId) ? targetId : null;
     }
 
     public void SetActionPlanOverride(EntityId entityId, ActionPlanOverrideSlot slot, PlannedActionPlan plan) =>

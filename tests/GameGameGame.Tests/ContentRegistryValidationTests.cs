@@ -80,6 +80,25 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsBehaviorTargetWithSlotAndLabel()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("invalidTargetReference"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.SeekTarget, TargetSlot: 1, TargetLabel: "fears")
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepTargetReference);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingApplyPrePlanReference()
     {
         var missingPlanId = new ActionPlanId("missingFear");

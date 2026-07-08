@@ -473,6 +473,27 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         var steps = GetActionPlanBehaviorSteps(planId);
         _ = steps[stepIndex];
         steps[stepIndex].TargetSlot = targetSlot;
+        if (targetSlot is not null)
+        {
+            steps[stepIndex].TargetLabel = null;
+        }
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel)
+    {
+        if (targetLabel is { } label && string.IsNullOrWhiteSpace(label))
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} target label must not be blank.");
+        }
+
+        var steps = GetActionPlanBehaviorSteps(planId);
+        _ = steps[stepIndex];
+        steps[stepIndex].TargetLabel = targetLabel;
+        if (targetLabel is not null)
+        {
+            steps[stepIndex].TargetSlot = null;
+        }
         onChanged?.Invoke();
     }
 
@@ -882,6 +903,7 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
                         metadata.DefaultableState,
                         metadata.StateWrites,
                         step.TargetSlot,
+                        step.TargetLabel,
                         step.PlanId);
                 })
                 .ToList();
@@ -1034,6 +1056,7 @@ public sealed record ActionPlanPreviewStep(
     IReadOnlyList<PlanPrimitiveSlotDescriptor> DefaultableState,
     IReadOnlyList<PlanPrimitiveSlotDescriptor> StateWrites,
     int? TargetSlot = null,
+    string? TargetLabel = null,
     ActionPlanId? PlanId = null);
 
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);

@@ -222,6 +222,7 @@ public sealed class PrototypeContentRegistry(
         }
 
         var slots = new HashSet<int>();
+        var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rule in template.TargetingRules)
         {
             if (rule.Slot <= 0)
@@ -238,6 +239,24 @@ public sealed class PrototypeContentRegistry(
                     ContentDiagnosticCode.InvalidTargetingRule,
                     $"Entity template {templateId} ({template.Name}) has duplicate targeting rule slot {rule.Slot}.",
                     entityTemplateId: templateId));
+            }
+
+            if (rule.Label is { } label)
+            {
+                if (string.IsNullOrWhiteSpace(label))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidTargetingRule,
+                        $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} label must not be blank.",
+                        entityTemplateId: templateId));
+                }
+                else if (!labels.Add(label))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidTargetingRule,
+                        $"Entity template {templateId} ({template.Name}) has duplicate targeting rule label {label}.",
+                        entityTemplateId: templateId));
+                }
             }
 
             if (rule.Range < 0)
@@ -432,6 +451,26 @@ public sealed class PrototypeContentRegistry(
                     AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
                         ContentDiagnosticCode.InvalidActionStepTargetSlot,
                         $"Action plan {descriptor.Id} action step {step.Kind} targetSlot must be greater than zero; found {step.TargetSlot}.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: index));
+                }
+
+                if (step.TargetSlot is not null && !string.IsNullOrWhiteSpace(step.TargetLabel))
+                {
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidActionStepTargetReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} must use either targetLabel or targetSlot, not both.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: index));
+                }
+
+                if (step.TargetLabel is { } label && string.IsNullOrWhiteSpace(label))
+                {
+                    AddDiagnostic(validationDiagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidActionStepTargetReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} targetLabel must not be blank.",
                         actionPlanTemplateId: actionPlanTemplateId,
                         actionPlanId: descriptor.Id,
                         stepIndex: index));

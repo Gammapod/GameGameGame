@@ -121,7 +121,7 @@ Current content-facing actor state:
 
 Author initial `Facing` through `actionStateDefaults.facing` or the corresponding editor/API workflow.
 
-Author target selection on entity templates with `targetingRules`. Each rule has a numeric `slot`, optional content-facing `hint`, `targetTemplateId`, and `range`. At the beginning of an entity turn, before its action plan is evaluated, each rule selects the nearest same-plane entity with the configured target template within range and writes that entity into the rule's target slot. Target-consuming Action Steps read slot `1` by default; advanced authoring can set an Action Step `targetSlot` to read another slot.
+Author target selection on entity templates with `targetingRules`. Each rule has a numeric `slot`, recommended stable `label`, optional content-facing `hint`, `targetTemplateId`, and `range`. At the beginning of an entity turn, before its action plan is evaluated, each rule selects the nearest same-plane entity with the configured target template within range and writes that entity into both the numeric target slot and the label when present. Target-consuming Action Steps should reference `targetLabel` for normal content; numeric `targetSlot` remains an advanced compatibility escape hatch. If a referenced label has no current target on the executing actor, the step fails/falls through.
 
 Do not author arbitrary state variables for new content. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; use template target rules instead, or track the need through the gap log when rules are insufficient.
 
@@ -189,11 +189,11 @@ This table is the content-facing catalog of currently authorable canonical Actio
 
 | Step | Reads | Writes | Author-facing behavior | Common use |
 |---|---|---|---|---|
-| `SeekTarget` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that reduces Manhattan distance to target; falls through if target is invalid or no reducing move can act. | chasing, following, collecting |
-| `FleeTarget` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that increases Manhattan distance from target; falls through if no valid escape move can act. | fleeing, avoidance |
-| `MaintainChebyshevDistanceTwo` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Move toward or away from target to approach Chebyshev distance 2; falls through when already at distance 2 or unable to improve. | kiting, spacing, ranged-position demos |
-| `StrafeClockwise` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Attempt clockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
-| `StrafeAnticlockwise` | target slot, default `1` | position; post-action `Facing` becomes movement direction | Attempt anticlockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
+| `SeekTarget` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that reduces Manhattan distance to target; falls through if target is invalid or no reducing move can act. | chasing, following, collecting |
+| `FleeTarget` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that increases Manhattan distance from target; falls through if no valid escape move can act. | fleeing, avoidance |
+| `MaintainChebyshevDistanceTwo` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Move toward or away from target to approach Chebyshev distance 2; falls through when already at distance 2 or unable to improve. | kiting, spacing, ranged-position demos |
+| `StrafeClockwise` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Attempt clockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
+| `StrafeAnticlockwise` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Attempt anticlockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
 
 ### World mutation / prototype utility
 
@@ -201,9 +201,9 @@ This table is the content-facing catalog of currently authorable canonical Actio
 |---|---|---|---|---|
 | `DestroyTarget` | `Target` | world/entity state | Destroy current target when valid; current first pass rejects self-destruction. | destructive actors, cleanup demos |
 | `CreateFacing` | `Facing` | world/entity state | Create a placeholder entity in the facing cell when open. | prototype creation/spawning demos |
-| `ApplyPrePlan` | target slot, default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn pre-plan, replacing any existing pre-plan override; the applying actor's turn is consumed on success. | fear/confusion-style temporary behavior override |
-| `ApplyMainPlan` | target slot, default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn main-plan override, replacing its default main behavior for the next turn. | temporary possession-like/simple behavior replacement |
-| `ApplyPostPlan` | target slot, default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn post-plan, tried after its main plan falls through. | temporary fallback/cleanup behavior |
+| `ApplyPrePlan` | target label preferred or target slot default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn pre-plan, replacing any existing pre-plan override; the applying actor's turn is consumed on success. | fear/confusion-style temporary behavior override |
+| `ApplyMainPlan` | target label preferred or target slot default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn main-plan override, replacing its default main behavior for the next turn. | temporary possession-like/simple behavior replacement |
+| `ApplyPostPlan` | target label preferred or target slot default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn post-plan, tried after its main plan falls through. | temporary fallback/cleanup behavior |
 
 Common chain patterns:
 
@@ -220,7 +220,7 @@ Common chain patterns:
 | Give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
 | Move into a bumped/targeted container, then later leave it | `MoveFacing -> EnterTarget`; contained actor can use `ExitFacing` |
 
-Targeting rules currently select by template ID, same-plane Manhattan range, and nearest deterministic tie-break. Use multiple target slots when one entity needs different content-defined concepts such as danger/home, enemy/treasure, or food/shelter.
+Targeting rules currently select by template ID, same-plane Manhattan range, and nearest deterministic tie-break. Use stable labels such as `danger`, `home`, `food`, or `shelter` when one entity needs different content-defined target concepts; numeric slots are still stored for compatibility but should not be the primary reference in new action steps.
 
 `GiveTarget` and `TakeTarget` use first-item deterministic selection only. They do not support authorable item filters, barter/trade permissions, or transfer restrictions yet. Runtime reports identify transferred entity ID/name and coordinates; template IDs are not shown because runtime entities do not currently carry template IDs.
 

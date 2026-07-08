@@ -62,6 +62,8 @@ public sealed class EntityActionState
 
     public Dictionary<int, EntityId> Targets { get; } = [];
 
+    public Dictionary<string, EntityId> LabeledTargets { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public Dictionary<ActionPlanOverrideSlot, PlannedActionPlan> ActionPlanOverrides { get; } = [];
 }
 

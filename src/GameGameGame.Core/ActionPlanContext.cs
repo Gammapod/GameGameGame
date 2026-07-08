@@ -40,9 +40,17 @@ public sealed class ActionPlanContext
 
     private int _activeTargetSlot = 1;
 
+    private string? _activeTargetLabel;
+
     public void UseTargetSlot(int targetSlot)
     {
         _activeTargetSlot = targetSlot <= 0 ? 1 : targetSlot;
+        _activeTargetLabel = null;
+    }
+
+    public void UseTargetLabel(string targetLabel)
+    {
+        _activeTargetLabel = string.IsNullOrWhiteSpace(targetLabel) ? null : targetLabel;
     }
 
     public void AttachEntityActionState(WorldState world, EntityId actorId)
@@ -70,7 +78,14 @@ public sealed class ActionPlanContext
                     _attachedWorld.SetActionFacing(actorId, direction.Value);
                     break;
                 case (ActionPlanSlot.Target, EntityPlanValue entity):
-                    _attachedWorld.SetActionTarget(actorId, _activeTargetSlot, entity.Value);
+                    if (_activeTargetLabel is { } label)
+                    {
+                        _attachedWorld.SetActionTarget(actorId, label, entity.Value);
+                    }
+                    else
+                    {
+                        _attachedWorld.SetActionTarget(actorId, _activeTargetSlot, entity.Value);
+                    }
                     break;
             }
         }
@@ -119,7 +134,9 @@ public sealed class ActionPlanContext
         {
             value = null!;
             trace.Status = TraceStatus.Failure;
-            trace.Detail = $"missing {slot} slot";
+            trace.Detail = slot == ActionPlanSlot.Target && _activeTargetLabel is { } label
+                ? $"missing target label {label}"
+                : $"missing {slot} slot";
             return false;
         }
 
@@ -146,7 +163,10 @@ public sealed class ActionPlanContext
                 case ActionPlanSlot.Facing when _attachedWorld.GetActionFacing(actorId) is { } facing:
                     value = new DirectionPlanValue(facing);
                     return true;
-                case ActionPlanSlot.Target when _attachedWorld.GetActionTarget(actorId, _activeTargetSlot) is { } target:
+                case ActionPlanSlot.Target when _activeTargetLabel is { } label && _attachedWorld.GetActionTarget(actorId, label) is { } labeledTarget:
+                    value = new EntityPlanValue(labeledTarget);
+                    return true;
+                case ActionPlanSlot.Target when _activeTargetLabel is null && _attachedWorld.GetActionTarget(actorId, _activeTargetSlot) is { } target:
                     value = new EntityPlanValue(target);
                     return true;
             }

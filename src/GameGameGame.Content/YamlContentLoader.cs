@@ -68,7 +68,8 @@ public static class YamlContentLoader
                 rule.Slot,
                 new EntityTemplateId(Required(rule.TargetTemplateId, nameof(rule.TargetTemplateId))),
                 rule.Range,
-                rule.Hint))
+                rule.Hint,
+                rule.Label))
             .ToList();
     }
 
@@ -161,7 +162,7 @@ public static class YamlContentLoader
         new((behavior.Steps ?? []).Select(MaterializeBehaviorStep).ToList());
 
     private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(ActionPlanBehaviorStepDescriptorDto step) =>
-        new(step.Kind, step.TargetSlot, step.PlanId is null ? null : new ActionPlanId(step.PlanId));
+        new(step.Kind, step.TargetSlot, step.TargetLabel, step.PlanId is null ? null : new ActionPlanId(step.PlanId));
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -317,6 +318,8 @@ public static class YamlContentLoader
 
         public string? Hint { get; set; }
 
+        public string? Label { get; set; }
+
         public string? TargetTemplateId { get; set; }
 
         public int Range { get; set; }
@@ -366,6 +369,8 @@ public static class YamlContentLoader
         public ActionPlanBehaviorStepKind Kind { get; set; }
 
         public int? TargetSlot { get; set; }
+
+        public string? TargetLabel { get; set; }
 
         public string? PlanId { get; set; }
     }

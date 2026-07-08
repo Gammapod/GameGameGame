@@ -1,0 +1,110 @@
+entityTemplates:
+  canonicalCreatureTestRoom:
+    name: Creature Test Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: testSlime
+      templateId: canonicalSlime
+      coord:
+        x: 4
+        y: 2
+    - entityId: testGoblin
+      templateId: canonicalGoblin
+      coord:
+        x: 6
+        y: 2
+  canonicalAdventurer:
+    name: Adventurer
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    actionStateDefaults:
+      facing: North
+  canonicalSlime:
+    name: Slime
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalSlimeBehavior
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: hates
+      hint: Adventurer this slime hates
+      targetTemplateId: canonicalAdventurer
+      range: 8
+    - slot: 2
+      label: fears
+      hint: Goblin this slime fears
+      targetTemplateId: canonicalGoblin
+      range: 6
+  canonicalGoblin:
+    name: Goblin
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 3
+    defaultActionPlanId: canonicalGoblinBehavior
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      label: fears
+      hint: Adventurer this goblin fears
+      targetTemplateId: canonicalAdventurer
+      range: 8
+presentations:
+  canonicalCreatureTestRoom:
+    glyph: '#'
+    color: Gray
+  canonicalAdventurer:
+    glyph: '@'
+    color: Yellow
+  canonicalSlime:
+    glyph: 's'
+    color: Green
+  canonicalGoblin:
+    glyph: 'g'
+    color: Earth
+actionPlans:
+  canonicalFleeFearedTarget:
+    id: canonicalFleeFearedTarget
+    behavior:
+      steps:
+      - kind: FleeTarget
+        targetLabel: fears
+  canonicalSeekHatedTarget:
+    id: canonicalSeekHatedTarget
+    behavior:
+      steps:
+      - kind: SeekTarget
+        targetLabel: hates
+  canonicalSlimeBehavior:
+    id: canonicalSlimeBehavior
+    behavior:
+      steps:
+      - kind: FleeTarget
+        targetLabel: fears
+      - kind: SeekTarget
+        targetLabel: hates
+  canonicalGoblinBehavior:
+    id: canonicalGoblinBehavior
+    behavior:
+      steps:
+      - kind: FleeTarget
+        targetLabel: fears
+scenarios:
+  canonical-creature-test-room:
+    name: Canonical Creature Test Room
+    scenarioRootEntityTemplateId: canonicalCreatureTestRoom
+    playerEntityTemplateId: canonicalAdventurer
+    playerEntityId: canonicalAdventurer
+    playerStart:
+      x: 1
+      y: 2

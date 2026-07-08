@@ -190,6 +190,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session)
     public AgentApiResult SetActionPlanBehaviorStepTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot) =>
         Try("SetActionPlanBehaviorStepTargetSlotFailed", () => Session.Editor.SetActionPlanBehaviorStepTargetSlot(planId, stepIndex, targetSlot));
 
+    public AgentApiResult SetActionPlanBehaviorStepTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel) =>
+        Try("SetActionPlanBehaviorStepTargetLabelFailed", () => Session.Editor.SetActionPlanBehaviorStepTargetLabel(planId, stepIndex, targetLabel));
+
     public AgentApiResult SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId) =>
         Try("SetActionPlanBehaviorStepPlanIdFailed", () => Session.Editor.SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId));
 

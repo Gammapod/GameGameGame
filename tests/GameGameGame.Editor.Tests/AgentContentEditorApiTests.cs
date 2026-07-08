@@ -63,11 +63,11 @@ public sealed class AgentContentEditorApiTests
         var catId = AssertSuccess(api.CreateEntityTemplate("Cat"));
         AssertSuccess(api.UpdateEntityTemplate(mouseId, new AgentEntityTemplateUpdate(Glyph: 'm', Color: PresentationColor.Gray)));
         AssertSuccess(api.UpdateEntityTemplate(catId, new AgentEntityTemplateUpdate(Glyph: 'c', Color: PresentationColor.Earth)));
-        AssertSuccess(api.SetTargetingRule(mouseId, new EntityTargetingRule(2, catId, Range: 4, Hint: "Danger")));
+        AssertSuccess(api.SetTargetingRule(mouseId, new EntityTargetingRule(2, catId, Range: 4, Hint: "Danger", Label: "danger")));
         var planId = AssertSuccess(api.CreateActionPlan("Mouse Behavior"));
         AssertSuccess(api.ClearActionPlanBehavior(planId));
         AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.FleeTarget));
-        AssertSuccess(api.SetActionPlanBehaviorStepTargetSlot(planId, stepIndex: 0, targetSlot: 2));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetLabel(planId, stepIndex: 0, targetLabel: "danger"));
         AssertSuccess(api.SetDefaultActionPlan(mouseId, planId));
 
         var rules = AssertSuccess(api.ListTargetingRules(mouseId));
@@ -75,9 +75,11 @@ public sealed class AgentContentEditorApiTests
 
         var rule = Assert.Single(rules);
         Assert.Equal(2, rule.Slot);
+        Assert.Equal("danger", rule.Label);
         Assert.Equal(catId, rule.TargetTemplateId);
         Assert.Contains("targetingRules:", snapshot.YamlPreview);
-        Assert.Contains("targetSlot: 2", snapshot.YamlPreview);
+        Assert.Contains("label: danger", snapshot.YamlPreview);
+        Assert.Contains("targetLabel: danger", snapshot.YamlPreview);
     }
 
     [Fact]

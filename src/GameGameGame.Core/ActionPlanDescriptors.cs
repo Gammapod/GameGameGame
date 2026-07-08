@@ -95,6 +95,7 @@ public enum ActionPlanBehaviorStepKind
 public sealed record ActionPlanBehaviorStepDescriptor(
     ActionPlanBehaviorStepKind Kind,
     int? TargetSlot = null,
+    string? TargetLabel = null,
     ActionPlanId? PlanId = null);
 
 public enum ActionPlanPrimitiveKind

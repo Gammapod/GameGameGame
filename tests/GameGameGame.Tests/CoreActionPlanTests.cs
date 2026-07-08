@@ -1781,6 +1781,51 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void TargetConsumingBehaviorCanReadTargetLabelFromExecutingActor()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, slot: 1, TestWorld.RockId);
+        world.SetActionTarget(TestWorld.PlayerId, label: "fears", TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("destroy-feared-target"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget, TargetLabel: "fears")
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.False(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.True(world.Entities.ContainsKey(TestWorld.RockId));
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.PlayerId, slot: 1));
+        Assert.Equal(TestWorld.SlimeId, world.GetActionTarget(TestWorld.PlayerId, label: "fears"));
+    }
+
+    [Fact]
+    public void TargetConsumingBehaviorFailsWhenTargetLabelHasNoCurrentTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, slot: 1, TestWorld.RockId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("destroy-missing-feared-target"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget, TargetLabel: "fears")
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(world.Entities.ContainsKey(TestWorld.RockId));
+        Assert.True(TraceContainsDetail(result.Trace, "target label fears"));
+    }
+
+    private static bool TraceContainsDetail(TraceNode node, string detail) =>
+        (node.Detail?.Contains(detail, StringComparison.OrdinalIgnoreCase) ?? false)
+        || node.Children.Any(child => TraceContainsDetail(child, detail));
+
+    [Fact]
     public void SeekTargetBlockedByIncidentalEntityPreservesGoalTarget()
     {
         var world = TestWorld.CreateWorld();

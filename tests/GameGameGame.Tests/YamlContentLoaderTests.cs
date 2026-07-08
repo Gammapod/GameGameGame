@@ -316,6 +316,7 @@ public sealed class YamlContentLoaderTests
                 carryingCapacity: 0
                 targetingRules:
                   - slot: 1
+                    label: danger
                     hint: Danger
                     targetTemplateId: cat
                     range: 6
@@ -333,6 +334,7 @@ public sealed class YamlContentLoaderTests
         var rule = Assert.Single(template.TargetingRules!);
 
         Assert.Equal(1, rule.Slot);
+        Assert.Equal("danger", rule.Label);
         Assert.Equal("Danger", rule.Hint);
         Assert.Equal(new EntityTemplateId("cat"), rule.TargetTemplateId);
         Assert.Equal(6, rule.Range);
@@ -359,6 +361,7 @@ public sealed class YamlContentLoaderTests
                 carryingCapacity: 0
                 targetingRules:
                   - slot: 2
+                    label: home
                     hint: Home
                     targetTemplateId: cat
                     range: 4
@@ -377,8 +380,10 @@ public sealed class YamlContentLoaderTests
         var rule = Assert.Single(reloaded.GetEntityTemplate(new EntityTemplateId("mouse")).TargetingRules!);
 
         Assert.Contains("targetingRules:", saved);
+        Assert.Contains("label: home", saved);
         Assert.Contains("hint: Home", saved);
         Assert.Equal(2, rule.Slot);
+        Assert.Equal("home", rule.Label);
         Assert.Equal(new EntityTemplateId("cat"), rule.TargetTemplateId);
     }
 

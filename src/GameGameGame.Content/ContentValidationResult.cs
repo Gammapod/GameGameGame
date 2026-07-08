@@ -58,7 +58,8 @@ public enum ContentDiagnosticCode
     InvalidScenarioDefinition,
     InvalidTargetingRule,
     MissingTargetTemplateReference,
-    InvalidActionStepTargetSlot
+    InvalidActionStepTargetSlot,
+    InvalidActionStepTargetReference
 }
 
 public sealed record ContentDiagnostic(

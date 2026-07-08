@@ -81,7 +81,7 @@ The completed shared-service foundation and unified simulation history/log/rollb
 
 Implemented support status now lives in `docs/Source of Truth/Engine-Editor-Capabilities.md`; stable behavior/test traces live in `docs/Source of Truth/invariants.md`.
 
-Remaining active work should focus on SadConsole/debug-browser UX over the shared history, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics.
+Remaining active work should be grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
 
 ### Stage 6: SadConsole canonical debug browser shell
 
@@ -212,4 +212,4 @@ Promote or consider while planning SadConsole work:
 
 ## Near-term selection recommendation
 
-The next implementation sequence should be selected from the active Stage 6+ SadConsole/debug-browser work above. Shared history/log/rollback and the first frontend consumption pass are complete enough for frontend-owner polish and future saved runlog/playback design.
+The next implementation sequence should be selected from `docs/Plans/Gamma-Editor-MVP-Plan.md`. Stage 6+ work above remains the broader SadConsole roadmap, but Gamma release selection should prioritize the Editor -> Preview -> Simulation -> Return loop and classify remaining items as Must Have or Could Have for Editor MVP.

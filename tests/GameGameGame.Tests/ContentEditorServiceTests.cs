@@ -602,6 +602,31 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceSetsBehaviorStepTargetLabel()
+    {
+        var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              behavior:
+                id: behavior
+                behavior:
+                  steps:
+                    - kind: SeekTarget
+                      targetSlot: 2
+            """));
+
+        editor.SetActionPlanBehaviorStepTargetLabel(new ActionPlanTemplateId("behavior"), stepIndex: 0, targetLabel: "fears");
+        var descriptor = editor.ListActionPlans().Single(plan => plan.TemplateId == new ActionPlanTemplateId("behavior")).Descriptor;
+
+        Assert.Equal("fears", descriptor.Behavior!.Steps[0].TargetLabel);
+        Assert.Null(descriptor.Behavior!.Steps[0].TargetSlot);
+        Assert.Contains("targetLabel: fears", editor.Document.SaveYaml());
+        Assert.DoesNotContain("targetSlot: 2", editor.Document.SaveYaml());
+    }
+
+    [Fact]
     public void ContentEditorServiceSetsBehaviorStepPlanId()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(
