@@ -17,6 +17,7 @@ Do not read when:
 - Core-owner/TDD lane: `docs/Source of Truth/invariants.md` records stable behavior contracts and test traces.
 - Capability matrix lane: `docs/Source of Truth/Engine-Editor-Capabilities.md` records maintainer-facing capability support tiers and layer coverage.
 - Content-authoring lane: `docs/Source of Truth/Content-Authoring-Manual.md` records content-editor-facing authoring capabilities, workflows, limits, and gap logging.
+- Action logic lane: `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome rules and actor/actee/spatial verb-affordance logic.
 - Frontend UX lane: `docs/Source of Truth/Frontend-UX-Invariants.md`, `docs/Source of Truth/Frontend-UX-Standards.md`, `docs/Source of Truth/Frontend-UX-Decisions.md`, `docs/Source of Truth/Frontend-Editor-Simulation-Flow.mmd`, and `docs/Source of Truth/Entity-Panel-UX-Spec.md` record frontend UX constraints, handoff boundaries, UI-bible standards, decisions, diagrams, and the entity-panel/breadcrumb/log model.
 - Planning lane: `docs/Plans/High-Level-Roadmap.md`, active plans, and the gap log record priorities, promotion triggers, and selected work.
 
@@ -40,15 +41,17 @@ Do not read when:
    - Active Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. This is the next-sprint selection authority for Gamma work.
 7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
    - Broader roadmap for paving frontend contracts and promoting SadConsole as the canonical debug/editor browser direction.
-8. `docs/Plans/Gamma-Frontend-Demo-Plan.md`
+8. `docs/Plans/SadConsole-UI-Pattern-Discovery-Sprint.md`
+   - Active frontend sprint plan for replacing the useful SadConsole editor prototype with reusable SadConsole UI component patterns and mockup-driven visual layouts.
+9. `docs/Plans/Gamma-Frontend-Demo-Plan.md`
    - Supporting Gamma tester/demo context. Console-specific next work is no longer the default unless explicitly re-selected.
-9. `docs/Plans/Beta-Capability-Gap-Log.md`
+10. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-10. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+11. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
    - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-11. `docs/Plans/Sprint-Retrospective.md`
+12. `docs/Plans/Sprint-Retrospective.md`
     - Recent process observations and open retrospective questions.
-12. `docs/Archived/`
+13. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
      - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
@@ -59,10 +62,11 @@ Alpha MVP is complete and Beta produced several authored gameplay vignettes plus
 ## Current highest-priority backlog buckets
 
 1. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
-2. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
-3. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
-4. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
-5. Future integrated game/editor frontend requirements discovered from SadConsole/Gamma feedback.
+2. SadConsole UI pattern discovery and editor recreation, as described in `docs/Plans/SadConsole-UI-Pattern-Discovery-Sprint.md`.
+3. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
+4. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
+5. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
+6. Future integrated game/editor frontend requirements discovered from SadConsole/Gamma feedback.
 6. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
 7. Inventory, containment, and transfer mechanics.
 8. Spawning, creation, and template materialization.
@@ -79,6 +83,7 @@ See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies
 - Stable behavior contracts and test traces belong in `invariants.md`.
 - Maintainer-facing capability tiers and layer support belong in `Engine-Editor-Capabilities.md`.
 - Content-editor-facing authoring capabilities, workflows, limits, and gap logging belong in `Content-Authoring-Manual.md`.
+- Canonical Action Step outcome and verb-affordance decision tables belong in `Action-Step-Outcome-And-Affordance-Logic.md`.
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
 - Active implementation details belong in an active sprint plan under `docs/Plans/`.

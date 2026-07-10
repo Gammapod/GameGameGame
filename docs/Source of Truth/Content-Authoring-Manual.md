@@ -299,6 +299,7 @@ Promote a request when repeated scenario pressure, one flagship blocked vignette
 ## External references
 
 - `docs/Source of Truth/Engine-Editor-Capabilities.md`: maintainer-facing support tiers, layer coverage, runtime/editor/API parity, and detailed Action Step semantics.
+- `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md`: compact Action Step success/failure/fallthrough rules and actor/actee/spatial verb-affordance tables.
 - `docs/Plans/Beta-Capability-Gap-Log.md`: active beta gaps, not-yet-authorable requested capabilities, workarounds, classifications, and priority signals.
 - `docs/Source of Truth/planning-index.md`: documentation lanes and required reading order.
 - `docs/Source of Truth/invariants.md`: Core behavior contracts and TDD traces; not normally needed for content authoring.

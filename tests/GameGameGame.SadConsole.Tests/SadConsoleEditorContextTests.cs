@@ -128,6 +128,196 @@ public sealed class SadConsoleEditorContextTests
     }
 
     [Fact]
+    public void TemplateEditorUsesSemanticFocusTargetsAndSelectActivatesFocusedField()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+
+            Assert.Equal(SadConsoleEditorTemplateFocus.TemplateSelector, context.TemplateFocus);
+            var moveName = context.MoveTemplateFocus(1, 0);
+            var view = SadConsoleEditorViewBuilder.Build(context, moveName.Message);
+
+            Assert.True(moveName.Succeeded, moveName.Message);
+            Assert.Equal(SadConsoleEditorTemplateFocus.Name, context.TemplateFocus);
+            Assert.Contains("semantic focus", view.PromptHint, StringComparison.Ordinal);
+            Assert.Contains(view.DetailRows, row => row.Contains(">[Name Editor Room]<", StringComparison.Ordinal));
+
+            var activateName = context.ActivateTemplateFocus();
+
+            Assert.True(activateName.Succeeded, activateName.Message);
+            Assert.True(context.IsEditingTemplatePresentation);
+            Assert.Equal(SadConsoleEditorTemplateEditMode.Name, context.TemplateEditMode);
+            context.CancelEdit();
+
+            context.MoveTemplateFocus(0, 1);
+            var metadataResult = context.ActivateTemplateFocus();
+
+            Assert.Equal(SadConsoleEditorTemplateFocus.InventoryWidth, context.TemplateFocus);
+            Assert.True(metadataResult.Succeeded, metadataResult.Message);
+            Assert.Equal(SadConsoleEditorTemplateEditMode.InventoryWidth, context.TemplateEditMode);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void TemplateMetadataFocusedFieldEditsThroughEditorServiceAndStalesPreview()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Preview);
+            context.RefreshSelectedScenarioPreview();
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+            context.MoveTemplateFocus(1, 0); // name
+            context.MoveTemplateFocus(0, 1); // inventory width
+
+            var begin = context.ActivateTemplateFocus();
+            context.BackspaceEditText();
+            context.TypeEditText("4");
+            var confirm = context.ConfirmEdit();
+
+            var selected = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex];
+            Assert.True(begin.Succeeded, begin.Message);
+            Assert.True(confirm.Succeeded, confirm.Message);
+            Assert.Equal(4, selected.InventoryWidth);
+            Assert.Equal(2, selected.InventoryHeight);
+            Assert.True(context.Snapshot().IsDirty);
+            Assert.Null(context.CachedPreview);
+            Assert.Contains("inventory width changed", context.PreviewInvalidationReason, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void TemplateInitialFacingPickerSetsAndClearsFacingThroughEditorService()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "rock");
+            context.MoveTemplateFocus(1, 0); // name
+            context.MoveTemplateFocus(0, 1); // width
+            context.MoveTemplateFocus(0, 1); // facing
+
+            var begin = context.ActivateTemplateFocus();
+            context.MoveSelection(1); // North
+            var set = context.ConfirmTemplateInitialFacingPicker();
+
+            Assert.True(begin.Succeeded, begin.Message);
+            Assert.True(set.Succeeded, set.Message);
+            Assert.Equal(Direction.North, context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].ActionStateDefaults.Facing);
+
+            begin = context.ActivateTemplateFocus();
+            context.MoveSelection(-99); // none
+            var clear = context.ConfirmTemplateInitialFacingPicker();
+
+            Assert.True(begin.Succeeded, begin.Message);
+            Assert.True(clear.Succeeded, clear.Message);
+            Assert.Null(context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].ActionStateDefaults.Facing);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void TemplateLifecycleCreateDuplicateAndDeleteUseEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            var initialCount = context.Snapshot().EntityTemplates.Count;
+
+            var beginCreate = context.BeginTemplateCreate();
+            context.TypeEditText("Temporary Actor");
+            var create = context.ConfirmEdit();
+
+            Assert.True(beginCreate.Succeeded, beginCreate.Message);
+            Assert.True(create.Succeeded, create.Message);
+            Assert.Equal(initialCount + 1, context.Snapshot().EntityTemplates.Count);
+            Assert.Equal("Temporary Actor", context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].Name);
+            Assert.True(context.Snapshot().IsDirty);
+
+            var createdId = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].TemplateId;
+            var beginDuplicate = context.BeginTemplateDuplicate();
+            while (context.TemplateEditBuffer.Length > 0)
+            {
+                context.BackspaceEditText();
+            }
+
+            context.TypeEditText("Temporary Actor Copy");
+            var duplicate = context.ConfirmEdit();
+
+            Assert.True(beginDuplicate.Succeeded, beginDuplicate.Message);
+            Assert.True(duplicate.Succeeded, duplicate.Message);
+            Assert.Equal(initialCount + 2, context.Snapshot().EntityTemplates.Count);
+            Assert.Equal("Temporary Actor Copy", context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].Name);
+
+            var duplicatedId = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].TemplateId;
+            Assert.NotEqual(createdId, duplicatedId);
+            var beginDelete = context.BeginTemplateDeleteConfirmation();
+            var delete = context.ConfirmEdit();
+
+            Assert.True(beginDelete.Succeeded, beginDelete.Message);
+            Assert.True(delete.Succeeded, delete.Message);
+            Assert.Equal(initialCount + 1, context.Snapshot().EntityTemplates.Count);
+            Assert.DoesNotContain(context.Snapshot().EntityTemplates, template => template.TemplateId == duplicatedId);
+            Assert.Contains("template was deleted", context.PreviewInvalidationReason, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void TemplateDeleteConfirmationCanBeCancelledWithoutMutation()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+            var beforeCount = context.Snapshot().EntityTemplates.Count;
+
+            var beginDelete = context.BeginTemplateDeleteConfirmation();
+            var cancel = context.CancelEdit();
+
+            Assert.True(beginDelete.Succeeded, beginDelete.Message);
+            Assert.True(cancel.Succeeded, cancel.Message);
+            Assert.Equal(beforeCount, context.Snapshot().EntityTemplates.Count);
+            Assert.Equal("editorRoom", context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].TemplateId);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void DiagnosticsSectionLabelsAuthoredObjectWhenAvailable()
     {
         var path = WriteTempContentFile(EditorFixtureYaml().Replace("defaultActionPlanId: moveEast", "defaultActionPlanId: missingPlan", StringComparison.Ordinal));
@@ -887,6 +1077,67 @@ public sealed class SadConsoleEditorContextTests
     }
 
     [Fact]
+    public void TargetingRuleSemanticFieldFocusCyclesTargetAndAppliesImmediately()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+            context.BeginTemplateTargetingRuleEditor(SadConsoleEditorTemplateFocus.TargetingTarget);
+            context.MoveSelection(1);
+            SetPendingTargetingLabel(context, "focus2");
+            context.MoveTargetingRuleField(1);
+
+            Assert.Equal(SadConsoleEditorTargetingRuleField.Target, context.TargetingRuleEdit!.ActiveField);
+            Assert.Equal("editorRoom", context.TargetingRuleEdit.TargetTemplateId);
+
+            var result = context.ActivateTargetingRuleField();
+
+            var rule = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].TargetingRules.Single(rule => rule.Slot == 2);
+            Assert.True(result.Succeeded, result.Message);
+            Assert.NotEqual("editorRoom", rule.TargetTemplateId);
+            Assert.Equal(rule.TargetTemplateId, context.TargetingRuleEdit!.TargetTemplateId);
+            Assert.True(context.Snapshot().IsDirty);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void TargetingRuleSemanticFieldFocusIncrementsRangeAndAppliesImmediately()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+            context.BeginTemplateTargetingRuleEditor(SadConsoleEditorTemplateFocus.TargetingRange);
+            context.MoveSelection(1);
+            SetPendingTargetingLabel(context, "focus2");
+            context.MoveTargetingRuleField(2);
+
+            Assert.Equal(SadConsoleEditorTargetingRuleField.Range, context.TargetingRuleEdit!.ActiveField);
+            var result = context.ActivateTargetingRuleField();
+
+            var rule = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].TargetingRules.Single(rule => rule.Slot == 2);
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal(1, rule.Range);
+            Assert.Equal(1, context.TargetingRuleEdit!.Range);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void ApplyingValidTargetingRuleUpdatesSnapshotDirtyStatusAndStalesPreview()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());
@@ -939,8 +1190,9 @@ public sealed class SadConsoleEditorContextTests
             Assert.True(first.Succeeded, first.Message);
 
             context.MoveSelection(1);
-            SetPendingTargetingLabel(context, "focus1");
-            var duplicate = context.ConfirmTemplateTargetingRuleEditor();
+            context.BeginTargetingRuleLabelEdit();
+            context.TypeTargetingRuleLabelText("focus1");
+            var duplicate = context.ConfirmTargetingRuleLabelEdit();
 
             var selected = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex];
             Assert.False(duplicate.Succeeded);
@@ -992,7 +1244,6 @@ public sealed class SadConsoleEditorContextTests
 
             context.BeginTemplateTargetingRuleEditor();
             context.MoveSelection(1);
-            SetPendingTargetingLabel(context, "focus1");
             context.AdjustTargetingRuleRange(5);
             var result = context.CancelEdit();
 

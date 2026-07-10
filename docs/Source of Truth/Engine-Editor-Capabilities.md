@@ -20,7 +20,7 @@ This document is intended for:
 
 Update this document whenever an engine capability is added, removed, renamed, promoted to editor support, intentionally kept engine-only, or moved into legacy compatibility.
 
-Stable behavior contracts and test traces belong in `docs/Source of Truth/invariants.md`. Content-editor-facing usage guidance belongs in `docs/Source of Truth/Content-Authoring-Manual.md`.
+Stable behavior contracts and test traces belong in `docs/Source of Truth/invariants.md`. Content-editor-facing usage guidance belongs in `docs/Source of Truth/Content-Authoring-Manual.md`. Canonical Action Step outcome summaries and actor/actee/spatial verb-affordance decision tables belong in `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md`.
 
 ## Evolution policy
 
@@ -224,7 +224,7 @@ Current and planned Action Step / primitive support:
 | `BumpTarget` | Conceptualized | `Target` | `Self` | Deferred; may overlap with reaction slots, push, destroy, or future interaction steps. |
 | `TeleportTo` | Conceptualized | target location TBD | TBD | Deferred because it likely requires a new location/destination state slot rather than overloading entity `Target`. |
 
-Canonical Action Step metadata is exposed by Core as the machine-readable source for editor/API discovery and validation. Initial metadata includes Action Step kind, display name, description/hint text, required state, defaultable state, state writes, and authoring tier.
+Canonical Action Step metadata is exposed by Core as the machine-readable source for editor/API discovery and validation. Initial metadata includes Action Step kind, display name, description/hint text, required state, defaultable state, state writes, and authoring tier. For a compact outcome matrix and actor/actee/spatial verb decision table, see `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md`.
 
 Canonical behavior-chain traces can be summarized through `BehaviorChainTraceFormatter`. The compact formatter reports the root plan outcome, each attempted Action Step, success/failure reason, whether fallback continued or stopped, canonical state reads/writes such as `Facing` and `Target`, Backstep preserve-facing results, AcquireNearestTarget selected target/distance/tie-break details, SeekTarget movement/contact/blocking details, FleeTarget escape direction/distance/blocking details, MaintainChebyshevDistanceTwo mode/distance/blocking details, StrafeClockwise/StrafeAnticlockwise primary/strafe direction and blocking details, GiveTarget/TakeTarget transfer details, EnterTarget/ExitFacing containment movement details, and the terminal consumed-turn outcome.
 

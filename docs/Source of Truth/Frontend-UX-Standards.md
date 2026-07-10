@@ -181,6 +181,14 @@ Editor and Simulation may share entity-panel presentation, but each panel must i
 
 The frontend should not blur these categories. Editing authored content should happen through shared editor/content services. Simulation actions should happen through runtime/session/action services.
 
+### Editor semantic focus layout
+
+Durable Editor-mode screens should use semantic focus targets rather than arbitrary cursor coordinates. The user should be able to move focus between visible authored-content controls such as template identity fields, color/glyph fields, metadata values, default action-plan references, targeting-rule fields, brush selectors, and authored inventory cells using directional navigation, then activate the focused target through Select and leave/cancel through Cancel.
+
+For entity-template editing, the preferred direction is a dedicated authored-template screen rather than continuing to overload the browser list/detail surface as the primary editing UI. The screen may still reuse entity-panel/card vocabulary, but editable fields should be visibly distinct from read-only summaries such as assigned action-plan step previews. Inventory layout editing remains a spatial submode and can be deferred until core template fields and targeting fields are comfortable.
+
+Letter hotkeys may remain as temporary accelerators during the transition, but the visible focus model and contextual controls should define the durable workflow.
+
 ### Deferred high-risk debugger ideas
 
 The following ideas are intentionally deferred and should be reassessed only after the Editor -> Preview -> Simulation loop is established:

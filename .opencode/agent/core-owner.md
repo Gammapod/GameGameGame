@@ -4,12 +4,12 @@ mode: all
 model: openai/gpt-5.5
 permission:
   read:
-    "*": ask
+    "/*": ask
     "docs/*": allow
     "src/*": allow
     "tests/*": allow
   edit:
-    "*": ask
+    "/*": ask
     "docs/*": allow
     "src/GameGameGame.Core/*": allow
     "src/GameGameGame.Editor/*": allow

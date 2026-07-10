@@ -94,3 +94,10 @@ Each decision should include:
 - **Reasoning:** This keeps redraws responsive and preserves the authored-content/materialized-runtime boundary before mutation UI exists.
 - **Implications:** Future mutations should use the same invalidation policy unless a shared service contract proves a preview remains valid. Mutation/save controls should remain absent or clearly disabled until a mutation design is promoted.
 - **Status:** Active / Phase 5A hardening implemented.
+
+### FED-011: Editor navigation uses semantic focus targets
+
+- **Decision:** Durable Editor-mode screens should move focus between semantic authored-content controls, fields, rows, cards, or grid cells through directional navigation, with Select activating the focused target and Cancel leaving or cancelling the current submode.
+- **Reasoning:** The integrated editor should support controller-friendly workflows and avoid relying on hidden letter hotkeys or arbitrary screen-coordinate cursoring for normal editing. The entity-template editing mockup uses visible editable-field regions as the intended navigation targets.
+- **Implications:** Current hotkey-heavy SadConsole editor mutation flows are prototype debt. Upcoming entity-template editing should use a dedicated field-focused layout for template identity, presentation, metadata, default action plan, targeting fields, and eventually inventory cells. Activating fields must still call shared editor/content services rather than introducing frontend-owned authoring semantics.
+- **Status:** Active.

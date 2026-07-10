@@ -160,6 +160,12 @@ internal sealed class SadConsoleShell : Console
             return;
         }
 
+        if (_editorContext.IsPickingTemplateInitialFacing)
+        {
+            HandleEditorTemplateInitialFacingPickerInput(keyboard);
+            return;
+        }
+
         if (_editorContext.IsPickingTemplateDefaultActionPlan)
         {
             HandleEditorTemplateDefaultActionPlanPickerInput(keyboard);
@@ -193,22 +199,42 @@ internal sealed class SadConsoleShell : Console
         if (keyboard.IsKeyReleased(Keys.Up))
         {
             _editorContext.MoveSelection(-1);
-            _message = "Editor browser selection moved. Template presentation edits apply only in Templates section.";
+            _message = _editorContext.Section == SadConsoleEditorSection.Templates
+                ? $"Template editor focus: {SadConsoleEditorContext.TemplateFocusLabel(_editorContext.TemplateFocus)}. Select/Enter activates."
+                : "Editor browser selection moved. Template presentation edits apply only in Templates section.";
         }
         else if (keyboard.IsKeyReleased(Keys.Down))
         {
             _editorContext.MoveSelection(1);
-            _message = "Editor browser selection moved. Template presentation edits apply only in Templates section.";
+            _message = _editorContext.Section == SadConsoleEditorSection.Templates
+                ? $"Template editor focus: {SadConsoleEditorContext.TemplateFocusLabel(_editorContext.TemplateFocus)}. Select/Enter activates."
+                : "Editor browser selection moved. Template presentation edits apply only in Templates section.";
         }
         else if (keyboard.IsKeyReleased(Keys.Left))
         {
-            _editorContext.MoveSection(-1);
-            _message = "Editor browser section changed.";
+            if (_editorContext.Section == SadConsoleEditorSection.Templates && _editorContext.TemplateFocus != SadConsoleEditorTemplateFocus.TemplateSelector)
+            {
+                var result = _editorContext.MoveTemplateFocus(-1, 0);
+                _message = result.Message;
+            }
+            else
+            {
+                _editorContext.MoveSection(-1);
+                _message = "Editor browser section changed.";
+            }
         }
         else if (keyboard.IsKeyReleased(Keys.Right))
         {
-            _editorContext.MoveSection(1);
-            _message = "Editor browser section changed.";
+            if (_editorContext.Section == SadConsoleEditorSection.Templates)
+            {
+                var result = _editorContext.MoveTemplateFocus(1, 0);
+                _message = result.Message;
+            }
+            else
+            {
+                _editorContext.MoveSection(1);
+                _message = "Editor browser section changed.";
+            }
         }
         else if (keyboard.IsKeyReleased(Keys.T))
         {
@@ -273,7 +299,9 @@ internal sealed class SadConsoleShell : Console
         }
         else if (keyboard.IsKeyReleased(Keys.Enter))
         {
-            var result = _editorContext.OpenCommandMenu();
+            var result = _editorContext.Section == SadConsoleEditorSection.Templates
+                ? _editorContext.ActivateTemplateFocus()
+                : _editorContext.OpenCommandMenu();
             _message = result.Message;
         }
         else if (keyboard.IsKeyReleased(Keys.M))
@@ -429,12 +457,22 @@ internal sealed class SadConsoleShell : Console
         if (keyboard.IsKeyReleased(Keys.Up))
         {
             _editorContext.MoveSelection(-1);
-            _message = "Targeting rule editor moved to previous slot. Enter applies; Esc exits.";
+            _message = "Targeting rule editor moved to previous slot. Left/Right field; Enter activates focused field; Esc exits.";
         }
         else if (keyboard.IsKeyReleased(Keys.Down))
         {
             _editorContext.MoveSelection(1);
-            _message = "Targeting rule editor moved to next slot. Enter applies; Esc exits.";
+            _message = "Targeting rule editor moved to next slot. Left/Right field; Enter activates focused field; Esc exits.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Left))
+        {
+            var result = _editorContext.MoveTargetingRuleField(-1);
+            _message = result.Message;
+        }
+        else if (keyboard.IsKeyReleased(Keys.Right))
+        {
+            var result = _editorContext.MoveTargetingRuleField(1);
+            _message = result.Message;
         }
         else if (keyboard.IsKeyReleased(Keys.L))
         {
@@ -448,7 +486,7 @@ internal sealed class SadConsoleShell : Console
         }
         else if (keyboard.IsKeyReleased(Keys.Enter))
         {
-            var result = _editorContext.ConfirmTemplateTargetingRuleEditor();
+            var result = _editorContext.ActivateTargetingRuleField();
             _message = result.Message;
         }
         else if (keyboard.IsKeyReleased(Keys.X) || keyboard.IsKeyReleased(Keys.Delete) || keyboard.IsKeyReleased(Keys.Back))
@@ -492,6 +530,30 @@ internal sealed class SadConsoleShell : Console
         else if (keyboard.IsKeyReleased(Keys.Enter))
         {
             var result = _editorContext.ConfirmTemplateDefaultActionPlanPicker();
+            _message = result.Message;
+        }
+    }
+
+    private void HandleEditorTemplateInitialFacingPickerInput(Keyboard keyboard)
+    {
+        if (_editorContext is null)
+        {
+            return;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Up))
+        {
+            _editorContext.MoveSelection(-1);
+            _message = "Initial facing picker moved. Enter applies; Esc cancels.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Down))
+        {
+            _editorContext.MoveSelection(1);
+            _message = "Initial facing picker moved. Enter applies; Esc cancels.";
+        }
+        else if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            var result = _editorContext.ConfirmTemplateInitialFacingPicker();
             _message = result.Message;
         }
     }

@@ -11,6 +11,8 @@ internal sealed class SadConsoleEditorContext
     private string _previewInvalidationReason = "Preview has not been materialized in this editor context.";
     private SadConsoleEditorTemplateEditMode _templateEditMode = SadConsoleEditorTemplateEditMode.None;
     private string _templateEditBuffer = string.Empty;
+    private bool _isPickingTemplateInitialFacing;
+    private int _templateInitialFacingPickerIndex;
     private bool _isPickingTemplateDefaultActionPlan;
     private int _templateDefaultActionPlanPickerIndex;
     private SadConsoleEditorActionStepEditState? _actionStepEdit;
@@ -34,6 +36,7 @@ internal sealed class SadConsoleEditorContext
     public int SelectedActionPlanIndex { get; private set; }
     public int SelectedDiagnosticIndex { get; private set; }
     public int SelectedPreviewEntityIndex { get; private set; }
+    public SadConsoleEditorTemplateFocus TemplateFocus { get; private set; } = SadConsoleEditorTemplateFocus.TemplateSelector;
     public int YamlScrollOffset { get; private set; }
     public SadConsoleEditorTextSurface TextSurface { get; private set; } = SadConsoleEditorTextSurface.YamlPreview;
     public FrontendEditorScenarioPreview? CachedPreview => _cachedPreview;
@@ -41,6 +44,8 @@ internal sealed class SadConsoleEditorContext
     public SadConsoleEditorTemplateEditMode TemplateEditMode => _templateEditMode;
     public string TemplateEditBuffer => _templateEditBuffer;
     public bool IsEditingTemplatePresentation => _templateEditMode != SadConsoleEditorTemplateEditMode.None;
+    public bool IsPickingTemplateInitialFacing => _isPickingTemplateInitialFacing;
+    public int TemplateInitialFacingPickerIndex => _templateInitialFacingPickerIndex;
     public bool IsPickingTemplateDefaultActionPlan => _isPickingTemplateDefaultActionPlan;
     public int TemplateDefaultActionPlanPickerIndex => _templateDefaultActionPlanPickerIndex;
     public bool IsEditingActionPlanSteps => _actionStepEdit is not null;
@@ -50,7 +55,7 @@ internal sealed class SadConsoleEditorContext
     public bool IsEditingTargetingRuleLabel => _targetingRuleEdit?.IsEditingLabel == true;
     public bool IsTemplateInventoryBrushActive => _inventoryBrush is not null;
     public SadConsoleEditorInventoryBrushState? InventoryBrush => _inventoryBrush;
-    public bool IsTemplateEditInputActive => IsEditingTemplatePresentation || IsPickingTemplateDefaultActionPlan || IsEditingActionPlanSteps || IsEditingTemplateTargetingRule || IsTemplateInventoryBrushActive;
+    public bool IsTemplateEditInputActive => IsEditingTemplatePresentation || IsPickingTemplateInitialFacing || IsPickingTemplateDefaultActionPlan || IsEditingActionPlanSteps || IsEditingTemplateTargetingRule || IsTemplateInventoryBrushActive;
     public bool IsCommandMenuOpen => _isCommandMenuOpen;
     public int CommandMenuSelectedIndex => _commandMenuSelectedIndex;
 
@@ -152,6 +157,12 @@ internal sealed class SadConsoleEditorContext
                 return SadConsoleEditorCommandMenuActivationResult.Mutation(selected, BeginTemplateNameEdit());
             case SadConsoleEditorCommandId.EditTemplateGlyph:
                 return SadConsoleEditorCommandMenuActivationResult.Mutation(selected, BeginTemplateGlyphEdit());
+            case SadConsoleEditorCommandId.CreateTemplate:
+                return SadConsoleEditorCommandMenuActivationResult.Mutation(selected, BeginTemplateCreate());
+            case SadConsoleEditorCommandId.DuplicateTemplate:
+                return SadConsoleEditorCommandMenuActivationResult.Mutation(selected, BeginTemplateDuplicate());
+            case SadConsoleEditorCommandId.DeleteTemplate:
+                return SadConsoleEditorCommandMenuActivationResult.Mutation(selected, BeginTemplateDeleteConfirmation());
             case SadConsoleEditorCommandId.CycleTemplateColor:
                 return SadConsoleEditorCommandMenuActivationResult.Mutation(selected, CycleSelectedTemplateColor());
             case SadConsoleEditorCommandId.SetTemplateDefaultActionPlan:
@@ -195,6 +206,9 @@ internal sealed class SadConsoleEditorContext
                 break;
             case SadConsoleEditorSection.Templates:
                 entries.AddRange([
+                    new SadConsoleEditorCommandMenuEntry(SadConsoleEditorCommandId.CreateTemplate, "Create template", "Enter name for a new authored entity template."),
+                    new SadConsoleEditorCommandMenuEntry(SadConsoleEditorCommandId.DuplicateTemplate, "Duplicate selected template", "Enter name for a copy of the selected authored template."),
+                    new SadConsoleEditorCommandMenuEntry(SadConsoleEditorCommandId.DeleteTemplate, "Delete selected template", "Requires confirmation and uses editor-service reference checks."),
                     new SadConsoleEditorCommandMenuEntry(SadConsoleEditorCommandId.EditTemplateName, "Edit template name", "Enter explicit typing submode for selected authored template name."),
                     new SadConsoleEditorCommandMenuEntry(SadConsoleEditorCommandId.EditTemplateGlyph, "Edit template glyph", "Enter explicit typing submode for selected authored template glyph."),
                     new SadConsoleEditorCommandMenuEntry(SadConsoleEditorCommandId.CycleTemplateColor, "Cycle template color", "Applies next presentation color through editor services."),
@@ -226,12 +240,65 @@ internal sealed class SadConsoleEditorContext
 
         Section = SadConsoleEditorSection.Templates;
         ClearTemplateDefaultActionPlanPicker();
+        ClearTemplateInitialFacingPicker();
         ClearActionPlanStepEditor();
         ClearTemplateTargetingRuleEditor();
         ClearTemplateInventoryBrush();
         _templateEditMode = SadConsoleEditorTemplateEditMode.Name;
         _templateEditBuffer = template.Name;
         return SadConsoleEditorMutationUiResult.Success($"Editing template name for {template.TemplateId}. Enter applies; Esc cancels.");
+    }
+
+    public SadConsoleEditorMutationUiResult BeginTemplateCreate()
+    {
+        Section = SadConsoleEditorSection.Templates;
+        ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
+        ClearTemplateDefaultActionPlanPicker();
+        ClearActionPlanStepEditor();
+        ClearTemplateTargetingRuleEditor();
+        ClearTemplateInventoryBrush();
+        _templateEditMode = SadConsoleEditorTemplateEditMode.CreateTemplateName;
+        _templateEditBuffer = string.Empty;
+        return SadConsoleEditorMutationUiResult.Success("Creating entity template. Type a template name, Enter creates through editor service, Esc cancels.");
+    }
+
+    public SadConsoleEditorMutationUiResult BeginTemplateDuplicate()
+    {
+        if (SelectedTemplate() is not { } template)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No authored template is selected to duplicate.");
+        }
+
+        Section = SadConsoleEditorSection.Templates;
+        ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
+        ClearTemplateDefaultActionPlanPicker();
+        ClearActionPlanStepEditor();
+        ClearTemplateTargetingRuleEditor();
+        ClearTemplateInventoryBrush();
+        _templateEditMode = SadConsoleEditorTemplateEditMode.DuplicateTemplateName;
+        _templateEditBuffer = $"{template.Name} Copy";
+        return SadConsoleEditorMutationUiResult.Success($"Duplicating template {template.TemplateId}. Edit copy name, Enter duplicates through editor service, Esc cancels.");
+    }
+
+    public SadConsoleEditorMutationUiResult BeginTemplateDeleteConfirmation()
+    {
+        if (SelectedTemplate() is not { } template)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No authored template is selected to delete.");
+        }
+
+        Section = SadConsoleEditorSection.Templates;
+        ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
+        ClearTemplateDefaultActionPlanPicker();
+        ClearActionPlanStepEditor();
+        ClearTemplateTargetingRuleEditor();
+        ClearTemplateInventoryBrush();
+        _templateEditMode = SadConsoleEditorTemplateEditMode.DeleteTemplateConfirmation;
+        _templateEditBuffer = template.TemplateId;
+        return SadConsoleEditorMutationUiResult.Success($"Confirm delete template {template.TemplateId}. Enter deletes through editor service; Esc cancels.");
     }
 
     public SadConsoleEditorMutationUiResult BeginTemplateGlyphEdit()
@@ -243,6 +310,7 @@ internal sealed class SadConsoleEditorContext
 
         Section = SadConsoleEditorSection.Templates;
         ClearTemplateDefaultActionPlanPicker();
+        ClearTemplateInitialFacingPicker();
         ClearActionPlanStepEditor();
         ClearTemplateTargetingRuleEditor();
         ClearTemplateInventoryBrush();
@@ -263,7 +331,9 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Success(EditStatusMessage());
         }
 
-        var printable = new string(text.Where(ch => !char.IsControl(ch)).ToArray());
+        var printable = IsNumericTemplateEdit(_templateEditMode)
+            ? new string(text.Where(char.IsDigit).ToArray())
+            : new string(text.Where(ch => !char.IsControl(ch)).ToArray());
         if (printable.Length == 0)
         {
             return SadConsoleEditorMutationUiResult.Success(EditStatusMessage());
@@ -303,18 +373,32 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Failure("No template presentation edit is active.");
         }
 
+        var mode = _templateEditMode;
+        var buffer = _templateEditBuffer;
+        ClearTemplateEdit();
+
+        if (mode == SadConsoleEditorTemplateEditMode.CreateTemplateName)
+        {
+            return ApplyCreateTemplate(buffer);
+        }
+
         if (SelectedTemplate() is not { } template)
         {
-            CancelEdit();
             return SadConsoleEditorMutationUiResult.Failure("No authored template is selected; edit cancelled.");
         }
 
-        var update = _templateEditMode == SadConsoleEditorTemplateEditMode.Name
-            ? new FrontendEditorTemplatePresentationUpdate(_templateEditBuffer, template.Glyph.ToString(), template.Color)
-            : new FrontendEditorTemplatePresentationUpdate(template.Name, FirstGlyphText(_templateEditBuffer), template.Color);
-
-        ClearTemplateEdit();
-        return ApplyTemplatePresentationUpdate(template.TemplateId, update);
+        return mode switch
+        {
+            SadConsoleEditorTemplateEditMode.DuplicateTemplateName => ApplyDuplicateTemplate(template.TemplateId, buffer),
+            SadConsoleEditorTemplateEditMode.DeleteTemplateConfirmation => ApplyDeleteTemplate(template.TemplateId),
+            SadConsoleEditorTemplateEditMode.Name => ApplyTemplatePresentationUpdate(template.TemplateId, new FrontendEditorTemplatePresentationUpdate(buffer, template.Glyph.ToString(), template.Color)),
+            SadConsoleEditorTemplateEditMode.Glyph => ApplyTemplatePresentationUpdate(template.TemplateId, new FrontendEditorTemplatePresentationUpdate(template.Name, FirstGlyphText(buffer), template.Color)),
+            SadConsoleEditorTemplateEditMode.InventoryWidth => ApplyTemplateMetadataUpdate(template, template with { InventoryWidth = ParseNonNegativeInt(buffer, template.InventoryWidth) }, "inventory width"),
+            SadConsoleEditorTemplateEditMode.InventoryHeight => ApplyTemplateMetadataUpdate(template, template with { InventoryHeight = ParseNonNegativeInt(buffer, template.InventoryHeight) }, "inventory height"),
+            SadConsoleEditorTemplateEditMode.Bulk => ApplyTemplateMetadataUpdate(template, template with { Bulk = ParseNonNegativeInt(buffer, template.Bulk) }, "bulk"),
+            SadConsoleEditorTemplateEditMode.Aperture => ApplyTemplateMetadataUpdate(template, template with { Aperture = ParseNonNegativeInt(buffer, template.Aperture) }, "aperture"),
+            _ => SadConsoleEditorMutationUiResult.Failure("Template edit mode is not implemented.")
+        };
     }
 
     public SadConsoleEditorMutationUiResult CancelEdit()
@@ -323,6 +407,12 @@ internal sealed class SadConsoleEditorContext
         {
             ClearTemplateDefaultActionPlanPicker();
             return SadConsoleEditorMutationUiResult.Success("Default action plan picker cancelled; authored content was not mutated.");
+        }
+
+        if (_isPickingTemplateInitialFacing)
+        {
+            ClearTemplateInitialFacingPicker();
+            return SadConsoleEditorMutationUiResult.Success("Initial facing picker cancelled; authored content was not mutated.");
         }
 
         if (_targetingRuleEdit is { IsEditingLabel: true } edit)
@@ -366,6 +456,7 @@ internal sealed class SadConsoleEditorContext
         }
 
         ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
         ClearTemplateDefaultActionPlanPicker();
         ClearActionPlanStepEditor();
         ClearTemplateTargetingRuleEditor();
@@ -378,9 +469,105 @@ internal sealed class SadConsoleEditorContext
             new FrontendEditorTemplatePresentationUpdate(template.Name, template.Glyph.ToString(), next));
     }
 
+    public SadConsoleEditorMutationUiResult BeginTemplateMetadataEdit(SadConsoleEditorTemplateFocus focus)
+    {
+        if (SelectedTemplate() is not { } template)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No authored template is selected for metadata edit.");
+        }
+
+        var (mode, value) = focus switch
+        {
+            SadConsoleEditorTemplateFocus.InventoryWidth => (SadConsoleEditorTemplateEditMode.InventoryWidth, template.InventoryWidth),
+            SadConsoleEditorTemplateFocus.InventoryHeight => (SadConsoleEditorTemplateEditMode.InventoryHeight, template.InventoryHeight),
+            SadConsoleEditorTemplateFocus.Bulk => (SadConsoleEditorTemplateEditMode.Bulk, template.Bulk),
+            SadConsoleEditorTemplateFocus.Aperture => (SadConsoleEditorTemplateEditMode.Aperture, template.Aperture),
+            _ => (SadConsoleEditorTemplateEditMode.None, 0)
+        };
+
+        if (mode == SadConsoleEditorTemplateEditMode.None)
+        {
+            return SadConsoleEditorMutationUiResult.Failure($"{TemplateFocusLabel(focus)} is not a numeric metadata field.");
+        }
+
+        Section = SadConsoleEditorSection.Templates;
+        ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
+        ClearTemplateDefaultActionPlanPicker();
+        ClearActionPlanStepEditor();
+        ClearTemplateTargetingRuleEditor();
+        ClearTemplateInventoryBrush();
+        _templateEditMode = mode;
+        _templateEditBuffer = value.ToString();
+        return SadConsoleEditorMutationUiResult.Success($"Editing {TemplateFocusLabel(focus)} for {template.TemplateId}. Type a non-negative integer, Enter applies, Esc cancels.");
+    }
+
+    public IReadOnlyList<SadConsoleEditorInitialFacingPickerOption> TemplateInitialFacingPickerOptions() =>
+        [
+            new SadConsoleEditorInitialFacingPickerOption(null, "none"),
+            new SadConsoleEditorInitialFacingPickerOption(Direction.North, "North"),
+            new SadConsoleEditorInitialFacingPickerOption(Direction.South, "South"),
+            new SadConsoleEditorInitialFacingPickerOption(Direction.West, "West"),
+            new SadConsoleEditorInitialFacingPickerOption(Direction.East, "East")
+        ];
+
+    public SadConsoleEditorMutationUiResult BeginTemplateInitialFacingPicker()
+    {
+        if (SelectedTemplate() is not { } template)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No authored template is selected for initial facing edit.");
+        }
+
+        Section = SadConsoleEditorSection.Templates;
+        ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
+        ClearTemplateDefaultActionPlanPicker();
+        ClearActionPlanStepEditor();
+        ClearTemplateTargetingRuleEditor();
+        ClearTemplateInventoryBrush();
+        var options = TemplateInitialFacingPickerOptions();
+        var currentIndex = options.ToList().FindIndex(option => option.Facing == template.ActionStateDefaults.Facing);
+        _templateInitialFacingPickerIndex = currentIndex >= 0 ? currentIndex : 0;
+        _isPickingTemplateInitialFacing = true;
+        return SadConsoleEditorMutationUiResult.Success($"Choosing initial facing for {template.TemplateId}. Up/Down selects; Enter applies; Esc cancels.");
+    }
+
+    public SadConsoleEditorMutationUiResult ConfirmTemplateInitialFacingPicker()
+    {
+        if (!_isPickingTemplateInitialFacing)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No initial facing picker is active.");
+        }
+
+        if (SelectedTemplate() is not { } template)
+        {
+            ClearTemplateInitialFacingPicker();
+            return SadConsoleEditorMutationUiResult.Failure("No authored template is selected; initial facing edit cancelled.");
+        }
+
+        var options = TemplateInitialFacingPickerOptions();
+        var option = options[Math.Clamp(_templateInitialFacingPickerIndex, 0, options.Count - 1)];
+        ClearTemplateInitialFacingPicker();
+        var result = option.Facing is { } facing
+            ? _service.SetTemplateInitialFacing(template.TemplateId, facing)
+            : _service.ClearTemplateInitialFacing(template.TemplateId);
+        ReplaceSnapshotAfterMutation(
+            result.Snapshot,
+            template.TemplateId,
+            markPreviewStale: result.IsSuccess,
+            previewStaleReason: "Preview marked stale because authored template initial facing changed. Press P to rematerialize.");
+        return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
+    }
+
+    private void MoveTemplateInitialFacingPicker(int delta)
+    {
+        _templateInitialFacingPickerIndex = ClampIndex(_templateInitialFacingPickerIndex + delta, TemplateInitialFacingPickerOptions().Count);
+    }
+
     public SadConsoleEditorMutationUiResult Save()
     {
         ClearTemplateEdit();
+        ClearTemplateInitialFacingPicker();
         ClearTemplateDefaultActionPlanPicker();
         ClearActionPlanStepEditor();
         ClearTemplateTargetingRuleEditor();
@@ -466,6 +653,12 @@ internal sealed class SadConsoleEditorContext
             return;
         }
 
+        if (_isPickingTemplateInitialFacing)
+        {
+            MoveTemplateInitialFacingPicker(delta);
+            return;
+        }
+
         if (_targetingRuleEdit is not null)
         {
             MoveTemplateTargetingRuleSlot(delta);
@@ -490,7 +683,14 @@ internal sealed class SadConsoleEditorContext
                 MoveScenarioSelection(delta);
                 break;
             case SadConsoleEditorSection.Templates:
-                SelectedTemplateIndex = ClampIndex(SelectedTemplateIndex + delta, _snapshot.EntityTemplates.Count);
+                if (TemplateFocus == SadConsoleEditorTemplateFocus.TemplateSelector)
+                {
+                    SelectedTemplateIndex = ClampIndex(SelectedTemplateIndex + delta, _snapshot.EntityTemplates.Count);
+                }
+                else
+                {
+                    MoveTemplateFocus(0, delta);
+                }
                 break;
             case SadConsoleEditorSection.ActionPlans:
                 SelectedActionPlanIndex = ClampIndex(SelectedActionPlanIndex + delta, _snapshot.ActionPlans.Count);
@@ -529,6 +729,125 @@ internal sealed class SadConsoleEditorContext
         Section = values[Math.Clamp(index + delta, 0, values.Length - 1)];
         ClampAllSelections();
     }
+
+    public SadConsoleEditorMutationUiResult MoveTemplateFocus(int dx, int dy)
+    {
+        if (Section != SadConsoleEditorSection.Templates)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("Template focus is only available in the Templates editor section.");
+        }
+
+        TemplateFocus = NextTemplateFocus(TemplateFocus, dx, dy);
+        return SadConsoleEditorMutationUiResult.Success($"Template editor focus: {TemplateFocusLabel(TemplateFocus)}. Select/Enter activates; Cancel/Esc leaves submodes.");
+    }
+
+    public SadConsoleEditorMutationUiResult ActivateTemplateFocus()
+    {
+        if (Section != SadConsoleEditorSection.Templates)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("Template focus can only be activated in the Templates editor section.");
+        }
+
+        return TemplateFocus switch
+        {
+            SadConsoleEditorTemplateFocus.TemplateSelector => OpenCommandMenu(),
+            SadConsoleEditorTemplateFocus.Name => BeginTemplateNameEdit(),
+            SadConsoleEditorTemplateFocus.Glyph => BeginTemplateGlyphEdit(),
+            SadConsoleEditorTemplateFocus.Color => CycleSelectedTemplateColor(),
+            SadConsoleEditorTemplateFocus.DefaultActionPlan => BeginTemplateDefaultActionPlanPicker(),
+            SadConsoleEditorTemplateFocus.TargetingLabel or SadConsoleEditorTemplateFocus.TargetingTarget or SadConsoleEditorTemplateFocus.TargetingRange => BeginTemplateTargetingRuleEditor(TemplateFocus),
+            SadConsoleEditorTemplateFocus.InventoryBrush => ToggleTemplateInventoryBrush(),
+            SadConsoleEditorTemplateFocus.InventoryWidth or SadConsoleEditorTemplateFocus.InventoryHeight or SadConsoleEditorTemplateFocus.Bulk or SadConsoleEditorTemplateFocus.Aperture => BeginTemplateMetadataEdit(TemplateFocus),
+            SadConsoleEditorTemplateFocus.InitialFacing => BeginTemplateInitialFacingPicker(),
+            _ => SadConsoleEditorMutationUiResult.Failure("Focused template field is not implemented.")
+        };
+    }
+
+    private static SadConsoleEditorTemplateFocus NextTemplateFocus(SadConsoleEditorTemplateFocus current, int dx, int dy)
+    {
+        if (dx < 0)
+        {
+            return current switch
+            {
+                SadConsoleEditorTemplateFocus.Glyph => SadConsoleEditorTemplateFocus.Name,
+                SadConsoleEditorTemplateFocus.Color => SadConsoleEditorTemplateFocus.Glyph,
+                SadConsoleEditorTemplateFocus.InventoryHeight => SadConsoleEditorTemplateFocus.InventoryWidth,
+                SadConsoleEditorTemplateFocus.Bulk => SadConsoleEditorTemplateFocus.InventoryHeight,
+                SadConsoleEditorTemplateFocus.Aperture => SadConsoleEditorTemplateFocus.Bulk,
+                SadConsoleEditorTemplateFocus.TargetingTarget => SadConsoleEditorTemplateFocus.TargetingLabel,
+                SadConsoleEditorTemplateFocus.TargetingRange => SadConsoleEditorTemplateFocus.TargetingTarget,
+                SadConsoleEditorTemplateFocus.InventoryBrush => SadConsoleEditorTemplateFocus.TemplateSelector,
+                _ => SadConsoleEditorTemplateFocus.TemplateSelector
+            };
+        }
+
+        if (dx > 0)
+        {
+            return current switch
+            {
+                SadConsoleEditorTemplateFocus.TemplateSelector => SadConsoleEditorTemplateFocus.Name,
+                SadConsoleEditorTemplateFocus.Name => SadConsoleEditorTemplateFocus.Glyph,
+                SadConsoleEditorTemplateFocus.Glyph => SadConsoleEditorTemplateFocus.Color,
+                SadConsoleEditorTemplateFocus.InventoryWidth => SadConsoleEditorTemplateFocus.InventoryHeight,
+                SadConsoleEditorTemplateFocus.InventoryHeight => SadConsoleEditorTemplateFocus.Bulk,
+                SadConsoleEditorTemplateFocus.Bulk => SadConsoleEditorTemplateFocus.Aperture,
+                SadConsoleEditorTemplateFocus.TargetingLabel => SadConsoleEditorTemplateFocus.TargetingTarget,
+                SadConsoleEditorTemplateFocus.TargetingTarget => SadConsoleEditorTemplateFocus.TargetingRange,
+                _ => current
+            };
+        }
+
+        if (dy < 0)
+        {
+            return current switch
+            {
+                SadConsoleEditorTemplateFocus.TemplateSelector => SadConsoleEditorTemplateFocus.TemplateSelector,
+                SadConsoleEditorTemplateFocus.Name or SadConsoleEditorTemplateFocus.Glyph or SadConsoleEditorTemplateFocus.Color => SadConsoleEditorTemplateFocus.TemplateSelector,
+                SadConsoleEditorTemplateFocus.InventoryWidth or SadConsoleEditorTemplateFocus.InventoryHeight or SadConsoleEditorTemplateFocus.Bulk or SadConsoleEditorTemplateFocus.Aperture => SadConsoleEditorTemplateFocus.Name,
+                SadConsoleEditorTemplateFocus.InitialFacing => SadConsoleEditorTemplateFocus.InventoryWidth,
+                SadConsoleEditorTemplateFocus.DefaultActionPlan => SadConsoleEditorTemplateFocus.InitialFacing,
+                SadConsoleEditorTemplateFocus.TargetingLabel or SadConsoleEditorTemplateFocus.TargetingTarget or SadConsoleEditorTemplateFocus.TargetingRange => SadConsoleEditorTemplateFocus.DefaultActionPlan,
+                SadConsoleEditorTemplateFocus.InventoryBrush => SadConsoleEditorTemplateFocus.TargetingLabel,
+                _ => current
+            };
+        }
+
+        if (dy > 0)
+        {
+            return current switch
+            {
+                SadConsoleEditorTemplateFocus.TemplateSelector => SadConsoleEditorTemplateFocus.Name,
+                SadConsoleEditorTemplateFocus.Name or SadConsoleEditorTemplateFocus.Glyph or SadConsoleEditorTemplateFocus.Color => SadConsoleEditorTemplateFocus.InventoryWidth,
+                SadConsoleEditorTemplateFocus.InventoryWidth or SadConsoleEditorTemplateFocus.InventoryHeight or SadConsoleEditorTemplateFocus.Bulk or SadConsoleEditorTemplateFocus.Aperture => SadConsoleEditorTemplateFocus.InitialFacing,
+                SadConsoleEditorTemplateFocus.InitialFacing => SadConsoleEditorTemplateFocus.DefaultActionPlan,
+                SadConsoleEditorTemplateFocus.DefaultActionPlan => SadConsoleEditorTemplateFocus.TargetingLabel,
+                SadConsoleEditorTemplateFocus.TargetingLabel or SadConsoleEditorTemplateFocus.TargetingTarget or SadConsoleEditorTemplateFocus.TargetingRange => SadConsoleEditorTemplateFocus.InventoryBrush,
+                SadConsoleEditorTemplateFocus.InventoryBrush => SadConsoleEditorTemplateFocus.InventoryBrush,
+                _ => current
+            };
+        }
+
+        return current;
+    }
+
+    internal static string TemplateFocusLabel(SadConsoleEditorTemplateFocus focus) => focus switch
+    {
+        SadConsoleEditorTemplateFocus.TemplateSelector => "template selector",
+        SadConsoleEditorTemplateFocus.Name => "template name",
+        SadConsoleEditorTemplateFocus.Glyph => "template glyph",
+        SadConsoleEditorTemplateFocus.Color => "template color",
+        SadConsoleEditorTemplateFocus.InventoryWidth => "inventory width",
+        SadConsoleEditorTemplateFocus.InventoryHeight => "inventory height",
+        SadConsoleEditorTemplateFocus.Bulk => "bulk",
+        SadConsoleEditorTemplateFocus.Aperture => "aperture",
+        SadConsoleEditorTemplateFocus.InitialFacing => "initial facing",
+        SadConsoleEditorTemplateFocus.DefaultActionPlan => "default action plan",
+        SadConsoleEditorTemplateFocus.TargetingLabel => "targeting rule label",
+        SadConsoleEditorTemplateFocus.TargetingTarget => "targeting rule target template",
+        SadConsoleEditorTemplateFocus.TargetingRange => "targeting rule range",
+        SadConsoleEditorTemplateFocus.InventoryBrush => "inventory brush",
+        _ => focus.ToString()
+    };
 
     public void SelectSection(SadConsoleEditorSection section)
     {
@@ -933,7 +1252,7 @@ internal sealed class SadConsoleEditorContext
         _actionStepEdit = edit with { StepOrInsertIndex = Math.Clamp(edit.StepOrInsertIndex + delta, 0, stepCount) };
     }
 
-    public SadConsoleEditorMutationUiResult BeginTemplateTargetingRuleEditor()
+    public SadConsoleEditorMutationUiResult BeginTemplateTargetingRuleEditor(SadConsoleEditorTemplateFocus initialField = SadConsoleEditorTemplateFocus.TargetingLabel)
     {
         if (SelectedTemplate() is not { } template)
         {
@@ -945,8 +1264,8 @@ internal sealed class SadConsoleEditorContext
         ClearTemplateInventoryBrush();
         Section = SadConsoleEditorSection.Templates;
         var slot = template.TargetingRules.OrderBy(rule => rule.Slot).FirstOrDefault()?.Slot ?? 1;
-        LoadTargetingRuleSlot(slot);
-        return SadConsoleEditorMutationUiResult.Success($"Editing targeting rules for {template.TemplateId}. Up/Down selects slot; L edits label; E cycles target; +/- range; Enter applies; X/Delete clears; Esc exits.");
+        LoadTargetingRuleSlot(slot, TargetingFieldFromTemplateFocus(initialField));
+        return SadConsoleEditorMutationUiResult.Success($"Editing targeting rules for {template.TemplateId}. Up/Down selects slot; Left/Right selects label/target/range; Enter activates focused field; X/Delete clears; Esc exits.");
     }
 
     public IReadOnlyList<SadConsoleEditorTargetTemplatePickerOption> TargetTemplatePickerOptions() =>
@@ -959,7 +1278,7 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Failure("No targeting rule editor is active.");
         }
 
-        _targetingRuleEdit = edit with { IsEditingLabel = true, LabelBuffer = edit.Label };
+        _targetingRuleEdit = edit with { ActiveField = SadConsoleEditorTargetingRuleField.Label, IsEditingLabel = true, LabelBuffer = edit.Label };
         return SadConsoleEditorMutationUiResult.Success($"Editing targeting rule slot {edit.Slot} label. Lowercase letters/digits only; Enter accepts pending label; Esc cancels label edit.");
     }
 
@@ -994,7 +1313,7 @@ internal sealed class SadConsoleEditorContext
         }
 
         _targetingRuleEdit = edit with { Label = edit.LabelBuffer, IsEditingLabel = false };
-        return SadConsoleEditorMutationUiResult.Success(TargetingRuleStatusMessage());
+        return ConfirmTemplateTargetingRuleEditor();
     }
 
     public SadConsoleEditorMutationUiResult CycleTargetingRuleTarget(int delta = 1)
@@ -1026,6 +1345,48 @@ internal sealed class SadConsoleEditorContext
         return SadConsoleEditorMutationUiResult.Success(TargetingRuleStatusMessage());
     }
 
+    public SadConsoleEditorMutationUiResult MoveTargetingRuleField(int delta)
+    {
+        if (_targetingRuleEdit is not { } edit || edit.IsEditingLabel)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No targeting rule field focus is available.");
+        }
+
+        var values = Enum.GetValues<SadConsoleEditorTargetingRuleField>();
+        var index = Array.IndexOf(values, edit.ActiveField);
+        var next = Math.Clamp(index + delta, 0, values.Length - 1);
+        _targetingRuleEdit = edit with { ActiveField = values[next] };
+        return SadConsoleEditorMutationUiResult.Success(TargetingRuleStatusMessage());
+    }
+
+    public SadConsoleEditorMutationUiResult ActivateTargetingRuleField()
+    {
+        if (_targetingRuleEdit is not { } edit)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No targeting rule editor is active.");
+        }
+
+        return edit.ActiveField switch
+        {
+            SadConsoleEditorTargetingRuleField.Label => BeginTargetingRuleLabelEdit(),
+            SadConsoleEditorTargetingRuleField.Target => ApplyTargetingRuleTargetCycle(),
+            SadConsoleEditorTargetingRuleField.Range => ApplyTargetingRuleRangeIncrement(),
+            _ => SadConsoleEditorMutationUiResult.Failure("Focused targeting rule field is not implemented.")
+        };
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyTargetingRuleTargetCycle()
+    {
+        var cycle = CycleTargetingRuleTarget();
+        return cycle.Succeeded ? ConfirmTemplateTargetingRuleEditor() : cycle;
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyTargetingRuleRangeIncrement()
+    {
+        var adjust = AdjustTargetingRuleRange(1);
+        return adjust.Succeeded ? ConfirmTemplateTargetingRuleEditor() : adjust;
+    }
+
     public SadConsoleEditorMutationUiResult ConfirmTemplateTargetingRuleEditor()
     {
         if (_targetingRuleEdit is not { } edit)
@@ -1047,7 +1408,7 @@ internal sealed class SadConsoleEditorContext
             previewStaleReason: "Preview marked stale because authored template targeting rules changed. Press P to rematerialize.");
         if (result.IsSuccess)
         {
-            LoadTargetingRuleSlot(edit.Slot);
+            LoadTargetingRuleSlot(edit.Slot, edit.ActiveField);
         }
 
         return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
@@ -1079,7 +1440,7 @@ internal sealed class SadConsoleEditorContext
             previewStaleReason: "Preview marked stale because authored template targeting rules changed. Press P to rematerialize.");
         if (result.IsSuccess)
         {
-            LoadTargetingRuleSlot(edit.Slot);
+            LoadTargetingRuleSlot(edit.Slot, edit.ActiveField);
         }
 
         return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
@@ -1092,7 +1453,7 @@ internal sealed class SadConsoleEditorContext
             return;
         }
 
-        LoadTargetingRuleSlot(Math.Clamp(edit.Slot + delta, 1, 4));
+        LoadTargetingRuleSlot(Math.Clamp(edit.Slot + delta, 1, 4), edit.ActiveField);
     }
 
     public SadConsoleEditorMutationUiResult ToggleTemplateInventoryBrush()
@@ -1221,7 +1582,7 @@ internal sealed class SadConsoleEditorContext
         return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
     }
 
-    private void LoadTargetingRuleSlot(int slot)
+    private void LoadTargetingRuleSlot(int slot, SadConsoleEditorTargetingRuleField activeField = SadConsoleEditorTargetingRuleField.Label)
     {
         if (SelectedTemplate() is not { } template)
         {
@@ -1247,10 +1608,18 @@ internal sealed class SadConsoleEditorContext
             targetId,
             targetIndex,
             existing?.Range ?? 0,
+            activeField,
             IsEditingLabel: false,
             LabelBuffer: existing?.Label ?? string.Empty,
             ExistingRulePresent: existing is not null);
     }
+
+    private static SadConsoleEditorTargetingRuleField TargetingFieldFromTemplateFocus(SadConsoleEditorTemplateFocus focus) => focus switch
+    {
+        SadConsoleEditorTemplateFocus.TargetingTarget => SadConsoleEditorTargetingRuleField.Target,
+        SadConsoleEditorTemplateFocus.TargetingRange => SadConsoleEditorTargetingRuleField.Range,
+        _ => SadConsoleEditorTargetingRuleField.Label
+    };
 
     private SadConsoleEditorMutationUiResult ApplyTemplatePresentationUpdate(string templateId, FrontendEditorTemplatePresentationUpdate update)
     {
@@ -1261,6 +1630,66 @@ internal sealed class SadConsoleEditorContext
             markPreviewStale: result.IsSuccess,
             previewStaleReason: "Preview marked stale because authored template presentation changed. Press P to rematerialize.");
         return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyCreateTemplate(string name)
+    {
+        var before = _snapshot.EntityTemplates.Select(template => template.TemplateId).ToHashSet(StringComparer.Ordinal);
+        var result = _service.CreateEntityTemplate(name);
+        var createdId = result.Snapshot.EntityTemplates.FirstOrDefault(template => !before.Contains(template.TemplateId))?.TemplateId;
+        ReplaceSnapshotAfterMutation(
+            result.Snapshot,
+            createdId,
+            markPreviewStale: result.IsSuccess,
+            previewStaleReason: "Preview marked stale because an authored template was created. Press P to rematerialize.");
+        return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyDuplicateTemplate(string sourceTemplateId, string name)
+    {
+        var before = _snapshot.EntityTemplates.Select(template => template.TemplateId).ToHashSet(StringComparer.Ordinal);
+        var result = _service.DuplicateEntityTemplate(sourceTemplateId, name);
+        var duplicatedId = result.Snapshot.EntityTemplates.FirstOrDefault(template => !before.Contains(template.TemplateId))?.TemplateId;
+        ReplaceSnapshotAfterMutation(
+            result.Snapshot,
+            duplicatedId ?? sourceTemplateId,
+            markPreviewStale: result.IsSuccess,
+            previewStaleReason: "Preview marked stale because an authored template was duplicated. Press P to rematerialize.");
+        return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyDeleteTemplate(string templateId)
+    {
+        var result = _service.DeleteEntityTemplate(templateId);
+        ReplaceSnapshotAfterMutation(
+            result.Snapshot,
+            null,
+            markPreviewStale: result.IsSuccess,
+            previewStaleReason: "Preview marked stale because an authored template was deleted. Press P to rematerialize.");
+        return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyTemplateMetadataUpdate(FrontendEditorEntityTemplateSummary original, FrontendEditorEntityTemplateSummary updated, string fieldName)
+    {
+        var result = _service.UpdateTemplateMetadata(
+            original.TemplateId,
+            new FrontendEditorTemplateMetadataUpdate(updated.InventoryWidth, updated.InventoryHeight, updated.Bulk, updated.Aperture));
+        ReplaceSnapshotAfterMutation(
+            result.Snapshot,
+            original.TemplateId,
+            markPreviewStale: result.IsSuccess,
+            previewStaleReason: $"Preview marked stale because authored template {fieldName} changed. Press P to rematerialize.");
+        return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
+    }
+
+    private static int ParseNonNegativeInt(string text, int fallback)
+    {
+        if (!int.TryParse(text, out var value))
+        {
+            return fallback;
+        }
+
+        return Math.Max(0, value);
     }
 
     private void ReplaceSnapshotAfterMutation(FrontendEditorSnapshot snapshot, string? selectedTemplateId, bool markPreviewStale, string? previewStaleReason = null)
@@ -1311,8 +1740,15 @@ internal sealed class SadConsoleEditorContext
 
     private string EditStatusMessage() => _templateEditMode switch
     {
+        SadConsoleEditorTemplateEditMode.CreateTemplateName => $"Creating template name: {_templateEditBuffer}",
+        SadConsoleEditorTemplateEditMode.DuplicateTemplateName => $"Duplicate template name: {_templateEditBuffer}",
+        SadConsoleEditorTemplateEditMode.DeleteTemplateConfirmation => $"Confirm delete template {_templateEditBuffer}. Enter deletes; Esc cancels.",
         SadConsoleEditorTemplateEditMode.Name => $"Editing template name: {_templateEditBuffer}",
         SadConsoleEditorTemplateEditMode.Glyph => $"Editing template glyph: {(_templateEditBuffer.Length == 0 ? "<empty>" : _templateEditBuffer[0])}",
+        SadConsoleEditorTemplateEditMode.InventoryWidth => $"Editing inventory width: {_templateEditBuffer}",
+        SadConsoleEditorTemplateEditMode.InventoryHeight => $"Editing inventory height: {_templateEditBuffer}",
+        SadConsoleEditorTemplateEditMode.Bulk => $"Editing bulk: {_templateEditBuffer}",
+        SadConsoleEditorTemplateEditMode.Aperture => $"Editing aperture: {_templateEditBuffer}",
         _ => "No template presentation edit is active."
     };
 
@@ -1320,6 +1756,12 @@ internal sealed class SadConsoleEditorContext
     {
         _templateEditMode = SadConsoleEditorTemplateEditMode.None;
         _templateEditBuffer = string.Empty;
+    }
+
+    private void ClearTemplateInitialFacingPicker()
+    {
+        _isPickingTemplateInitialFacing = false;
+        _templateInitialFacingPickerIndex = 0;
     }
 
     private void ClearTemplateDefaultActionPlanPicker()
@@ -1415,11 +1857,17 @@ internal sealed class SadConsoleEditorContext
         }
 
         var label = edit.IsEditingLabel ? edit.LabelBuffer : edit.Label;
-        return $"Targeting slot {edit.Slot}: label '{(string.IsNullOrEmpty(label) ? "<blank>" : label)}' target {edit.TargetTemplateId} range {edit.Range}.";
+        return $"Targeting slot {edit.Slot}: focused {edit.ActiveField}; label '{(string.IsNullOrEmpty(label) ? "<blank>" : label)}' target {edit.TargetTemplateId} range {edit.Range}.";
     }
 
     private static string FirstGlyphText(string text) =>
         string.IsNullOrEmpty(text) ? string.Empty : text[0].ToString();
+
+    private static bool IsNumericTemplateEdit(SadConsoleEditorTemplateEditMode mode) =>
+        mode is SadConsoleEditorTemplateEditMode.InventoryWidth
+            or SadConsoleEditorTemplateEditMode.InventoryHeight
+            or SadConsoleEditorTemplateEditMode.Bulk
+            or SadConsoleEditorTemplateEditMode.Aperture;
 
     private bool HasCurrentScenarioPreview() =>
         _cachedPreview is not null && string.Equals(_cachedPreview.ScenarioId, SelectedScenario()?.ScenarioId, StringComparison.Ordinal);
@@ -1508,6 +1956,9 @@ internal enum SadConsoleEditorCommandId
     ToggleYamlDiff,
     EditTemplateName,
     EditTemplateGlyph,
+    CreateTemplate,
+    DuplicateTemplate,
+    DeleteTemplate,
     CycleTemplateColor,
     SetTemplateDefaultActionPlan,
     EditTemplateTargetingRules,
@@ -1517,6 +1968,8 @@ internal enum SadConsoleEditorCommandId
 }
 
 internal sealed record SadConsoleEditorActionPlanPickerOption(string? ActionPlanId, string Label);
+
+internal sealed record SadConsoleEditorInitialFacingPickerOption(Direction? Facing, string Label);
 
 internal sealed record SadConsoleEditorActionStepEditState(int StepOrInsertIndex, int AvailableActionStepIndex);
 
@@ -1532,9 +1985,17 @@ internal sealed record SadConsoleEditorTargetingRuleEditState(
     string TargetTemplateId,
     int TargetTemplateIndex,
     int Range,
+    SadConsoleEditorTargetingRuleField ActiveField,
     bool IsEditingLabel,
     string LabelBuffer,
     bool ExistingRulePresent);
+
+internal enum SadConsoleEditorTargetingRuleField
+{
+    Label,
+    Target,
+    Range
+}
 
 internal sealed record SadConsoleEditorRefreshResult(
     string Message,
@@ -1558,8 +2019,33 @@ internal sealed record SadConsoleEditorMutationUiResult(bool Succeeded, string M
 internal enum SadConsoleEditorTemplateEditMode
 {
     None,
+    CreateTemplateName,
+    DuplicateTemplateName,
+    DeleteTemplateConfirmation,
     Name,
-    Glyph
+    Glyph,
+    InventoryWidth,
+    InventoryHeight,
+    Bulk,
+    Aperture
+}
+
+internal enum SadConsoleEditorTemplateFocus
+{
+    TemplateSelector,
+    Name,
+    Glyph,
+    Color,
+    InventoryWidth,
+    InventoryHeight,
+    Bulk,
+    Aperture,
+    InitialFacing,
+    DefaultActionPlan,
+    TargetingLabel,
+    TargetingTarget,
+    TargetingRange,
+    InventoryBrush
 }
 
 internal enum SadConsoleEditorSection
@@ -1695,7 +2181,7 @@ internal static class SadConsoleEditorViewBuilder
         var contextual = context.Section switch
         {
             SadConsoleEditorSection.Scenarios => "Scenarios: Up/Down selects; M launches Simulation; P/command menu rematerializes Preview.",
-            SadConsoleEditorSection.Templates => "Templates: command menu offers name/glyph/color/default plan/targeting/inventory brush. Temporary hotkeys: N/G/C/A/Y/B.",
+            SadConsoleEditorSection.Templates => $"Templates: command menu offers name/glyph/color/default plan/targeting/inventory brush; semantic focus is {SadConsoleEditorContext.TemplateFocusLabel(context.TemplateFocus)}. Arrows move between fields/rows; Enter/Select activates focused field; Cancel/Esc exits submodes. Temporary hotkeys: N/G/C/A/Y/B.",
             SadConsoleEditorSection.ActionPlans => "Action Plans: command menu or A opens step editor; step submode uses Up/Down, Left/Right/Tab, R/I, Esc.",
             SadConsoleEditorSection.Diagnostics => "Diagnostics: Up/Down reviews validation rows.",
             SadConsoleEditorSection.YamlAndDiff => "YAML/Diff: Up/Down scrolls; command menu or T toggles read-only YAML/Diff.",
@@ -1791,18 +2277,26 @@ internal static class SadConsoleEditorViewBuilder
     {
         var rows = new List<string>
         {
+            $"Authored entity-template edit screen: {FocusField(context, SadConsoleEditorTemplateFocus.TemplateSelector, $"{template.Glyph} {template.Name} ({template.TemplateId})")}",
             $"Authored entity template panel (presentation editable): {template.Glyph} {template.Name} ({template.TemplateId})",
-            $"Identity/presentation: template id {template.TemplateId} | glyph '{template.Glyph}' | color {template.Color}",
+            $"Identity fields: {FocusField(context, SadConsoleEditorTemplateFocus.Name, $"Name {template.Name}")} | {FocusField(context, SadConsoleEditorTemplateFocus.Glyph, $"glyph '{template.Glyph}'")} | {FocusField(context, SadConsoleEditorTemplateFocus.Color, $"color {template.Color}")}",
             TemplateEditStatusLine(context),
+            $"Properties: {FocusField(context, SadConsoleEditorTemplateFocus.InventoryWidth, $"width {template.InventoryWidth}")} | {FocusField(context, SadConsoleEditorTemplateFocus.InventoryHeight, $"height {template.InventoryHeight}")} | {FocusField(context, SadConsoleEditorTemplateFocus.Bulk, $"bulk {template.Bulk}")} | {FocusField(context, SadConsoleEditorTemplateFocus.Aperture, $"aperture {template.Aperture}")}",
             $"Template metadata: inventory {template.InventoryWidth}x{template.InventoryHeight} | bulk {template.Bulk} | aperture {template.Aperture}",
-            $"Default action plan id: {template.DefaultActionPlanId ?? "none"}",
+            $"Action-state defaults: facing {template.ActionStateDefaults.Facing?.ToString() ?? "none"} | target entity id {template.ActionStateDefaults.TargetEntityId ?? "none"} | focus {FocusField(context, SadConsoleEditorTemplateFocus.InitialFacing, $"facing {template.ActionStateDefaults.Facing?.ToString() ?? "none"}")}",
+            $"Default action plan id: {template.DefaultActionPlanId ?? "none"} | focus {FocusField(context, SadConsoleEditorTemplateFocus.DefaultActionPlan, template.DefaultActionPlanId ?? "none")}",
             FormatAssignedActionPlanSummary(snapshot, template.DefaultActionPlanId),
-            $"Action-state defaults: facing {template.ActionStateDefaults.Facing?.ToString() ?? "none"} | target entity id {template.ActionStateDefaults.TargetEntityId ?? "none"}"
+            "Semantic focus shell: pink-field navigation model is active; width/height/bulk/aperture/facing are focusable but editing lands in the next slice."
         };
 
         if (context.IsPickingTemplateDefaultActionPlan)
         {
             rows.AddRange(BuildTemplateDefaultActionPlanPickerRows(context, snapshot));
+        }
+
+        if (context.IsPickingTemplateInitialFacing)
+        {
+            rows.AddRange(BuildTemplateInitialFacingPickerRows(context));
         }
 
         if (context.IsEditingTemplateTargetingRule)
@@ -1820,8 +2314,10 @@ internal static class SadConsoleEditorViewBuilder
             : $"Authored starting inventory/carried layout ({template.CarriedEntities.Count}): {string.Join("; ", template.CarriedEntities.Take(4).Select(FormatCarriedDetail))}{(template.CarriedEntities.Count > 4 ? "; ..." : string.Empty)}");
 
         rows.Add(template.TargetingRules.Count == 0
-            ? "Targeting rules: none"
-            : $"Targeting rules ({template.TargetingRules.Count}): {string.Join("; ", template.TargetingRules.Take(3).Select(FormatTargetingRule))}{(template.TargetingRules.Count > 3 ? "; ..." : string.Empty)}");
+            ? $"Targeting rules/fields: {FocusField(context, SadConsoleEditorTemplateFocus.TargetingLabel, "label <empty>")} | {FocusField(context, SadConsoleEditorTemplateFocus.TargetingTarget, "target <empty>")} | {FocusField(context, SadConsoleEditorTemplateFocus.TargetingRange, "range <empty>")}"
+            : $"Targeting rules/fields: {FocusField(context, SadConsoleEditorTemplateFocus.TargetingLabel, "label")}/{FocusField(context, SadConsoleEditorTemplateFocus.TargetingTarget, "target")}/{FocusField(context, SadConsoleEditorTemplateFocus.TargetingRange, "range")} -> {string.Join("; ", template.TargetingRules.Take(3).Select(FormatTargetingRule))}{(template.TargetingRules.Count > 3 ? "; ..." : string.Empty)}");
+
+        rows.Add($"Inventory edit entry: {FocusField(context, SadConsoleEditorTemplateFocus.InventoryBrush, "brush / authored inventory grid")} (layout mutation remains a later slice beyond place-only prototype). ");
 
         if (template.Diagnostics.Count == 0)
         {
@@ -1844,8 +2340,18 @@ internal static class SadConsoleEditorViewBuilder
         return rows;
     }
 
+    private static string FocusField(SadConsoleEditorContext context, SadConsoleEditorTemplateFocus focus, string text) =>
+        context.Section == SadConsoleEditorSection.Templates && context.TemplateFocus == focus
+            ? $">[{text}]<"
+            : $"[{text}]";
+
     private static string TemplateEditStatusLine(SadConsoleEditorContext context)
     {
+        if (context.IsPickingTemplateInitialFacing)
+        {
+            return "Initial facing picker active: Up/Down selects none/North/South/West/East, Enter applies through editor service, Esc cancels.";
+        }
+
         if (context.IsPickingTemplateDefaultActionPlan)
         {
             return "Default action plan picker active: Up/Down selects existing plan or none, Enter applies through editor service, Esc cancels.";
@@ -1857,8 +2363,21 @@ internal static class SadConsoleEditorViewBuilder
         }
 
         return context.TemplateEditMode == SadConsoleEditorTemplateEditMode.None
-            ? "Edit controls: N name, G glyph, C cycle color, A default plan, Y targeting rules, B inventory brush, S save. Enter opens the command menu; M launches Simulation."
+            ? "Controls: arrows move semantic focus; Enter/Select activates focused field; Esc/Cancel exits submodes. Hotkeys remain temporary accelerators."
             : $"Editing {context.TemplateEditMode}: '{context.TemplateEditBuffer}' (Enter applies, Esc cancels).";
+    }
+
+    private static IReadOnlyList<string> BuildTemplateInitialFacingPickerRows(SadConsoleEditorContext context)
+    {
+        var options = context.TemplateInitialFacingPickerOptions();
+        return [
+            "Initial facing picker options:",
+            .. options.Select((option, index) =>
+            {
+                var marker = index == context.TemplateInitialFacingPickerIndex ? '>' : ' ';
+                return $"{marker} {option.Label}";
+            })
+        ];
     }
 
     private static IReadOnlyList<string> BuildTemplateInventoryBrushRows(SadConsoleEditorContext context, FrontendEditorEntityTemplateSummary template)
@@ -1923,10 +2442,10 @@ internal static class SadConsoleEditorViewBuilder
 
         var rows = new List<string>
         {
-            "Targeting rule editor active: Up/Down slot, L label, E cycle target template, +/- range, Enter apply, X/Delete clear, Esc exit.",
+            "Targeting rule editor active: Up/Down slot, Left/Right field, Enter activates focused label/target/range, X/Delete clears slot, Esc exits.",
             edit.IsEditingLabel
-                ? $"Editing slot {edit.Slot} label buffer: '{edit.LabelBuffer}' (lowercase alphanumeric required by service; Enter accepts pending label; Esc cancels label edit)."
-                : $"Pending slot {edit.Slot}: label '{(string.IsNullOrWhiteSpace(edit.Label) ? "<blank>" : edit.Label)}' | target {FormatTargetTemplate(snapshot, edit.TargetTemplateId)} | range {edit.Range} | {(edit.ExistingRulePresent ? "existing rule" : "empty slot/new rule")}",
+                ? $"Editing slot {edit.Slot} label buffer: '{edit.LabelBuffer}' (lowercase alphanumeric required by service; Enter applies label through editor service; Esc cancels label edit)."
+                : $"Pending slot {edit.Slot}: {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Label, $"label '{(string.IsNullOrWhiteSpace(edit.Label) ? "<blank>" : edit.Label)}'")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Target, $"target {FormatTargetTemplate(snapshot, edit.TargetTemplateId)}")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Range, $"range {edit.Range}")} | {(edit.ExistingRulePresent ? "existing rule" : "empty slot/new rule")}",
             "Slots 1-4:"
         };
 
@@ -1948,6 +2467,9 @@ internal static class SadConsoleEditorViewBuilder
 
         return rows;
     }
+
+    private static string FocusTargetingField(SadConsoleEditorTargetingRuleEditState edit, SadConsoleEditorTargetingRuleField field, string text) =>
+        !edit.IsEditingLabel && edit.ActiveField == field ? $">[{text}]<" : $"[{text}]";
 
     private static string FormatTargetTemplate(FrontendEditorSnapshot snapshot, string templateId)
     {
