@@ -9,6 +9,8 @@ using GggColor = GameGameGame.Content.PresentationColor;
 
 namespace GameGameGame.SadConsoleApp;
 
+// Legacy/deprecated SadConsole shell. Keep as reference only while the new
+// componentized exploration architecture is built.
 internal sealed class SadConsoleShell : Console
 {
     public const int ScreenWidth = 120;

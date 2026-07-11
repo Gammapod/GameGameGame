@@ -2,10 +2,22 @@ using GameGameGame.Content;
 
 namespace GameGameGame.SadConsoleApp;
 
-internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null)
+internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchNewScenarioSelection = false)
 {
     public static SadConsoleStartup FromArgs(string[] args)
     {
+        if (args.Contains("--gallery", StringComparer.OrdinalIgnoreCase))
+        {
+            return new SadConsoleStartup(null, null, null, LaunchGallery: true);
+        }
+
+        if (args.Contains("--new-scenario-selection", StringComparer.OrdinalIgnoreCase))
+        {
+            var filteredArgs = args.Where(arg => !string.Equals(arg, "--new-scenario-selection", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var scenarioCatalog = ResolveScenarioCatalog(filteredArgs);
+            return new SadConsoleStartup(null, scenarioCatalog, null, LaunchNewScenarioSelection: true);
+        }
+
         if (args.Length >= 2 && !args[0].StartsWith("--", StringComparison.Ordinal))
         {
             try
@@ -61,5 +73,5 @@ internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession,
         return new ScenarioCatalogResult([], [Usage]);
     }
 
-    private const string Usage = "Usage: GameGameGame.SadConsole <content-file> <scenario-id>, --content <file>, --discover <folder>, or --manifest <manifest>.";
+    private const string Usage = "Usage: GameGameGame.SadConsole <content-file> <scenario-id>, --content <file>, --discover <folder>, --manifest <manifest>, --gallery, or --new-scenario-selection.";
 }

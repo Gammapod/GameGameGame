@@ -42,13 +42,13 @@ This checkpoint is complete, but it was not represented by a standalone active s
 
 ## Prototype/legacy replacement target
 
-The current `src/GameGameGame.SadConsole` project should remain the active SadConsole frontend. Do **not** start a separate replacement project unless the discovery sprint finds a hard framework or architecture blocker. The working catalog launch, editor-service integration, preview/materialization, Simulation launch/return, controlled-command Simulation mode, and tests are valuable foundations.
+The current `src/GameGameGame.SadConsole` implementation is now explicitly **legacy/deprecated reference code**. It remains in-tree because the working catalog launch, editor-service integration, preview/materialization, Simulation launch/return, controlled-command Simulation mode, and tests are valuable reference material, but new frontend work should not extend the monolithic shell/list-detail architecture by default.
 
-What should become legacy/replaced by the end of this sprint is the current Editor-mode presentation architecture, not the whole project.
+The replacement target is a clean componentized architecture inside the SadConsole frontend lane: reusable screen models, selectable/focusable components, explicit border/focus states, service-backed data projection, and eventually SadConsole rendering/input adapters over those testable models. Starting a separate replacement project is no longer the default requirement; the important boundary is legacy/reference versus new componentized code.
 
 ### Should be deprecated as prototype/legacy
 
-These pieces may remain temporarily as fallback/reference paths, but should not be extended as the durable editor UI pattern:
+These pieces may remain temporarily as fallback/reference paths, but should not be extended as the durable editor or simulation UI pattern:
 
 1. **Row-list Editor rendering as the primary screen model.**
    - Current examples: `SadConsoleEditorViewBuilder` rows, `DetailRows`, `ScenarioRows`, `DiagnosticRows`, and generic row printing in `SadConsoleShell.DrawEditor()`.
@@ -152,23 +152,48 @@ The sprint should trace and eventually decide patterns for each of these compone
    - footer describes current focus controls;
    - no editor mutation bypasses shared services.
 
-### Phase 1: Custom-drawn layout prototype
+### Phase 1: Component-library foundation
 
-Goal: prove the mockup can be reproduced with direct SadConsole surface drawing.
+Goal: create reusable, themeable, testable frontend components before rebuilding any full screen.
 
 Tasks:
 
-1. Add a `TemplateEditorLayout` pure layout model with region rectangles and field rectangles.
-2. Add tests for region and field geometry.
-3. Add a dedicated template-editor drawing path using `CellSurfaceEditor` drawing primitives.
-4. Draw static panel boxes, field boxes, glyph card, targeting area, inventory placeholder, and footer.
-5. Keep current mutation/navigation state behind it where possible.
+1. Add a separate theme/token model for panel borders, list rows, fields, and footers.
+2. Add primitive component models for bordered panels, selectable lists, editable fields, and field groups.
+3. Add a shared focus router that owns the screen-level selected-versus-focused component policy.
+4. Keep these primitives pure/testable and independent from direct SadConsole rendering so the user can review component behavior before we wire visual screens.
+5. Treat legacy shell/list-detail behavior as reference only while new screens compose these primitives.
 
 Expected tests:
 
-- `TemplateEditorLayoutTests`
-- `TemplateEditorFieldBoxViewTests`
-- `TemplateEditorFooterViewTests`
+- `SadConsoleUiComponentLibraryTests`
+- `SadConsoleComponentGalleryTests`
+- Existing `SadConsoleExplorationComponentsTests` remain the first screen-flow trace over these ideas.
+
+Review artifact:
+
+- `ComponentGalleryScreen` composes Phase 1 primitives into a non-game gallery that shows panel border states, selectable-list behavior, editable-field states, and footer control wording. This should be the first thing reviewed/adjusted before Scenario Selection is rebuilt.
+- Run the visual gallery with `GameGameGame.SadConsole --gallery` (or equivalent `dotnet run --project src/GameGameGame.SadConsole -- --gallery`) to inspect the current SadConsole-rendered version. The gallery exits on Cancel/Esc when no component is focused.
+- Built-in themes now include `Default` and `Blueprint`. Themes carry both color tokens and border glyph sets, so review can evaluate presentation differences beyond color before editor-parity work resumes.
+
+Phase gate before Phase 2:
+
+- Review border/focus states and theme token names.
+- Review selectable-list behavior: empty state, selected row, focused row, scrolling.
+- Review editable-field behavior: read-only, editable, editing, dirty, invalid.
+- Review focus-router behavior: when no component is focused, controls select components; when focused, controls route to that component; Cancel releases focus or leaves the screen.
+- Do not rebuild Scenario Selection until the component vocabulary is accepted or adjusted.
+
+### Phase 1B: Custom-drawn layout prototype
+
+Goal: prove accepted component models can be rendered with direct SadConsole surface drawing.
+
+Tasks:
+
+1. Add component renderers over the accepted component models.
+2. Add tests for renderer-independent geometry where practical.
+3. Draw static panel boxes, field boxes, list boxes, inventory placeholder, and footer using the shared theme.
+4. Prefer a component gallery/mock screen before wiring a real scenario flow.
 
 ### Phase 2: Built-in UI control comparison
 
@@ -260,4 +285,126 @@ Apply useful component patterns to Simulation mode:
 
 ## Initial next action
 
-Begin with Phase 1: implement a pure `TemplateEditorLayout` model plus a static custom-drawn template editor mockup path. This offers the fastest way to break out of row-list rendering while establishing testable geometry for later SadConsole control comparisons.
+Continue Phase 1 by reviewing the component-library primitives and theme/focus behavior with the user before rebuilding Scenario Selection. After acceptance, add a small component gallery/mock screen and direct SadConsole renderers, then proceed to Phase 2 Scenario Selection using only accepted components.
+
+## Phase 2 Scenario Selection rebuild checkpoint
+
+Status: Started.
+
+Current demo command:
+
+```text
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+```
+
+Optional catalog arguments may be combined with the flag, for example:
+
+```text
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection --manifest <manifest>
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection --discover <folder>
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection --content <file>
+```
+
+Demoable behavior:
+
+- new component-based Scenario Selection screen renders the scenario list through `SelectableListComponent`;
+- Up/Down changes selected scenario;
+- Enter opens a component-based Play/Edit sub-panel;
+- The Play/Edit sub-panel is now rendered as a SadConsole child `Console` overlay rather than shrinking the scenario list. This is an exploration of SadConsole's screen-object layering model and should be reassessed after the next screen exposes more popup/menu needs.
+- Up/Down changes the command while the command panel is open;
+- Enter returns Play/Edit/Exit routing results for the selected scenario;
+- Esc is Cancel/Back: it closes the command panel first, then exits when back on the scenario list;
+- catalog diagnostics render as an error panel.
+
+Known intentional placeholders:
+
+- Play and Edit currently report routing results in the message line rather than handing off to Simulation or Scenario Edit. Those handoffs are the next screens/phases.
+- Renderer code is still simple and should be consolidated with gallery rendering once the second real screen exposes enough shared renderer needs.
+- Overlay rendering currently uses a child `Console` owned by the Scenario Selection renderer. If child-surface layering adds friction, the model can fall back to drawing overlay components last on one surface without changing the screen model.
+
+## Phase 3 Scenario Edit rebuild checkpoint
+
+Status: Started.
+
+Demo path:
+
+```text
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+```
+
+Then select a scenario, press Enter, choose Edit, and press Enter.
+
+Demoable behavior:
+
+- Scenario Edit opens from the new Scenario Selection Edit route;
+- screen uses component API panels for 2.1 Scenario preview, 2.2 Player starting position, 2.3 Defined entities, and 2.4 Defined action plans;
+- arrows choose a component while no component is focused;
+- Enter focuses the selected component;
+- Esc releases focus, then returns to Scenario Selection when no component is focused;
+- focused entity/action-plan lists support Up/Down selection;
+- Enter on an entity/action plan reports the next-screen routing placeholder.
+
+Known intentional placeholders:
+
+- Scenario preview is a first derived/authored summary and entity row list, not yet the full materialized containment tree view.
+- Action Plan screens are not opened yet; activation reports which screen would be next.
+
+## Phase 4 Entity Template Edit rebuild checkpoint
+
+Status: Started.
+
+Demo path:
+
+```text
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+```
+
+Then select a scenario, choose Edit, focus the Defined entities list, select an entity, and press Enter.
+
+Demoable behavior:
+
+- Entity Template Edit opens from the new Scenario Edit entity route;
+- screen uses component API panels for 3.1 Presentation information, 3.2 Targeting information, and 3.3 Inventory information;
+- arrows choose a component while no component is focused;
+- Enter focuses the selected component;
+- Esc releases focus, then returns to Scenario Edit when no component is focused;
+- targeting and inventory panels support focused Up/Down row selection;
+- Targeting information now shows compact slot summaries (`slot {#}: {label} {target}`) and Enter opens a layered 3.2.1 targeting-slot detail sub-panel over the template screen;
+- Enter while Presentation is focused reports the default action-plan jump placeholder when a default plan exists.
+
+Known intentional placeholders:
+
+- fields are displayed as editable-style fields but do not mutate content yet;
+- 3.2.1 targeting-slot detail fields are displayed as editable-style fields but do not mutate content yet;
+- inventory drawing is a placeholder text row, not a spatial drawing panel;
+- default action-plan jump reports the next route but does not open the Action Plan screen yet.
+
+## Phase 5 Action Plan Edit rebuild checkpoint
+
+Status: Started.
+
+Demo path:
+
+```text
+dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+```
+
+Then either:
+
+- select a scenario, choose Edit, focus the Defined action plans list, select a plan, and press Enter; or
+- open Entity Template Edit, focus Presentation, and press Enter when the template has a default action plan.
+
+Demoable behavior:
+
+- Action Plan Edit opens from Scenario Edit action-plan selection;
+- Action Plan Edit also opens from Entity Template Presentation default-plan jump;
+- screen uses component API list for 4.1 Action steps;
+- Enter focuses the action-step list;
+- focused Up/Down changes selected step;
+- Enter on a selected step reports an action-step edit placeholder;
+- Esc releases focus first, then returns to Scenario Edit or Entity Template Edit depending on entry path.
+
+Known intentional placeholders:
+
+- action-step insert, replace, delete, and rearrange controls are not designed yet;
+- action-step field mutation is not implemented yet.

@@ -189,6 +189,15 @@ For entity-template editing, the preferred direction is a dedicated authored-tem
 
 Letter hotkeys may remain as temporary accelerators during the transition, but the visible focus model and contextual controls should define the durable workflow.
 
+### Component selection and focus treatment
+
+New SadConsole screen architecture should represent screens as reusable components with explicit selection/focus state:
+
+1. When no component is focused, controls should move the current component selection. Every visible component should have a border.
+2. Unselected component borders use a low-emphasis highlight color, the currently selected component uses a distinct selection highlight, and the focused component uses a third focus highlight.
+3. Once a component is focused, normal controls are routed to that component until Cancel/release focus returns to screen-level component selection.
+4. Scenario selection uses a scenario list plus a Play/Edit sub-panel. Cancel/Back is the input action, normally Escape, not a separate menu option. Scenario edit uses distinct preview, player-start, entity-list, and action-plan-list components. Entity template and action plan editing should be composed from the reusable editable-field/list/grid component vocabulary rather than shell-owned row strings.
+
 ### Deferred high-risk debugger ideas
 
 The following ideas are intentionally deferred and should be reassessed only after the Editor -> Preview -> Simulation loop is established:

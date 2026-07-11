@@ -20,7 +20,7 @@ Related source of truth:
 
 ## Direction
 
-SadConsole is now the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The near-term goal is a functional, information-dense frontend over shared engine/content/headless contracts, not a polished final game UI.
+SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The existing monolithic SadConsole shell is now legacy/deprecated reference code; the near-term goal is a cleaner componentized SadConsole architecture over shared engine/content/headless contracts, not a polished final game UI.
 
 Console remains valuable, but its long-term role should shift toward fallback CLI tooling, smoke/debug paths, scenario scanning, legacy scenario recording, and simple developer commands. New rich UI investment should prefer SadConsole or shared frontend-neutral services unless a task explicitly targets Console fallback behavior.
 

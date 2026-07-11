@@ -101,3 +101,10 @@ Each decision should include:
 - **Reasoning:** The integrated editor should support controller-friendly workflows and avoid relying on hidden letter hotkeys or arbitrary screen-coordinate cursoring for normal editing. The entity-template editing mockup uses visible editable-field regions as the intended navigation targets.
 - **Implications:** Current hotkey-heavy SadConsole editor mutation flows are prototype debt. Upcoming entity-template editing should use a dedicated field-focused layout for template identity, presentation, metadata, default action plan, targeting fields, and eventually inventory cells. Activating fields must still call shared editor/content services rather than introducing frontend-owned authoring semantics.
 - **Status:** Active.
+
+### FED-012: Existing SadConsole shell is legacy reference; new work uses componentized screen models
+
+- **Decision:** The existing monolithic SadConsole shell/list-detail implementation is deprecated as legacy reference. New SadConsole exploration work should build reusable, testable screen/component models first, then attach SadConsole rendering and input adapters.
+- **Reasoning:** The current implementation proved catalog launch, editor-service-backed mutation, preview/materialization, Simulation launch/return, and runtime play/debug paths, but it stayed too close to Console-inspired row-list rendering and accumulated too much shell-owned drawing/input behavior.
+- **Implications:** Keep legacy behavior available for reference while replacing it with clean architecture slices. Durable screens should model selection, focused components, contextual controls, and authored/runtime data boundaries explicitly. Do not bypass shared editor/content/runtime services while rebuilding.
+- **Status:** Active / exploration sprint started.
