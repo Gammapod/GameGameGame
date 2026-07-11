@@ -31,6 +31,11 @@ entityTemplates:
       coord:
         x: 3
         y: 3
+    - entityId: betaPushShowcaseRoomNewTemplate
+      templateId: newTemplate
+      coord:
+        x: 7
+        y: 0
   betaPlayer:
     name: Beta Player
     inventoryWidth: 2
@@ -75,6 +80,46 @@ entityTemplates:
     inventoryHeight: 0
     weight: 5
     carryingCapacity: 0
+  newTemplate:
+    name: New Template
+    inventoryWidth: 5
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 0
+    bulk: 0
+    aperture: 0
+    defaultActionPlanId: pushFacingOnly
+    actionStateDefaults:
+      facing: West
+    carriedEntities:
+    - entityId: newTemplateFrontBlock
+      templateId: betaBlockedFrontBlock
+      coord:
+        x: 1
+        y: 1
+    - entityId: newTemplateBetaPlayer
+      templateId: betaPlayer
+      coord:
+        x: 1
+        y: 2
+    - entityId: newTemplateBlockedPusher
+      templateId: betaPusherBlocked
+      coord:
+        x: 3
+        y: 2
+    - entityId: newTemplateSuccessfulPusher
+      templateId: betaPusherSuccess
+      coord:
+        x: 0
+        y: 1
+  newTemplate2:
+    name: New Template
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 0
+    aperture: 0
 presentations:
   betaPushRoom:
     glyph: '#'
@@ -89,13 +134,19 @@ presentations:
     glyph: '!'
     color: Earth
   betaSuccessBlock:
-    glyph: 'o'
+    glyph: o
     color: Gray
   betaBlockedFrontBlock:
-    glyph: 'o'
+    glyph: o
     color: Gray
   betaBlockedRearBlock:
-    glyph: 'o'
+    glyph: o
+    color: Gray
+  newTemplate:
+    glyph: '?'
+    color: Gray
+  newTemplate2:
+    glyph: '?'
     color: Gray
 actionPlans:
   pushFacingOnly:
@@ -103,6 +154,23 @@ actionPlans:
     behavior:
       steps:
       - kind: PushFacing
+      - kind: GiveTarget
+    steps: []
+  pushFacingOnlyCopy:
+    id: pushFacingOnlyCopy
+    behavior:
+      steps:
+      - kind: PushFacing
+    steps: []
+  newActionPlan:
+    id: newActionPlan
+    steps:
+    - label: wait
+      checks: []
+      onSuccess:
+        kind: Wait
+        consumesTurn: false
+        continuePlan: false
 scenarios:
   beta-push-showcase:
     name: Beta Push Showcase

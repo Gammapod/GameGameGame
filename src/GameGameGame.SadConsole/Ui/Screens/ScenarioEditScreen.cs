@@ -14,12 +14,21 @@ internal sealed class ScenarioEditScreen
     private readonly List<string> _diagnostics;
     private readonly FocusRouter _focusRouter;
     private IUiComponent? _overlay;
+    private ScenarioEditOverlayMode? _overlayMode;
     private int _selectedPreviewIndex;
     private int _selectedEntityIndex;
     private int _selectedActionPlanIndex;
     private const string BackToEditingChoiceId = "back-to-editing";
     private const string SaveAndExitChoiceId = "save-and-exit";
     private const string ExitWithoutSavingChoiceId = "exit-without-saving";
+    private const string CreateEntityChoiceId = "create-template";
+    private const string EditEntityChoiceId = "edit-template";
+    private const string DuplicateEntityChoiceId = "duplicate-template";
+    private const string DeleteEntityChoiceId = "delete-template";
+    private const string CreateActionPlanChoiceId = "create-action-plan";
+    private const string EditActionPlanChoiceId = "edit-action-plan";
+    private const string DuplicateActionPlanChoiceId = "duplicate-action-plan";
+    private const string DeleteActionPlanChoiceId = "delete-action-plan";
 
     private ScenarioEditScreen(
         ScenarioCatalogEntry catalogEntry,
@@ -51,6 +60,7 @@ internal sealed class ScenarioEditScreen
     public int SelectedEntityIndex => _selectedEntityIndex;
     public int SelectedActionPlanIndex => _selectedActionPlanIndex;
     public bool IsDirty => _snapshot?.IsDirty == true;
+    public bool IsTextEntryOverlayActive => _overlay is TextEntryOverlayComponent;
 
     public static ScenarioEditOpenResult Open(ScenarioCatalogEntry entry)
     {
@@ -136,6 +146,20 @@ internal sealed class ScenarioEditScreen
 
     public IUiComponent? OverlayComponent() => _overlay;
 
+    public ScenarioEditResult InsertText(string text)
+    {
+        if (_overlay is not TextEntryOverlayComponent textEntry) return ScenarioEditResult.Stay("No text field editor is open.");
+        textEntry.InsertText(text);
+        return ScenarioEditResult.Stay("Typing text field value.");
+    }
+
+    public ScenarioEditResult Backspace()
+    {
+        if (_overlay is not TextEntryOverlayComponent textEntry) return ScenarioEditResult.Stay("No text field editor is open.");
+        textEntry.Backspace();
+        return ScenarioEditResult.Stay("Typing text field value.");
+    }
+
     public string FooterText()
     {
         if (FocusedComponentId is null)
@@ -157,6 +181,16 @@ internal sealed class ScenarioEditScreen
 
     public ScenarioEditResult Handle(UiComponentCommand command)
     {
+        if (_overlay is TextEntryOverlayComponent textEntry)
+        {
+            return HandleTextOverlay(textEntry, command);
+        }
+
+        if (_overlay is ConfirmOverlayComponent confirm)
+        {
+            return HandleConfirmOverlay(confirm, command);
+        }
+
         if (_overlay is ChoicePickerOverlayComponent picker)
         {
             return HandleOverlay(picker, command);
@@ -186,6 +220,12 @@ internal sealed class ScenarioEditScreen
 
         var result = _service.Save();
         ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        if (result.IsSuccess && _scenario is not null)
+        {
+            _ = _service.PreviewScenario(_scenario.ScenarioId);
+            return ScenarioEditResult.Stay($"{result.StatusMessage} Preview refreshed.");
+        }
+
         return ScenarioEditResult.Stay(result.StatusMessage);
     }
 
@@ -210,7 +250,7 @@ internal sealed class ScenarioEditScreen
         var result = picker.Handle(command);
         if (result.Kind == FieldEditorOverlayResultKind.Cancelled)
         {
-            _overlay = null;
+            ClearOverlay();
             return ScenarioEditResult.Stay("Back to editing.");
         }
 
@@ -218,6 +258,9 @@ internal sealed class ScenarioEditScreen
         {
             return ScenarioEditResult.Stay(result.Message);
         }
+
+        if (picker.Id == "entity-template-actions") return HandleEntityActionChoice(choice.Id);
+        if (picker.Id == "action-plan-actions") return HandleActionPlanActionChoice(choice.Id);
 
         return choice.Id switch
         {
@@ -230,7 +273,7 @@ internal sealed class ScenarioEditScreen
 
     private ScenarioEditResult BackToEditing()
     {
-        _overlay = null;
+        ClearOverlay();
         return ScenarioEditResult.Stay("Back to editing.");
     }
 
@@ -244,6 +287,169 @@ internal sealed class ScenarioEditScreen
         }
 
         return ScenarioEditResult.ReturnToScenarioSelection(save.Message);
+    }
+
+    private ScenarioEditResult HandleTextOverlay(TextEntryOverlayComponent textEntry, UiComponentCommand command)
+    {
+        var result = textEntry.Handle(command);
+        if (result.Kind == FieldEditorOverlayResultKind.Cancelled)
+        {
+            ClearOverlay();
+            return ScenarioEditResult.Stay(result.Message);
+        }
+
+        if (result.Kind != FieldEditorOverlayResultKind.Confirmed)
+        {
+            return ScenarioEditResult.Stay(result.Message);
+        }
+
+        return _overlayMode switch
+        {
+            ScenarioEditOverlayMode.CreateEntityTemplateName => CreateEntityTemplate(result.Value),
+            ScenarioEditOverlayMode.DuplicateEntityTemplateName => DuplicateSelectedEntityTemplate(result.Value),
+            ScenarioEditOverlayMode.CreateActionPlanName => CreateActionPlan(result.Value),
+            ScenarioEditOverlayMode.DuplicateActionPlanName => DuplicateSelectedActionPlan(result.Value),
+            _ => ScenarioEditResult.Stay("No text-entry operation is active.")
+        };
+    }
+
+    private ScenarioEditResult HandleConfirmOverlay(ConfirmOverlayComponent confirm, UiComponentCommand command)
+    {
+        var result = confirm.Handle(command);
+        if (result.Kind == FieldEditorOverlayResultKind.Cancelled)
+        {
+            ClearOverlay();
+            return ScenarioEditResult.Stay(result.Message);
+        }
+
+        if (result.Kind != FieldEditorOverlayResultKind.Confirmed)
+        {
+            return ScenarioEditResult.Stay(result.Message);
+        }
+
+        return _overlayMode switch
+        {
+            ScenarioEditOverlayMode.DeleteEntityTemplateConfirm => DeleteSelectedEntityTemplate(),
+            ScenarioEditOverlayMode.DeleteActionPlanConfirm => DeleteSelectedActionPlan(),
+            _ => ScenarioEditResult.Stay("No delete confirmation is active.")
+        };
+    }
+
+    private void ClearOverlay()
+    {
+        _overlay = null;
+        _overlayMode = null;
+    }
+
+    private ScenarioEditResult HandleEntityActionChoice(string choiceId)
+    {
+        return choiceId switch
+        {
+            EditEntityChoiceId => SelectedEntity() is { } entity ? ScenarioEditResult.OpenEntity(entity.TemplateId, $"Entity Template screen next: {entity.Name} ({entity.TemplateId}).") : ScenarioEditResult.Stay("No entity template is selected."),
+            DuplicateEntityChoiceId => OpenEntityNameEntry(ScenarioEditOverlayMode.DuplicateEntityTemplateName, $"Duplicate {SelectedEntity()?.Name ?? "template"}", $"{SelectedEntity()?.Name ?? "Template"} Copy"),
+            DeleteEntityChoiceId => OpenDeleteEntityConfirmation(),
+            _ => ScenarioEditResult.Stay("Unknown entity-template action.")
+        };
+    }
+
+    private ScenarioEditResult HandleActionPlanActionChoice(string choiceId)
+    {
+        return choiceId switch
+        {
+            EditActionPlanChoiceId => SelectedActionPlan() is { } plan ? ScenarioEditResult.OpenActionPlan(plan.ActionPlanId, $"Action Plan screen next: {plan.ActionPlanId}.") : ScenarioEditResult.Stay("No action plan is selected."),
+            DuplicateActionPlanChoiceId => OpenActionPlanNameEntry(ScenarioEditOverlayMode.DuplicateActionPlanName, $"Duplicate {SelectedActionPlan()?.ActionPlanId ?? "action plan"}", $"{SelectedActionPlan()?.ActionPlanId ?? "Action Plan"} Copy"),
+            DeleteActionPlanChoiceId => OpenDeleteActionPlanConfirmation(),
+            _ => ScenarioEditResult.Stay("Unknown action-plan action.")
+        };
+    }
+
+    private ScenarioEditResult OpenEntityNameEntry(ScenarioEditOverlayMode mode, string title, string initialValue)
+    {
+        _overlayMode = mode;
+        _overlay = new TextEntryOverlayComponent("entity-template-name-entry", title, "template name", initialValue, SadConsoleRect.FromSize(34, 8, 58, 7), maxLength: 80, allowEmpty: false);
+        return ScenarioEditResult.Stay($"Opened template name entry for {title}.");
+    }
+
+    private ScenarioEditResult OpenActionPlanNameEntry(ScenarioEditOverlayMode mode, string title, string initialValue)
+    {
+        _overlayMode = mode;
+        _overlay = new TextEntryOverlayComponent("action-plan-name-entry", title, "action plan name", initialValue, SadConsoleRect.FromSize(34, 8, 58, 7), maxLength: 80, allowEmpty: false);
+        return ScenarioEditResult.Stay($"Opened action-plan name entry for {title}.");
+    }
+
+    private ScenarioEditResult CreateEntityTemplate(string name)
+    {
+        if (_service is null) return CloseOverlayWith("Template creation requires a service-backed editor screen.");
+        var before = _entities.Select(entity => entity.TemplateId).ToHashSet(StringComparer.Ordinal);
+        var result = _service.CreateEntityTemplate(name);
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        ClearOverlay();
+        var createdId = _entities.FirstOrDefault(entity => !before.Contains(entity.TemplateId))?.TemplateId;
+        return result.IsSuccess && createdId is not null ? ScenarioEditResult.OpenEntity(createdId, result.StatusMessage) : ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult DuplicateSelectedEntityTemplate(string name)
+    {
+        if (_service is null) return CloseOverlayWith("Template duplication requires a service-backed editor screen.");
+        if (SelectedEntity() is not { } source) return CloseOverlayWith("No entity template is selected to duplicate.");
+        var before = _entities.Select(entity => entity.TemplateId).ToHashSet(StringComparer.Ordinal);
+        var result = _service.DuplicateEntityTemplate(source.TemplateId, name);
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        ClearOverlay();
+        var createdId = _entities.FirstOrDefault(entity => !before.Contains(entity.TemplateId))?.TemplateId;
+        return result.IsSuccess && createdId is not null ? ScenarioEditResult.OpenEntity(createdId, result.StatusMessage) : ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult DeleteSelectedEntityTemplate()
+    {
+        if (_service is null) return CloseOverlayWith("Template deletion requires a service-backed editor screen.");
+        if (SelectedEntity() is not { } entity) return CloseOverlayWith("No entity template is selected to delete.");
+        var result = _service.DeleteEntityTemplate(entity.TemplateId);
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        _selectedEntityIndex = Math.Clamp(_selectedEntityIndex, 0, _entities.Count);
+        _selectedPreviewIndex = Math.Clamp(_selectedPreviewIndex, 0, Math.Max(0, _entities.Count - 1));
+        ClearOverlay();
+        return ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult CreateActionPlan(string name)
+    {
+        if (_service is null) return CloseOverlayWith("Action-plan creation requires a service-backed editor screen.");
+        var before = _actionPlans.Select(plan => plan.ActionPlanId).ToHashSet(StringComparer.Ordinal);
+        var result = _service.CreateActionPlan(name);
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        ClearOverlay();
+        var createdId = _actionPlans.FirstOrDefault(plan => !before.Contains(plan.ActionPlanId))?.ActionPlanId;
+        return result.IsSuccess && createdId is not null ? ScenarioEditResult.OpenActionPlan(createdId, result.StatusMessage) : ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult DuplicateSelectedActionPlan(string name)
+    {
+        if (_service is null) return CloseOverlayWith("Action-plan duplication requires a service-backed editor screen.");
+        if (SelectedActionPlan() is not { } source) return CloseOverlayWith("No action plan is selected to duplicate.");
+        var before = _actionPlans.Select(plan => plan.ActionPlanId).ToHashSet(StringComparer.Ordinal);
+        var result = _service.DuplicateActionPlan(source.ActionPlanId, name);
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        ClearOverlay();
+        var createdId = _actionPlans.FirstOrDefault(plan => !before.Contains(plan.ActionPlanId))?.ActionPlanId;
+        return result.IsSuccess && createdId is not null ? ScenarioEditResult.OpenActionPlan(createdId, result.StatusMessage) : ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult DeleteSelectedActionPlan()
+    {
+        if (_service is null) return CloseOverlayWith("Action-plan deletion requires a service-backed editor screen.");
+        if (SelectedActionPlan() is not { } plan) return CloseOverlayWith("No action plan is selected to delete.");
+        var result = _service.DeleteActionPlan(plan.ActionPlanId);
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        _selectedActionPlanIndex = Math.Clamp(_selectedActionPlanIndex, 0, _actionPlans.Count);
+        ClearOverlay();
+        return ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult CloseOverlayWith(string message)
+    {
+        ClearOverlay();
+        return ScenarioEditResult.Stay(message);
     }
 
     private ScenarioEditResult HandleFocused(string focused, UiComponentCommand command)
@@ -270,18 +476,22 @@ internal sealed class ScenarioEditScreen
         {
             if (focused is "scenario-preview" or "entity-list")
             {
-                var entity = SelectedEntity();
-                return entity is null
-                    ? ScenarioEditResult.Stay("No entity template is available to open.")
-                    : ScenarioEditResult.OpenEntity(entity.TemplateId, $"Entity Template screen next: {entity.Name} ({entity.TemplateId}).");
+                if (focused == "entity-list" && _selectedEntityIndex == 0)
+                {
+                    return OpenEntityNameEntry(ScenarioEditOverlayMode.CreateEntityTemplateName, "Create new template", "New Template");
+                }
+
+                return OpenEntityActionModal();
             }
 
             if (focused == "action-plan-list")
             {
-                var plan = SelectedActionPlan();
-                return plan is null
-                    ? ScenarioEditResult.Stay("No action plan is available to open.")
-                    : ScenarioEditResult.OpenActionPlan(plan.ActionPlanId, $"Action Plan screen next: {plan.ActionPlanId}.");
+                if (_selectedActionPlanIndex == 0)
+                {
+                    return OpenActionPlanNameEntry(ScenarioEditOverlayMode.CreateActionPlanName, "Create new action plan", "New Action Plan");
+                }
+
+                return OpenActionPlanActionModal();
             }
         }
 
@@ -292,21 +502,81 @@ internal sealed class ScenarioEditScreen
     {
         if (focused is "scenario-preview" or "entity-list" && _entities.Count > 0)
         {
-            _selectedEntityIndex = Math.Clamp(_selectedEntityIndex + delta, 0, _entities.Count - 1);
-            _selectedPreviewIndex = _selectedEntityIndex;
+            if (focused == "entity-list")
+            {
+                _selectedEntityIndex = Math.Clamp(_selectedEntityIndex + delta, 0, _entities.Count);
+                _selectedPreviewIndex = Math.Clamp(_selectedEntityIndex - 1, 0, _entities.Count - 1);
+            }
+            else
+            {
+                _selectedPreviewIndex = Math.Clamp(_selectedPreviewIndex + delta, 0, _entities.Count - 1);
+                _selectedEntityIndex = _selectedPreviewIndex + 1;
+            }
         }
         else if (focused == "action-plan-list" && _actionPlans.Count > 0)
         {
-            _selectedActionPlanIndex = Math.Clamp(_selectedActionPlanIndex + delta, 0, _actionPlans.Count - 1);
+            _selectedActionPlanIndex = Math.Clamp(_selectedActionPlanIndex + delta, 0, _actionPlans.Count);
         }
     }
 
     private string FocusedSelectionMessage(string focused) => focused switch
     {
+        "entity-list" when _selectedEntityIndex == 0 => "Selected Create New Template.",
         "scenario-preview" or "entity-list" => SelectedEntity() is { } entity ? $"Selected entity: {entity.Name} ({entity.TemplateId})." : "No entity selected.",
+        "action-plan-list" when _selectedActionPlanIndex == 0 => "Selected Create New Action Plan.",
         "action-plan-list" => SelectedActionPlan() is { } plan ? $"Selected action plan: {plan.ActionPlanId}." : "No action plan selected.",
         _ => "Field selection unchanged."
     };
+
+    private ScenarioEditResult OpenEntityActionModal()
+    {
+        if (SelectedEntity() is not { } entity) return ScenarioEditResult.Stay("No entity template is selected.");
+        _overlay = new ChoicePickerOverlayComponent(
+            "entity-template-actions",
+            $"2.3.1 Entity Template: {entity.Name}",
+            "entity template action",
+            [
+                new SelectableListItem(EditEntityChoiceId, "Edit Template", entity.TemplateId),
+                new SelectableListItem(DuplicateEntityChoiceId, "Duplicate Template", entity.TemplateId),
+                new SelectableListItem(DeleteEntityChoiceId, "Delete Template", entity.TemplateId)
+            ],
+            SadConsoleRect.FromSize(34, 9, 54, 10),
+            0);
+        return ScenarioEditResult.Stay($"Opened 2.3.1 actions for {entity.Name}.");
+    }
+
+    private ScenarioEditResult OpenActionPlanActionModal()
+    {
+        if (SelectedActionPlan() is not { } plan) return ScenarioEditResult.Stay("No action plan is selected.");
+        _overlay = new ChoicePickerOverlayComponent(
+            "action-plan-actions",
+            $"2.4.1 Action Plan: {plan.ActionPlanId}",
+            "action plan action",
+            [
+                new SelectableListItem(EditActionPlanChoiceId, "Edit Action Plan", plan.ActionPlanId),
+                new SelectableListItem(DuplicateActionPlanChoiceId, "Duplicate Action Plan", plan.ActionPlanId),
+                new SelectableListItem(DeleteActionPlanChoiceId, "Delete Action Plan", plan.ActionPlanId)
+            ],
+            SadConsoleRect.FromSize(34, 9, 54, 10),
+            0);
+        return ScenarioEditResult.Stay($"Opened 2.4.1 actions for {plan.ActionPlanId}.");
+    }
+
+    private ScenarioEditResult OpenDeleteEntityConfirmation()
+    {
+        if (SelectedEntity() is not { } entity) return ScenarioEditResult.Stay("No entity template is selected.");
+        _overlayMode = ScenarioEditOverlayMode.DeleteEntityTemplateConfirm;
+        _overlay = new ConfirmOverlayComponent("delete-template-confirm", "Delete template", $"Delete template {entity.Name} ({entity.TemplateId})?", SadConsoleRect.FromSize(34, 10, 58, 8), "Delete Template", "Back");
+        return ScenarioEditResult.Stay($"Confirm delete for template {entity.TemplateId}.");
+    }
+
+    private ScenarioEditResult OpenDeleteActionPlanConfirmation()
+    {
+        if (SelectedActionPlan() is not { } plan) return ScenarioEditResult.Stay("No action plan is selected.");
+        _overlayMode = ScenarioEditOverlayMode.DeleteActionPlanConfirm;
+        _overlay = new ConfirmOverlayComponent("delete-action-plan-confirm", "Delete action plan", $"Delete action plan {plan.ActionPlanId}?", SadConsoleRect.FromSize(34, 10, 58, 8), "Delete Action Plan", "Back");
+        return ScenarioEditResult.Stay($"Confirm delete for action plan {plan.ActionPlanId}.");
+    }
 
     private PanelComponent SaveStatusPanel() => new(
         "save-status",
@@ -354,11 +624,16 @@ internal sealed class ScenarioEditScreen
 
     private SelectableListComponent EntityList()
     {
+        var items = new List<SelectableListItem>
+        {
+            new(CreateEntityChoiceId, "Create New Template", "initialized template")
+        };
+        items.AddRange(_entities.Select(entity => new SelectableListItem(entity.TemplateId, $"{entity.Glyph} {entity.Name}", entity.TemplateId)));
         var list = new SelectableListComponent(
             "entity-list",
             "2.3 Defined entities",
             new SadConsoleRect(1, 22, 57, 33),
-            _entities.Select(entity => new SelectableListItem(entity.TemplateId, $"{entity.Glyph} {entity.Name}", entity.TemplateId)),
+            items,
             _focusRouter.StateFor("entity-list"),
             visibleRowCount: 9);
         for (var index = 0; index < _selectedEntityIndex; index++) list.MoveSelection(1);
@@ -367,19 +642,45 @@ internal sealed class ScenarioEditScreen
 
     private SelectableListComponent ActionPlanList()
     {
+        var items = new List<SelectableListItem>
+        {
+            new(CreateActionPlanChoiceId, "Create New Action Plan", "empty action plan")
+        };
+        items.AddRange(_actionPlans.Select(plan => new SelectableListItem(plan.ActionPlanId, plan.ActionPlanId, $"{plan.ActionSteps.Count} steps | {plan.Shape}")));
         var list = new SelectableListComponent(
             "action-plan-list",
             "2.4 Defined action plans",
             new SadConsoleRect(61, 15, 56, 33),
-            _actionPlans.Select(plan => new SelectableListItem(plan.ActionPlanId, plan.ActionPlanId, $"{plan.ActionSteps.Count} steps | {plan.Shape}")),
+            items,
             _focusRouter.StateFor("action-plan-list"),
             visibleRowCount: 16);
         for (var index = 0; index < _selectedActionPlanIndex; index++) list.MoveSelection(1);
         return list;
     }
 
-    private FrontendEditorEntityTemplateSummary? SelectedEntity() => _entities.Count == 0 ? null : _entities[_selectedEntityIndex];
-    private FrontendEditorActionPlanSummary? SelectedActionPlan() => _actionPlans.Count == 0 ? null : _actionPlans[_selectedActionPlanIndex];
+    private FrontendEditorEntityTemplateSummary? SelectedEntity()
+    {
+        if (_entities.Count == 0) return null;
+        var index = FocusedComponentId == "scenario-preview" ? _selectedPreviewIndex : _selectedEntityIndex - 1;
+        return index < 0 || index >= _entities.Count ? null : _entities[index];
+    }
+
+    private FrontendEditorActionPlanSummary? SelectedActionPlan()
+    {
+        if (_actionPlans.Count == 0) return null;
+        var index = _selectedActionPlanIndex - 1;
+        return index < 0 || index >= _actionPlans.Count ? null : _actionPlans[index];
+    }
+}
+
+internal enum ScenarioEditOverlayMode
+{
+    CreateEntityTemplateName,
+    DuplicateEntityTemplateName,
+    DeleteEntityTemplateConfirm,
+    CreateActionPlanName,
+    DuplicateActionPlanName,
+    DeleteActionPlanConfirm
 }
 
 internal sealed record ScenarioEditOpenResult(ScenarioEditScreen Screen)

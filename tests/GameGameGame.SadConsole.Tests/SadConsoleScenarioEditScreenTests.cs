@@ -84,7 +84,7 @@ public sealed class SadConsoleScenarioEditScreenTests
     }
 
     [Fact]
-    public void ScenarioEditFocusesEntityListAndRoutesEntityOpenPlaceholder()
+    public void ScenarioEditFocusesEntityListAndOpensEntityActionModalThenEditRoutes()
     {
         var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot());
 
@@ -92,16 +92,19 @@ public sealed class SadConsoleScenarioEditScreenTests
         screen.Handle(UiComponentCommand.Down);
         screen.Handle(UiComponentCommand.Select);
         screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var modal = screen.Handle(UiComponentCommand.Select);
         var result = screen.Handle(UiComponentCommand.Select);
 
         Assert.Equal("entity-list", screen.FocusedComponentId);
-        Assert.Equal(1, screen.SelectedEntityIndex);
+        Assert.Equal(2, screen.SelectedEntityIndex);
+        Assert.Contains("2.3.1", modal.Message);
         Assert.Equal(ScenarioEditResultKind.OpenEntityTemplate, result.Kind);
         Assert.Equal("rock", result.EntityTemplateId);
     }
 
     [Fact]
-    public void ScenarioEditFocusesActionPlanListAndRoutesActionPlanOpenPlaceholder()
+    public void ScenarioEditFocusesActionPlanListAndOpensActionPlanActionModalThenEditRoutes()
     {
         var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot());
 
@@ -109,11 +112,137 @@ public sealed class SadConsoleScenarioEditScreenTests
         screen.Handle(UiComponentCommand.Down);
         screen.Handle(UiComponentCommand.Down);
         screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        var modal = screen.Handle(UiComponentCommand.Select);
         var result = screen.Handle(UiComponentCommand.Select);
 
         Assert.Equal("action-plan-list", screen.FocusedComponentId);
+        Assert.Contains("2.4.1", modal.Message);
         Assert.Equal(ScenarioEditResultKind.OpenActionPlan, result.Kind);
         Assert.Equal("wander", result.ActionPlanId);
+    }
+
+    [Fact]
+    public void ScenarioEditPinnedCreateTemplateOpensNameEntryAndCreatedTemplate()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), service.GetSnapshot(), service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        var open = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Create new template", open.Message);
+        Assert.Equal(ScenarioEditResultKind.OpenEntityTemplate, result.Kind);
+        Assert.Contains(service.GetSnapshot().EntityTemplates, template => template.TemplateId == result.EntityTemplateId);
+    }
+
+    [Fact]
+    public void ScenarioEditDuplicateTemplateUsesNameEntryAndOpensDuplicate()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateEntityTemplate("Rock");
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), service.GetSnapshot(), service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        var openText = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Duplicate", openText.Message);
+        Assert.Equal(ScenarioEditResultKind.OpenEntityTemplate, result.Kind);
+        Assert.Equal(2, service.GetSnapshot().EntityTemplates.Count);
+    }
+
+    [Fact]
+    public void ScenarioEditDeleteTemplateUsesConfirmModal()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateEntityTemplate("Rock");
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), service.GetSnapshot(), service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var confirm = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Confirm delete", confirm.Message);
+        Assert.Contains("Deleted template", result.Message);
+        Assert.Empty(service.GetSnapshot().EntityTemplates);
+    }
+
+    [Fact]
+    public void ScenarioEditPinnedCreateActionPlanOpensNameEntryAndCreatedPlan()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), service.GetSnapshot(), service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        var open = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Create new action plan", open.Message);
+        Assert.Equal(ScenarioEditResultKind.OpenActionPlan, result.Kind);
+        Assert.Contains(service.GetSnapshot().ActionPlans, plan => plan.ActionPlanId == result.ActionPlanId);
+    }
+
+    [Fact]
+    public void ScenarioEditDuplicateActionPlanUsesNameEntryAndOpensDuplicate()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateActionPlan("Wander");
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), service.GetSnapshot(), service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        var openText = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Duplicate", openText.Message);
+        Assert.Equal(ScenarioEditResultKind.OpenActionPlan, result.Kind);
+        Assert.Equal(2, service.GetSnapshot().ActionPlans.Count);
+    }
+
+    [Fact]
+    public void ScenarioEditDeleteActionPlanUsesConfirmModal()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateActionPlan("Wander");
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), service.GetSnapshot(), service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var confirm = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Confirm delete", confirm.Message);
+        Assert.Contains("Deleted action plan", result.Message);
+        Assert.Empty(service.GetSnapshot().ActionPlans);
     }
 
     [Fact]

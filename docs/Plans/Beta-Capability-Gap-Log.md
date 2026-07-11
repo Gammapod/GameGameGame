@@ -114,3 +114,27 @@ Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario rep
 - **Unlocks:** Lower-friction content authoring and fewer mistaken assumptions during agent handoffs.
 - **Classification:** Reporting/tooling request; API ergonomics/documentation issue.
 - **Priority:** Medium; may be resolved together with GAP-002.
+
+### GAP-008: Carried entity instances cannot author per-instance initial state/facing
+
+- **Discovered in:** SadConsole Editor parity review.
+- **Scenario/content:** Future inventory-authored actors/items where each carried instance needs distinct initial facing or action state.
+- **Desired behavior:** The inventory editor should own per-instance state for carried/placed entities, such as facing, instead of exposing template-level defaults as a primary entity-template editor field.
+- **Current behavior:** Entity templates expose `actionStateDefaults`, while carried entity summaries/editing currently focus on template, coordinate, glyph/color, and diagnostics. The rebuilt editor intentionally does not expose template default facing as a main entity-template field.
+- **Current workaround:** Keep template defaults hidden/defaulted, or author separate templates when different defaults are required.
+- **Missing capability:** Shared content/editor model and frontend projection/mutation support for per-carried-instance initial state overrides, including validation and scenario materialization behavior.
+- **Unlocks:** Placing multiple instances of one template with different initial facing/state; cleaner inventory-authored setup; less template duplication.
+- **Classification:** Content/editor/materialization capability.
+- **Priority:** Medium; promote when authored layouts need per-instance state.
+
+### GAP-009: Action-step parameter editing lacks typed frontend projection/mutation design
+
+- **Discovered in:** SadConsole Action Plan editor rebuild.
+- **Scenario/content:** Action plans that need more than choosing/reordering stable behavior-step primitives.
+- **Desired behavior:** Screen 4 should eventually expose typed editable parameters for highlighted action steps, with current values, allowed choices, validation, and shared mutation services.
+- **Current behavior:** `FrontendEditorActionPlanStepSummary` exposes step index, kind, and display name. The rebuilt editor can insert, replace, delete, and move canonical behavior-chain steps, but does not expose check/effect/parameter editing.
+- **Current workaround:** Use existing content files or lower-level editor/API tooling for parameter-level changes where available.
+- **Missing capability:** A typed action-step parameter projection and mutation contract, plus UX design for how parameters fit into 4.2/4.2.x without overloading primitive replacement.
+- **Unlocks:** Full action-plan authoring from SadConsole; fewer raw YAML edits; richer behavior composition.
+- **Classification:** Editor/API and frontend UX capability.
+- **Priority:** Medium-high once content authoring requires parameter-level edits through the frontend.

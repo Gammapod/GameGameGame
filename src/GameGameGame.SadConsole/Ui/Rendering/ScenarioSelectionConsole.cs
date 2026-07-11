@@ -53,6 +53,24 @@ internal sealed class ScenarioSelectionConsole : Console
             }
         }
 
+        if (_scenarioEditScreen?.IsTextEntryOverlayActive == true)
+        {
+            if (keyboard.IsKeyReleased(Keys.Back))
+            {
+                _message = _scenarioEditScreen.Backspace().Message;
+                Redraw();
+                return true;
+            }
+
+            var typed = ReadTypedCharacters(keyboard);
+            if (!string.IsNullOrEmpty(typed))
+            {
+                _message = _scenarioEditScreen.InsertText(typed).Message;
+                Redraw();
+                return true;
+            }
+        }
+
         if (_scenarioEditScreen is not null && keyboard.IsKeyReleased(Keys.S))
         {
             var result = _scenarioEditScreen.Save();

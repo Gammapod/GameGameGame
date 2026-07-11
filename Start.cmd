@@ -1,1 +1,1 @@
-dotnet run --project "src\GameGameGame.SadConsole\GameGameGame.SadConsole.csproj" -- --clean
+dotnet run --project "src\GameGameGame.SadConsole\GameGameGame.SadConsole.csproj"

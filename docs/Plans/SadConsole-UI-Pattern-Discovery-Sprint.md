@@ -402,18 +402,23 @@ Demoable behavior:
 - Scenario Edit opens from the new Scenario Selection Edit route;
 - screen uses component API panels for 2.1 Scenario preview, 2.2 Player starting position, 2.3 Defined entities, and 2.4 Defined action plans;
 - screen includes a prominent save-status panel: Brown/dirty when unsaved changes are pending and Green/saved when the editor snapshot is unmodified;
-- S is a persistent save hotkey throughout the service-backed Scenario Edit flow, except while text entry is active;
+- S is a persistent save hotkey throughout the service-backed Scenario Edit flow, except while text entry is active; saving is also the preview-refresh boundary, so dirty and preview-stale are treated as one user-facing state for now;
 - arrows choose a component while no component is focused;
 - Enter focuses the selected component;
 - Esc releases focus; when no component is focused, it returns to Scenario Selection if saved, or opens 2.5 Unsaved changes if dirty;
 - 2.5 Unsaved changes warns about pending changes and offers Back to Editing, Save & Exit, and Exit without Saving; Esc from 2.5 returns to editing;
 - focused entity/action-plan lists support Up/Down selection;
-- Enter on an entity/action plan reports the next-screen routing placeholder.
+- 2.3 Defined entities has a pinned Create New Template row; selecting it opens a name-entry box, creates an initialized template through `FrontendEditorService.CreateEntityTemplate`, and proceeds to screen 3;
+- selecting an existing entity template through 2.1 or 2.3 opens 2.3.1 with Edit Template, Duplicate Template, and Delete Template;
+- 2.3.1 Edit Template proceeds to screen 3, Duplicate Template opens a name-entry box then proceeds to screen 3 for the duplicate, and Delete Template uses a confirmation modal before calling `FrontendEditorService.DeleteEntityTemplate`;
+- 2.4 Defined action plans has a pinned Create New Action Plan row; selecting it opens a name-entry box, creates through `FrontendEditorService.CreateActionPlan`, and proceeds to screen 4;
+- selecting an existing action plan opens 2.4.1 with Edit Action Plan, Duplicate Action Plan, and Delete Action Plan;
+- 2.4.1 Edit Action Plan proceeds to screen 4, Duplicate Action Plan opens a name-entry box then proceeds to screen 4 for the duplicate, and Delete Action Plan uses a confirmation modal before calling `FrontendEditorService.DeleteActionPlan`.
 
 Known intentional placeholders:
 
 - Scenario preview is a first derived/authored summary and entity row list, not yet the full materialized containment tree view.
-- Action Plan screens are not opened yet; activation reports which screen would be next.
+- Scenario root and player position fields remain read-only; editable scenario root/player start likely need additional shared editor API design.
 
 ## Phase 4 Entity Template Edit rebuild checkpoint
 
@@ -495,7 +500,8 @@ Demoable behavior:
 Known intentional placeholders:
 
 - action-step parameter editing, check/effect editing, and label/slot field editing are not implemented in the rebuilt UI yet;
-- action-step mutation is limited to canonical behavior-chain steps exposed by shared editor services.
+- action-step mutation is limited to canonical behavior-chain steps exposed by shared editor services;
+- step parameter editing is important but is not yet designed for the screen 4 workflow because the current frontend projection exposes step kind/display information, not a typed editable parameter surface.
 
 ## Rebuilt vs legacy/prototype checkpoint assessment
 
@@ -552,8 +558,9 @@ Rebuilt ease-of-use gaps:
 
 - Inventory contents/layout editing now has a first cursor-grid implementation; large-grid navigation polish, mouse controls, undo, and advanced replacement rules remain deferred.
 - Action Plan editing now supports insert/replace/delete/reorder for canonical behavior-chain steps; parameter/check/effect editing remains deferred.
-- Save/dirty affordances are surfaced through the Scenario Edit status panel, S hotkey, and 2.5 unsaved-exit modal; preview-stale/rematerialize affordances still need MVP review.
+- Save/dirty affordances are surfaced through the Scenario Edit status panel, S hotkey, and 2.5 unsaved-exit modal; saving is currently treated as the preview-refresh/rematerialize boundary.
 - Scenario/player-start editing remains mostly review-only in the rebuilt Scenario Edit screen.
+- Per-instance initial facing is intentionally deferred as a capability gap: the desired model is inventory-owned per carried instance state, while templates keep hidden/default state not exposed as a primary entity-template editor field.
 
 Legacy/prototype ease-of-use strengths:
 
@@ -601,7 +608,8 @@ The rebuilt UI is at or above the legacy/prototype direction for visual grammar,
 
 Remaining major semantic gaps before claiming full MVP editor parity:
 
-1. Preview-stale/rematerialize controls and scenario/player-start editing should be reviewed against the intended MVP definition.
-2. Advanced Action Plan parameter/check/effect editing may be needed later if content authoring requires more than selecting stable behavior-step kinds.
+1. Scenario/player-start editing should be reviewed against the intended MVP definition and likely needs shared editor API support.
+2. Per-instance facing/state in inventory should be designed as a shared content/editor capability rather than as template-level UI.
+3. Advanced Action Plan parameter/check/effect editing needs a designed screen 4 UX and typed frontend projection/mutation contract.
 
-Recommended next checkpoint: review preview-stale/rematerialize controls and scenario/player-start editing needs.
+Recommended next checkpoint: review scenario/player-start editing needs, per-instance inventory state, and action-step parameter projection/mutation design.
