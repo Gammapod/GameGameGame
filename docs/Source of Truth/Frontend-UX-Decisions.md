@@ -129,3 +129,18 @@ Each decision should include:
 - **Reasoning:** This keeps creation discoverable without requiring a global command palette, and prevents selection of an existing definition from immediately committing to edit when duplicate/delete may be intended.
 - **Implications:** Duplicate should request a new name before creating and then open the duplicate. Delete should use a confirmation modal before calling shared editor services. Future lists of authored definitions should prefer the same pattern unless a more scalable management surface is designed.
 - **Status:** Active.
+
+### FED-016: Component gallery is the executable SadConsole pattern reference
+
+- **Decision:** The SadConsole component gallery should expand with each reusable component or adopted SadConsole pattern, with working examples that are interactive through the frontend whenever practical and isolated enough to inspect without entering a full editor workflow.
+- **Reasoning:** The gallery gives future frontend work a live, code-backed reference for accepted implementation patterns such as panels, lists, editable fields, overlays, fixed-cell grids, color swatches, and future mouse/scrolling/layout patterns. This is more reliable than re-deriving SadConsole API usage from memory, especially in fresh implementation sessions.
+- **Implications:** When a reusable component or SadConsole feature pattern is accepted, add or update a gallery example and keep the example simple enough to copy from. Do not create a separate SadConsole-pattern manual by default; record the reason and UX decision here, then point implementers to gallery/code examples and official SadConsole docs when no project pattern exists.
+- **Established patterns so far:** componentized screen models over direct shell drawing; child `Console` overlays for modal/popup layers; `SadConsoleRect.FromSize(...)` for height-based overlay sizing; theme-owned border/color/glyph styling; renderer-owned CP437 glyph index `219` for color swatches; fixed-position inventory grid cells with cursor highlight as presentation state; text/int/choice/confirm overlays as reusable field editors; persistent footer/context controls for current focus/submode.
+- **Status:** Active.
+
+### FED-017: Look up SadConsole docs before inventing unproven feature patterns
+
+- **Decision:** If a requested frontend behavior involves SadConsole layout, rendering, input, controls, surfaces, fonts/glyphs, animation/effects, mouse interaction, scrolling, or layering and it does not cleanly match an established project pattern, consult official SadConsole documentation or reference material before implementing.
+- **Reasoning:** SadConsole has built-in concepts that are easy to misuse or unnecessarily reimplement. Checking the docs first helps the project benefit from the breadth of the framework while still promoting only accepted patterns into the component gallery and decisions trace.
+- **Implications:** Prefer adopted gallery patterns when they exist. When no adopted pattern exists, research SadConsole docs, implement the smallest useful experiment, add a gallery example if accepted, and record any durable UX/API decision here.
+- **Status:** Active.

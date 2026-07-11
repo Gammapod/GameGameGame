@@ -27,10 +27,7 @@ Current frontend direction:
 
 - SadConsole is the canonical debug/browser frontend direction for now.
 - Console is fallback/minimal tooling.
-- SadConsole is being planned as a two-mode frontend:
-  - **Simulation mode**: runtime play/debug/inspection over materialized scenario sessions.
-  - **Editor mode**: authored content browsing/editing over shared content/editor services.
-- The preferred cross-mode loop is: Editor -> turn-0 scenario preview -> Simulation -> return to Editor, with future Simulation -> authored-source jumps where provenance exists.
+- When frontend work requires SadConsole layout, rendering, input, controls, surfaces, fonts/glyphs, animation/effects, mouse interaction, scrolling, or layering, first prefer established project patterns from the component gallery and frontend UX decisions; if no established pattern fits, consult official SadConsole documentation before implementing, then promote accepted reusable patterns into the gallery and decision log.
 
 Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 
