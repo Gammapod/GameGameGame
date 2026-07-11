@@ -13,6 +13,7 @@ internal sealed class ComponentGalleryConsole : Console
 {
     public const int ScreenWidth = 120;
     public const int ScreenHeight = 42;
+    internal const int ColorSampleGlyph = 219;
 
     private readonly ComponentGalleryScreen _gallery;
     private readonly SadConsoleTheme _theme;
@@ -88,7 +89,9 @@ internal sealed class ComponentGalleryConsole : Console
         for (var index = 0; index < rows.Count && index < maxRows; index++)
         {
             var row = rows[index];
-            PrintClipped(bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), StripStyleTokens(row), ColorForRow(row, component.State));
+            var visibleRow = StripStyleTokens(row);
+            PrintClipped(bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, ColorForRow(row, component.State));
+            DrawColorSampleGlyph(this, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, row);
         }
     }
 
@@ -114,6 +117,10 @@ internal sealed class ComponentGalleryConsole : Console
         if (row.Contains(_theme.Field.InvalidText, StringComparison.Ordinal)) return ColorFromToken(_theme.Field.InvalidText);
         if (row.Contains(_theme.Field.DirtyText, StringComparison.Ordinal)) return ColorFromToken(_theme.Field.DirtyText);
         if (row.Contains(_theme.Field.EditableText, StringComparison.Ordinal)) return ColorFromToken(_theme.Field.EditableText);
+        foreach (var token in SadConsoleKnownColorTokens.Values)
+        {
+            if (row.Contains($"({token})", StringComparison.OrdinalIgnoreCase)) return ColorFromToken(token);
+        }
         if (row.Contains(_theme.List.FocusedRowText, StringComparison.Ordinal)) return ColorFromToken(_theme.List.FocusedRowText);
         if (row.Contains(_theme.List.SelectedRowText, StringComparison.Ordinal)) return ColorFromToken(_theme.List.SelectedRowText);
         if (row.Contains(_theme.List.EmptyText, StringComparison.Ordinal)) return ColorFromToken(_theme.List.EmptyText);
@@ -131,6 +138,26 @@ internal sealed class ComponentGalleryConsole : Console
             if (end < 0) return CollapseSpaces(result);
             result = result.Remove(start, end - start + 1).TrimStart();
         }
+    }
+
+    internal static string? SampleColorTokenForRow(string row)
+    {
+        foreach (var token in SadConsoleKnownColorTokens.Values)
+        {
+            if (row.Contains($"({token}) ■", StringComparison.OrdinalIgnoreCase)) return token;
+        }
+
+        return null;
+    }
+
+    internal static void DrawColorSampleGlyph(Console target, int x, int y, int width, string visibleRow, string styledRow)
+    {
+        if (width <= 0 || SampleColorTokenForRow(styledRow) is not { } token) return;
+
+        var sampleIndex = visibleRow.IndexOf('■');
+        if (sampleIndex < 0 || sampleIndex >= width) return;
+
+        SetCell(target, x + sampleIndex, y, ColorSampleGlyph, ColorFromToken(token), Color.Black);
     }
 
     private static string CollapseSpaces(string text)
@@ -157,6 +184,11 @@ internal sealed class ComponentGalleryConsole : Console
         "Orange" => Color.Orange,
         "DarkBlue" => Color.DarkBlue,
         "Black" => Color.Black,
+        "Default" => Color.White,
+        "Green" => Color.Green,
+        "DarkGreen" => Color.DarkGreen,
+        "Yellow" => Color.Yellow,
+        "Earth" => Color.SaddleBrown,
         _ => Color.White
     };
 
@@ -191,13 +223,18 @@ internal sealed class ComponentGalleryConsole : Console
 
     private void SetCell(int x, int y, int glyph, Color foreground, Color background)
     {
-        if (x < 0 || y < 0 || x >= ScreenWidth || y >= ScreenHeight)
+        SetCell(this, x, y, glyph, foreground, background);
+    }
+
+    internal static void SetCell(Console target, int x, int y, int glyph, Color foreground, Color background)
+    {
+        if (x < 0 || y < 0 || x >= target.Width || y >= target.Height)
         {
             return;
         }
 
-        Surface[x, y].Glyph = glyph;
-        Surface[x, y].Foreground = foreground;
-        Surface[x, y].Background = background;
+        target.Surface[x, y].Glyph = glyph;
+        target.Surface[x, y].Foreground = foreground;
+        target.Surface[x, y].Background = background;
     }
 }

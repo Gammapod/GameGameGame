@@ -6,7 +6,8 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
 internal sealed class ScenarioEditScreen
 {
-    private readonly FrontendEditorSnapshot? _snapshot;
+    private FrontendEditorSnapshot? _snapshot;
+    private readonly FrontendEditorService? _service;
     private readonly FrontendEditorScenarioSummary? _scenario;
     private readonly List<FrontendEditorEntityTemplateSummary> _entities;
     private readonly List<FrontendEditorActionPlanSummary> _actionPlans;
@@ -18,11 +19,13 @@ internal sealed class ScenarioEditScreen
 
     private ScenarioEditScreen(
         ScenarioCatalogEntry catalogEntry,
+        FrontendEditorService? service,
         FrontendEditorSnapshot? snapshot,
         FrontendEditorScenarioSummary? scenario,
         IReadOnlyList<string> diagnostics)
     {
         CatalogEntry = catalogEntry;
+        _service = service;
         _snapshot = snapshot;
         _scenario = scenario;
         _entities = snapshot?.EntityTemplates.ToList() ?? [];
@@ -51,7 +54,7 @@ internal sealed class ScenarioEditScreen
             var open = FrontendEditorService.OpenFile(entry.ContentPath);
             if (!open.IsSuccess || open.Service is null)
             {
-                return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, [open.ErrorMessage ?? $"Could not open {entry.ContentPath}."]));
+                return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, null, [open.ErrorMessage ?? $"Could not open {entry.ContentPath}."]));
             }
 
             var snapshot = open.Service.GetSnapshot();
@@ -59,18 +62,18 @@ internal sealed class ScenarioEditScreen
             var diagnostics = scenario is null
                 ? [$"Scenario '{entry.ScenarioId}' was not found in {entry.ContentPath}."]
                 : snapshot.ValidationDiagnostics.Select(diagnostic => $"{diagnostic.Severity}: {diagnostic.Message}").ToList();
-            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, snapshot, scenario, diagnostics));
+            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, open.Service, snapshot, scenario, diagnostics));
         }
         catch (Exception ex)
         {
-            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, [ex.Message]));
+            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, null, [ex.Message]));
         }
     }
 
     public static ScenarioEditScreen FromSnapshot(ScenarioCatalogEntry entry, FrontendEditorSnapshot snapshot)
     {
         var scenario = snapshot.Scenarios.FirstOrDefault(item => item.ScenarioId == entry.ScenarioId);
-        return new ScenarioEditScreen(entry, snapshot, scenario, []);
+        return new ScenarioEditScreen(entry, null, snapshot, scenario, []);
     }
 
     public EntityTemplateEditScreen? OpenEntityTemplateEditScreen(string templateId)
@@ -80,7 +83,16 @@ internal sealed class ScenarioEditScreen
             return null;
         }
 
-        return EntityTemplateEditScreen.FromSnapshot(_snapshot, templateId);
+        return EntityTemplateEditScreen.FromSnapshot(_snapshot, templateId, _service, ReplaceSnapshotAfterChildMutation);
+    }
+
+    private void ReplaceSnapshotAfterChildMutation(FrontendEditorSnapshot snapshot)
+    {
+        _snapshot = snapshot;
+        _entities.Clear();
+        _entities.AddRange(snapshot.EntityTemplates);
+        _actionPlans.Clear();
+        _actionPlans.AddRange(snapshot.ActionPlans);
     }
 
     public ActionPlanEditScreen? OpenActionPlanEditScreen(string actionPlanId, ActionPlanEditReturnDestination returnDestination)

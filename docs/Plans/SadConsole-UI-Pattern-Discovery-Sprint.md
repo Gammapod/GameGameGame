@@ -175,6 +175,8 @@ Review artifact:
 - `ComponentGalleryScreen` composes Phase 1 primitives into a non-game gallery that shows panel border states, selectable-list behavior, editable-field states, and footer control wording. This should be the first thing reviewed/adjusted before Scenario Selection is rebuilt.
 - Run the visual gallery with `GameGameGame.SadConsole --gallery` (or equivalent `dotnet run --project src/GameGameGame.SadConsole -- --gallery`) to inspect the current SadConsole-rendered version. The gallery exits on Cancel/Esc when no component is focused.
 - Built-in themes now include `Default` and `Blueprint`. Themes carry both color tokens and border glyph sets, so review can evaluate presentation differences beyond color before editor-parity work resumes.
+- Reusable field editor overlays now include `TextEntryOverlayComponent`, `IntSetterOverlayComponent`, and `ChoicePickerOverlayComponent`. These are intended to be the common mutation panels for text fields, controller-friendly integer fields, and pick-one fields before bespoke editors are introduced.
+- `ConfirmOverlayComponent` is also part of the accepted gallery/prototype set for risky operations such as delete or exit-with-unsaved-changes. `CommandPaletteOverlayComponent` remains in code as a deferred action-editing idea, but it is intentionally not shown in the gallery until action-plan editing has a concrete command/menu requirement.
 
 Phase gate before Phase 2:
 
@@ -283,6 +285,67 @@ Apply useful component patterns to Simulation mode:
 4. What is the minimum viable visual parity with the mockup before continuing inventory editing?
 5. Should component geometry become a shared frontend-owned layout model usable for future mouse hit-testing?
 
+## SadConsole feature research checkpoint: size, placement, layering, movement, drag
+
+Status: Research checkpoint recorded after the component gallery and first editor-flow skeletons proved child-console overlays in the new Scenario Selection and Entity Template targeting-detail screens.
+
+Research sources:
+
+- SadConsole surfaces/consoles overview: `https://sadconsole.com/guides/surfaces-overview/`
+- SadConsole `IScreenObject`/`ScreenObject` overview: `https://sadconsole.com/guides/screenobject-basics/`
+- `Settings.WindowResizeOptions`: `https://sadconsole.com/reference/sadconsole.settings.windowresizeoptions/`
+- `Overlay`: `https://sadconsole.com/reference/sadconsole.components.overlay/`
+- `LayeredScreenSurface`: `https://sadconsole.com/reference/sadconsole.layeredscreensurface/`
+- `Window`: `https://sadconsole.com/reference/sadconsole.ui.window/`
+- `MouseDragViewPort`: `https://sadconsole.com/reference/sadconsole.components.mousedragviewport/`
+- `ObjectComponentMove`: `https://sadconsole.com/reference/sadconsole.components.objectcomponentmove/`
+- `SmoothMove`: `https://sadconsole.com/reference/sadconsole.components.smoothmove/`
+
+Findings:
+
+1. **Screen size and resizing.** SadConsole supports screen/surface dimensions in cells, surfaces with a visible view over a larger backing buffer, and final render resize policies through `Settings.WindowResizeOptions` (`Stretch`, `Center`, `Scale`, `Fit`, `None`). This confirms that frontend layout should keep an explicit cell-geometry model rather than hard-code only the initial 120x40-style demo assumptions. Near-term work can still use fixed cell bounds, but the component screen models should expose panel rectangles so a future layout pass can recompute them when the host size changes.
+2. **Dynamic placement.** `ScreenObject.Position` is relative to the parent; `AbsolutePosition` is resolved from the parent chain; `IgnoreParentPosition = true` supports fixed overlays. Child objects render/update through the parent tree. This fits the current child-console overlay experiment and suggests a frontend-owned layout model can place panels as either children of a screen container or fixed overlays without changing the pure component models.
+3. **Layering and transparency.** SadConsole supports multiple layering approaches: child `ScreenObject` render order and `SortOrder`, `Overlay` components that draw a matching surface on top of a host surface, `LayeredScreenSurface` with transparent cells over lower layers, and `Window` for titled/bordered modal dialogs. Our current child `Console` overlays are valid for popup/menu exploration; for focus outlines, dimming, validation marks, and hover highlights, `LayeredScreenSurface` or an `Overlay` component may be cleaner than mutating the base panel drawing.
+4. **Movement and translation.** Moving a parent `ScreenObject` moves its children as a group. SadConsole also includes `ObjectComponentMove` for keyboard-driven movement and `SmoothMove` for animated position transitions. This is useful for future debug/gallery experiments and possible animated panel transitions, but durable Editor mode should not let generic movement components consume arrow keys that belong to semantic focus navigation.
+5. **Dragging and mouse readiness.** `Window` has built-in dragging (`CanDrag`) and modal/close-on-Esc behavior. `MouseDragViewPort` enables dragging a scrollable surface viewport. General mouse input is available through `UseMouse`, `ProcessMouse`, exclusive mouse routing, and `MouseScreenObjectState`. This supports future mouse hit-testing over the same component rectangles, but immediate editor work should remain controller/keyboard-first.
+
+Current architectural implication:
+
+- Keep the pure frontend component models and focus router as the source of truth for keyboard/controller behavior.
+- Add/keep explicit geometry on rendered components and overlays so placement can become responsive later.
+- Continue using child `Console` overlays for simple popups in the near term because they already work in Scenario Selection and targeting detail.
+- Prototype `Window` only when we need built-in modal/control behavior or mouse-drag affordances; do not switch all popups to `Window` preemptively.
+- Prototype `LayeredScreenSurface`/`Overlay` for visual effects such as modal dimming, focus outlines, validation badges, or hover states after the static editor skeleton stabilizes.
+
+## SadConsole feature research checkpoint: fonts, glyphs, and tilesets
+
+Status: Research checkpoint recorded after the color-picker preview proved that Unicode-looking text markers are not always reliable as rendered SadConsole glyphs.
+
+Research sources:
+
+- SadConsole font overview: `https://sadconsole.com/guides/fonts-overview/`
+- SadConsole startup config font options: `https://sadconsole.com/guides/config-overview/`
+- `SadFont`: `https://sadconsole.com/reference/sadconsole.sadfont/`
+- `GlyphDefinition`: `https://sadconsole.com/reference/sadconsole.glyphdefinition/`
+- `FontExtensions`: `https://sadconsole.com/reference/sadconsole.fontextensions/`
+
+Findings:
+
+1. **SadConsole fonts are tilesets, not system fonts.** A SadConsole font is a PNG texture plus `.font` metadata. Surfaces draw cells by glyph index into that texture. A .NET `char` or Unicode symbol in a string is only visible if the active font/tileset maps that code point or glyph index to a useful tile.
+2. **Default font model is Code Page 437-oriented.** SadConsole's documented default is IBM 8x16 Code Page 437. The project currently calls `UseBuiltinFontExtended()` in `src/GameGameGame.SadConsole/Program.cs`, so we are using SadConsole's built-in extended font, but it is still safer to treat CP437/basic ASCII and explicit glyph indices as the portable UI baseline.
+3. **Important reserved/known glyphs.** Glyph index `0` should be transparent/dead and may be skipped for optimization. `SolidGlyphIndex` is required; for Code Page 437 fonts the solid fill glyph is index `219`. This is the right glyph to use for color swatches/fill samples rather than relying on Unicode `■` rendering.
+4. **Unsupported glyph handling exists.** `SadFont` exposes `UnsupportedGlyphIndex`/`UnsupportedGlyphRectangle`, and missing glyphs may render as that unsupported glyph instead of the intended symbol. This means renderer output should prefer known glyph indices for UI primitives, borders, cursors, and samples.
+5. **Named glyph definitions/decorators are possible.** Fonts can define named `GlyphDefinition`s and create decorators/cells from them. This may be useful later for custom icons, but current reusable components should avoid depending on custom font definitions unless the frontend also owns and loads the required font asset.
+6. **Font sizing is separate from component cell geometry.** Surfaces have a font and `FontSize`; `FontExtensions` can convert cell positions to pixel rectangles. Our current component layout should remain cell-based, but future mouse/hit-test and custom drawing work should remember font size controls the pixel footprint.
+
+Current architectural implication:
+
+- Treat component model strings as semantic/debug rows, not a guarantee of final glyph rendering.
+- Renderer-owned glyph constants should be used for UI primitives that must be visually reliable. Current accepted example: color swatches use glyph index `219`.
+- Keep theme border glyphs constrained to ASCII/CP437-safe characters unless we explicitly verify the active built-in extended font renders them correctly.
+- For authored entity glyph editing, keep accepting a single character for now because content already models glyphs as `char`, but add future validation/preview guidance before expanding to glyph palettes or non-ASCII art.
+- If we later want richer icons, create a small frontend glyph contract: named semantic icon -> glyph index/font requirement -> fallback glyph.
+
 ## Initial next action
 
 Continue Phase 1 by reviewing the component-library primitives and theme/focus behavior with the user before rebuilding Scenario Selection. After acceptance, add a small component gallery/mock screen and direct SadConsole renderers, then proceed to Phase 2 Scenario Selection using only accepted components.
@@ -368,16 +431,18 @@ Demoable behavior:
 - arrows choose a component while no component is focused;
 - Enter focuses the selected component;
 - Esc releases focus, then returns to Scenario Edit when no component is focused;
-- targeting and inventory panels support focused Up/Down row selection;
-- Targeting information now shows compact slot summaries (`slot {#}: {label} {target}`) and Enter opens a layered 3.2.1 targeting-slot detail sub-panel over the template screen;
-- Enter while Presentation is focused reports the default action-plan jump placeholder when a default plan exists.
+- focused Presentation information supports Up/Down field selection; Enter opens reusable field-editor overlays for name, glyph, and color, then confirms through `FrontendEditorService.UpdateTemplatePresentation` when opened from a service-backed Scenario Edit screen;
+- focused Inventory information supports Up/Down metadata-field selection; Enter opens reusable integer overlays for inventory width, inventory height, aperture, and bulk, then confirms through `FrontendEditorService.UpdateTemplateMetadata` when opened from a service-backed Scenario Edit screen;
+- Targeting information now derives read-only target labels from the template's selected/default Action Plan via shared `FrontendEditorService` targeting requirements; if no Action Plan/requirements exist, it asks the author to choose an Action Plan;
+- targeting supports focused Up/Down target-label selection; Enter opens a layered 3.2.1 target-label detail sub-panel over the template screen;
+- 3.2.1 keeps the label read-only and supports target-template choice plus target-range integer editing, confirming through `FrontendEditorService.SetTemplateTargetingRule` when opened from a service-backed Scenario Edit screen;
+- authored targeting rules whose labels are not referenced by the selected/default Action Plan render as unused/orphaned rows instead of being deleted;
+- Enter on the Presentation action-plan row opens an Action Plan picker: `(none)` clears the default Action Plan, defined plans assign the default through `FrontendEditorService`, and `Edit current action plan` is the separate affordance that jumps to the Action Plan editor when a default plan exists.
 
 Known intentional placeholders:
 
-- fields are displayed as editable-style fields but do not mutate content yet;
-- 3.2.1 targeting-slot detail fields are displayed as editable-style fields but do not mutate content yet;
 - inventory drawing is a placeholder text row, not a spatial drawing panel;
-- default action-plan jump reports the next route but does not open the Action Plan screen yet.
+- service-backed name/glyph/color edits update the editor snapshot and mark preview stale through shared editor services, but save/dirty/preview controls are not surfaced in the componentized shell yet.
 
 ## Phase 5 Action Plan Edit rebuild checkpoint
 

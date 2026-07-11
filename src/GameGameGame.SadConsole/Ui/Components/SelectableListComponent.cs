@@ -3,7 +3,7 @@ using GameGameGame.SadConsoleApp;
 
 namespace GameGameGame.SadConsoleApp.Ui.Components;
 
-internal sealed record SelectableListItem(string Id, string Label, string? Detail = null, bool IsEnabled = true);
+internal sealed record SelectableListItem(string Id, string Label, string? Detail = null, bool IsEnabled = true, string? SampleColorToken = null);
 
 internal sealed class SelectableListComponent : IUiComponent
 {

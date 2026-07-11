@@ -935,7 +935,30 @@ public sealed class FrontendEditorService(ContentEditorSession session)
 
     private IReadOnlyList<FrontendEditorEntityTemplateSummary> ListEntityTemplates(IReadOnlyList<FrontendEditorDiagnostic> diagnostics) =>
         Session.Editor.ListEntityPresets()
-            .Select(model => new FrontendEditorEntityTemplateSummary(
+            .Select(model =>
+            {
+                var targetingRules = (model.Template.TargetingRules ?? [])
+                    .OrderBy(rule => rule.Slot)
+                    .ThenBy(rule => rule.Label ?? string.Empty, StringComparer.Ordinal)
+                    .Select(rule => new FrontendEditorTargetingRuleSummary(
+                        rule.Slot,
+                        rule.Label,
+                        rule.Hint,
+                        rule.TargetTemplateId.Value,
+                        TryGetTemplateName(rule.TargetTemplateId.Value),
+                        rule.Range))
+                    .ToList();
+                var targetRequirements = GetTargetingRequirements(model.Template.DefaultActionPlanId, targetingRules);
+                var requirementLabels = targetRequirements
+                    .Select(requirement => requirement.Label)
+                    .ToHashSet(StringComparer.Ordinal);
+                var orphanedRules = model.Template.DefaultActionPlanId is null
+                    ? []
+                    : targetingRules
+                        .Where(rule => rule.Label is null || !requirementLabels.Contains(rule.Label))
+                        .ToList();
+
+                return new FrontendEditorEntityTemplateSummary(
                 model.Id.Value,
                 model.Template.Name,
                 model.Presentation.Glyph,
@@ -948,17 +971,7 @@ public sealed class FrontendEditorService(ContentEditorSession session)
                 new FrontendEditorActionStateDefaultsSummary(
                     model.Template.ActionStateDefaults?.Facing,
                     model.Template.ActionStateDefaults?.Target?.Value),
-                (model.Template.TargetingRules ?? [])
-                    .OrderBy(rule => rule.Slot)
-                    .ThenBy(rule => rule.Label ?? string.Empty, StringComparer.Ordinal)
-                    .Select(rule => new FrontendEditorTargetingRuleSummary(
-                        rule.Slot,
-                        rule.Label,
-                        rule.Hint,
-                        rule.TargetTemplateId.Value,
-                        TryGetTemplateName(rule.TargetTemplateId.Value),
-                        rule.Range))
-                    .ToList(),
+                targetingRules,
                 (model.Template.CarriedEntities ?? [])
                     .OrderBy(carried => carried.Coord.Y)
                     .ThenBy(carried => carried.Coord.X)
@@ -977,8 +990,42 @@ public sealed class FrontendEditorService(ContentEditorSession session)
                     .ToList(),
                 diagnostics
                     .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value)
-                    .ToList()))
+                    .ToList())
+                {
+                    TargetingRequirements = targetRequirements,
+                    OrphanedTargetingRules = orphanedRules
+                };
+            })
             .ToList();
+
+    private IReadOnlyList<FrontendEditorTargetingRequirementSummary> GetTargetingRequirements(
+        ActionPlanTemplateId? defaultActionPlanId,
+        IReadOnlyList<FrontendEditorTargetingRuleSummary> targetingRules)
+    {
+        if (defaultActionPlanId is null
+            || !Session.Document.ActionPlans.TryGetValue(defaultActionPlanId.Value.Value, out var plan))
+        {
+            return [];
+        }
+
+        var rulesByLabel = targetingRules
+            .Where(rule => rule.Label is not null)
+            .GroupBy(rule => rule.Label!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.OrderBy(rule => rule.Slot).First(), StringComparer.Ordinal);
+
+        return ActionPlanTargetLabelRequirementProjection.Project(plan.ToDescriptor(defaultActionPlanId.Value.Value))
+            .Select(requirement =>
+            {
+                rulesByLabel.TryGetValue(requirement.Label, out var rule);
+                return new FrontendEditorTargetingRequirementSummary(
+                    requirement.Label,
+                    requirement.StepIndexes,
+                    requirement.StepKinds,
+                    rule is not null,
+                    rule);
+            })
+            .ToList();
+    }
 
     private string? TryGetTemplateName(string templateId) =>
         Session.Document.EntityTemplates.TryGetValue(templateId, out var template)
@@ -1002,7 +1049,15 @@ public sealed class FrontendEditorService(ContentEditorSession session)
                 model.TemplateId.Value,
                 ContentEditorService.FormatActionPlanShape(ActionPlanShapeClassifier.Classify(model.Descriptor)),
                 GetActionSteps(model.Descriptor),
-                GetActionStepNames(model.Descriptor)))
+                GetActionStepNames(model.Descriptor))
+            {
+                TargetLabelRequirements = ActionPlanTargetLabelRequirementProjection.Project(model.Descriptor)
+                    .Select(requirement => new FrontendEditorActionPlanTargetLabelRequirementSummary(
+                        requirement.Label,
+                        requirement.StepIndexes,
+                        requirement.StepKinds))
+                    .ToList()
+            })
             .ToList();
 
     private IReadOnlyList<FrontendEditorAvailableActionStepSummary> ListAvailableActionSteps() =>
@@ -1122,7 +1177,12 @@ public sealed record FrontendEditorEntityTemplateSummary(
     FrontendEditorActionStateDefaultsSummary ActionStateDefaults,
     IReadOnlyList<FrontendEditorTargetingRuleSummary> TargetingRules,
     IReadOnlyList<FrontendEditorCarriedEntitySummary> CarriedEntities,
-    IReadOnlyList<FrontendEditorDiagnostic> Diagnostics);
+    IReadOnlyList<FrontendEditorDiagnostic> Diagnostics)
+{
+    public IReadOnlyList<FrontendEditorTargetingRequirementSummary> TargetingRequirements { get; init; } = [];
+
+    public IReadOnlyList<FrontendEditorTargetingRuleSummary> OrphanedTargetingRules { get; init; } = [];
+}
 
 public sealed record FrontendEditorActionStateDefaultsSummary(
     Direction? Facing,
@@ -1135,6 +1195,13 @@ public sealed record FrontendEditorTargetingRuleSummary(
     string TargetTemplateId,
     string? TargetTemplateName,
     int Range);
+
+public sealed record FrontendEditorTargetingRequirementSummary(
+    string Label,
+    IReadOnlyList<int> StepIndexes,
+    IReadOnlyList<ActionPlanBehaviorStepKind> StepKinds,
+    bool IsConfigured,
+    FrontendEditorTargetingRuleSummary? Rule);
 
 public sealed record FrontendEditorCarriedEntitySummary(
     string EntityId,
@@ -1149,7 +1216,15 @@ public sealed record FrontendEditorActionPlanSummary(
     string ActionPlanId,
     string Shape,
     IReadOnlyList<FrontendEditorActionPlanStepSummary> ActionSteps,
-    IReadOnlyList<string> ActionStepNames);
+    IReadOnlyList<string> ActionStepNames)
+{
+    public IReadOnlyList<FrontendEditorActionPlanTargetLabelRequirementSummary> TargetLabelRequirements { get; init; } = [];
+}
+
+public sealed record FrontendEditorActionPlanTargetLabelRequirementSummary(
+    string Label,
+    IReadOnlyList<int> StepIndexes,
+    IReadOnlyList<ActionPlanBehaviorStepKind> StepKinds);
 
 public sealed record FrontendEditorActionPlanStepSummary(
     int Index,

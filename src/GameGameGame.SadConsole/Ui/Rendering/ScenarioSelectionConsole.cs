@@ -34,6 +34,24 @@ internal sealed class ScenarioSelectionConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
+        if (_entityTemplateEditScreen?.IsTextEntryOverlayActive == true)
+        {
+            if (keyboard.IsKeyReleased(Keys.Back))
+            {
+                _message = _entityTemplateEditScreen.Backspace().Message;
+                Redraw();
+                return true;
+            }
+
+            var typed = ReadTypedCharacters(keyboard);
+            if (!string.IsNullOrEmpty(typed))
+            {
+                _message = _entityTemplateEditScreen.InsertText(typed).Message;
+                Redraw();
+                return true;
+            }
+        }
+
         if (keyboard.IsKeyReleased(Keys.Up)) Handle(UiComponentCommand.Up);
         else if (keyboard.IsKeyReleased(Keys.Down)) Handle(UiComponentCommand.Down);
         else if (keyboard.IsKeyReleased(Keys.Enter)) Handle(UiComponentCommand.Select);
@@ -234,6 +252,11 @@ internal sealed class ScenarioSelectionConsole : Console
         {
             RenderOverlay(overlay);
         }
+        else if (_overlayAttached)
+        {
+            Children.Remove(_overlayLayer!);
+            _overlayAttached = false;
+        }
 
         var top = Height - 2;
         PrintClipped(1, top, Width - 2, $"Theme: {_theme.Name} | {screen.FooterText()}", ColorFromToken(_theme.Footer.Text));
@@ -328,7 +351,9 @@ internal sealed class ScenarioSelectionConsole : Console
         for (var index = 0; index < rows.Count && index < maxRows; index++)
         {
             var row = rows[index];
-            PrintClipped(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), ComponentGalleryConsole.StripStyleTokens(row), ColorForRow(row, component.State));
+            var visibleRow = ComponentGalleryConsole.StripStyleTokens(row);
+            PrintClipped(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, ColorForRow(row, component.State));
+            ComponentGalleryConsole.DrawColorSampleGlyph(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, row);
         }
     }
 
@@ -352,12 +377,30 @@ internal sealed class ScenarioSelectionConsole : Console
     private Color ColorForRow(string row, UiComponentState componentState)
     {
         if (row.Contains(_theme.List.FocusedRowText, StringComparison.Ordinal)) return ColorFromToken(_theme.List.FocusedRowText);
+        foreach (var token in SadConsoleKnownColorTokens.Values)
+        {
+            if (row.Contains($"({token})", StringComparison.OrdinalIgnoreCase)) return ColorFromToken(token);
+        }
         if (row.Contains(_theme.List.SelectedRowText, StringComparison.Ordinal)) return ColorFromToken(_theme.List.SelectedRowText);
         if (row.Contains(_theme.List.EmptyText, StringComparison.Ordinal)) return ColorFromToken(_theme.List.EmptyText);
         return componentState == UiComponentState.Focused ? Color.White : Color.LightGray;
     }
 
     private static Color ColorFromToken(string token) => ComponentGalleryConsole.ColorFromToken(token);
+
+    private static string ReadTypedCharacters(Keyboard keyboard)
+    {
+        var chars = new List<char>();
+        foreach (var key in keyboard.KeysPressed)
+        {
+            if (key.Character != 0 && !char.IsControl(key.Character))
+            {
+                chars.Add(key.Character);
+            }
+        }
+
+        return new string(chars.ToArray());
+    }
 
     private void PrintClipped(int x, int y, int width, string text, Color color)
     {

@@ -16,6 +16,10 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("panel-states"),
             new FocusTarget("lists"),
             new FocusTarget("fields"),
+            new FocusTarget("text-entry-overlay"),
+            new FocusTarget("int-setter-overlay"),
+            new FocusTarget("choice-picker-overlay"),
+            new FocusTarget("confirm-overlay"),
             new FocusTarget("footer")
         ]);
     }
@@ -35,6 +39,10 @@ internal sealed class ComponentGalleryScreen
             PanelStates(),
             ListStates(),
             FieldStates(),
+            TextEntryOverlayExample(),
+            IntSetterOverlayExample(),
+            ChoicePickerOverlayExample(),
+            ConfirmOverlayExample(),
             FooterPanel()
         ];
     }
@@ -63,7 +71,7 @@ internal sealed class ComponentGalleryScreen
         return new PanelComponent(
             "panel-states",
             "Panels / border states",
-            new SadConsoleRect(1, 3, 38, 16),
+            new SadConsoleRect(1, 3, 36, 14),
             [
                 $"theme: {_theme.Name}",
                 $"border glyphs: {BorderGlyphPreview(_theme.Panel.BorderGlyphs)}",
@@ -82,7 +90,7 @@ internal sealed class ComponentGalleryScreen
         var list = new SelectableListComponent(
             "lists",
             "Selectable lists",
-            new SadConsoleRect(41, 3, 38, 16),
+            new SadConsoleRect(40, 3, 37, 14),
             [
                 new SelectableListItem("scenario", "Scenario row", "opens Play/Edit; Esc cancels/back"),
                 new SelectableListItem("entity", "Entity template row", "opens entity editor"),
@@ -101,7 +109,7 @@ internal sealed class ComponentGalleryScreen
         return new FieldGroupComponent(
             "fields",
             "Editable fields",
-            new SadConsoleRect(1, 18, 58, 34),
+            new SadConsoleRect(1, 16, 37, 31),
             [
                 new EditableFieldComponent("readonly", "scenario root", "root-template", EditableFieldMode.ReadOnly),
                 new EditableFieldComponent("editable", "name", "Player", EditableFieldMode.Editable),
@@ -121,7 +129,7 @@ internal sealed class ComponentGalleryScreen
         return new PanelComponent(
             "footer",
             "Context footer",
-            new SadConsoleRect(61, 18, 56, 34),
+            new SadConsoleRect(79, 3, 38, 12),
             [
                 $"background token: {_theme.Footer.Background}",
                 $"text token: {_theme.Footer.Text}",
@@ -130,6 +138,64 @@ internal sealed class ComponentGalleryScreen
             ],
             state,
             "Footer wording should always describe current focus controls.");
+    }
+
+    private TextEntryOverlayComponent TextEntryOverlayExample()
+    {
+        var component = new TextEntryOverlayComponent(
+            "text-entry-overlay",
+            "Text entry overlay",
+            "entity name",
+            "Fleeing Mouse",
+            new SadConsoleRect(40, 16, 37, 26),
+            maxLength: 32,
+            allowEmpty: false);
+        component.InsertText("!");
+        return component;
+    }
+
+    private IntSetterOverlayComponent IntSetterOverlayExample()
+    {
+        var component = new IntSetterOverlayComponent(
+            "int-setter-overlay",
+            "Int setter overlay",
+            "target range",
+            originalValue: 3,
+            min: 0,
+            max: 10,
+            step: 1,
+            bounds: new SadConsoleRect(79, 16, 38, 26));
+        component.Handle(UiComponentCommand.Right);
+        return component;
+    }
+
+    private ChoicePickerOverlayComponent ChoicePickerOverlayExample()
+    {
+        var component = new ChoicePickerOverlayComponent(
+            "choice-picker-overlay",
+            "Choice picker overlay",
+            "color",
+            [
+                new SelectableListItem("green", "Green", SampleColorToken: "Green"),
+                new SelectableListItem("yellow", "Yellow", SampleColorToken: "Yellow"),
+                new SelectableListItem("orange", "Orange", SampleColorToken: "Orange")
+            ],
+            new SadConsoleRect(40, 27, 77, 39));
+        component.Handle(UiComponentCommand.Down);
+        return component;
+    }
+
+    private ConfirmOverlayComponent ConfirmOverlayExample()
+    {
+        var component = new ConfirmOverlayComponent(
+            "confirm-overlay",
+            "Confirm overlay",
+            "Delete selected action step?",
+            new SadConsoleRect(79, 13, 38, 23),
+            confirmLabel: "Delete",
+            backLabel: "Back");
+        component.Handle(UiComponentCommand.Right);
+        return component;
     }
 
     private static string BorderGlyphPreview(BorderGlyphTheme glyphs) =>

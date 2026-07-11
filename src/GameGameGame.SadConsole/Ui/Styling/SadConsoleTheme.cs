@@ -135,3 +135,24 @@ internal sealed record FooterTheme(
         KeyText: "White",
         WarningText: "Gold");
 }
+
+internal static class SadConsoleKnownColorTokens
+{
+    public static IReadOnlySet<string> Values { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Black",
+        "White",
+        "LightGray",
+        "Gray",
+        "DarkGray",
+        "MutedBlue",
+        "DarkBlue",
+        "Cyan",
+        "Gold",
+        "Orange",
+        "Red",
+        "HotPink",
+        "Green",
+        "Yellow"
+    };
+}

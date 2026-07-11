@@ -346,6 +346,106 @@ public sealed class FrontendEditorServiceTests
         }
     }
 
+    [Fact]
+    public void SnapshotProjectsDefaultActionPlanTargetLabelRequirementsAndOrphanedRules()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+                defaultActionPlanId: feelings
+                targetingRules:
+                - slot: 1
+                  label: loves
+                  targetTemplateId: friend
+                  range: 4
+                - slot: 2
+                  label: unused
+                  targetTemplateId: enemy
+                  range: 5
+              noPlan:
+                name: No Plan
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+              friend:
+                name: Friend
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+              enemy:
+                name: Enemy
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+            presentations:
+              actor:
+                glyph: '@'
+                color: Yellow
+              noPlan:
+                glyph: '?'
+                color: Gray
+              friend:
+                glyph: 'f'
+                color: Gray
+              enemy:
+                glyph: 'e'
+                color: Earth
+            actionPlans:
+              feelings:
+                id: feelings
+                behavior:
+                  steps:
+                  - kind: SeekTarget
+                    targetLabel: loves
+                  - kind: FleeTarget
+                    targetLabel: fears
+                  - kind: GiveTarget
+                    targetLabel: loves
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var actor = Assert.Single(service.GetSnapshot().EntityTemplates, template => template.TemplateId == "actor");
+
+            Assert.Equal(["loves", "fears"], actor.TargetingRequirements.Select(requirement => requirement.Label).ToArray());
+            var loves = actor.TargetingRequirements[0];
+            Assert.True(loves.IsConfigured);
+            Assert.Equal([0, 2], loves.StepIndexes.ToArray());
+            Assert.Equal([ActionPlanBehaviorStepKind.SeekTarget, ActionPlanBehaviorStepKind.GiveTarget], loves.StepKinds.ToArray());
+            Assert.NotNull(loves.Rule);
+            Assert.Equal("friend", loves.Rule!.TargetTemplateId);
+
+            var fears = actor.TargetingRequirements[1];
+            Assert.False(fears.IsConfigured);
+            Assert.Null(fears.Rule);
+
+            var orphan = Assert.Single(actor.OrphanedTargetingRules);
+            Assert.Equal("unused", orphan.Label);
+
+            var noPlan = Assert.Single(service.GetSnapshot().EntityTemplates, template => template.TemplateId == "noPlan");
+            Assert.Empty(noPlan.TargetingRequirements);
+            Assert.Empty(noPlan.OrphanedTargetingRules);
+
+            var plan = Assert.Single(service.GetSnapshot().ActionPlans, plan => plan.ActionPlanId == "feelings");
+            Assert.Equal(["loves", "fears"], plan.TargetLabelRequirements.Select(requirement => requirement.Label).ToArray());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
     [Theory]
     [InlineData(0, "fears", "editorPlayer", 5, "slot")]
     [InlineData(5, "fears", "editorPlayer", 5, "slot")]

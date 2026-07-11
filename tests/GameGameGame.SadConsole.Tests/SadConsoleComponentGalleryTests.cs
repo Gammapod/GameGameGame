@@ -21,6 +21,10 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("panel-states", component.Id),
             component => Assert.Equal("lists", component.Id),
             component => Assert.Equal("fields", component.Id),
+            component => Assert.Equal("text-entry-overlay", component.Id),
+            component => Assert.Equal("int-setter-overlay", component.Id),
+            component => Assert.Equal("choice-picker-overlay", component.Id),
+            component => Assert.Equal("confirm-overlay", component.Id),
             component => Assert.Equal("footer", component.Id));
     }
 
@@ -48,6 +52,12 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Editable fields"));
         Assert.Contains(rows, row => row.Contains("scenario root"));
         Assert.Contains(rows, row => row.Contains("range must be 0-10"));
+        Assert.Contains(rows, row => row.Contains("Text entry overlay"));
+        Assert.Contains(rows, row => row.Contains("Int setter overlay"));
+        Assert.Contains(rows, row => row.Contains("Choice picker overlay"));
+        Assert.Contains(rows, row => row.Contains("■ Yellow"));
+        Assert.Contains(rows, row => row.Contains("Confirm overlay"));
+        Assert.DoesNotContain(rows, row => row.Contains("Command palette overlay"));
         Assert.Contains(rows, row => row.Contains("Context footer"));
         Assert.Contains(rows, row => row.Contains("arrows select a component"));
     }
@@ -144,7 +154,21 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Equal(SadRogue.Primitives.Color.Gold, ComponentGalleryConsole.ColorFromToken("Gold"));
         Assert.Equal(SadRogue.Primitives.Color.HotPink, ComponentGalleryConsole.ColorFromToken("HotPink"));
         Assert.Equal(SadRogue.Primitives.Color.Black, ComponentGalleryConsole.ColorFromToken("Black"));
+        Assert.Equal(SadRogue.Primitives.Color.White, ComponentGalleryConsole.ColorFromToken("Default"));
+        Assert.Equal(SadRogue.Primitives.Color.Green, ComponentGalleryConsole.ColorFromToken("Green"));
+        Assert.Equal(SadRogue.Primitives.Color.DarkGreen, ComponentGalleryConsole.ColorFromToken("DarkGreen"));
+        Assert.Equal(SadRogue.Primitives.Color.Yellow, ComponentGalleryConsole.ColorFromToken("Yellow"));
+        Assert.Equal(SadRogue.Primitives.Color.SaddleBrown, ComponentGalleryConsole.ColorFromToken("Earth"));
         Assert.Equal(SadRogue.Primitives.Color.White, ComponentGalleryConsole.ColorFromToken("unknown-token"));
+    }
+
+    [Fact]
+    public void GalleryRendererDetectsColorSampleTokensForBlockGlyphPreview()
+    {
+        var row = "> (HotPink) (Green) ■ Green";
+
+        Assert.Equal("Green", ComponentGalleryConsole.SampleColorTokenForRow(row));
+        Assert.Equal("> ■ Green", ComponentGalleryConsole.StripStyleTokens(row));
     }
 
     [Fact]

@@ -39,6 +39,9 @@ internal sealed record SadConsoleSessionViewBuilderState(
 internal readonly record struct SadConsoleRect(int Left, int Top, int Width, int Bottom)
 {
     public int Height => Math.Max(0, Bottom - Top);
+
+    public static SadConsoleRect FromSize(int left, int top, int width, int height) =>
+        new(left, top, width, top + height);
 }
 
 internal static class SadConsoleSessionLayout
