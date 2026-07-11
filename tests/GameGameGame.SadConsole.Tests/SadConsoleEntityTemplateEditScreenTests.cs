@@ -296,7 +296,7 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
     }
 
     [Fact]
-    public void EntityTemplateEditInventoryRendersMetadataAndPlaceholder()
+    public void EntityTemplateEditInventoryRendersMetadataGridEditorEntryAndReadOnlyPreviewData()
     {
         var screen = EntityTemplateEditScreen.FromSnapshot(DemoSnapshot(), "player");
 
@@ -307,7 +307,15 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         var rows = screen.Components().SelectMany(component => component.RenderRows(SadConsoleTheme.Default)).ToList();
         Assert.Contains(rows, row => row.Contains("inventory width: 5"));
         Assert.Contains(rows, row => row.Contains("inventory height: 4"));
-        Assert.Contains(rows, row => row.Contains("3.3.2 inventory-drawing panel: placeholder"));
+        Assert.Contains(rows, row => row.Contains("3.3.2 inventory grid editor"));
+        Assert.DoesNotContain(rows, row => row.Contains("brush selection"));
+        Assert.DoesNotContain(rows, row => row.Contains("carried entries"));
+        Assert.DoesNotContain(rows, row => row.Contains("inventory drawing opens"));
+
+        var inventory = Assert.IsType<InventorySummaryComponent>(screen.Components().Single(component => component.Id == "inventory"));
+        Assert.Equal(5, inventory.GridWidth);
+        Assert.Equal(4, inventory.GridHeight);
+        Assert.Contains(inventory.Cells, cell => cell.Coord == new GridCoord(1, 2) && cell.Glyph == '*');
     }
 
     [Fact]
@@ -349,6 +357,114 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         Assert.Null(screen.OverlayComponent());
         Assert.Equal(originalWidth + 1, service.GetSnapshot().EntityTemplates.Single().InventoryWidth);
         Assert.Contains(screen.Components().SelectMany(component => component.RenderRows(SadConsoleTheme.Default)), row => row.Contains($"inventory width: {originalWidth + 1}"));
+    }
+
+    [Fact]
+    public void EntityTemplateEditInventoryGridEntryOpensDedicatedGridScreen()
+    {
+        var screen = EntityTemplateEditScreen.FromSnapshot(DemoSnapshot(), "player");
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Equal(EntityTemplateEditResultKind.OpenInventoryGrid, result.Kind);
+    }
+
+    [Fact]
+    public void InventoryGridEditPlacesBrushAtCursorWithEnterAndOverwritesOccupant()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        screen.Handle(UiComponentCommand.Right);
+        var place = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Overwrote", place.Message);
+        var carried = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == "box").CarriedEntities.Single(entity => entity.Coord == new GridCoord(1, 0));
+        Assert.Equal("coin", carried.TemplateId);
+    }
+
+    [Fact]
+    public void InventoryGridEditDeleteRemovesEntityAtCursor()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        var result = screen.Handle(InventoryGridEditCommand.Delete);
+
+        Assert.Contains("Removed carried entity", result.Message);
+        Assert.DoesNotContain(service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == "box").CarriedEntities, entity => entity.Coord == new GridCoord(0, 0));
+    }
+
+    [Fact]
+    public void InventoryGridEditSpaceMovesEntityAndCanCancelMove()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        var pickUp = screen.Handle(InventoryGridEditCommand.Move);
+        screen.Handle(UiComponentCommand.Right);
+        var cancel = screen.Handle(UiComponentCommand.Cancel);
+
+        Assert.Contains("picked up", pickUp.Message);
+        Assert.Contains("Cancelled move", cancel.Message);
+        Assert.Null(screen.MovingEntityId);
+        Assert.Contains(service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == "box").CarriedEntities, entity => entity.Coord == new GridCoord(0, 0));
+    }
+
+    [Fact]
+    public void InventoryGridEditSpacePlacesMovingEntityAndSilentlyReplacesDestination()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        screen.Handle(InventoryGridEditCommand.Move);
+        screen.Handle(UiComponentCommand.Right);
+        var result = screen.Handle(InventoryGridEditCommand.Move);
+
+        Assert.Contains("Moved carried entity", result.Message);
+        var carried = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == "box").CarriedEntities;
+        Assert.Single(carried, entity => entity.Coord == new GridCoord(1, 0));
+        Assert.DoesNotContain(carried, entity => entity.Coord == new GridCoord(0, 0));
+    }
+
+    [Fact]
+    public void InventoryGridEditCopySetsBrushFromCursorAndTabOpensBrushPicker()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        var copy = screen.Handle(InventoryGridEditCommand.Copy);
+        var openPicker = screen.Handle(InventoryGridEditCommand.OpenBrushPicker);
+
+        Assert.Contains("Copied brush", copy.Message);
+        Assert.Equal("rock", screen.BrushTemplateId);
+        Assert.Contains("Opened inventory brush picker", openPicker.Message);
+        Assert.Equal("inventory-brush-picker", screen.OverlayComponent()?.Id);
+    }
+
+    [Fact]
+    public void InventoryGridEditAlwaysShowsCurrentCellInspectionPanel()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        var rows = screen.Components().Single(component => component.Id == "inventory-grid-inspection").RenderRows(SadConsoleTheme.Default);
+
+        Assert.Contains(rows, row => row.Contains("cell: 0,0"));
+        Assert.Contains(rows, row => row.Contains("template: Rock"));
+
+        screen.Handle(UiComponentCommand.Right);
+        rows = screen.Components().Single(component => component.Id == "inventory-grid-inspection").RenderRows(SadConsoleTheme.Default);
+
+        Assert.Contains(rows, row => row.Contains("cell: 1,0"));
+        Assert.Contains(rows, row => row.Contains("template: Coin"));
     }
 
     private static FrontendEditorSnapshot DemoSnapshot() => new(
@@ -414,4 +530,16 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         [],
         [],
         []);
+
+    private static FrontendEditorService InventoryGridService()
+    {
+        var service = FrontendEditorService.CreateNew();
+        service.CreateEntityTemplate("Box");
+        service.CreateEntityTemplate("Rock");
+        service.CreateEntityTemplate("Coin");
+        service.UpdateTemplateMetadata("box", new FrontendEditorTemplateMetadataUpdate(3, 2, 9, 1));
+        service.OverwriteTemplateInInventory("box", "rock", new GridCoord(0, 0));
+        service.OverwriteTemplateInInventory("box", "coin", new GridCoord(1, 0));
+        return service;
+    }
 }

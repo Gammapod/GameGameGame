@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Navigation;
+using GameGameGame.SadConsoleApp.Ui.Styling;
 
 namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
@@ -12,6 +13,7 @@ internal sealed class EntityTemplateEditScreen
     private const string EditActionPlanChoiceId = "__edit_action_plan__";
     private static readonly string[] InventoryMetadataFieldIds = ["inventory-width", "inventory-height", "aperture", "bulk"];
     private static readonly string[] InventoryMetadataFieldLabels = ["inventory width", "inventory height", "aperture", "bulk"];
+    private const int InventoryGridEditFieldIndex = 4;
 
     private readonly FrontendEditorService? _service;
     private readonly Action<FrontendEditorSnapshot>? _snapshotMutated;
@@ -59,6 +61,22 @@ internal sealed class EntityTemplateEditScreen
     public int SelectedInventoryItemIndex => 0;
     public bool IsTextEntryOverlayActive => _activeFieldOverlay is TextEntryOverlayComponent;
 
+    public InventoryGridEditScreen OpenInventoryGridEditScreen() =>
+        InventoryGridEditScreen.FromSnapshot(
+            new FrontendEditorSnapshot(
+                string.Empty,
+                false,
+                [],
+                _entityTemplates,
+                _actionPlans,
+                [],
+                [],
+                string.Empty,
+                []),
+            _template.TemplateId,
+            _service,
+            ReplaceAfterMutation);
+
     public static EntityTemplateEditScreen FromSnapshot(
         FrontendEditorSnapshot snapshot,
         string templateId,
@@ -94,7 +112,7 @@ internal sealed class EntityTemplateEditScreen
             "targeting" => _targetingSlotPanelOpen
                 ? "Targeting requirement detail focused: Up/Down chooses target template/range. Enter edits. Esc closes 3.2.1 detail panel."
                 : "Targeting focused: Up/Down chooses action-plan target label. Enter opens 3.2.1 details. Esc releases focus.",
-            "inventory" => "Inventory focused: Up/Down chooses metadata field. Enter edits width/height/aperture/bulk. Esc releases focus.",
+            "inventory" => "Inventory focused: Up/Down chooses metadata field or grid editor. Enter edits/opens. Esc releases focus.",
             _ => "Esc releases focus."
         };
     }
@@ -188,7 +206,9 @@ internal sealed class EntityTemplateEditScreen
 
         if (command == UiComponentCommand.Select && focused == "inventory")
         {
-            return ActivateSelectedInventoryMetadataField();
+            return _selectedInventoryMetadataFieldIndex == InventoryGridEditFieldIndex
+                ? EntityTemplateEditResult.OpenInventoryGrid("Inventory grid editor next.")
+                : ActivateSelectedInventoryMetadataField();
         }
 
         return EntityTemplateEditResult.Stay("This component is read-only in the first template-edit shell pass.");
@@ -219,11 +239,11 @@ internal sealed class EntityTemplateEditScreen
         }
         else if (focused == "inventory" && _template.CarriedEntities.Count > 0)
         {
-            _selectedInventoryMetadataFieldIndex = Math.Clamp(_selectedInventoryMetadataFieldIndex + delta, 0, InventoryMetadataFieldIds.Length - 1);
+            _selectedInventoryMetadataFieldIndex = Math.Clamp(_selectedInventoryMetadataFieldIndex + delta, 0, InventoryGridEditFieldIndex);
         }
         else if (focused == "inventory")
         {
-            _selectedInventoryMetadataFieldIndex = Math.Clamp(_selectedInventoryMetadataFieldIndex + delta, 0, InventoryMetadataFieldIds.Length - 1);
+            _selectedInventoryMetadataFieldIndex = Math.Clamp(_selectedInventoryMetadataFieldIndex + delta, 0, InventoryGridEditFieldIndex);
         }
     }
 
@@ -231,7 +251,9 @@ internal sealed class EntityTemplateEditScreen
     {
         "presentation" => $"Selected presentation field: {PresentationFieldLabels[_selectedPresentationFieldIndex]}.",
         "targeting" => _template.TargetingRequirements.Count == 0 ? "No action-plan targeting labels defined." : $"Selected target label: {SelectedTargetingRequirement().Label}.",
-        "inventory" => $"Selected inventory metadata field: {InventoryMetadataFieldLabels[_selectedInventoryMetadataFieldIndex]}.",
+        "inventory" => _selectedInventoryMetadataFieldIndex == InventoryGridEditFieldIndex
+            ? "Selected inventory grid editor."
+            : $"Selected inventory metadata field: {InventoryMetadataFieldLabels[_selectedInventoryMetadataFieldIndex]}.",
         _ => "Selection unchanged."
     };
 
@@ -664,7 +686,7 @@ internal sealed class EntityTemplateEditScreen
 
     private static int DisplaySlotNumber(FrontendEditorTargetingRuleSummary slot) => slot.Slot + 1;
 
-    private PanelComponent InventoryPanel()
+    private IUiComponent InventoryPanel()
     {
         var rows = new List<string>
         {
@@ -672,23 +694,18 @@ internal sealed class EntityTemplateEditScreen
             InventoryMetadataRow(1, $"inventory height: {_template.InventoryHeight}"),
             InventoryMetadataRow(2, $"aperture: {_template.Aperture}"),
             InventoryMetadataRow(3, $"bulk: {_template.Bulk}"),
-            $"brush selection: {(_template.CarriedEntities.Count == 0 ? "(none)" : _template.CarriedEntities[SelectedInventoryItemIndex].TemplateName ?? _template.CarriedEntities[SelectedInventoryItemIndex].TemplateId ?? "unbound")}",
-            "3.3.2 inventory-drawing panel: placeholder"
+            InventoryMetadataRow(InventoryGridEditFieldIndex, "3.3.2 inventory grid editor")
         };
 
-        if (_template.CarriedEntities.Count > 0)
-        {
-            rows.Add("3.3.1 carried entries:");
-            rows.AddRange(_template.CarriedEntities.Select((item, index) =>
-                $"{(index == SelectedInventoryItemIndex ? ">" : " ")} ({item.Coord.X},{item.Coord.Y}) {item.Glyph?.ToString() ?? "?"} {item.TemplateName ?? item.TemplateId ?? item.EntityId}"));
-        }
-
-        return new PanelComponent(
+        return new InventorySummaryComponent(
             "inventory",
             "3.3 Inventory information",
             new SadConsoleRect(1, 18, 116, 36),
             rows,
-            _focusRouter.StateFor("inventory"));
+            _focusRouter.StateFor("inventory"),
+            _template.InventoryWidth,
+            _template.InventoryHeight,
+            _template.CarriedEntities.Select(item => new InventoryGridCell(item.Coord, item.Glyph ?? '?', item.Color)).ToList());
     }
 
     private string InventoryMetadataRow(int index, string text)
@@ -698,16 +715,58 @@ internal sealed class EntityTemplateEditScreen
     }
 }
 
+internal sealed class InventorySummaryComponent : IUiComponent
+{
+    public InventorySummaryComponent(
+        string id,
+        string title,
+        SadConsoleRect bounds,
+        IReadOnlyList<string> rows,
+        UiComponentState state,
+        int gridWidth,
+        int gridHeight,
+        IReadOnlyList<InventoryGridCell> cells)
+    {
+        Id = id;
+        Title = title;
+        Bounds = bounds;
+        Rows = rows;
+        State = state;
+        GridWidth = gridWidth;
+        GridHeight = gridHeight;
+        Cells = cells;
+    }
+
+    public string Id { get; }
+    public string Title { get; }
+    public SadConsoleRect Bounds { get; }
+    public UiComponentState State { get; }
+    public IReadOnlyList<string> Rows { get; }
+    public int GridWidth { get; }
+    public int GridHeight { get; }
+    public IReadOnlyList<InventoryGridCell> Cells { get; }
+
+    public IReadOnlyList<string> RenderRows(SadConsoleTheme theme)
+    {
+        var rows = new List<string> { $"[{State.BorderColor(theme)}] {Title}" };
+        rows.AddRange(Rows);
+        rows.Add("inventory grid preview rendered by SadConsole renderer");
+        return rows;
+    }
+}
+
 internal sealed record EntityTemplateEditResult(EntityTemplateEditResultKind Kind, string Message, string? ActionPlanId = null)
 {
     public static EntityTemplateEditResult Stay(string message) => new(EntityTemplateEditResultKind.Stay, message);
     public static EntityTemplateEditResult ReturnToScenarioEdit(string message) => new(EntityTemplateEditResultKind.ReturnToScenarioEdit, message);
     public static EntityTemplateEditResult OpenActionPlan(string actionPlanId, string message) => new(EntityTemplateEditResultKind.OpenActionPlan, message, actionPlanId);
+    public static EntityTemplateEditResult OpenInventoryGrid(string message) => new(EntityTemplateEditResultKind.OpenInventoryGrid, message);
 }
 
 internal enum EntityTemplateEditResultKind
 {
     Stay,
     ReturnToScenarioEdit,
-    OpenActionPlan
+    OpenActionPlan,
+    OpenInventoryGrid
 }

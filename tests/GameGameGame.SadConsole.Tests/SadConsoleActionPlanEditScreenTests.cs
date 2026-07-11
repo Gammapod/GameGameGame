@@ -12,11 +12,12 @@ public sealed class SadConsoleActionPlanEditScreenTests
     {
         var screen = ActionPlanEditScreen.FromSnapshot(DemoSnapshot(), "wander", ActionPlanEditReturnDestination.ScenarioEdit);
 
-        var component = Assert.Single(screen.Components());
+        var component = screen.Components().Single(component => component.Id == "action-plan-steps");
 
         Assert.Equal("action-plan-steps", component.Id);
         Assert.Equal("4.1 Action steps", component.Title);
         Assert.Equal(UiComponentState.Selected, component.State);
+        Assert.Contains(screen.Components(), component => component.Id == "highlighted-action-step");
     }
 
     [Fact]
@@ -42,18 +43,69 @@ public sealed class SadConsoleActionPlanEditScreenTests
     }
 
     [Fact]
-    public void ActionPlanEditFocusesStepsSelectsRowsAndReportsEditPlaceholder()
+    public void ActionPlanEditFocusesStepsAndSelectsRows()
     {
         var screen = ActionPlanEditScreen.FromSnapshot(DemoSnapshot(), "wander", ActionPlanEditReturnDestination.ScenarioEdit);
 
         screen.Handle(UiComponentCommand.Select);
-        screen.Handle(UiComponentCommand.Down);
-        var result = screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Down);
 
         Assert.Equal("action-plan-steps", screen.FocusedComponentId);
         Assert.Equal(1, screen.SelectedStepIndex);
-        Assert.Contains("Action-step edit placeholder", result.Message);
-        Assert.Contains("Wait", result.Message);
+        Assert.Contains("Highlighted step 2", result.Message);
+    }
+
+    [Fact]
+    public void ActionPlanEditSelectOnExistingStepOpensReplacementPicker()
+    {
+        var screen = ActionPlanEditScreen.FromSnapshot(ServiceSnapshotWithPlan(out _, out var planId), planId, ActionPlanEditReturnDestination.ScenarioEdit);
+
+        screen.Handle(UiComponentCommand.Select);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Opened replacement picker", result.Message);
+        Assert.Equal("action-step-primitive-picker", screen.OverlayComponent()?.Id);
+        Assert.Contains(screen.Components().Single(component => component.Id == "highlighted-action-step").RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default), row => row.Contains("highlighting primitive"));
+    }
+
+    [Fact]
+    public void ActionPlanEditReplaceDeleteInsertAndMoveMutateThroughEditorService()
+    {
+        var snapshot = ServiceSnapshotWithPlan(out var service, out var planId);
+        var screen = ActionPlanEditScreen.FromSnapshot(snapshot, planId, ActionPlanEditReturnDestination.ScenarioEdit, service);
+
+        screen.Handle(UiComponentCommand.Select);
+        var insertOpen = screen.Handle(ActionPlanEditCommand.Insert);
+        Assert.Contains("Opened insert action-step picker", insertOpen.Message);
+        Assert.Equal("action-step-primitive-picker", screen.OverlayComponent()?.Id);
+        var insert = screen.Handle(UiComponentCommand.Select);
+        Assert.Contains("Inserted", insert.Message);
+        Assert.Single(service.GetSnapshot().ActionPlans.Single(plan => plan.ActionPlanId == planId).ActionSteps);
+
+        screen.Handle(UiComponentCommand.Select);
+        var replace = screen.Handle(UiComponentCommand.Select);
+        Assert.Contains("Replaced", replace.Message);
+
+        var secondInsertOpen = screen.Handle(ActionPlanEditCommand.Insert);
+        Assert.Contains("insert-position picker", secondInsertOpen.Message);
+        Assert.Equal("action-step-insert-position", screen.OverlayComponent()?.Id);
+        screen.Handle(UiComponentCommand.Select);
+        Assert.Equal("action-step-primitive-picker", screen.OverlayComponent()?.Id);
+        screen.Handle(UiComponentCommand.Select);
+        Assert.Equal(2, service.GetSnapshot().ActionPlans.Single(plan => plan.ActionPlanId == planId).ActionSteps.Count);
+
+        var moveMode = screen.Handle(ActionPlanEditCommand.ToggleMoveMode);
+        Assert.True(screen.IsMoveMode);
+        Assert.Contains("Move mode", moveMode.Message);
+        var move = screen.Handle(UiComponentCommand.Down);
+        Assert.Contains("Moved", move.Message);
+        var place = screen.Handle(ActionPlanEditCommand.ToggleMoveMode);
+        Assert.Contains("Placed", place.Message);
+        Assert.False(screen.IsMoveMode);
+
+        var delete = screen.Handle(ActionPlanEditCommand.Delete);
+        Assert.Contains("Removed", delete.Message);
+        Assert.Single(service.GetSnapshot().ActionPlans.Single(plan => plan.ActionPlanId == planId).ActionSteps);
     }
 
     [Fact]
@@ -80,8 +132,19 @@ public sealed class SadConsoleActionPlanEditScreenTests
                 new FrontendEditorActionPlanStepSummary(1, default, "Wait")
             ],
             ["Move", "Wait"])],
-        [],
+        [
+            new FrontendEditorAvailableActionStepSummary(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target", "Flee a target."),
+            new FrontendEditorAvailableActionStepSummary(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target", "Seek a target.")
+        ],
         [],
         "yaml",
         []);
+
+    private static FrontendEditorSnapshot ServiceSnapshotWithPlan(out FrontendEditorService service, out string planId)
+    {
+        service = FrontendEditorService.CreateNew();
+        var plan = service.CreatePassiveActionPlan("Patrol");
+        planId = plan.Snapshot.ActionPlans.Single().ActionPlanId;
+        return service.GetSnapshot();
+    }
 }

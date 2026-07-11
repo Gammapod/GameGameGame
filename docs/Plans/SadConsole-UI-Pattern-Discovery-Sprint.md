@@ -401,9 +401,12 @@ Demoable behavior:
 
 - Scenario Edit opens from the new Scenario Selection Edit route;
 - screen uses component API panels for 2.1 Scenario preview, 2.2 Player starting position, 2.3 Defined entities, and 2.4 Defined action plans;
+- screen includes a prominent save-status panel: Brown/dirty when unsaved changes are pending and Green/saved when the editor snapshot is unmodified;
+- S is a persistent save hotkey throughout the service-backed Scenario Edit flow, except while text entry is active;
 - arrows choose a component while no component is focused;
 - Enter focuses the selected component;
-- Esc releases focus, then returns to Scenario Selection when no component is focused;
+- Esc releases focus; when no component is focused, it returns to Scenario Selection if saved, or opens 2.5 Unsaved changes if dirty;
+- 2.5 Unsaved changes warns about pending changes and offers Back to Editing, Save & Exit, and Exit without Saving; Esc from 2.5 returns to editing;
 - focused entity/action-plan lists support Up/Down selection;
 - Enter on an entity/action plan reports the next-screen routing placeholder.
 
@@ -433,16 +436,30 @@ Demoable behavior:
 - Esc releases focus, then returns to Scenario Edit when no component is focused;
 - focused Presentation information supports Up/Down field selection; Enter opens reusable field-editor overlays for name, glyph, and color, then confirms through `FrontendEditorService.UpdateTemplatePresentation` when opened from a service-backed Scenario Edit screen;
 - focused Inventory information supports Up/Down metadata-field selection; Enter opens reusable integer overlays for inventory width, inventory height, aperture, and bulk, then confirms through `FrontendEditorService.UpdateTemplateMetadata` when opened from a service-backed Scenario Edit screen;
+- focused Inventory information also exposes `3.3.2 inventory grid editor`; Enter opens a dedicated cursor-grid editing mode rather than forcing grid authoring through the normal field/Submit-only model;
+- the 3.3 panel keeps only the five functional selections on the left and renders a clipped read-only inventory-grid preview on the right; brush selection, carried-entry detail rows, and explanatory placeholder copy were removed from the parent panel;
 - Targeting information now derives read-only target labels from the template's selected/default Action Plan via shared `FrontendEditorService` targeting requirements; if no Action Plan/requirements exist, it asks the author to choose an Action Plan;
 - targeting supports focused Up/Down target-label selection; Enter opens a layered 3.2.1 target-label detail sub-panel over the template screen;
 - 3.2.1 keeps the label read-only and supports target-template choice plus target-range integer editing, confirming through `FrontendEditorService.SetTemplateTargetingRule` when opened from a service-backed Scenario Edit screen;
 - authored targeting rules whose labels are not referenced by the selected/default Action Plan render as unused/orphaned rows instead of being deleted;
 - Enter on the Presentation action-plan row opens an Action Plan picker: `(none)` clears the default Action Plan, defined plans assign the default through `FrontendEditorService`, and `Edit current action plan` is the separate affordance that jumps to the Action Plan editor when a default plan exists.
 
+Inventory grid editor behavior:
+
+- arrow keys move the grid cursor;
+- grid cells render at fixed positions; moving the cursor changes only the cursor highlight, not cell spacing or glyph positions;
+- Enter places the current brush at the cursor through `FrontendEditorService.OverwriteTemplateInInventory`, silently replacing the current occupant;
+- Delete removes the carried entity at the cursor; Backspace is accepted as an alias but help text says Delete;
+- Space starts move mode from an occupied cursor cell, and Space or Enter places the moving carried entity at the new cursor location;
+- Esc cancels a pending move, otherwise returns to Entity Template Edit;
+- C copies the carried entity template at the cursor into the current brush;
+- Tab opens the brush picker; previous/next brush hotkeys are intentionally deferred because adjacent template order is unlikely to be useful in large template sets;
+- the bottom-right Current cell panel always inspects the highlighted cursor cell; the `?`/`/` inspection hotkey was removed;
+- undo, clear-brush hotkeys, large-grid navigation acceleration, viewport/pan controls, coordinate toggles, and mouse controls are deferred.
+
 Known intentional placeholders:
 
-- inventory drawing is a placeholder text row, not a spatial drawing panel;
-- service-backed name/glyph/color edits update the editor snapshot and mark preview stale through shared editor services, but save/dirty/preview controls are not surfaced in the componentized shell yet.
+- preview-stale/rematerialize controls beyond save/dirty status are not surfaced in the componentized shell yet.
 
 ## Phase 5 Action Plan Edit rebuild checkpoint
 
@@ -463,13 +480,128 @@ Demoable behavior:
 
 - Action Plan Edit opens from Scenario Edit action-plan selection;
 - Action Plan Edit also opens from Entity Template Presentation default-plan jump;
-- screen uses component API list for 4.1 Action steps;
+- screen uses component API panels for 4.1 Action steps and 4.2 Highlighted step details;
 - Enter focuses the action-step list;
-- focused Up/Down changes selected step;
-- Enter on a selected step reports an action-step edit placeholder;
+- focused Up/Down changes the highlighted existing step;
+- Enter on a highlighted existing step opens 4.1.1, a primitive picker over stable engine-defined authoring steps; choosing a primitive replaces that step through `FrontendEditorService.ReplaceActionPlanStep`;
+- Delete/Backspace removes the highlighted existing step through `FrontendEditorService.RemoveActionPlanStep`, collapsing later steps downward;
+- I opens 4.1.2, an insert-position picker for `insert above` / `insert below`; choosing a position opens 4.1.1, and choosing a primitive inserts through `FrontendEditorService.InsertActionPlanStep`;
+- Space enters move mode; while moving, Up/Down swaps the selected step through `FrontendEditorService.MoveActionPlanStep`, and Enter or Space places/confirms the moved step;
+- 4.2 always describes the currently highlighted item, whether the highlight is in 4.1 or inside the 4.1.1 primitive picker;
+- Tab, R, `<`, and `>` intentionally do nothing in the Action Plan editor;
+- the detail panel summarizes target-label requirements projected from the current action plan so authors can relate action-plan edits to Entity Template 3.2 targeting requirements;
 - Esc releases focus first, then returns to Scenario Edit or Entity Template Edit depending on entry path.
 
 Known intentional placeholders:
 
-- action-step insert, replace, delete, and rearrange controls are not designed yet;
-- action-step field mutation is not implemented yet.
+- action-step parameter editing, check/effect editing, and label/slot field editing are not implemented in the rebuilt UI yet;
+- action-step mutation is limited to canonical behavior-chain steps exposed by shared editor services.
+
+## Rebuilt vs legacy/prototype checkpoint assessment
+
+Status: Checkpoint captured after the componentized Scenario Selection -> Scenario Edit -> Entity Template Edit -> Action Plan Edit loop became demoable, including service-backed entity-template presentation edits, default Action Plan selection, action-plan-derived targeting requirements, targeting template/range edits, and inventory metadata edits.
+
+Comparison targets:
+
+- **Legacy/deprecated shell:** `SadConsoleShell` plus `SadConsoleEditorContext`. This path contains more historical editing semantics, but concentrates menu, editor, simulation, renderer, focus, mutation, preview invalidation, and modal state in large classes.
+- **Intermediate prototype:** `SadConsoleExplorationComponents`. This proved the panel/component visual direction but was mostly model/snapshot projection rather than durable reusable UI infrastructure.
+- **Rebuilt componentized path:** `Ui/Screens`, `Ui/Components`, `Ui/Navigation`, `Ui/Rendering`, and `Ui/Styling`.
+
+### Architectural strengths vs code smells
+
+Rebuilt strengths:
+
+- Screen state, reusable components, styling, focus routing, and SadConsole rendering are now separated enough to test screen behavior without the SadConsole host.
+- Shared content/editor services remain the mutation boundary; the frontend does not reimplement content semantics for presentation, metadata, default Action Plans, or targeting rules.
+- The new component model gives recurring affordances names and tests: panels, field groups, selectable lists, text/int/choice overlays, confirmation overlays, themes, and focus routing.
+- Targeting now follows shared action-plan-derived projections instead of letting the frontend author arbitrary labels that may not correspond to the selected/default Action Plan.
+- The new path has clearer mode/screen transitions and explicit return destinations, especially for Entity Template -> Action Plan -> Entity Template flows.
+
+Rebuilt code smells / risks:
+
+- `EntityTemplateEditScreen` is accumulating several field-specific concerns in one class. It is much cleaner than the legacy context, but could become the next monolith if inventory and action-plan editing are added directly into it.
+- Overlay dispatch is still string/id driven (`action-plan`, `target-template`, etc.). This is acceptable for the prototype checkpoint but should evolve toward typed field/action descriptors if the number of editable fields grows.
+- Snapshot refresh and selected-index preservation are implemented per screen. This is simple today, but repeated mutation/refresh patterns may deserve a shared helper once Action Plan and inventory editing are added.
+- The renderer still has special cases for some component visuals, such as color samples. This is tolerable while SadConsole glyph behavior is being learned, but component-owned render hints may be preferable later.
+
+Legacy strengths:
+
+- The legacy editor context already had several useful mutation semantics: default Action Plan picker, action-step insert/replace, targeting-rule mutation, inventory brush placement, template create/duplicate/delete, and preview-stale marking.
+- Many edge cases around mutation result handling and stale preview state were already explored there.
+
+Legacy code smells:
+
+- Large classes combine input dispatch, modal state, editor service calls, selection restoration, preview invalidation, and rendering-facing state.
+- The command/menu model is harder to discover visually than the new panel/field model.
+- Some legacy semantics were frontend-shaped rather than UX-shaped, such as editable targeting labels before the action-plan-derived targeting requirement model existed.
+- Reusing legacy behavior in future frontend modes would require extracting logic from monolithic state machines rather than composing smaller UI components.
+
+Assessment: the rebuilt path is architecturally stronger and should remain canonical. The legacy path is best treated as a semantic mine for missing affordances, not a structure to preserve.
+
+### Ease of use
+
+Rebuilt strengths:
+
+- The flow is more discoverable: Scenario Selection offers Play/Edit, Scenario Edit exposes preview/player/entities/action plans, Entity Template Edit exposes presentation/targeting/inventory, and Action Plan Edit has its own screen.
+- Keyboard/controller behavior is consistent: no focus means arrows choose components, Enter focuses, focused components consume arrows/Enter, and Esc releases focus or returns.
+- Field editing uses focused overlays with concise prompts; risky/branching interactions use popup overlays instead of hidden key chords.
+- The new default Action Plan picker matches author expectations better: selecting a plan and editing a plan are separate actions.
+- Targeting UX is now more honest: labels are read-only requirements from the selected/default Action Plan, and unconfigured requirements tell the user what still needs assignment.
+
+Rebuilt ease-of-use gaps:
+
+- Inventory contents/layout editing now has a first cursor-grid implementation; large-grid navigation polish, mouse controls, undo, and advanced replacement rules remain deferred.
+- Action Plan editing now supports insert/replace/delete/reorder for canonical behavior-chain steps; parameter/check/effect editing remains deferred.
+- Save/dirty affordances are surfaced through the Scenario Edit status panel, S hotkey, and 2.5 unsaved-exit modal; preview-stale/rematerialize affordances still need MVP review.
+- Scenario/player-start editing remains mostly review-only in the rebuilt Scenario Edit screen.
+
+Legacy/prototype ease-of-use strengths:
+
+- The legacy context exposed more keyboard shortcuts for power-user mutation flows.
+- Legacy inventory brush and action-step editing proved useful service-backed mutation flows that the rebuilt screens have now largely recaptured with clearer structure.
+
+Legacy/prototype ease-of-use weaknesses:
+
+- Hidden command/menu states and key chords were harder to discover and harder to explain in footer text.
+- Multiple editor modes/modals in the same shell made it easy for the user to be unsure whether arrows were moving a screen selection, a field, a brush, an action-step row, or a picker.
+
+Assessment: the rebuilt path is easier to learn and evaluate, and now covers the core inventory/action-plan authoring loops; advanced action-step parameter/check/effect editing remains out of scope for this checkpoint.
+
+### Modularity/extensibility
+
+Rebuilt strengths:
+
+- Components and overlays are reusable across screens and gallery-testable.
+- `FocusRouter` gives a small shared model for the cross-screen focus contract.
+- `SadConsoleTheme` centralizes color/glyph/border choices and keeps visual language consistent.
+- Screen models are unit-testable without launching SadConsole, which makes iterative UX changes much safer.
+- The service-backed mutation boundary should allow future frontends to share semantics while presenting different UX shells.
+
+Rebuilt extensibility risks:
+
+- Future advanced inventory/action-plan features should continue as dedicated subcomponents/subscreens rather than accumulating as branches inside existing screen classes.
+- Typed command/action descriptors may become necessary before adding many more editable fields, especially action-step parameter editors.
+- The frontend still needs a reusable pattern for mutation result handling: refresh snapshot, preserve selection, mark preview stale, and report status.
+
+Legacy/prototype modularity strengths:
+
+- The legacy code proves that the editor services have enough capability for several missing rebuilt semantics.
+- The intermediate exploration model proved reusable visual panel concepts before the current component library existed.
+
+Legacy/prototype modularity weaknesses:
+
+- Behavior is not naturally reusable because it is bound to a specific shell/context state machine.
+- Adding a new screen or editing mode tends to increase branching in central classes instead of composing smaller pieces.
+
+Assessment: the rebuilt model is substantially more extensible. The next implementation work should preserve that advantage by extracting inventory/action-plan editing as composable modules rather than cloning legacy state-machine branches.
+
+### Parity conclusion
+
+The rebuilt UI is at or above the legacy/prototype direction for visual grammar, navigation consistency, service-backed entity-template presentation/default-plan/targeting edits, and testability.
+
+Remaining major semantic gaps before claiming full MVP editor parity:
+
+1. Preview-stale/rematerialize controls and scenario/player-start editing should be reviewed against the intended MVP definition.
+2. Advanced Action Plan parameter/check/effect editing may be needed later if content authoring requires more than selecting stable behavior-step kinds.
+
+Recommended next checkpoint: review preview-stale/rematerialize controls and scenario/player-start editing needs.

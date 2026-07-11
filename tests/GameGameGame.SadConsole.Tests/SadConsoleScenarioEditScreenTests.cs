@@ -18,7 +18,20 @@ public sealed class SadConsoleScenarioEditScreenTests
         Assert.Contains(components, component => component.Id == "player-start");
         Assert.Contains(components, component => component.Id == "entity-list");
         Assert.Contains(components, component => component.Id == "action-plan-list");
+        Assert.Contains(components, component => component.Id == "save-status");
         Assert.Equal(UiComponentState.Selected, components.Single(component => component.Id == "scenario-preview").State);
+        Assert.Equal(UiComponentState.Saved, components.Single(component => component.Id == "save-status").State);
+    }
+
+    [Fact]
+    public void ScenarioEditDirtySnapshotShowsUnsavedStatus()
+    {
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot(isDirty: true));
+
+        var saveStatus = screen.Components().Single(component => component.Id == "save-status");
+
+        Assert.Equal(UiComponentState.Dirty, saveStatus.State);
+        Assert.Contains(saveStatus.RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default), row => row.Contains("status: dirty"));
     }
 
     [Fact]
@@ -29,6 +42,45 @@ public sealed class SadConsoleScenarioEditScreenTests
         var result = screen.Handle(UiComponentCommand.Cancel);
 
         Assert.Equal(ScenarioEditResultKind.ReturnToScenarioSelection, result.Kind);
+    }
+
+    [Fact]
+    public void ScenarioEditCancelWithoutFocusWhenDirtyOpensUnsavedExitModal()
+    {
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot(isDirty: true));
+
+        var result = screen.Handle(UiComponentCommand.Cancel);
+
+        Assert.Equal(ScenarioEditResultKind.Stay, result.Kind);
+        Assert.Equal("unsaved-exit-confirmation", screen.OverlayComponent()?.Id);
+        Assert.Contains(screen.OverlayComponent()!.RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default), row => row.Contains("Save & Exit"));
+    }
+
+    [Fact]
+    public void ScenarioEditUnsavedExitModalEscReturnsToEditing()
+    {
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot(isDirty: true));
+
+        screen.Handle(UiComponentCommand.Cancel);
+        var result = screen.Handle(UiComponentCommand.Cancel);
+
+        Assert.Equal(ScenarioEditResultKind.Stay, result.Kind);
+        Assert.Null(screen.OverlayComponent());
+        Assert.Contains("Back to editing", result.Message);
+    }
+
+    [Fact]
+    public void ScenarioEditUnsavedExitModalCanExitWithoutSaving()
+    {
+        var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot(isDirty: true));
+
+        screen.Handle(UiComponentCommand.Cancel);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var result = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Equal(ScenarioEditResultKind.ReturnToScenarioSelection, result.Kind);
+        Assert.Contains("without saving", result.Message);
     }
 
     [Fact]
@@ -80,9 +132,9 @@ public sealed class SadConsoleScenarioEditScreenTests
 
     private static ScenarioCatalogEntry DemoEntry() => new("demo.yaml", "demo", "Demo Scenario", "Demo description");
 
-    private static FrontendEditorSnapshot DemoSnapshot() => new(
+    private static FrontendEditorSnapshot DemoSnapshot(bool isDirty = false) => new(
         "demo.yaml",
-        false,
+        isDirty,
         [new FrontendEditorScenarioSummary("demo", "Demo Scenario", "root", "player", "player-1", new GridCoord(2, 3))],
         [
             new FrontendEditorEntityTemplateSummary(

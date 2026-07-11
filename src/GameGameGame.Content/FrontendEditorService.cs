@@ -738,7 +738,96 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         }
     }
 
+    public FrontendEditorMutationResult RemoveActionPlanStep(string actionPlanId, int stepIndex)
+    {
+        var validationError = ValidateActionPlanMutation(actionPlanId);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, GetSnapshot());
+        }
+
+        try
+        {
+            var planId = new ActionPlanTemplateId(actionPlanId);
+            var steps = GetEditableBehaviorSteps(planId);
+            if (stepIndex < 0 || stepIndex >= steps.Count)
+            {
+                return FrontendEditorMutationResult.Failure(
+                    $"Action plan {actionPlanId} step index {stepIndex} is outside editable step range 0..{Math.Max(steps.Count - 1, 0)}.",
+                    GetSnapshot());
+            }
+
+            var removed = steps[stepIndex];
+            Session.Editor.RemoveActionPlanBehaviorStep(planId, stepIndex);
+            return FrontendEditorMutationResult.Success(
+                $"Removed {ActionStepCatalog.Get(removed.Kind).DisplayName} from action plan {actionPlanId} at {stepIndex}. Preview stale until P rematerializes.",
+                GetSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not remove action plan {actionPlanId} step {stepIndex}: {ex.Message}",
+                GetSnapshot());
+        }
+    }
+
+    public FrontendEditorMutationResult MoveActionPlanStep(string actionPlanId, int fromIndex, int toIndex)
+    {
+        var validationError = ValidateActionPlanMutation(actionPlanId);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, GetSnapshot());
+        }
+
+        try
+        {
+            var planId = new ActionPlanTemplateId(actionPlanId);
+            var steps = GetEditableBehaviorSteps(planId);
+            if (fromIndex < 0 || fromIndex >= steps.Count)
+            {
+                return FrontendEditorMutationResult.Failure(
+                    $"Action plan {actionPlanId} from index {fromIndex} is outside editable step range 0..{Math.Max(steps.Count - 1, 0)}.",
+                    GetSnapshot());
+            }
+
+            if (toIndex < 0 || toIndex >= steps.Count)
+            {
+                return FrontendEditorMutationResult.Failure(
+                    $"Action plan {actionPlanId} to index {toIndex} is outside editable step range 0..{Math.Max(steps.Count - 1, 0)}.",
+                    GetSnapshot());
+            }
+
+            Session.Editor.MoveActionPlanBehaviorStep(planId, fromIndex, toIndex);
+            return FrontendEditorMutationResult.Success(
+                $"Moved action plan {actionPlanId} step from {fromIndex} to {toIndex}. Preview stale until P rematerializes.",
+                GetSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not move action plan {actionPlanId} step from {fromIndex} to {toIndex}: {ex.Message}",
+                GetSnapshot());
+        }
+    }
+
     private string? ValidateActionPlanStepMutation(string actionPlanId, ActionPlanBehaviorStepKind kind)
+    {
+        var validationError = ValidateActionPlanMutation(actionPlanId);
+        if (validationError is not null)
+        {
+            return validationError;
+        }
+
+        _ = ActionStepCatalog.Get(kind);
+        if (ActionStepCatalog.IsStableAuthoringStep(kind) is false)
+        {
+            return $"Action step {kind} is not available for canonical authoring.";
+        }
+
+        return null;
+    }
+
+    private string? ValidateActionPlanMutation(string actionPlanId)
     {
         if (string.IsNullOrWhiteSpace(actionPlanId))
         {
@@ -748,12 +837,6 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         if (Session.Document.ActionPlans.ContainsKey(actionPlanId) is false)
         {
             return $"Action plan {actionPlanId} does not exist.";
-        }
-
-        _ = ActionStepCatalog.Get(kind);
-        if (ActionStepCatalog.IsStableAuthoringStep(kind) is false)
-        {
-            return $"Action step {kind} is not available for canonical authoring.";
         }
 
         return null;

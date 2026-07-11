@@ -174,6 +174,7 @@ internal sealed class ComponentGalleryConsole : Console
     {
         "MutedBlue" => Color.SteelBlue,
         "Gold" => Color.Gold,
+        "Brown" => Color.SaddleBrown,
         "HotPink" => Color.HotPink,
         "DarkGray" => Color.DarkGray,
         "Red" => Color.Red,

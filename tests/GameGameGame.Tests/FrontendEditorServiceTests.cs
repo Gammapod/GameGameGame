@@ -674,6 +674,56 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void RemoveActionPlanStepRemovesCanonicalStepThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+            Assert.True(service.InsertActionPlanStep("moveEast", 1, ActionPlanBehaviorStepKind.PickupTarget).IsSuccess);
+
+            var result = service.RemoveActionPlanStep("moveEast", 0);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.Equal([ActionPlanBehaviorStepKind.PickupTarget], plan.ActionSteps.Select(step => step.Kind).ToArray());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void MoveActionPlanStepReordersCanonicalStepsThroughEditorServices()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+            Assert.True(service.InsertActionPlanStep("moveEast", 1, ActionPlanBehaviorStepKind.PickupTarget).IsSuccess);
+
+            var result = service.MoveActionPlanStep("moveEast", 1, 0);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            Assert.True(result.Snapshot.IsDirty);
+            Assert.Contains("Preview stale", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.Equal(
+                [ActionPlanBehaviorStepKind.PickupTarget, ActionPlanBehaviorStepKind.MoveFacing],
+                plan.ActionSteps.Select(step => step.Kind).ToArray());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void ActionPlanStepEditsRejectLegacyStepsAndInvalidIndexes()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());
@@ -685,6 +735,11 @@ public sealed class FrontendEditorServiceTests
             var legacy = service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.AcquireNearestTarget);
             var missing = service.ReplaceActionPlanStep("moveEast", 9, ActionPlanBehaviorStepKind.Backstep);
             var badInsert = service.InsertActionPlanStep("moveEast", -1, ActionPlanBehaviorStepKind.Backstep);
+            var badRemove = service.RemoveActionPlanStep("moveEast", 9);
+            var badMove = service.MoveActionPlanStep("moveEast", 0, 9);
+            Assert.True(service.CreatePassiveActionPlan("Passive Plan").IsSuccess);
+            var passiveRemove = service.RemoveActionPlanStep("passivePlan", 0);
+            var passiveMove = service.MoveActionPlanStep("passivePlan", 0, 0);
 
             Assert.False(legacy.IsSuccess);
             Assert.Contains("not available", legacy.StatusMessage, StringComparison.OrdinalIgnoreCase);
@@ -692,6 +747,14 @@ public sealed class FrontendEditorServiceTests
             Assert.Contains("index", missing.StatusMessage, StringComparison.OrdinalIgnoreCase);
             Assert.False(badInsert.IsSuccess);
             Assert.Contains("index", badInsert.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(badRemove.IsSuccess);
+            Assert.Contains("index", badRemove.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(badMove.IsSuccess);
+            Assert.Contains("index", badMove.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(passiveRemove.IsSuccess);
+            Assert.Contains("only canonical behavior chains", passiveRemove.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.False(passiveMove.IsSuccess);
+            Assert.Contains("only canonical behavior chains", passiveMove.StatusMessage, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

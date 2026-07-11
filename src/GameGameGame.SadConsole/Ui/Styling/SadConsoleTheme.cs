@@ -149,6 +149,7 @@ internal static class SadConsoleKnownColorTokens
         "DarkBlue",
         "Cyan",
         "Gold",
+        "Brown",
         "Orange",
         "Red",
         "HotPink",

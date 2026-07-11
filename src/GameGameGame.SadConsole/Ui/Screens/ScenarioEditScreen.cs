@@ -13,9 +13,13 @@ internal sealed class ScenarioEditScreen
     private readonly List<FrontendEditorActionPlanSummary> _actionPlans;
     private readonly List<string> _diagnostics;
     private readonly FocusRouter _focusRouter;
+    private IUiComponent? _overlay;
     private int _selectedPreviewIndex;
     private int _selectedEntityIndex;
     private int _selectedActionPlanIndex;
+    private const string BackToEditingChoiceId = "back-to-editing";
+    private const string SaveAndExitChoiceId = "save-and-exit";
+    private const string ExitWithoutSavingChoiceId = "exit-without-saving";
 
     private ScenarioEditScreen(
         ScenarioCatalogEntry catalogEntry,
@@ -46,6 +50,7 @@ internal sealed class ScenarioEditScreen
     public string? FocusedComponentId => _focusRouter.FocusedComponentId;
     public int SelectedEntityIndex => _selectedEntityIndex;
     public int SelectedActionPlanIndex => _selectedActionPlanIndex;
+    public bool IsDirty => _snapshot?.IsDirty == true;
 
     public static ScenarioEditOpenResult Open(ScenarioCatalogEntry entry)
     {
@@ -70,10 +75,10 @@ internal sealed class ScenarioEditScreen
         }
     }
 
-    public static ScenarioEditScreen FromSnapshot(ScenarioCatalogEntry entry, FrontendEditorSnapshot snapshot)
+    public static ScenarioEditScreen FromSnapshot(ScenarioCatalogEntry entry, FrontendEditorSnapshot snapshot, FrontendEditorService? service = null)
     {
         var scenario = snapshot.Scenarios.FirstOrDefault(item => item.ScenarioId == entry.ScenarioId);
-        return new ScenarioEditScreen(entry, null, snapshot, scenario, []);
+        return new ScenarioEditScreen(entry, service, snapshot, scenario, []);
     }
 
     public EntityTemplateEditScreen? OpenEntityTemplateEditScreen(string templateId)
@@ -102,13 +107,14 @@ internal sealed class ScenarioEditScreen
             return null;
         }
 
-        return ActionPlanEditScreen.FromSnapshot(_snapshot, actionPlanId, returnDestination);
+        return ActionPlanEditScreen.FromSnapshot(_snapshot, actionPlanId, returnDestination, _service, ReplaceSnapshotAfterChildMutation);
     }
 
     public IReadOnlyList<IUiComponent> Components()
     {
         var components = new List<IUiComponent>
         {
+            SaveStatusPanel(),
             ScenarioPreview(),
             PlayerStartFields(),
             EntityList(),
@@ -128,11 +134,15 @@ internal sealed class ScenarioEditScreen
         return components;
     }
 
+    public IUiComponent? OverlayComponent() => _overlay;
+
     public string FooterText()
     {
         if (FocusedComponentId is null)
         {
-            return "No component focused: arrows choose component. Enter focuses. Esc returns to Scenario Selection.";
+            return IsDirty
+                ? "No component focused: arrows choose component. Enter focuses. S saves. Esc opens unsaved-exit options."
+                : "No component focused: arrows choose component. Enter focuses. S saves. Esc returns to Scenario Selection.";
         }
 
         return FocusedComponentId switch
@@ -147,6 +157,11 @@ internal sealed class ScenarioEditScreen
 
     public ScenarioEditResult Handle(UiComponentCommand command)
     {
+        if (_overlay is ChoicePickerOverlayComponent picker)
+        {
+            return HandleOverlay(picker, command);
+        }
+
         if (FocusedComponentId is { } focused)
         {
             return HandleFocused(focused, command);
@@ -155,11 +170,80 @@ internal sealed class ScenarioEditScreen
         var result = _focusRouter.Handle(command);
         return result.Kind switch
         {
-            FocusRouterResultKind.CancelScreen => ScenarioEditResult.ReturnToScenarioSelection("Returned to Scenario Selection."),
+            FocusRouterResultKind.CancelScreen => IsDirty ? OpenUnsavedExitModal() : ScenarioEditResult.ReturnToScenarioSelection("Returned to Scenario Selection."),
             FocusRouterResultKind.SelectedComponent => ScenarioEditResult.Stay($"Selected component: {result.ComponentId}."),
             FocusRouterResultKind.FocusedComponent => ScenarioEditResult.Stay($"Focused component: {result.ComponentId}."),
             _ => ScenarioEditResult.Stay("Use arrows to choose a component, Enter to focus, Esc to return.")
         };
+    }
+
+    public ScenarioEditResult Save()
+    {
+        if (_service is null)
+        {
+            return ScenarioEditResult.Stay("Save requires a service-backed editor screen.");
+        }
+
+        var result = _service.Save();
+        ReplaceSnapshotAfterChildMutation(result.Snapshot);
+        return ScenarioEditResult.Stay(result.StatusMessage);
+    }
+
+    private ScenarioEditResult OpenUnsavedExitModal()
+    {
+        _overlay = new ChoicePickerOverlayComponent(
+            "unsaved-exit-confirmation",
+            "2.5 Unsaved changes",
+            "You have pending changes. What would you like to do?",
+            [
+                new SelectableListItem(BackToEditingChoiceId, "Back to Editing", "return without saving"),
+                new SelectableListItem(SaveAndExitChoiceId, "Save & Exit", "save changes and return to Scenario Selection"),
+                new SelectableListItem(ExitWithoutSavingChoiceId, "Exit without Saving", "discard pending editor-session changes")
+            ],
+            SadConsoleRect.FromSize(32, 10, 62, 10),
+            0);
+        return ScenarioEditResult.Stay("Unsaved changes: choose Back to Editing, Save & Exit, or Exit without Saving.");
+    }
+
+    private ScenarioEditResult HandleOverlay(ChoicePickerOverlayComponent picker, UiComponentCommand command)
+    {
+        var result = picker.Handle(command);
+        if (result.Kind == FieldEditorOverlayResultKind.Cancelled)
+        {
+            _overlay = null;
+            return ScenarioEditResult.Stay("Back to editing.");
+        }
+
+        if (result.Kind != FieldEditorOverlayResultKind.Confirmed || result.Value is not { } choice)
+        {
+            return ScenarioEditResult.Stay(result.Message);
+        }
+
+        return choice.Id switch
+        {
+            BackToEditingChoiceId => BackToEditing(),
+            SaveAndExitChoiceId => SaveAndExit(),
+            ExitWithoutSavingChoiceId => ScenarioEditResult.ReturnToScenarioSelection("Exited without saving pending changes."),
+            _ => ScenarioEditResult.Stay("Unknown unsaved-exit choice.")
+        };
+    }
+
+    private ScenarioEditResult BackToEditing()
+    {
+        _overlay = null;
+        return ScenarioEditResult.Stay("Back to editing.");
+    }
+
+    private ScenarioEditResult SaveAndExit()
+    {
+        var save = Save();
+        if (IsDirty)
+        {
+            _overlay = null;
+            return save;
+        }
+
+        return ScenarioEditResult.ReturnToScenarioSelection(save.Message);
     }
 
     private ScenarioEditResult HandleFocused(string focused, UiComponentCommand command)
@@ -223,6 +307,15 @@ internal sealed class ScenarioEditScreen
         "action-plan-list" => SelectedActionPlan() is { } plan ? $"Selected action plan: {plan.ActionPlanId}." : "No action plan selected.",
         _ => "Field selection unchanged."
     };
+
+    private PanelComponent SaveStatusPanel() => new(
+        "save-status",
+        IsDirty ? "Unsaved changes" : "Saved",
+        new SadConsoleRect(98, 3, 19, 8),
+        IsDirty
+            ? ["status: dirty", "S: save"]
+            : ["status: saved", "S: save"],
+        IsDirty ? UiComponentState.Dirty : UiComponentState.Saved);
 
     private IUiComponent ScenarioPreview()
     {

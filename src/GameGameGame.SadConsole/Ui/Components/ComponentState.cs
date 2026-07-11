@@ -9,7 +9,9 @@ internal enum UiComponentState
     Selected,
     Focused,
     Disabled,
-    Error
+    Error,
+    Dirty,
+    Saved
 }
 
 internal enum UiComponentCommand
@@ -40,6 +42,8 @@ internal static class UiComponentStateExtensions
         UiComponentState.Focused => theme.Panel.BorderFocused,
         UiComponentState.Disabled => theme.Panel.BorderDisabled,
         UiComponentState.Error => theme.Panel.BorderError,
+        UiComponentState.Dirty => "Brown",
+        UiComponentState.Saved => "Green",
         _ => theme.Panel.BorderUnselected
     };
 
