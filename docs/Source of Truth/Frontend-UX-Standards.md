@@ -151,7 +151,7 @@ The preview should:
 - make it clear that preview state is derived from authored content and is not itself the authored source;
 - eventually support a direct “Launch Simulation” action from the preview.
 
-SadConsole Editor mode uses an explicit manual refresh policy for the first cached browser implementation: `R` refreshes/revalidates the cached authored snapshot through shared editor services and marks any preview stale/not materialized, while `P` explicitly materializes or rematerializes the selected scenario preview. Auto-refresh remains deferred until performance and dirty-document semantics are understood.
+SadConsole Editor mode now treats Save as the primary refresh boundary for authored preview state. Authoring mutations make the editor dirty and imply preview facts may be stale; `S` saves through shared editor services, clears dirty state, and refreshes the current preview boundary. The earlier separate `R` refresh / `P` preview-rematerialize prototype model is legacy reference unless a future richer preview system proves that separate refresh controls are necessary.
 
 ### Simulation -> Editor source jumps
 
@@ -197,6 +197,47 @@ New SadConsole screen architecture should represent screens as reusable componen
 2. Unselected component borders use a low-emphasis highlight color, the currently selected component uses a distinct selection highlight, and the focused component uses a third focus highlight.
 3. Once a component is focused, normal controls are routed to that component until Cancel/release focus returns to screen-level component selection.
 4. Scenario selection uses a scenario list plus a Play/Edit sub-panel. Cancel/Back is the input action, normally Escape, not a separate menu option. Scenario edit uses distinct preview, player-start, entity-list, and action-plan-list components. Entity template and action plan editing should be composed from the reusable editable-field/list/grid component vocabulary rather than shell-owned row strings.
+
+### Editor management patterns
+
+1. Authored definition lists should prefer a pinned create row plus a per-item action modal.
+   - Entity templates: `Create New Template` is pinned at the top of 2.3. Existing templates open 2.3.1 with Edit, Duplicate, and Delete.
+   - Action plans: `Create New Action Plan` is pinned at the top of 2.4. Existing action plans open 2.4.1 with Edit, Duplicate, and Delete.
+   - Duplicate asks for a new name before creating and should route immediately into the duplicated definition's editor screen.
+   - Delete is destructive and should use a confirmation modal.
+
+2. Save/dirty status should be prominent at the Scenario Edit level.
+   - Dirty/unsaved state uses a Brown warning treatment.
+   - Saved/unmodified state uses a Green success treatment.
+   - `S` is the persistent save shortcut except while text entry is active.
+   - Exiting a dirty Scenario Edit screen opens an unsaved-changes modal with Back to Editing, Save & Exit, and Exit without Saving. Esc from that modal returns to editing.
+
+### Dense editor submodes
+
+1. Dense spatial and sequence editors may intentionally use visible hotkey-first controls.
+   - This is an exception to the ordinary “directional + Select reaches everything” preference.
+   - The exception is appropriate when Enter-only menus would make high-frequency edits tedious, such as placing/deleting/moving cells in an inventory grid or inserting/deleting/moving action-plan steps.
+   - The current controls must be visible in contextual help/footer text or a help panel.
+   - Esc remains cancel/back for the current submode.
+   - Mutations must still go through shared editor/content services.
+
+2. Inventory grid editor standards:
+   - Arrow keys move a highlighted cursor; cells remain fixed in place.
+   - Enter places the current brush at the cursor.
+   - Delete removes the occupant at the cursor; Backspace may be accepted as an alias while help text says Delete.
+   - Space enters/places move mode.
+   - C copies the cursor occupant's template into the brush.
+   - Tab opens the brush picker; previous/next brush cycling is deferred unless template sets become small enough for adjacency to be meaningful.
+   - The currently highlighted cell should always be inspected in a visible detail panel rather than requiring an inspection hotkey.
+
+3. Action-plan sequence editor standards:
+   - 4.1 lists existing steps as numbered rows.
+   - Enter on a highlighted step opens 4.1.1, the primitive picker, and selecting a primitive replaces that step.
+   - Delete/Backspace removes the highlighted step and collapses later steps downward.
+   - I opens 4.1.2, an insert above/below picker, then opens 4.1.1 to choose the inserted primitive.
+   - Space enters move mode; Up/Down swaps the step; Enter or Space confirms placement.
+   - 4.2 describes the currently highlighted item, whether that highlight is in 4.1 or in the 4.1.1 primitive picker.
+   - Tab, R, `<`, and `>` are intentionally not part of the current action-plan editor interaction model.
 
 ### Deferred high-risk debugger ideas
 

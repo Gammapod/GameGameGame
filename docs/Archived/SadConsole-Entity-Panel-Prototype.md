@@ -12,7 +12,7 @@ Related source of truth:
 
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records broad frontend UX invariants.
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the entity-panel UX model.
-- `docs/Plans/Gamma-Frontend-Demo-Plan.md` records the current tester/demo frontend direction.
+- `docs/Archived/Gamma-Frontend-Demo-Plan.md` records the historical tester/demo frontend direction that was later superseded by the Gamma Editor MVP plan.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented cross-layer capability support.
 
 ## Goal

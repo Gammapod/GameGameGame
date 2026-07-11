@@ -27,7 +27,7 @@ The release is not trying to ship a polished final editor, a full replacement fo
 Target statement:
 
 - A user can open authored content in SadConsole Editor mode.
-- A user can browse and understand scenarios, templates, action plans, validation diagnostics, and generated YAML/diff information without opening Avalonia or raw YAML first.
+- A user can browse, understand, and perform core service-backed edits for scenarios' templates, inventory layouts, and action plans without opening Avalonia or raw YAML first.
 - A user can materialize a selected scenario as a turn-0 preview, launch Simulation mode from that preview, play/debug through shared runtime services, and return to the same editor context.
 - Editor-like workflows consume shared content/editor services; Simulation consumes shared session/action/affordance/log/panel services.
 - Runtime mutation, live hot-editing, and broad new gameplay mechanics remain deferred unless explicitly promoted by an Editor MVP blocker.
@@ -50,7 +50,7 @@ These define the Editor MVP release bar.
 2. Browse entity templates and authored carried inventory layouts at a useful summary level.
 3. Browse action plans at a useful summary level, including canonical behavior-chain/action-step names where available.
 4. Show references that are already available through shared content/editor services when practical, especially scenario -> root/player/template/action-plan relationships.
-5. Keep the first browser read-only except for narrowly selected, service-backed edits promoted in a later phase.
+5. Use the componentized SadConsole editor as the default authoring surface for supported service-backed edits: template presentation/default-plan/targeting/inventory, action-plan step sequence edits, and template/action-plan create/duplicate/delete.
 
 ### Validation and authoring feedback
 
@@ -62,7 +62,7 @@ These define the Editor MVP release bar.
 ### YAML and diff visibility
 
 1. Show generated/canonical YAML preview for the opened content/session when the underlying service supports it.
-2. Show a diff/dirty-state surface sufficient to understand pending authored-content changes.
+2. Show a diff/dirty-state surface sufficient to understand pending authored-content changes; current componentized editor baseline includes prominent dirty/saved status, `S` save, and unsaved-exit confirmation.
 3. Treat YAML/diff views as inspection/confirmation surfaces, not as the primary mutation model for MVP.
 
 ### Scenario preview
@@ -71,7 +71,7 @@ These define the Editor MVP release bar.
 2. Render the preview using the same entity-panel/grid/glyph standards as Simulation where practical.
 3. Show materialization diagnostics and capability gaps in context.
 4. Make it clear that preview state is derived runtime state, not the authored source itself.
-5. Use manual refresh for the first preview implementation unless a later plan explicitly promotes auto-refresh semantics.
+5. Treat Save as the first preview-refresh boundary: authored mutations make content dirty/stale, and saving clears that state and refreshes preview facts. A richer preview surface may refine this later.
 
 ### Simulation handoff and return
 
@@ -95,7 +95,7 @@ These define the Editor MVP release bar.
 
 These are valuable, but should not block Editor MVP unless user testing shows they are essential.
 
-1. First service-backed content mutations, such as editing display name/glyph/color, assigning default plans, or moving authored carried entities.
+1. Rich action-plan parameter/check/effect editing after a typed frontend projection/mutation contract is designed.
 2. Rich action-plan preview panels with expanded step details, slot reads/writes, fallback summaries, and legacy/canonical shape classification.
 3. Semantic reference browser: list all references to a template/action plan and jump between them.
 4. Saved runlogs or history playback integrated into Editor mode.
@@ -110,6 +110,8 @@ These are valuable, but should not block Editor MVP unless user testing shows th
 13. Runtime debug mutation mode, clearly separated from authored-content editing.
 14. Live hot-edit/re-materialize while Simulation is paused.
 15. Packaging/distribution polish for external tester builds.
+16. Scenario root/player-start editing if shared editor APIs expose safe mutations and validation.
+17. Per-carried-instance initial facing/state in inventory authoring, once shared content/editor/materialization support exists.
 
 ## Explicit non-goals for Gamma Editor MVP
 
@@ -157,20 +159,20 @@ Exit criteria:
 
 - A scenario can be selected, launched into Simulation, and return to an Editor context without losing the selected content/scenario identity.
 
-### Phase 2: Read-only browser and diagnostics
+### Phase 2: Browser, diagnostics, and core authoring parity
 
-Goal: make Editor mode useful before adding mutation workflows.
+Goal: make Editor mode useful for browsing and core service-backed authoring before full Simulation handoff.
 
 Scope:
 
 1. Browse scenarios, templates, carried layouts, and action plans.
 2. Show validation diagnostics grouped by authored object where possible.
 3. Show YAML preview, dirty state, and available diff surface.
-4. Keep all mutation controls disabled/absent unless backed by existing editor services and explicitly promoted.
+4. Support the completed core authoring set through shared editor services: template presentation/default-plan/targeting/inventory, action-plan step sequence edits, template/action-plan create/duplicate/delete, save/dirty/unsaved-exit.
 
 Exit criteria:
 
-- A user can answer “what content is in this file and what is invalid?” from SadConsole without opening YAML or Avalonia.
+- A user can answer “what content is in this file and what is invalid?” and perform core service-backed template/action-plan/inventory edits from SadConsole without opening YAML or Avalonia.
 
 ### Phase 3: Scenario preview
 

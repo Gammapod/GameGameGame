@@ -15,12 +15,13 @@ Related source of truth:
 - `docs/Archived/Unified-Simulation-History-Log-Rollback.md` records the completed shared history/log/rollback sprint.
 - `docs/Archived/SadConsole-Prototype-Assessment.md` records UX and technical-debt findings from the spike.
 - `docs/Archived/SadConsole-Entity-Panel-Prototype.md` records the prototype's implementation sequence and findings log.
+- `docs/Archived/SadConsole-UI-Pattern-Discovery-Sprint.md` records the completed componentized editor rebuild/parity sprint.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 
 ## Direction
 
-SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The existing monolithic SadConsole shell is now legacy/deprecated reference code; the near-term goal is a cleaner componentized SadConsole architecture over shared engine/content/headless contracts, not a polished final game UI.
+SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The componentized SadConsole editor is now the default launch path. The existing monolithic SadConsole shell remains available as `--beta-editor` legacy/deprecated reference code.
 
 Console remains valuable, but its long-term role should shift toward fallback CLI tooling, smoke/debug paths, scenario scanning, legacy scenario recording, and simple developer commands. New rich UI investment should prefer SadConsole or shared frontend-neutral services unless a task explicitly targets Console fallback behavior.
 
@@ -81,7 +82,20 @@ The completed shared-service foundation and unified simulation history/log/rollb
 
 Implemented support status now lives in `docs/Source of Truth/Engine-Editor-Capabilities.md`; stable behavior/test traces live in `docs/Source of Truth/invariants.md`.
 
-Remaining active work should be grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
+Remaining active work should be grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. The editor parity slice is complete enough for service-backed template/action-plan/inventory authoring; next work should focus on preview quality, Simulation handoff/return, provenance/source jumps, and capability gaps discovered by the editor sprint. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
+
+Completed componentized editor parity slice:
+
+- Default SadConsole launch opens the componentized editor UI; legacy shell is `--beta-editor`.
+- Scenario Edit supports save/dirty/unsaved-exit, template/action-plan create/duplicate/delete, and service-backed navigation to dedicated editors.
+- Entity Template Edit supports presentation, default action plan, targeting requirements/rules, inventory metadata, and inventory-grid contents/layout editing.
+- Action Plan Edit supports canonical behavior-step insert/replace/delete/move through shared editor services.
+
+Known capability gaps promoted from the parity sprint:
+
+- Scenario root/player-start editing likely needs shared editor API support before becoming editable fields.
+- Per-carried-instance initial facing/state should be owned by inventory/placement authoring, not exposed as template-level UI; this needs shared content/editor/materialization support.
+- Action-step parameter/check/effect editing needs a typed frontend projection and mutation contract before Screen 4 can expose it cleanly.
 
 ### Stage 6: SadConsole canonical debug browser shell
 
@@ -203,6 +217,7 @@ Promote or consider while planning SadConsole work:
 - Entity/location/container indexes if frontend browsing or large scenarios create performance pressure.
 - Behavior/action-plan templates, usage display, and future editor/browser workflows.
 - Entity panel chain UX, collapsible panels, keyboard mode model, target highlighting, mouse layer, facing/target visualization, reusable layout geometry, runlog stepper, and integrated editor affordances.
+- Scenario root/player-start editing, per-instance carried state/facing, and typed action-step parameter editing as shared editor capability gaps before richer authoring UI is added.
 - No-valid-target prompt suppression for current direct-control prompt modes, while preserving shared command execution as authoritative.
 - SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs.
 - Saved runlogs / runlog stepper backed by shared history.

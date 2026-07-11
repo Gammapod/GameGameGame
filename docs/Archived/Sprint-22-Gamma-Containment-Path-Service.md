@@ -7,7 +7,7 @@ Related source of truth:
 - `docs/Source of Truth/invariants.md` records stable behavior contracts and test traces.
 - `docs/Source of Truth/testing-charter.md` records TDD expectations.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented support status after this plan.
-- `docs/Plans/Gamma-Frontend-Demo-Plan.md` records the active Gamma frontend/demo direction and follow-up stages.
+- `docs/Archived/Gamma-Frontend-Demo-Plan.md` records the historical Gamma frontend/demo direction and follow-up stages that were later superseded by the Gamma Editor MVP plan.
 
 ## Goal
 

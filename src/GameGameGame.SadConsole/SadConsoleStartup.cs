@@ -2,7 +2,7 @@ using GameGameGame.Content;
 
 namespace GameGameGame.SadConsoleApp;
 
-internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchNewScenarioSelection = false)
+internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchLegacyBetaEditor = false)
 {
     public static SadConsoleStartup FromArgs(string[] args)
     {
@@ -15,7 +15,19 @@ internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession,
         {
             var filteredArgs = args.Where(arg => !string.Equals(arg, "--new-scenario-selection", StringComparison.OrdinalIgnoreCase)).ToArray();
             var scenarioCatalog = ResolveScenarioCatalog(filteredArgs);
-            return new SadConsoleStartup(null, scenarioCatalog, null, LaunchNewScenarioSelection: true);
+            return new SadConsoleStartup(null, scenarioCatalog, null);
+        }
+
+        if (args.Contains("--beta-editor", StringComparer.OrdinalIgnoreCase))
+        {
+            var filteredArgs = args.Where(arg => !string.Equals(arg, "--beta-editor", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (filteredArgs.Length >= 2 && !filteredArgs[0].StartsWith("--", StringComparison.Ordinal))
+            {
+                return new SadConsoleStartup(null, null, null, filteredArgs[0], filteredArgs[1], LaunchLegacyBetaEditor: true);
+            }
+
+            var scenarioCatalog = ResolveScenarioCatalog(filteredArgs);
+            return new SadConsoleStartup(null, scenarioCatalog, null, LaunchLegacyBetaEditor: true);
         }
 
         if (args.Length >= 2 && !args[0].StartsWith("--", StringComparison.Ordinal))
@@ -73,5 +85,5 @@ internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession,
         return new ScenarioCatalogResult([], [Usage]);
     }
 
-    private const string Usage = "Usage: GameGameGame.SadConsole <content-file> <scenario-id>, --content <file>, --discover <folder>, --manifest <manifest>, --gallery, or --new-scenario-selection.";
+    private const string Usage = "Usage: GameGameGame.SadConsole [--content <file> | --discover <folder> | --manifest <manifest>], --gallery, or --beta-editor [<content-file> <scenario-id>].";
 }

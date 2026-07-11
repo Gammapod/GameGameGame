@@ -1,6 +1,6 @@
 # SadConsole UI Pattern Discovery Sprint
 
-Status: Active planning draft for the next frontend sprint.
+Status: Completed / archived. This sprint replaced the legacy SadConsole editor prototype with the componentized default SadConsole editor and promoted durable UX decisions into source-of-truth docs.
 
 Read when:
 
@@ -357,16 +357,18 @@ Status: Started.
 Current demo command:
 
 ```text
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+dotnet run --project src/GameGameGame.SadConsole
 ```
 
-Optional catalog arguments may be combined with the flag, for example:
+Optional catalog arguments may be supplied directly, for example:
 
 ```text
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection --manifest <manifest>
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection --discover <folder>
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection --content <file>
+dotnet run --project src/GameGameGame.SadConsole -- --manifest <manifest>
+dotnet run --project src/GameGameGame.SadConsole -- --discover <folder>
+dotnet run --project src/GameGameGame.SadConsole -- --content <file>
 ```
+
+The deprecated legacy/beta editor shell is available only through `--beta-editor`.
 
 Demoable behavior:
 
@@ -392,7 +394,7 @@ Status: Started.
 Demo path:
 
 ```text
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+dotnet run --project src/GameGameGame.SadConsole
 ```
 
 Then select a scenario, press Enter, choose Edit, and press Enter.
@@ -427,7 +429,7 @@ Status: Started.
 Demo path:
 
 ```text
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+dotnet run --project src/GameGameGame.SadConsole
 ```
 
 Then select a scenario, choose Edit, focus the Defined entities list, select an entity, and press Enter.
@@ -473,7 +475,7 @@ Status: Started.
 Demo path:
 
 ```text
-dotnet run --project src/GameGameGame.SadConsole -- --new-scenario-selection
+dotnet run --project src/GameGameGame.SadConsole
 ```
 
 Then either:

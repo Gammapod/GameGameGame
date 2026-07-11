@@ -107,4 +107,25 @@ Each decision should include:
 - **Decision:** The existing monolithic SadConsole shell/list-detail implementation is deprecated as legacy reference. New SadConsole exploration work should build reusable, testable screen/component models first, then attach SadConsole rendering and input adapters.
 - **Reasoning:** The current implementation proved catalog launch, editor-service-backed mutation, preview/materialization, Simulation launch/return, and runtime play/debug paths, but it stayed too close to Console-inspired row-list rendering and accumulated too much shell-owned drawing/input behavior.
 - **Implications:** Keep legacy behavior available for reference while replacing it with clean architecture slices. Durable screens should model selection, focused components, contextual controls, and authored/runtime data boundaries explicitly. Do not bypass shared editor/content/runtime services while rebuilding.
-- **Status:** Active / exploration sprint started.
+- **Status:** Active / implemented. The componentized SadConsole editor is now the default launch path; the legacy shell is available only as `--beta-editor` reference.
+
+### FED-013: Save is the editor refresh boundary for authored preview state
+
+- **Decision:** In the componentized SadConsole Editor, dirty authored content and stale preview state are treated as one user-facing condition. Saving clears dirty state and refreshes the current scenario preview boundary.
+- **Reasoning:** The separate legacy `R` refresh / `P` preview-rematerialize model was useful while browsing was read-only, but became unnecessary friction once service-backed mutation and save affordances were present. Authors need one obvious recovery action for “my editor view/preview is stale.”
+- **Implications:** The Scenario Edit save-status panel, `S` hotkey, and unsaved-exit modal are the canonical first Save/Preview UX. Future richer preview rendering may refine what is refreshed, but should preserve Save as the primary user-facing stale-state resolution unless performance or shared-service constraints force a split.
+- **Status:** Active.
+
+### FED-014: Dense spatial and sequence editors may use visible hotkey-first controls
+
+- **Decision:** The normal directional + Select/Cancel model remains preferred, but dense spatial or ordered-sequence authoring modes may expose high-frequency actions through visible hotkeys when Enter-only operation would be clumsy. Current approved examples are inventory grid editing and action-plan sequence editing.
+- **Reasoning:** Large-grid editing and ordered step editing need fast place/delete/move/insert operations. Forcing every operation through a Submit-only menu slows authoring and makes the UI less usable.
+- **Implications:** Hotkey-first modes must clearly show contextual controls, keep Esc as cancel/back, and route mutations through shared editor services. These exceptions should be explicit and local to the submode; do not use them as permission to hide ordinary durable workflows behind undocumented keys.
+- **Status:** Active.
+
+### FED-015: Content-management actions use pinned create rows plus per-item action modals
+
+- **Decision:** Scenario Edit lists that manage authored definitions use a pinned Create row and per-existing-item action modal. Entity templates use `2.3 Create New Template` plus `2.3.1 Edit/Duplicate/Delete`; action plans use `2.4 Create New Action Plan` plus `2.4.1 Edit/Duplicate/Delete`.
+- **Reasoning:** This keeps creation discoverable without requiring a global command palette, and prevents selection of an existing definition from immediately committing to edit when duplicate/delete may be intended.
+- **Implications:** Duplicate should request a new name before creating and then open the duplicate. Delete should use a confirmation modal before calling shared editor services. Future lists of authored definitions should prefer the same pattern unless a more scalable management surface is designed.
+- **Status:** Active.

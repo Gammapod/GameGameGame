@@ -103,12 +103,13 @@ Recently completed supporting documents:
 - [Sprint 20: Scenario Run and Report Polish](../Archived/Sprint-20-Scenario-Run-Report-Polish.md)
 - [Sprint 21: Console Scenario Catalog](../Archived/Sprint-21-Console-Scenario-Catalog.md)
 - [Sprint 22: Gamma Containment Path Service](../Archived/Sprint-22-Gamma-Containment-Path-Service.md)
+- [Gamma Frontend Demo Plan](../Archived/Gamma-Frontend-Demo-Plan.md)
+- [SadConsole UI Pattern Discovery Sprint](../Archived/SadConsole-UI-Pattern-Discovery-Sprint.md)
 - [Beta Content Exploration Plan](../Archived/Beta-Content-Exploration-Plan.md)
 
 Active Gamma/frontend planning documents:
 
 - [Gamma Editor MVP Plan](Gamma-Editor-MVP-Plan.md)
-- [Gamma Frontend Demo Plan](Gamma-Frontend-Demo-Plan.md)
 - [SadConsole Frontend Roadmap](SadConsole-Frontend-Roadmap.md)
 
 Immediate Gamma priority:
@@ -121,7 +122,7 @@ Immediate Gamma priority:
 
 Planned next sprint:
 
-- Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` paved the initial frontend contracts: frontend UX source-of-truth docs, Content's frontend-neutral `PlayableScenarioLauncher`, Core's `ControlledActorCommandService`, Core's `ControlledActorAffordanceService`, controlled-command outcome/log projection, Content's first-pass `EntityPanelProjectionService`, and the shared simulation history/log/rollback foundation. The selected Gamma work is now the Editor MVP sequence in `docs/Plans/Gamma-Editor-MVP-Plan.md`: align/inventory, establish Editor context shell, add read-only browser and diagnostics, add scenario preview, complete Simulation handoff/return with source-jump seed, then harden for release. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole editor/debug-browser path unless explicitly re-selected as fallback polish.
+- Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` paved the initial frontend contracts, and the archived SadConsole UI pattern discovery sprint rebuilt the editor as the default componentized SadConsole UI with core service-backed authoring parity. The selected Gamma work now continues from `docs/Plans/Gamma-Editor-MVP-Plan.md`: improve turn-0 preview quality, complete Simulation handoff/return from the componentized editor, add a first provenance-backed source jump, and then harden for release. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole editor/debug-browser path unless explicitly re-selected as fallback polish.
 
 Gamma/editor target statement:
 
@@ -136,9 +137,9 @@ Gamma/editor promoted stages:
 1. Completed in Sprint 22: read-only Core inspection path service that produces cycle-safe structural containment paths for entities, including upward, root-relative, max-depth, and shared-root queries.
 2. SadConsole roadmap Stage 0/1 contract paving: frontend UX source-of-truth cleanup, debt inventory, and shared playable-session launch extraction.
 3. Shared controlled action / Action Choice-compatible command result, action target/affordance queries, structured outcome/log projection, and entity panel projection.
-4. SadConsole Editor MVP Phase 1: Editor context shell and Simulation return path.
-5. SadConsole Editor MVP Phase 2: read-only content browser, validation diagnostics, YAML/diff visibility.
-6. SadConsole Editor MVP Phase 3/4: turn-0 scenario preview, Simulation handoff, history/log continuity, and first provenance-backed source jump.
+4. Completed componentized SadConsole Editor shell: default SadConsole launch now opens the clean editor UI, with legacy `--beta-editor` retained as reference.
+5. Completed service-backed Editor authoring parity slice: entity template presentation/default plan/targeting/inventory editing, action-plan step insert/replace/delete/move, template/action-plan create/duplicate/delete, save/dirty/unsaved-exit behavior, and Save-as-preview-refresh boundary.
+6. Next Gamma work: turn-0 scenario preview quality, Simulation handoff/return over the new componentized editor, history/log continuity, and first provenance-backed source jump.
 7. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy entries, or naming issues make it necessary.
 
 Deferred to the consolidated frontend bucket:
@@ -445,8 +446,10 @@ Priority order:
 7. Saved runlog/playback UX: test inspector or runlog stepper with forward/back controls, plus richer visual state debugging backed by shared history.
 8. History playback / SadConsole-rendered visual export for shareable debug artifacts.
 9. Distribution for SadConsole feedback builds; browser/HTML5 hosting is deferred unless a later frontend-technology checkpoint re-promotes it.
-10. Future integrated editor affordances: `Run in SadConsole` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
-11. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
+10. Componentized Editor -> Preview -> Simulation handoff: launch/play from the new editor surface, return to the same editor context, and add provenance-backed source jumps.
+11. Future integrated editor affordances: `Run in SadConsole` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
+12. Editor capability gaps discovered by the parity sprint: scenario root/player-start editing; per-carried-instance initial facing/state in inventory; typed action-step parameter/check/effect projection and mutation for Screen 4.
+13. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
 12. Retire or replace the current Avalonia GUI only when the future frontend/editor surface is viable.
 
 SadConsole prototype findings coverage snapshot:

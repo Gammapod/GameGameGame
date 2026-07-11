@@ -41,19 +41,15 @@ Do not read when:
    - Active Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. This is the next-sprint selection authority for Gamma work.
 7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
    - Broader roadmap for paving frontend contracts and promoting SadConsole as the canonical debug/editor browser direction.
-8. `docs/Plans/SadConsole-UI-Pattern-Discovery-Sprint.md`
-   - Active frontend sprint plan for replacing the useful SadConsole editor prototype with reusable SadConsole UI component patterns and mockup-driven visual layouts.
-9. `docs/Plans/Gamma-Frontend-Demo-Plan.md`
-   - Supporting Gamma tester/demo context. Console-specific next work is no longer the default unless explicitly re-selected.
-10. `docs/Plans/Beta-Capability-Gap-Log.md`
+8. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-11. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+9. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
    - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-12. `docs/Plans/Sprint-Retrospective.md`
-    - Recent process observations and open retrospective questions.
-13. `docs/Archived/`
+10. `docs/Plans/Sprint-Retrospective.md`
+     - Recent process observations and open retrospective questions.
+11. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
-     - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
+     - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current strategic priority
 
@@ -62,11 +58,10 @@ Alpha MVP is complete and Beta produced several authored gameplay vignettes plus
 ## Current highest-priority backlog buckets
 
 1. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
-2. SadConsole UI pattern discovery and editor recreation, as described in `docs/Plans/SadConsole-UI-Pattern-Discovery-Sprint.md`.
-3. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
-4. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
-5. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
-6. Future integrated game/editor frontend requirements discovered from SadConsole/Gamma feedback.
+2. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
+3. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
+4. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
+5. Future integrated game/editor frontend requirements discovered from SadConsole/Gamma feedback.
 6. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
 7. Inventory, containment, and transfer mechanics.
 8. Spawning, creation, and template materialization.
