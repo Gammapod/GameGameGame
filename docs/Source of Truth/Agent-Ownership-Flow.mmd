@@ -1,0 +1,87 @@
+swimlane-beta LR
+%% Intended to be a BPMN-style ownership chart, not define the full responsibilities within an agent's ownership.
+%% Each workflow is started and overseen by a human, not fully autonomous.
+ 
+
+  subgraph frontend["Swimlane: frontend-owner"]
+    frontend_request(["`Visuals requested
+    (by human or agent)`"])
+
+    frontend-owner[/"`frontend-owner
+      Model: GPT-5.5
+      Read: SadConsole, Tests
+      Write: SadConsole, Tests`"\]
+
+    visuals_start(("Start: New Visuals"))
+    contract?{"Clear simulation model exposed?"}
+    component_edit[["Create/change component(s)"]]
+    visuals_end((("End: New Visuals")))
+    request_feature1(["New Feature Request"])
+  end
+  frontend_request --> visuals_start
+  visuals_start --> contract?
+  contract? -->|yes| component_edit
+  contract? -.->|no| request_feature1
+  component_edit --> visuals_end
+
+  subgraph content["Swimlane: content-editor"]
+    gameplay_request(["`Scenario requested
+    (by human or agent)`"])
+
+    content-data[/"`content-editor
+      Model: GPT-5.5
+      Read: Editor, Content
+      Write: Editor, Content`"\]
+
+    scenario_start(("Start: New Scenario"))
+    create_scenario[["Create scenario"]]
+    %% Including templates, presentation, action plans, validation, etc
+    capability_gap?{"Capability Gap?"}
+    scenario_end((("End: New Scenario")))
+    request_feature2(["New Feature Request"])
+  end
+  gameplay_request --> scenario_start
+  scenario_start --> capability_gap?
+
+  capability_gap? -.->|"yes"| request_feature2
+  capability_gap? -->|"no"| create_scenario
+  create_scenario --> scenario_end
+
+
+  
+  subgraph core["Swimlane: core-owner"]
+    feature_request(["`Feature requested
+    (by human or agent)`"])
+
+    core-owner[/"`core-owner
+      Model: GPT-5.5
+      Read: all
+      Write: Core, Editor, Tests`"\]
+    feature_start(("Start: New Feature"))
+    planning?{"`On roadmap?
+    Implementation planned?`"}
+  
+    prototype[["Prototyping Spike"]]
+    viable?{"Is the feature viable?"}
+    dont((("Stop")))
+    prototype --> viable?
+    viable? --> |no| dont
+    viable? --> |yes| tdd
+
+    tdd["Implement Feature"]
+    
+    frontend?{"New visuals needed?"}
+    gameplay?{"Needs authored content/scenario coverage?"}
+    feature_end((("End: New Feature")))
+    request_scenario(["New Scenario Request"])
+    request_visuals(["New Visuals Request"])
+  end
+  feature_request --> feature_start
+  feature_start --> planning?
+  planning? -->|yes| tdd
+  planning? -->|no| prototype
+  tdd --> gameplay?
+  gameplay? -.->|yes| request_scenario
+  gameplay? -->|no| frontend?
+  frontend? -.->|yes| request_visuals
+  frontend? -->|no| feature_end

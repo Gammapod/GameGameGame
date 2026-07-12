@@ -4,7 +4,7 @@ Status: Source of truth for frontend-facing presentation standards, design princ
 
 Read when:
 
-- designing Console, SadConsole, or future frontend presentation;
+- designing SadConsole or future frontend presentation;
 - deciding whether a UI treatment is consistent with the entity-panel/debug-browser model;
 - evaluating Stage 7+ information-density, log, glyph, cursor, highlighting, or panel changes;
 - converting playtest/frontend feedback into UI standards or backlog items.

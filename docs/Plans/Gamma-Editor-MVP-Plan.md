@@ -27,7 +27,7 @@ The release is not trying to ship a polished final editor, a full replacement fo
 Target statement:
 
 - A user can open authored content in SadConsole Editor mode.
-- A user can browse, understand, and perform core service-backed edits for scenarios' templates, inventory layouts, and action plans without opening Avalonia or raw YAML first.
+- A user can browse, understand, and perform core service-backed edits for scenarios' templates, inventory layouts, and action plans without opening raw YAML first.
 - A user can materialize a selected scenario as a turn-0 preview, launch Simulation mode from that preview, play/debug through shared runtime services, and return to the same editor context.
 - Editor-like workflows consume shared content/editor services; Simulation consumes shared session/action/affordance/log/panel services.
 - Runtime mutation, live hot-editing, and broad new gameplay mechanics remain deferred unless explicitly promoted by an Editor MVP blocker.
@@ -116,7 +116,7 @@ These are valuable, but should not block Editor MVP unless user testing shows th
 ## Explicit non-goals for Gamma Editor MVP
 
 - Broad new gameplay mechanics by default, including template spawning, reactions, scheduler/speed, combat, or generalized runtime indexing.
-- Avalonia GUI parity.
+- Retired Avalonia GUI parity.
 - Direct YAML editing as the primary editor interaction.
 - Frontend-only authoring concepts that cannot be represented by Core/Content/Editor services.
 - Live hot-editing while Simulation continues running.
@@ -142,7 +142,7 @@ Exit criteria:
 
 Current readiness note:
 
-- Initial content/editor service readiness exists through `FrontendEditorService`, which exposes SadConsole-consumable read-only snapshots and turn-0 scenario previews over `ContentEditorSession`/`ContentEditorService` while leaving Avalonia view models as reference-only and preserving `AgentContentEditorApi` as a parallel editing surface.
+- Initial content/editor service readiness exists through `FrontendEditorService`, which exposes SadConsole-consumable read-only snapshots and turn-0 scenario previews over `ContentEditorSession`/`ContentEditorService` while preserving `AgentContentEditorApi` as a parallel editing surface.
 
 ### Phase 1: Editor context shell
 
@@ -172,7 +172,7 @@ Scope:
 
 Exit criteria:
 
-- A user can answer “what content is in this file and what is invalid?” and perform core service-backed template/action-plan/inventory edits from SadConsole without opening YAML or Avalonia.
+- A user can answer “what content is in this file and what is invalid?” and perform core service-backed template/action-plan/inventory edits from SadConsole without opening YAML.
 
 ### Phase 3: Scenario preview
 

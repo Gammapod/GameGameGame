@@ -81,7 +81,7 @@ Status: Living retrospective notes from the current wrap-up.
 - Add a lightweight prioritization check during wrap-up: did the ad-hoc work indicate the roadmap is stale, or did it merely surface a tactical bottleneck inside an existing bucket?
 - Generated/cache files under content directories should have an explicit policy before broad use: checked-in curated artifact, local cache ignored by git, or generated output outside source content.
 
-- For future showcase sprints, replace the old `record-scenario` GIF step with saved runlog/history playback or SadConsole-rendered export when available; until then, use the legacy recorder only when a shareable visual artifact is specifically needed.
+- For future showcase sprints, replace the old `record-scenario` GIF step with saved runlog/history playback or SadConsole-rendered export; the Console command is removed, while the legacy recorder service should only remain as long as tests or explicit adapters still need it.
 - When two primitives are symmetric variants, request them together to reduce duplicated coordination and documentation effort.
 - For complex fallback-chain showcases, consider planning both a player-facing/readable scenario and a small mechanical proof scenario from the start.
 - Always record scenario GIFs to an external temp/artifact directory, not a repository-local `debug/` folder, unless the artifact is intentionally being checked in.

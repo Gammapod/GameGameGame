@@ -1,6 +1,5 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
-using GameGameGame.ConsoleApp;
 
 namespace GameGameGame.Tests;
 
@@ -72,6 +71,32 @@ public sealed class ConsoleScenarioLaunchTests
 
             Assert.Equal("Shows the described scenario.", Assert.Single(discovered.Entries).Description);
             Assert.Equal("Shows the described scenario.", Assert.Single(loaded.Entries).Description);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ScenarioCatalogScanServiceDiscoversFolderAndWritesManifest()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var contentPath = Path.Combine(directory, "Scanned.yaml");
+            var manifestPath = Path.Combine(directory, "ScannedManifest.yaml");
+            File.WriteAllText(contentPath, CreateConsoleDocument("catalog-scanned", "Catalog Scanned", new GridCoord(0, 0)).SaveYaml());
+
+            var result = ScenarioCatalogScanService.Scan(directory, manifestPath);
+
+            Assert.Equal(directory, result.FolderPath);
+            Assert.Equal(manifestPath, result.OutputPath);
+            Assert.True(result.Succeeded, string.Join(Environment.NewLine, result.Diagnostics));
+            Assert.Equal(1, result.EntryCount);
+            Assert.Contains($"Wrote 1 scenario entries to {manifestPath}.", result.Messages);
+            Assert.True(File.Exists(manifestPath));
+            Assert.Equal("catalog-scanned", Assert.Single(ScenarioCatalog.LoadManifest(manifestPath).Entries).ScenarioId);
         }
         finally
         {
@@ -154,98 +179,6 @@ public sealed class ConsoleScenarioLaunchTests
         {
             Directory.Delete(directory, recursive: true);
         }
-    }
-
-    [Fact]
-    public void ConsoleScenarioLauncherBuildsFreshSessionFromCatalogEntry()
-    {
-        var directory = CreateTemporaryDirectory();
-        try
-        {
-            var path = Path.Combine(directory, "CatalogLaunch.yaml");
-            File.WriteAllText(path, CreateConsoleDocument("catalog-launch", "Catalog Launch", new GridCoord(0, 0)).SaveYaml());
-            var entry = ScenarioCatalog.DiscoverFolder(directory).Entries.Single();
-
-            var firstSession = ConsoleScenarioLauncher.CreateFromCatalogEntry(entry);
-            var movement = new MovementService();
-            new TurnService(movement, firstSession.ActionPlans).TakeActorTurnThenAdvance(
-                firstSession.World,
-                firstSession.PlayerEntityId,
-                PlannedActionPlan.Single(new MoveAction(Direction.East)));
-            var secondSession = ConsoleScenarioLauncher.CreateFromCatalogEntry(entry);
-
-            Assert.Equal(new PlaneCoord(secondSession.ActivePlaneId, new GridCoord(0, 0)), secondSession.World.GetEntityLocation(secondSession.PlayerEntityId));
-            Assert.NotEqual(firstSession.World.GetEntityLocation(firstSession.PlayerEntityId), secondSession.World.GetEntityLocation(secondSession.PlayerEntityId));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
-
-    [Fact]
-    public void ConsoleScenarioLauncherBuildsPlayableSessionFromPersistedScenario()
-    {
-        var document = new EditableContentDocument();
-        var roomId = document.AddEntityTemplate(
-            "Console Alpha Room",
-            new EntityTemplate("Console Alpha Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
-            new EntityPresentation('#', PresentationColor.Gray));
-        var playerId = document.AddEntityTemplate(
-            "Console Player",
-            new EntityTemplate(
-                "Console Player",
-                InventoryWidth: 1,
-                InventoryHeight: 1,
-                Bulk: 1,
-                Aperture: 5,
-                ActionStateDefaults: new ActorActionStateDefaults(Direction.East)),
-            new EntityPresentation('@', PresentationColor.Yellow));
-        document.UpsertScenario(new ScenarioDefinition(
-            "console-alpha",
-            "Console Alpha",
-            roomId,
-            playerId,
-            new EntityId("consolePlayer"),
-            new GridCoord(1, 0)));
-
-        var session = ConsoleScenarioLauncher.CreateFromDocument(document, "console-alpha");
-
-        Assert.Equal("console-alpha", session.ScenarioId);
-        Assert.Equal(new EntityId("consolePlayer"), session.PlayerEntityId);
-        Assert.Equal(new PlaneId("scenarioRoot"), session.ActivePlaneId);
-        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(1, 0)), session.World.GetEntityLocation(session.PlayerEntityId));
-        Assert.NotNull(session.World.GetInventoryPlaneId(session.PlayerEntityId));
-        Assert.Empty(session.ValidationDiagnostics);
-        Assert.Empty(session.RuntimeFailures);
-    }
-
-    [Fact]
-    public void ConsoleInspectionDisplayFormatsBreadcrumbAndRuntimePanelProperties()
-    {
-        var session = ConsoleScenarioLauncher.CreateFromDocument(CreateConsoleDocument("breadcrumb", "Breadcrumb", new GridCoord(0, 0)), "breadcrumb");
-        var inspector = new EntityInspectionService(entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
-        var panel = inspector.Inspect(session.World, session.PlayerEntityId);
-        var path = new EntityContainmentPathService().GetUpwardPath(session.World, session.PlayerEntityId);
-        var glyph = (EntityId entityId) => session.Registry.GetPresentationForEntity(entityId).Glyph;
-
-        var breadcrumb = ConsoleInspectionDisplayFormatter.FormatBreadcrumb(session.World, path, glyph);
-        var properties = ConsoleInspectionDisplayFormatter.BuildPanelProperties(session.World, panel, path, turnOrderReport: null, getGlyph: glyph);
-
-        Assert.Contains("# Breadcrumb Room", breadcrumb);
-        Assert.Contains("@ Breadcrumb Player", breadcrumb);
-        Assert.Contains(properties, property => property.Name == "Path" && property.Value == breadcrumb);
-        Assert.Contains(properties, property => property.Name == "Inventory" && property.Value.Contains("1x1", StringComparison.Ordinal));
-        Assert.Contains(properties, property => property.Name == "Facing" && property.Value == Direction.East.ToString());
-    }
-
-    [Fact]
-    public void ConsolePlayerControlsMapEnterAndExitToPlayerActionIntents()
-    {
-        Assert.Equal(ConsolePlayerCommand.Enter, ConsolePlayerControls.GetCommand(ConsoleKey.E));
-        Assert.Equal(ConsolePlayerCommand.Exit, ConsolePlayerControls.GetCommand(ConsoleKey.X));
-        Assert.IsType<EnterAction>(ConsolePlayerControls.CreateEnterAction(new EntityId("door")));
-        Assert.IsType<ExitAction>(ConsolePlayerControls.CreateExitAction(Direction.North));
     }
 
     private static EditableContentDocument CreateConsoleDocument(string scenarioId, string scenarioName, GridCoord playerStart)

@@ -22,7 +22,6 @@
     <ProjectReference Include="..\..\src\GameGameGame.Core\GameGameGame.Core.csproj" />
     <ProjectReference Include="..\..\src\GameGameGame.Content\GameGameGame.Content.csproj" />
     <ProjectReference Include="..\..\src\GameGameGame.Headless\GameGameGame.Headless.csproj" />
-    <ProjectReference Include="..\..\src\GameGameGame.Console\GameGameGame.Console.csproj" />
   </ItemGroup>
 
 </Project>

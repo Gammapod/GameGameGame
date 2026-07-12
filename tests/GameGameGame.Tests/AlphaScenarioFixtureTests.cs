@@ -1,6 +1,5 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
-using GameGameGame.ConsoleApp;
 
 namespace GameGameGame.Tests;
 
@@ -23,9 +22,9 @@ public sealed class AlphaScenarioFixtureTests
     }
 
     [Fact]
-    public void AlphaScenarioFixtureCanLaunchInConsoleAndAcceptPlayerMove()
+    public void AlphaScenarioFixtureCanLaunchPlayableSessionAndAcceptPlayerMove()
     {
-        var session = ConsoleScenarioLauncher.CreateFromDocument(
+        var session = PlayableScenarioLauncher.CreateFromDocument(
             AlphaScenarioContent.LoadDocument(),
             AlphaScenarioContent.DefaultScenarioId);
         var movement = new MovementService();

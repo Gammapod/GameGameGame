@@ -4,7 +4,7 @@ Status: Source of truth for the entity-panel, breadcrumb, and turn-log UX model.
 
 Read when:
 
-- designing Console, SadConsole, or future frontend inspection surfaces;
+- designing SadConsole or future frontend inspection surfaces;
 - defining frontend-neutral entity panel projection data;
 - deciding which panel state is frontend-owned versus shared service data.
 

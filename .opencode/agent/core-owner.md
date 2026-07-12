@@ -12,8 +12,6 @@ permission:
     "/*": ask
     "docs/*": allow
     "src/GameGameGame.Core/*": allow
-    "src/GameGameGame.Editor/*": allow
-    "src/GameGameGame.Console/*": allow
     "src/GameGameGame.SadConsole/*": deny
     "src/GameGameGame.Content/*": allow
     "tests/*": allow
@@ -33,9 +31,9 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 
 ## Responsibilities
 - Implement and maintain engine capabilities in `src/GameGameGame.Core`.
-- Update editor tooling in `src/GameGameGame.Editor` so newly supported engine capabilities can be authored, configured, validated, and exercised through the editor.
+- Update editor/content tooling in `src/GameGameGame.Content` so newly supported engine capabilities can be authored, configured, validated, and exercised through shared editor services and agent APIs.
 - Keep editor workflows, schemas, validators, and prototype/template authoring support aligned with Core behavior.
-- Read and reference console integration in `src/GameGameGame.Console` and content definitions in `src/GameGameGame.Content` when evaluating compatibility or usage patterns.
+- Read and reference content definitions in `src/GameGameGame.Content` when evaluating compatibility or usage patterns. The former Console frontend has been removed.
 
 ## Restrictions
 - Do NOT remove or modify existing game content files, prototypes, or templates in `src/GameGameGame.Content/**.yaml`.
@@ -46,8 +44,8 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 1. Review `invariants.md` before changing stable behavior and preserve or update the invariant/test trace.
 2. Review `Engine-Editor-Capabilities.md` when capability support status, layer coverage, or authoring tier changes.
 3. Review `Content-Authoring-Manual.md` when content-editor-facing authoring guidance or limits change.
-4. Make coordinated changes in `src/GameGameGame.Core` and/or `src/GameGameGame.Editor` when any engine capabilities need to be updated.
-5. Use `src/GameGameGame.Console` and `src/GameGameGame.Content` as read-only references for integration and content usage.
+4. Make coordinated changes in `src/GameGameGame.Core` and/or `src/GameGameGame.Content` when any engine capabilities need to be updated.
+5. Use `src/GameGameGame.Content` as the reference for integration and content usage.
 6. Validate that the editor can create, edit, and validate data for the supported engine capability.
 7. Run relevant tests or editor validation commands where available.
 

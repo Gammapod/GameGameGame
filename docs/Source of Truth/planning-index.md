@@ -53,7 +53,7 @@ Do not read when:
 
 ## Current strategic priority
 
-Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Gamma now prioritizes the SadConsole Editor MVP: an Editor -> Preview -> Simulation -> Return loop over shared content/editor and runtime services. Console remains fallback/minimal tooling unless explicitly re-selected.
+Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Gamma now prioritizes the SadConsole Editor MVP: an Editor -> Preview -> Simulation -> Return loop over shared content/editor and runtime services. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`.
 
 ## Current highest-priority backlog buckets
 

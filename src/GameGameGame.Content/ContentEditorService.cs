@@ -30,36 +30,10 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public ScenarioDefinition GetScenario(string scenarioId) => Document.GetScenario(scenarioId);
 
     public EntityTemplateId CreateEntityPreset(string name)
-    {
-        var id = Document.AddEntityTemplate(
-            name,
-            new EntityTemplate(
-                name,
-                InventoryWidth: 0,
-                InventoryHeight: 0,
-                Bulk: 0,
-                Aperture: 0),
-            new EntityPresentation('?', PresentationColor.Gray));
-        onChanged?.Invoke();
-
-        return id;
-    }
+        => new EntityTemplateEditorService(Document, onChanged).CreateEntityPreset(name);
 
     public EntityTemplateId DuplicateEntityPreset(EntityTemplateId sourceId, string name)
-    {
-        var preset = GetEntityPreset(sourceId);
-        var duplicateId = Document.AddEntityTemplate(
-            name,
-            preset.Template with
-            {
-                Name = name,
-                CarriedEntities = DuplicateCarriedEntities(preset.Template.CarriedEntities, name)
-            },
-            preset.Presentation);
-        onChanged?.Invoke();
-
-        return duplicateId;
-    }
+        => new EntityTemplateEditorService(Document, onChanged).DuplicateEntityPreset(sourceId, name);
 
     public IReadOnlyList<EntityTemplateReference> ListEntityTemplateReferences(EntityTemplateId id) =>
         Document.EntityTemplates
@@ -71,35 +45,13 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .ToList();
 
     public ContentEditorOperationResult DeleteEntityPreset(EntityTemplateId id)
-    {
-        var references = ListEntityTemplateReferences(id);
-
-        if (references.Count > 0)
-        {
-            return ContentEditorOperationResult.Failure(
-                $"Cannot delete entity template {id}; it is referenced by {string.Join(", ", references.Select(reference => reference.ToString()))}.");
-        }
-
-        Document.EntityTemplates.Remove(id.Value);
-        Document.Presentations.Remove(id.Value);
-        onChanged?.Invoke();
-
-        return ContentEditorOperationResult.Success();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).DeleteEntityPreset(id);
 
     public void SetDefaultActionPlan(EntityTemplateId templateId, ActionPlanTemplateId actionPlanId)
-    {
-        var template = GetTemplateDto(templateId);
-        template.DefaultActionPlanId = actionPlanId.Value;
-        MaterializeBehaviorDefaults(template, GetActionPlanDto(actionPlanId).Behavior);
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).SetDefaultActionPlan(templateId, actionPlanId);
 
     public void ClearDefaultActionPlan(EntityTemplateId templateId)
-    {
-        GetTemplateDto(templateId).DefaultActionPlanId = null;
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).ClearDefaultActionPlan(templateId);
 
     public EntityPresetEditorModel GetEntityPreset(EntityTemplateId id)
     {
@@ -112,169 +64,37 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     }
 
     public void UpdateEntityPreset(EntityTemplateId id, EntityTemplate template, EntityPresentation presentation)
-    {
-        Document.EntityTemplates[id.Value] = EditableContentDocument.EntityTemplateDto.From(template);
-        Document.Presentations[id.Value] = EditableContentDocument.EntityPresentationDto.From(presentation);
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).UpdateEntityPreset(id, template, presentation);
 
     public void PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, EntityTemplateId templateId, GridCoord coord)
-    {
-        var placement = ValidateCarriedEntityPlacement(parentTemplateId, coord);
-        if (!placement.IsSuccess)
-        {
-            throw new InvalidOperationException(placement.ErrorMessage);
-        }
-
-        var template = GetTemplateDto(parentTemplateId);
-        template.CarriedEntities ??= [];
-        template.CarriedEntities.Add(new EditableContentDocument.CarriedEntityTemplateDto
-        {
-            EntityId = entityId.Value,
-            TemplateId = templateId.Value,
-            Coord = EditableContentDocument.GridCoordDto.From(coord)
-        });
-        onChanged?.Invoke();
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).PlaceCarriedEntity(parentTemplateId, entityId, templateId, coord);
 
     public EntityId PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityTemplateId templateId)
-    {
-        var coord = FindFirstOpenInventoryCell(parentTemplateId)
-            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} has no open inventory cell.");
-
-        return PlaceCarriedEntity(parentTemplateId, templateId, coord);
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).PlaceCarriedEntity(parentTemplateId, templateId);
 
     public EntityId PlaceCarriedEntity(EntityTemplateId parentTemplateId, EntityTemplateId templateId, GridCoord coord)
-    {
-        var entityId = GenerateCarriedEntityId(parentTemplateId, templateId);
-
-        PlaceCarriedEntity(parentTemplateId, entityId, templateId, coord);
-
-        return entityId;
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).PlaceCarriedEntity(parentTemplateId, templateId, coord);
 
     public IReadOnlyList<CarriedEntityEditorModel> ListCarriedEntities(EntityTemplateId parentTemplateId)
-    {
-        var registry = Document.ToRegistry();
-        var parent = registry.EntityTemplates[parentTemplateId];
-
-        return (parent.CarriedEntities ?? [])
-            .Where(carried => carried.TemplateId is not null)
-            .Select(carried =>
-            {
-                var templateId = carried.TemplateId!.Value;
-                return new CarriedEntityEditorModel(
-                    carried.EntityId,
-                    templateId,
-                    carried.Coord,
-                    registry.EntityTemplates[templateId],
-                    registry.Presentations[templateId]);
-            })
-            .ToList();
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).ListCarriedEntities(parentTemplateId);
 
     public GridCoord? FindFirstOpenInventoryCell(EntityTemplateId parentTemplateId)
-    {
-        var template = GetTemplateDto(parentTemplateId);
-        var occupied = (template.CarriedEntities ?? [])
-            .Where(carried => carried.Coord is not null)
-            .Select(carried => new GridCoord(carried.Coord!.X, carried.Coord.Y))
-            .ToHashSet();
-
-        for (var y = 0; y < template.InventoryHeight; y++)
-        {
-            for (var x = 0; x < template.InventoryWidth; x++)
-            {
-                var coord = new GridCoord(x, y);
-                if (!occupied.Contains(coord))
-                {
-                    return coord;
-                }
-            }
-        }
-
-        return null;
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).FindFirstOpenInventoryCell(parentTemplateId);
 
     public ContentEditorOperationResult ValidateCarriedEntityPlacement(
         EntityTemplateId parentTemplateId,
         GridCoord coord,
         EntityId? movingEntityId = null)
-    {
-        var template = GetTemplateDto(parentTemplateId);
-        if (template.InventoryWidth <= 0 || template.InventoryHeight <= 0)
-        {
-            return ContentEditorOperationResult.Failure(
-                $"Cannot place carried entity; {parentTemplateId} has no usable inventory.");
-        }
-
-        if (coord.X < 0 || coord.Y < 0 || coord.X >= template.InventoryWidth || coord.Y >= template.InventoryHeight)
-        {
-            return ContentEditorOperationResult.Failure(
-                $"Cannot place carried entity at {coord.X},{coord.Y}; it is outside inventory bounds {template.InventoryWidth}x{template.InventoryHeight} for {parentTemplateId}.");
-        }
-
-        var carriedEntities = template.CarriedEntities ?? [];
-        if (movingEntityId is not null && carriedEntities.All(carried => carried.EntityId != movingEntityId.Value.Value))
-        {
-            return ContentEditorOperationResult.Failure(
-                $"Entity template {parentTemplateId} does not carry entity {movingEntityId.Value}.");
-        }
-
-        var occupant = carriedEntities.FirstOrDefault(carried =>
-            carried.Coord is not null
-            && carried.Coord.X == coord.X
-            && carried.Coord.Y == coord.Y
-            && (movingEntityId is null || carried.EntityId != movingEntityId.Value.Value));
-        if (occupant is not null)
-        {
-            return ContentEditorOperationResult.Failure(
-                $"Cannot place carried entity at {coord.X},{coord.Y}; cell is already occupied by {occupant.EntityId}.");
-        }
-
-        return ContentEditorOperationResult.Success();
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).ValidateCarriedEntityPlacement(parentTemplateId, coord, movingEntityId);
 
     public void MoveCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId, GridCoord coord)
-    {
-        var template = GetTemplateDto(parentTemplateId);
-        var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
-            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
-        var placement = ValidateCarriedEntityPlacement(parentTemplateId, coord, entityId);
-        if (!placement.IsSuccess)
-        {
-            throw new InvalidOperationException(placement.ErrorMessage);
-        }
-
-        carried.Coord = EditableContentDocument.GridCoordDto.From(coord);
-        onChanged?.Invoke();
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).MoveCarriedEntity(parentTemplateId, entityId, coord);
 
     public void RemoveCarriedEntity(EntityTemplateId parentTemplateId, EntityId entityId)
-    {
-        var template = GetTemplateDto(parentTemplateId);
-        var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
-            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
-
-        template.CarriedEntities!.Remove(carried);
-        if (template.CarriedEntities.Count == 0)
-        {
-            template.CarriedEntities = null;
-        }
-
-        onChanged?.Invoke();
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).RemoveCarriedEntity(parentTemplateId, entityId);
 
     public void ReplaceCarriedEntityTemplate(EntityTemplateId parentTemplateId, EntityId entityId, EntityTemplateId templateId)
-    {
-        var template = GetTemplateDto(parentTemplateId);
-        var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
-            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
-
-        carried.TemplateId = templateId.Value;
-        onChanged?.Invoke();
-    }
+        => new CarriedEntityLayoutEditor(Document, onChanged).ReplaceCarriedEntityTemplate(parentTemplateId, entityId, templateId);
 
     public IReadOnlyList<ActionPlanEditorModel> ListActionPlans()
     {
@@ -292,133 +112,25 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .ToList();
 
     public ActionPlanPreview PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null)
-    {
-        var plan = ListActionPlans().Single(item => item.TemplateId == planId).Descriptor;
-        var validation = Validate();
-        var canonicalValidation = Document.ValidateCanonicalAuthoring();
-        var diagnostics = validation.ForActionPlan(planId)
-            .Concat(canonicalValidation.ForActionPlan(planId))
-            .Concat(entityTemplateId is { } templateId
-                ? validation.ForEntityTemplate(templateId).Concat(canonicalValidation.ForEntityTemplate(templateId))
-                : [])
-            .Select(diagnostic => diagnostic.Message)
-            .Distinct()
-            .ToList();
-
-        return new ActionPlanPreview(
-            planId,
-            entityTemplateId,
-            FormatActionPlanShape(ActionPlanShapeClassifier.Classify(plan)),
-            GetActionPlanGuidance(plan),
-            GetActionPlanPreviewSteps(plan),
-            GetActionPlanStateHints(plan, entityTemplateId),
-            diagnostics,
-            Document.SaveYaml());
-    }
+        => new ActionPlanPreviewService(Document).Preview(planId, entityTemplateId);
 
     public ActionPlanTemplateId CreateActionPlan(string name)
-    {
-        var id = GenerateActionPlanTemplateId(name);
-        Document.ActionPlans[id.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(
-            new ActionPlanDescriptor(
-                new ActionPlanId(id.Value),
-                [new ActionPlanStepDescriptor("wait", [], PlanEffectDescriptor.Wait(), OnFailure: null)]));
-        onChanged?.Invoke();
-
-        return id;
-    }
+        => new ActionPlanEditorService(Document, onChanged).CreateActionPlan(name);
 
     public ActionPlanTemplateId CreatePassiveActionPlan(string name)
-    {
-        var id = GenerateActionPlanTemplateId(name);
-        Document.ActionPlans[id.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(
-            new ActionPlanDescriptor(new ActionPlanId(id.Value), []));
-        onChanged?.Invoke();
-
-        return id;
-    }
+        => new ActionPlanEditorService(Document, onChanged).CreatePassiveActionPlan(name);
 
     public ActionPlanTemplateId DuplicateActionPlan(ActionPlanTemplateId sourceId, string name)
-    {
-        var source = ListActionPlans().Single(plan => plan.TemplateId == sourceId).Descriptor;
-        var duplicateId = GenerateActionPlanTemplateId(name);
-        Document.ActionPlans[duplicateId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(
-            source with { Id = new ActionPlanId(duplicateId.Value) });
-        onChanged?.Invoke();
-
-        return duplicateId;
-    }
+        => new ActionPlanEditorService(Document, onChanged).DuplicateActionPlan(sourceId, name);
 
     public IReadOnlyList<ActionPlanReference> ListActionPlanReferences(ActionPlanTemplateId id)
-    {
-        var references = Document.EntityTemplates
-            .Where(template => template.Value.DefaultActionPlanId == id.Value)
-            .Select(template => new ActionPlanReference(
-                EntityTemplateId: new EntityTemplateId(template.Key),
-                ActionPlanTemplateId: null,
-                StepIndex: null))
-            .ToList();
-
-        foreach (var (planId, plan) in Document.ActionPlans)
-        {
-            var steps = plan.Steps ?? [];
-            if (plan.Primitive?.FallbackPlanId == id.Value)
-            {
-                references.Add(new ActionPlanReference(
-                    EntityTemplateId: null,
-                    ActionPlanTemplateId: new ActionPlanTemplateId(planId),
-                    StepIndex: null));
-            }
-
-            for (var index = 0; index < steps.Count; index++)
-            {
-                var step = steps[index];
-                if ((step.OnSuccess?.Kind == PlanEffectKind.CallPlan && step.OnSuccess.PlanId == id.Value)
-                    || (step.OnFailure?.Kind == PlanEffectKind.CallPlan && step.OnFailure.PlanId == id.Value))
-                {
-                    references.Add(new ActionPlanReference(
-                        EntityTemplateId: null,
-                        ActionPlanTemplateId: new ActionPlanTemplateId(planId),
-                        StepIndex: index));
-                }
-            }
-
-            var behaviorSteps = plan.Behavior?.Steps ?? [];
-            for (var index = 0; index < behaviorSteps.Count; index++)
-            {
-                if (behaviorSteps[index].PlanId == id.Value)
-                {
-                    references.Add(new ActionPlanReference(
-                        EntityTemplateId: null,
-                        ActionPlanTemplateId: new ActionPlanTemplateId(planId),
-                        StepIndex: index));
-                }
-            }
-        }
-
-        return references;
-    }
+        => new ActionPlanEditorService(Document, onChanged).ListActionPlanReferences(id);
 
     public void SetActionPlanPrimitive(ActionPlanTemplateId planId, ActionPlanPrimitiveKind kind, ActionPlanId? fallbackPlanId = null)
-    {
-        var plan = GetActionPlanDto(planId);
-        plan.Primitive = new EditableContentDocument.ActionPlanPrimitiveDescriptorDto
-        {
-            Kind = kind,
-            FallbackPlanId = fallbackPlanId?.Value
-        };
-        plan.Behavior = null;
-        plan.Steps = [];
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanPrimitive(planId, kind, fallbackPlanId);
 
     public void ClearActionPlanPrimitive(ActionPlanTemplateId planId)
-    {
-        var plan = GetActionPlanDto(planId);
-        plan.Primitive = null;
-        plan.Steps ??= [];
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).ClearActionPlanPrimitive(planId);
 
     public void SetActionPlanBehavior(ActionPlanTemplateId planId, IReadOnlyList<ActionPlanBehaviorStepKind> steps) =>
         SetActionPlanBehavior(
@@ -426,84 +138,22 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             steps.Select(step => new ActionPlanBehaviorStepDescriptor(step)).ToList());
 
     public void SetActionPlanBehavior(ActionPlanTemplateId planId, IReadOnlyList<ActionPlanBehaviorStepDescriptor> steps)
-    {
-        foreach (var step in steps)
-        {
-            EnsureStableAuthoringStep(step.Kind);
-        }
-
-        var plan = GetActionPlanDto(planId);
-        if (steps.Count == 0)
-        {
-            ClearActionPlanBehavior(planId);
-            return;
-        }
-
-        plan.Primitive = null;
-        plan.Steps = [];
-        plan.Behavior = EditableContentDocument.ActionPlanBehaviorDescriptorDto.From(new ActionPlanBehaviorDescriptor(steps));
-        MaterializeBehaviorDefaultsForAssignedTemplates(planId, plan.Behavior);
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehavior(planId, steps);
 
     public void ClearActionPlanBehavior(ActionPlanTemplateId planId)
-    {
-        var plan = GetActionPlanDto(planId);
-        plan.Behavior = null;
-        plan.Steps ??= [];
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).ClearActionPlanBehavior(planId);
 
     public void AddActionPlanBehaviorStep(ActionPlanTemplateId planId, ActionPlanBehaviorStepKind kind)
-    {
-        EnsureStableAuthoringStep(kind);
-        var steps = GetActionPlanBehaviorSteps(planId);
-        steps.Add(new EditableContentDocument.ActionPlanBehaviorStepDescriptorDto { Kind = kind });
-        MaterializeBehaviorDefaultsForAssignedTemplates(planId, GetActionPlanDto(planId).Behavior);
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).AddActionPlanBehaviorStep(planId, kind);
 
     public void SetActionPlanBehaviorStepTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot)
-    {
-        if (targetSlot is <= 0)
-        {
-            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} target slot must be greater than zero.");
-        }
-
-        var steps = GetActionPlanBehaviorSteps(planId);
-        _ = steps[stepIndex];
-        steps[stepIndex].TargetSlot = targetSlot;
-        if (targetSlot is not null)
-        {
-            steps[stepIndex].TargetLabel = null;
-        }
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetSlot(planId, stepIndex, targetSlot);
 
     public void SetActionPlanBehaviorStepTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel)
-    {
-        if (targetLabel is { } label && string.IsNullOrWhiteSpace(label))
-        {
-            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} target label must not be blank.");
-        }
-
-        var steps = GetActionPlanBehaviorSteps(planId);
-        _ = steps[stepIndex];
-        steps[stepIndex].TargetLabel = targetLabel;
-        if (targetLabel is not null)
-        {
-            steps[stepIndex].TargetSlot = null;
-        }
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetLabel(planId, stepIndex, targetLabel);
 
     public void SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId)
-    {
-        var steps = GetActionPlanBehaviorSteps(planId);
-        _ = steps[stepIndex];
-        steps[stepIndex].PlanId = referencedPlanId?.Value;
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId);
 
     private static void EnsureStableAuthoringStep(ActionPlanBehaviorStepKind kind)
     {
@@ -515,25 +165,10 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     }
 
     public void MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex)
-    {
-        var steps = GetActionPlanBehaviorSteps(planId);
-        var step = steps[fromIndex];
-        steps.RemoveAt(fromIndex);
-        steps.Insert(toIndex, step);
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).MoveActionPlanBehaviorStep(planId, fromIndex, toIndex);
 
     public void RemoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int index)
-    {
-        var steps = GetActionPlanBehaviorSteps(planId);
-        steps.RemoveAt(index);
-        if (steps.Count == 0)
-        {
-            GetActionPlanDto(planId).Behavior = null;
-        }
-
-        onChanged?.Invoke();
-    }
+        => new ActionPlanEditorService(Document, onChanged).RemoveActionPlanBehaviorStep(planId, index);
 
     public PrimitiveActionPlanChain CreateMoveFacingPickupTargetChain(string moveFacingPlanName, string pickupTargetPlanName)
     {
@@ -560,19 +195,7 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     }
 
     public ContentEditorOperationResult DeleteActionPlan(ActionPlanTemplateId id)
-    {
-        var references = ListActionPlanReferences(id);
-        if (references.Count > 0)
-        {
-            return ContentEditorOperationResult.Failure(
-                $"Cannot delete action plan {id}; it is referenced by {string.Join(", ", references.Select(reference => reference.ToString()))}.");
-        }
-
-        Document.ActionPlans.Remove(id.Value);
-        onChanged?.Invoke();
-
-        return ContentEditorOperationResult.Success();
-    }
+        => new ActionPlanEditorService(Document, onChanged).DeleteActionPlan(id);
 
     public void AddActionPlanStep(ActionPlanTemplateId planId, ActionPlanStepDescriptor step)
     {
@@ -691,115 +314,31 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     }
 
     public void SetDefaultPlanVariable(EntityTemplateId templateId, string variableName, PlanValueDescriptor value)
-    {
-        var template = GetTemplateDto(templateId);
-        template.DefaultPlanVariables ??= [];
-        template.DefaultPlanVariables[variableName] = EditableContentDocument.PlanValueDescriptorDto.From(value);
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).SetDefaultPlanVariable(templateId, variableName, value);
 
     public IReadOnlyList<DefaultPlanVariableEditorModel> ListDefaultPlanVariables(EntityTemplateId templateId)
-    {
-        var template = GetEntityPreset(templateId).Template;
-        return (template.DefaultPlanVariables ?? new Dictionary<string, PlanValueDescriptor>())
-            .OrderBy(entry => entry.Key)
-            .Select(entry => new DefaultPlanVariableEditorModel(entry.Key, entry.Value))
-            .ToList();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).ListDefaultPlanVariables(templateId);
 
     public void RemoveDefaultPlanVariable(EntityTemplateId templateId, string variableName)
-    {
-        var template = GetTemplateDto(templateId);
-        if (template.DefaultPlanVariables is null || !template.DefaultPlanVariables.Remove(variableName))
-        {
-            throw new InvalidOperationException($"Entity template {templateId} has no default variable {variableName}.");
-        }
-
-        if (template.DefaultPlanVariables.Count == 0)
-        {
-            template.DefaultPlanVariables = null;
-        }
-
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).RemoveDefaultPlanVariable(templateId, variableName);
 
     public ActorActionStateDefaults GetActionStateDefaults(EntityTemplateId templateId)
-    {
-        var template = GetTemplateDto(templateId);
-
-        return new ActorActionStateDefaults(
-            template.ActionStateDefaults?.Facing,
-            string.IsNullOrWhiteSpace(template.ActionStateDefaults?.Target) ? null : new EntityId(template.ActionStateDefaults.Target));
-    }
+        => new EntityTemplateEditorService(Document, onChanged).GetActionStateDefaults(templateId);
 
     public void SetInitialFacing(EntityTemplateId templateId, Direction facing)
-    {
-        var template = GetTemplateDto(templateId);
-        template.ActionStateDefaults ??= new EditableContentDocument.ActorActionStateDefaultsDto();
-        template.ActionStateDefaults.Facing = facing;
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).SetInitialFacing(templateId, facing);
 
     public void ClearInitialFacing(EntityTemplateId templateId)
-    {
-        var template = GetTemplateDto(templateId);
-        if (template.ActionStateDefaults is null)
-        {
-            return;
-        }
-
-        template.ActionStateDefaults.Facing = null;
-        if (template.ActionStateDefaults.Target is null)
-        {
-            template.ActionStateDefaults = null;
-        }
-
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).ClearInitialFacing(templateId);
 
     public IReadOnlyList<EntityTargetingRule> ListTargetingRules(EntityTemplateId templateId)
-    {
-        var template = GetEntityPreset(templateId).Template;
-        return (template.TargetingRules ?? [])
-            .OrderBy(rule => rule.Slot)
-            .ToList();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).ListTargetingRules(templateId);
 
     public void SetTargetingRule(EntityTemplateId templateId, EntityTargetingRule rule)
-    {
-        if (rule.Slot <= 0)
-        {
-            throw new InvalidOperationException($"Entity template {templateId} targeting rule slot must be greater than zero.");
-        }
-
-        if (rule.Range < 0)
-        {
-            throw new InvalidOperationException($"Entity template {templateId} targeting rule slot {rule.Slot} range must be zero or greater.");
-        }
-
-        var template = GetTemplateDto(templateId);
-        template.TargetingRules ??= [];
-        template.TargetingRules.RemoveAll(existing => existing.Slot == rule.Slot);
-        template.TargetingRules.Add(EditableContentDocument.EntityTargetingRuleDto.From(rule));
-        template.TargetingRules = template.TargetingRules.OrderBy(existing => existing.Slot).ToList();
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).SetTargetingRule(templateId, rule);
 
     public void RemoveTargetingRule(EntityTemplateId templateId, int slot)
-    {
-        var template = GetTemplateDto(templateId);
-        if (template.TargetingRules is null || template.TargetingRules.RemoveAll(rule => rule.Slot == slot) == 0)
-        {
-            throw new InvalidOperationException($"Entity template {templateId} has no targeting rule slot {slot}.");
-        }
-
-        if (template.TargetingRules.Count == 0)
-        {
-            template.TargetingRules = null;
-        }
-
-        onChanged?.Invoke();
-    }
+        => new EntityTemplateEditorService(Document, onChanged).RemoveTargetingRule(templateId, slot);
 
     private EditableContentDocument.EntityTemplateDto GetTemplateDto(EntityTemplateId id) =>
         Document.EntityTemplates.TryGetValue(id.Value, out var template)
@@ -821,203 +360,8 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
         return plan.Steps;
     }
 
-    private List<EditableContentDocument.ActionPlanBehaviorStepDescriptorDto> GetActionPlanBehaviorSteps(ActionPlanTemplateId id)
-    {
-        var plan = GetActionPlanDto(id);
-        plan.Primitive = null;
-        plan.Steps = [];
-        plan.Behavior ??= new EditableContentDocument.ActionPlanBehaviorDescriptorDto { Steps = [] };
-        plan.Behavior.Steps ??= [];
-
-        return plan.Behavior.Steps;
-    }
-
-    private void MaterializeBehaviorDefaultsForAssignedTemplates(
-        ActionPlanTemplateId planId,
-        EditableContentDocument.ActionPlanBehaviorDescriptorDto? behavior)
-    {
-        foreach (var template in Document.EntityTemplates.Values.Where(template => template.DefaultActionPlanId == planId.Value))
-        {
-            MaterializeBehaviorDefaults(template, behavior);
-        }
-    }
-
-    private static void MaterializeBehaviorDefaults(
-        EditableContentDocument.EntityTemplateDto template,
-        EditableContentDocument.ActionPlanBehaviorDescriptorDto? behavior)
-    {
-        if (behavior?.Steps is null || behavior.Steps.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var step in behavior.Steps)
-        {
-            var metadata = ActionStepCatalog.Get(step.Kind);
-            foreach (var defaultable in metadata.DefaultableState)
-            {
-                if (defaultable.Slot == ActionPlanSlot.Facing && defaultable.ValueKind == PlanValueKind.Direction)
-                {
-                    template.ActionStateDefaults ??= new EditableContentDocument.ActorActionStateDefaultsDto();
-                    template.ActionStateDefaults.Facing ??= Direction.West;
-                }
-            }
-        }
-    }
-
-    private static IReadOnlyList<string> GetActionPlanGuidance(ActionPlanDescriptor descriptor) =>
-        ActionPlanShapeClassifier.Classify(descriptor) switch
-        {
-            ActionPlanShape.CanonicalBehaviorChain => ["Preferred canonical behavior chain. Author normal behavior as ordered engine-defined Action Steps."],
-            ActionPlanShape.TransitionalPrimitivePlan => ["Compatibility primitive-backed fallback plan. Prefer canonical behavior chains for new authoring."],
-            ActionPlanShape.LegacyLowLevelSteps => ["Legacy/advanced low-level steps/checks/effects. Keep only where canonical Action Steps cannot express the behavior yet."],
-            ActionPlanShape.EmptyPassive => ["Passive plan with no current behavior. Add canonical Action Steps when the entity should act."],
-            _ => ["Unknown action-plan shape. Validate before saving."]
-        };
-
     public static string FormatActionPlanShape(ActionPlanShape shape) =>
-        shape switch
-        {
-            ActionPlanShape.CanonicalBehaviorChain => "Canonical Behavior Chain",
-            ActionPlanShape.TransitionalPrimitivePlan => "Transitional Primitive Plan",
-            ActionPlanShape.LegacyLowLevelSteps => "Legacy / Advanced Low-Level Steps",
-            ActionPlanShape.EmptyPassive => "Empty / Passive",
-            ActionPlanShape.InvalidMixedShape => "Invalid Mixed Shape",
-            ActionPlanShape.InvalidEmptyBehaviorChain => "Invalid Empty Behavior Chain",
-            _ => "Unknown"
-        };
-
-    private static IReadOnlyList<ActionPlanPreviewStep> GetActionPlanPreviewSteps(ActionPlanDescriptor descriptor)
-    {
-        if (descriptor.Behavior?.Steps.Count > 0)
-        {
-            return descriptor.Behavior.Steps
-                .Select(step =>
-                {
-                    var metadata = ActionStepCatalog.Get(step.Kind);
-                    return new ActionPlanPreviewStep(
-                        step.Kind,
-                        metadata.DisplayName,
-                        metadata.Description,
-                        metadata.RequiredState,
-                        metadata.DefaultableState,
-                        metadata.StateWrites,
-                        step.TargetSlot,
-                        step.TargetLabel,
-                        step.PlanId);
-                })
-                .ToList();
-        }
-
-        return [];
-    }
-
-    private IReadOnlyList<string> GetActionPlanStateHints(ActionPlanDescriptor descriptor, EntityTemplateId? entityTemplateId)
-    {
-        if (descriptor.Behavior?.Steps.Count is not > 0)
-        {
-            return [];
-        }
-
-        ActorActionStateDefaults? defaults = entityTemplateId is { } templateId
-            ? GetActionStateDefaults(templateId)
-            : null;
-        var hints = new List<string>();
-
-        foreach (var step in descriptor.Behavior.Steps)
-        {
-            var metadata = ActionStepCatalog.Get(step.Kind);
-            foreach (var state in metadata.DefaultableState)
-            {
-                var hint = FormatPreviewStateHint(state, defaults);
-                if (!hints.Contains(hint))
-                {
-                    hints.Add(hint);
-                }
-            }
-        }
-
-        return hints;
-    }
-
-    private static string FormatPreviewStateHint(PlanPrimitiveSlotDescriptor state, ActorActionStateDefaults? defaults) =>
-        state.Slot switch
-        {
-            ActionPlanSlot.Facing => defaults?.Facing is { } facing
-                ? $"Facing={facing}"
-                : "Facing=West (defaultable)",
-            ActionPlanSlot.Target => defaults?.Target is { } target
-                ? $"Target={target}"
-                : "Target=Self (defaultable)",
-            _ => $"{state.Slot} ({state.ValueKind})"
-        };
-
-    private static IReadOnlyList<CarriedEntityTemplate>? DuplicateCarriedEntities(
-        IReadOnlyList<CarriedEntityTemplate>? carriedEntities,
-        string duplicateName)
-    {
-        if (carriedEntities is null || carriedEntities.Count == 0)
-        {
-            return null;
-        }
-
-        var idPrefix = ToCamelCaseId(duplicateName);
-        return carriedEntities
-            .Select(carried => new CarriedEntityTemplate(
-                new EntityId($"{idPrefix}{UppercaseFirst(carried.EntityId.Value)}"),
-                carried.TemplateId ?? throw new InvalidOperationException($"Carried entity {carried.EntityId} has no template ID."),
-                carried.Coord))
-            .ToList();
-    }
-
-    private static string ToCamelCaseId(string name)
-    {
-        var result = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Select((part, index) => index == 0
-                ? char.ToLowerInvariant(part[0]) + part[1..]
-                : char.ToUpperInvariant(part[0]) + part[1..]));
-
-        return string.IsNullOrWhiteSpace(result) ? "entity" : result;
-    }
-
-    private static string UppercaseFirst(string value) =>
-        string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
-
-    private EntityId GenerateCarriedEntityId(EntityTemplateId parentTemplateId, EntityTemplateId templateId)
-    {
-        var parentPrefix = ToCamelCaseId(GetTemplateDto(parentTemplateId).Name ?? parentTemplateId.Value);
-        var templateName = Document.EntityTemplates.TryGetValue(templateId.Value, out var template)
-            ? template.Name ?? templateId.Value
-            : templateId.Value;
-        var baseId = $"{parentPrefix}{UppercaseFirst(ToCamelCaseId(templateName))}";
-        var candidate = baseId;
-        var suffix = 2;
-        var existingIds = (GetTemplateDto(parentTemplateId).CarriedEntities ?? [])
-            .Select(carried => carried.EntityId)
-            .ToHashSet();
-
-        while (existingIds.Contains(candidate))
-        {
-            candidate = $"{baseId}{suffix}";
-            suffix++;
-        }
-
-        return new EntityId(candidate);
-    }
-
-    private ActionPlanTemplateId GenerateActionPlanTemplateId(string name)
-    {
-        var baseId = ToCamelCaseId(name);
-        var candidate = baseId;
-        var suffix = 2;
-        while (Document.ActionPlans.ContainsKey(candidate))
-        {
-            candidate = $"{baseId}{suffix}";
-            suffix++;
-        }
-
-        return new ActionPlanTemplateId(candidate);
-    }
+        ActionPlanPreviewService.FormatActionPlanShape(shape);
 }
 
 public sealed record EntityPresetEditorModel(

@@ -17,13 +17,13 @@ Related source of truth:
 
 ## Current strategic direction
 
-Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and a Console scenario catalog. Gamma now shifts from adding mechanics to preparing the existing scenarios for real tester feedback. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
+Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and scenario catalog services. Gamma now shifts from adding mechanics to preparing the existing scenarios for real tester feedback. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
 
-The current Avalonia GUI is legacy-priority / maintenance-mode. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and future frontend readiness rather than maintaining broad Avalonia GUI parity. Long-term human-facing editor work is expected to move toward an integrated game/editor frontend.
+The former Avalonia GUI has been removed. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and SadConsole/future frontend readiness.
 
 ## Alpha MVP: playable arbitrary scenarios
 
-Status: Complete as of Sprint 11. The alpha path is represented end-to-end in tests: persisted scenario definition -> validation/materialization -> player insertion -> Console-launchable session -> player action.
+Status: Complete as of Sprint 11. The alpha path is represented end-to-end in tests: persisted scenario definition -> validation/materialization -> player insertion -> frontend-neutral playable session -> player action.
 
 Target statement:
 
@@ -80,13 +80,13 @@ This target promoted the following items out of backlog buckets and into the com
 - Scheduler/speed/multiple actions per turn.
 - Saved runlogs/golden runlog tests.
 - Future integrated frontend replacement.
-- Avalonia GUI parity for scenario authoring.
+- Retired Avalonia GUI parity for scenario authoring.
 
 ## Active / likely next sprint
 
 ### Gamma release target: tester-shareable frontend demo
 
-Status: Selected after Sprint 21 Console scenario catalog work. Beta mechanics expansion is paused while current authored scenarios are prepared for external feedback.
+Status: Selected after Sprint 21 scenario catalog work and later Console deletion. Beta mechanics expansion is paused while current authored scenarios are prepared for external feedback.
 
 Recently completed supporting documents:
 
@@ -101,7 +101,7 @@ Recently completed supporting documents:
 - [Sprint 18: Tech Debt Cleanup](../Archived/Sprint-18-Tech-Debt-Cleanup.md)
 - [Sprint 19: Gate 4 Peer Transfer Showcases](../Archived/Sprint-19-Gate-4-Peer-Transfer.md)
 - [Sprint 20: Scenario Run and Report Polish](../Archived/Sprint-20-Scenario-Run-Report-Polish.md)
-- [Sprint 21: Console Scenario Catalog](../Archived/Sprint-21-Console-Scenario-Catalog.md)
+- [Sprint 21: Console Scenario Catalog](../Archived/Sprint-21-Console-Scenario-Catalog.md) (historical; catalog policy now lives in Content and Console has been removed)
 - [Sprint 22: Gamma Containment Path Service](../Archived/Sprint-22-Gamma-Containment-Path-Service.md)
 - [Gamma Frontend Demo Plan](../Archived/Gamma-Frontend-Demo-Plan.md)
 - [SadConsole UI Pattern Discovery Sprint](../Archived/SadConsole-UI-Pattern-Discovery-Sprint.md)
@@ -117,8 +117,8 @@ Immediate Gamma priority:
 - Use the Gamma Editor MVP plan as the release checkpoint: SadConsole should prove the Editor -> Preview -> Simulation -> Return loop over shared content/editor and runtime services.
 - Carry the completed SadConsole spike findings into the current SadConsole editor/debug-browser path.
 - Use the SadConsole frontend roadmap to keep shared session/action/target/log/entity-panel contracts aligned while frontend-owner polishes the canonical debug/editor browser shell.
-- Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so future Console, SadConsole, Godot, or editor-facing surfaces consume the same capabilities.
-- Make SadConsole the supported shareable editor/debug frontend surface; keep Console as fallback/minimal CLI and debug tooling.
+- Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so SadConsole, Godot, or future editor-facing surfaces consume the same capabilities.
+- Make SadConsole the supported shareable editor/debug frontend surface; the former Console fallback has been removed.
 
 Planned next sprint:
 
@@ -129,8 +129,8 @@ Gamma/editor target statement:
 - The project can be shared with test players and content/debug users through a SadConsole editor/debug browser path.
 - Users can open content, browse authored scenarios/templates/action plans, inspect validation diagnostics, preview a scenario at turn 0, launch Simulation, and return to the same editor context.
 - Testers can choose curated scenarios, understand what they are looking at, and give useful feedback without reading development docs.
-- SadConsole is now the preferred canonical debug/editor browser direction; Console remains fallback/minimal tooling.
-- Short-term work should preserve shared UI-agnostic query/catalog/session/action/log contracts that Console, SadConsole, or a later frontend engine can consume.
+- SadConsole is now the preferred canonical debug/editor browser direction; Console has been removed.
+- Short-term work should preserve shared UI-agnostic query/catalog/session/action/log contracts that SadConsole or a later frontend engine can consume.
 
 Gamma/editor promoted stages:
 
@@ -158,7 +158,7 @@ Long-term frontend direction:
 - SadConsole is the preferred canonical debug/editor browser direction while final frontend-engine choice remains deferred.
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
 - Major frontend feature work should follow the shared-contract paving sequence in `docs/Plans/SadConsole-Frontend-Roadmap.md` so frontend-owner work does not require Core knowledge or duplicate simulation semantics.
-- The current Avalonia editor is legacy-priority and should not remain a dependency of Console, scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting Avalonia assumptions.
+- The retired Avalonia editor should not return as a dependency of scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting retired UI assumptions.
 
 Current decision point: Sprint 21 completed Console scenario catalog/listing. Gate 5 template spawning and Gate 6 reactions are no longer the default next work; they remain backlog items until tester feedback or a specific scenario need re-promotes mechanics expansion.
 
@@ -245,7 +245,7 @@ Completed baseline:
 - Sprint 12 added beta current-tool content fixtures for push, destroy, create, drop, pickup/weight, and behavior-chain composition; consolidated beta fixture validation; and recorded GAP-001 for `CreateFacing` placeholder presentation/template binding.
 - Sprint 15 added the persisted-scenario debug recorder with PNG/GIF artifacts and visual facing/target markers for reviewing authored scenario simulations.
 - Sprint 16 added Gate 3 distance-movement primitives and beta fixtures: `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise`, and kiting/orbiter fallback composition, each validated headlessly and recorded as GIF artifacts.
-- Sprint 17 moved scenario materialization/run/record workflows out of the legacy Editor dependency path: `GameGameGame.Content` owns canonical scenario materialization, `GameGameGame.Headless` owns scenario run/record services and debug rendering, Console no longer references Editor, and normal non-Editor tests validate scenario tooling without building Avalonia.
+- Sprint 17 moved scenario materialization/run/record workflows out of the legacy Editor dependency path. Later cleanup removed Console and the Avalonia editor; `GameGameGame.Content` now owns canonical scenario materialization and run reports, and `GameGameGame.Headless` owns legacy debug recording/rendering.
 - Sprint 21 added a shared scenario catalog and Console scenario menu: single-file listing, folder discovery, automatic `Manifest.yaml` refresh, optional manifest-only descriptions, manifest loading, default Beta folder/manifest behavior, catalog-entry launch, and return-to-list flow while preserving direct content-file/scenario-ID launch.
 
 Future generalized scenario runner wishlist:
@@ -426,7 +426,7 @@ Promotion trigger:
 
 ### Bucket 8: Unified frontend, inspection UX, and integrated editor
 
-Status: Active strategic bucket with SadConsole now serving as the canonical debug/browser frontend project. Current Avalonia GUI remains legacy-priority / maintenance-mode; Console remains fallback/minimal CLI and debug tooling.
+Status: Active strategic bucket with SadConsole now serving as the canonical debug/browser frontend project. Console and the former Avalonia editor have been removed.
 
 Consolidated scope:
 
@@ -437,7 +437,7 @@ Consolidated scope:
 
 Priority order:
 
-1. Preserve frontend-agnostic Core/Content/Headless/Editor service contracts so Console, SadConsole, and any later game/editor frontend consume the same capabilities.
+1. Preserve frontend-agnostic Core/Content/Headless/Editor service contracts so SadConsole and any later game/editor frontend consume the same capabilities.
 2. Continue SadConsole debug-browser UX polish over the completed shared history/session/action/target/log/panel contracts.
 3. Entity panel chain UX: improve inspected containment/breadcrumb panel behavior, auto-focus, collapse/expand, and dense local activity readability.
 4. Action-prompt targeting polish: show valid targets/destinations, skip invalid cells where practical, and explain blocked pickup/drop/enter/exit choices without inventing frontend-only simulation rules.
@@ -450,7 +450,7 @@ Priority order:
 11. Future integrated editor affordances: `Run in SadConsole` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
 12. Editor capability gaps discovered by the parity sprint: scenario root/player-start editing; per-carried-instance initial facing/state in inventory; typed action-step parameter/check/effect projection and mutation for Screen 4.
 13. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
-12. Retire or replace the current Avalonia GUI only when the future frontend/editor surface is viable.
+12. Former Avalonia GUI retired; continue replacing its useful authoring affordances through shared services and SadConsole/future editor surfaces.
 
 SadConsole prototype findings coverage snapshot:
 
@@ -459,7 +459,7 @@ This table summarizes findings from the completed spike; it does not imply that 
 | Roadmap need | Current coverage |
 | --- | --- |
 | Direct scenario launch and materialization reuse | Covered by production SadConsole command-line launch through the shared playable session launcher. |
-| Manifest/scenario selection menu | Covered in production SadConsole through the shared scenario catalog/menu path; Console retains fallback/CLI scan support. |
+| Manifest/scenario selection menu | Covered in production SadConsole through the shared scenario catalog/menu path; scan/save policy lives in Content `ScenarioCatalogScanService`. |
 | Entity panel chain from containment path | Partially covered; panels render from inspection path and auto-focus newly inspected panels. |
 | Expand/collapse panels and keyboard focus | Partially covered; prototype supports collapse/expand and Tab focus, but layout/focus rules are not production-ready. |
 | Keyboard-first play/inspect/action modes | Partially covered; Play, Inspect, pickup/drop/enter/exit prompt modes exist and need polish. |
@@ -478,7 +478,7 @@ Dependencies:
 - Depends on shared Core/Content/Headless/Editor service/API contracts staying frontend-agnostic.
 - Frontend behavior must not contradict engine/editor capability contracts or add frontend-only simulation semantics.
 - Final frontend-engine choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer; short-term work should still pave SadConsole as the canonical debug/browser direction.
-- Console breadcrumb work may continue only as explicitly selected fallback polish; interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated SadConsole/frontend bucket.
+- Interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated SadConsole/frontend bucket.
 
 Promotion trigger:
 
@@ -486,7 +486,7 @@ Promotion trigger:
 
 Decision checkpoint after the timebox:
 
-- **Continue with SadConsole as the main shareable frontend** if feedback builds cover debug play, scenario selection, logs, packaging, and developer ergonomics while Console remains useful as minimal CLI/debug fallback.
+- **Continue with SadConsole as the main shareable frontend** if feedback builds cover debug play, scenario selection, logs, packaging, and developer ergonomics.
 - **Reassess frontend technology** only if packaging, editor-widget, mouse, layout, or browser-delivery constraints become significant enough to justify starting a different shareable frontend path.
 
 ### Bucket 9: Reactions and cross-entity behavior

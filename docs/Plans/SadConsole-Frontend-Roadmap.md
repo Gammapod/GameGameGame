@@ -157,7 +157,7 @@ Scope:
 
 Exit criteria:
 
-- SadConsole can answer common “what is this entity/template/plan doing?” questions without opening YAML or Avalonia.
+- SadConsole can answer common “what is this entity/template/plan doing?” questions without opening YAML.
 
 ### Stage 9: Long-term Action Choice / PlayerInputStep promotion
 

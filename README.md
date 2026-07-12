@@ -1,15 +1,13 @@
 # GameGameGame
 
-GameGameGame is a .NET game prototype with a shared engine, YAML-backed content model, SadConsole debug/browser frontend, console fallback tooling, and Avalonia content editor.
+GameGameGame is a .NET game prototype with a shared engine, YAML-backed content model, and SadConsole debug/browser frontend.
 
 ## Projects
 
 - `src/GameGameGame.Core` — engine/runtime model and gameplay services.
 - `src/GameGameGame.Content` — content loading, editable content documents, validation, prototype content, and editor service operations.
 - `src/GameGameGame.SadConsole` — official SadConsole debug/browser frontend shell over shared scenario/action/panel contracts.
-- `src/GameGameGame.Console` — fallback console gameplay shell and CLI/debug tooling.
-- `src/GameGameGame.Editor` — Avalonia editor for authoring and validating content.
-- `tests/GameGameGame.Tests` — xUnit coverage for core behavior, content loading/validation, editor services, and editor view-model behavior.
+- `tests/GameGameGame.Tests` — xUnit coverage for core behavior, content loading/validation, editor services, scenario tooling, and headless services.
 
 ## Current engine capabilities
 
@@ -42,9 +40,9 @@ Current content tooling includes:
 - YAML preview, save, reload, and validation support;
 - structured diagnostics for many content validation issues.
 
-## Current editor
+## Current editor services
 
-The Avalonia editor can currently:
+Shared Content editor services can currently:
 
 - create, open, save, and reload content documents;
 - edit entity templates and presentation fields;
@@ -55,18 +53,6 @@ The Avalonia editor can currently:
 - author supported checks and effects;
 - edit movement target/destination fields for advanced movement effects;
 - surface validation diagnostics.
-
-## Current console prototype
-
-The console app runs the current prototype content and provides keyboard-driven gameplay for movement, pickup, drop, and inspection.
-
-Basic controls shown by the app include:
-
-- arrow keys to move;
-- `P` to pick up;
-- `D` to drop;
-- `I` to inspect;
-- `Q` or `Esc` to quit.
 
 ## Run and author scenarios
 
@@ -88,36 +74,6 @@ Example:
 dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -- src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke
 ```
 
-Run the fallback console shell:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj
-```
-
-Console accepts the same direct scenario-launch shape as SadConsole:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- <content-file> <scenario-id>
-```
-
-Record a scenario to PNG frames and a GIF:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- record-scenario <content-file> <scenario-id> --turns <N> --output <directory>
-```
-
-Example:
-
-```bash
-dotnet run --project src/GameGameGame.Console/GameGameGame.Console.csproj -- record-scenario src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke --turns 5 --output artifacts/scenario-recordings/alpha-smoke
-```
-
-Open the current Avalonia editor for content and scenario authoring:
-
-```bash
-dotnet run --project src/GameGameGame.Editor/GameGameGame.Editor.csproj
-```
-
 Content is YAML-backed and primarily lives under `src/GameGameGame.Content`. Current beta scenario fixtures are organized under `src/GameGameGame.Content/Beta`.
 
 ## Build and test
@@ -125,21 +81,13 @@ Content is YAML-backed and primarily lives under `src/GameGameGame.Content`. Cur
 This repository targets .NET 10. Build the main runnable projects directly:
 
 ```bash
-dotnet build src/GameGameGame.Console/GameGameGame.Console.csproj
 dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
-dotnet build src/GameGameGame.Editor/GameGameGame.Editor.csproj
 ```
 
-Run the normal non-Editor test project for Core, Content, Console fallback, and Headless coverage:
+Run the normal non-Editor test project for Core, Content, scenario tooling, and Headless coverage:
 
 ```bash
 dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj
-```
-
-Run legacy/current Avalonia editor-specific tests separately:
-
-```bash
-dotnet test tests/GameGameGame.Editor.Tests/GameGameGame.Editor.Tests.csproj
 ```
 
 Run SadConsole frontend tests separately:

@@ -79,13 +79,7 @@ They are responsible for action primitives, movement, inventory interactions, Bu
 
 Content tests cover the integration pipeline for content.
 
-They are responsible for YAML loading, editable document roundtrips, editor services, registry validation, and broad validation of built-in content. Content tests may assert values from inline test fixtures or explicit edits made by the test, but should not pin valid prototype content choices such as exact balance values, glyphs, positions, or action plan behavior.
-
-## Console Tests
-
-Console tests cover frontend behavior.
-
-They are responsible for input handling, rendering-facing behavior, and user workflows. Console tests are currently deprioritized, but future tests should stay focused on console behavior rather than re-testing Core or Content internals.
+They are responsible for YAML loading, editable document roundtrips, editor services, registry validation, and broad validation of content infrastructure. Existing authored content is transient prototype/test data unless explicitly promoted as stable shipping content; do not add or keep tests for specific transient content scenarios. Content tests may assert values from inline test fixtures or explicit edits made by the test, but should not pin prototype content choices such as exact balance values, glyphs, positions, scenario choreography, final coordinates, or action plan behavior.
 
 ## SadConsole Tests
 

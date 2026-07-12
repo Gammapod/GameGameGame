@@ -27,9 +27,9 @@ Each decision should include:
 
 ### FED-001: SadConsole is the canonical debug/browser direction for now
 
-- **Decision:** SadConsole is the current canonical debug/browser frontend direction. Console remains fallback/minimal tooling.
+- **Decision:** SadConsole is the current canonical debug/browser frontend direction. The former Console frontend has been removed.
 - **Reasoning:** The first frontend sprint validated that SadConsole can launch scenario catalogs, play through shared controlled-command services, and render entity-panel debug information.
-- **Implications:** Rich frontend UX work should prefer SadConsole or shared frontend-neutral services unless Console fallback work is explicitly selected.
+- **Implications:** Frontend UX work should prefer SadConsole or shared frontend-neutral services.
 - **Status:** Active.
 
 ### FED-002: Entity panels are the shared visual grammar

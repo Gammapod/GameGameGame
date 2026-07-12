@@ -7,13 +7,11 @@ permission:
     "*": ask
     "docs/*": allow
     "src/*": deny
-    "src/GameGameGame.Editor/*": allow
     "src/GameGameGame.Content/*": allow
   edit:
     "*": ask
     "docs/*": deny
     "src/*": deny
-    "src/GameGameGame.Editor/*": allow
     "src/GameGameGame.Content/*": allow
   task:
     "frontend-owner": allow
@@ -30,14 +28,14 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 
 ## Responsibilities
 - Create, edit, and validate game content (entities, templates, action plans)
-- Use the editor tools in `src/GameGameGame.Editor` to author content
+- Use Content editor services / AgentContentEditorApi-backed workflows to author content
 - Read and reference content definitions in `src/GameGameGame.Content`
 - Work with YAML content files, prototype definitions, and entity templates
 
 ## Restrictions
-- Do NOT modify editor tool implementations in `src/GameGameGame.Editor`
+- Do NOT modify editor tool implementations in `src/GameGameGame.Content`
 - Do NOT modify game engine code in `src/GameGameGame.Core`
-- Do NOT modify console application code in `src/GameGameGame.Console`
+- The former Console frontend has been removed; do not add Console-specific content workflows.
 - Do NOT change core systems (action plans, movement, turn services, etc.)
 
 ## Workflow
