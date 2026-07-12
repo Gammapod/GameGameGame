@@ -292,7 +292,7 @@ internal sealed class SadConsoleScenarioEditScreenModel
             template.TargetingRules.Select(rule => new SadConsoleTargetingSlotEditItem(
                 rule.Slot,
                 rule.Label ?? string.Empty,
-                rule.TargetTemplateName ?? rule.TargetTemplateId,
+                FormatTargetingCriteria(rule),
                 rule.Range)).ToList(),
             template.CarriedEntities.Select(item => new SadConsoleInventoryItemEditItem(
                 item.EntityId,
@@ -325,6 +325,13 @@ internal sealed class SadConsoleScenarioEditScreenModel
                 $"Root template: {scenario.ScenarioRootEntityTemplateId}",
                 $"Player template: {scenario.PlayerEntityTemplateId} at ({scenario.PlayerStart.X},{scenario.PlayerStart.Y})"
             ]);
+    }
+
+    private static string FormatTargetingCriteria(FrontendEditorTargetingRuleSummary rule)
+    {
+        var target = rule.TargetTemplateName ?? rule.TargetTemplateId ?? "any entity";
+        var capabilities = rule.TargetCapabilities.Count == 0 ? string.Empty : $" [{string.Join(", ", rule.TargetCapabilities)}]";
+        return $"{target}{capabilities}";
     }
 
     public SadConsoleExplorationScreen BuildScreen()

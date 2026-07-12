@@ -50,10 +50,10 @@ presentations:
     glyph: '@'
     color: Yellow
   betaHandoffCollector:
-    glyph: 'C'
+    glyph: C
     color: Green
   betaHandoffTrader:
-    glyph: 'T'
+    glyph: T
     color: Earth
 actionPlans:
   collectThenGive:
@@ -68,7 +68,9 @@ actionPlans:
     id: dropFacingOnly
     behavior:
       steps:
-      - kind: DropFacing
+      - kind: DestroyTarget
+        targetLabel: hates
+    steps: []
 scenarios:
   beta-collector-trader-handoff:
     name: Beta Collector Trader Handoff

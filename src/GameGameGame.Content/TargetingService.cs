@@ -4,6 +4,9 @@ namespace GameGameGame.Content;
 
 public static class TargetingService
 {
+    private static readonly MovementService Movement = new();
+    private static readonly EntityInteractionAffordanceService Affordances = new(Movement);
+
     public static void RefreshTargets(WorldState world, PrototypeContentRegistry registry, EntityId actorId)
     {
         if (!world.Entities.ContainsKey(actorId)
@@ -51,7 +54,8 @@ public static class TargetingService
             .Select(entry => (EntityId: entry.Value, Node: world.Nodes[entry.Key]))
             .Where(entry => entry.EntityId != actorId)
             .Where(entry => entry.Node.PlaneId == actorLocation.PlaneId)
-            .Where(entry => registry.TryGetTemplateIdForEntity(entry.EntityId, out var templateId) && templateId == rule.TargetTemplateId)
+            .Where(entry => MatchesTargetTemplate(registry, entry.EntityId, rule.TargetTemplateId))
+            .Where(entry => MatchesTargetCapabilities(world, actorId, entry.EntityId, rule.TargetCapabilities))
             .Select(entry => new
             {
                 entry.EntityId,
@@ -68,4 +72,16 @@ public static class TargetingService
 
     private static int ManhattanDistance(GridCoord first, GridCoord second) =>
         Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
+
+    private static bool MatchesTargetTemplate(PrototypeContentRegistry registry, EntityId entityId, EntityTemplateId? targetTemplateId) =>
+        targetTemplateId is null
+        || (registry.TryGetTemplateIdForEntity(entityId, out var templateId) && templateId == targetTemplateId);
+
+    private static bool MatchesTargetCapabilities(
+        WorldState world,
+        EntityId actorId,
+        EntityId candidateId,
+        IReadOnlyList<ActionPlanBehaviorStepKind> targetCapabilities) =>
+        targetCapabilities.Count == 0
+        || targetCapabilities.All(capability => Affordances.QueryTargetCapability(world, actorId, candidateId, capability).CanTarget);
 }

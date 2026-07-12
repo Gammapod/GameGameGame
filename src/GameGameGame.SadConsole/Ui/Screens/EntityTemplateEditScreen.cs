@@ -1,4 +1,5 @@
 using GameGameGame.Content;
+using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Navigation;
 using GameGameGame.SadConsoleApp.Ui.Styling;
@@ -11,6 +12,7 @@ internal sealed class EntityTemplateEditScreen
     private static readonly string[] PresentationFieldLabels = ["name", "glyph", "color", "action plan"];
     private const string ClearActionPlanChoiceId = "__clear_action_plan__";
     private const string EditActionPlanChoiceId = "__edit_action_plan__";
+    private const string ClearTargetCapabilitiesChoiceId = "__clear_target_capabilities__";
     private static readonly string[] InventoryMetadataFieldIds = ["inventory-width", "inventory-height", "aperture", "bulk"];
     private static readonly string[] InventoryMetadataFieldLabels = ["inventory width", "inventory height", "aperture", "bulk"];
     private const int InventoryGridEditFieldIndex = 4;
@@ -20,7 +22,7 @@ internal sealed class EntityTemplateEditScreen
     private FrontendEditorEntityTemplateSummary _template;
     private readonly List<FrontendEditorEntityTemplateSummary> _entityTemplates;
     private readonly List<FrontendEditorActionPlanSummary> _actionPlans;
-    private readonly FocusRouter _focusRouter;
+    private FocusRouter _focusRouter;
     private int _selectedPresentationFieldIndex;
     private int _selectedInventoryMetadataFieldIndex;
     private int _selectedTargetingSlotIndex;
@@ -43,11 +45,7 @@ internal sealed class EntityTemplateEditScreen
         _actionPlans = actionPlans.ToList();
         _service = service;
         _snapshotMutated = snapshotMutated;
-        _focusRouter = new FocusRouter([
-            new FocusTarget("presentation"),
-            new FocusTarget("targeting"),
-            new FocusTarget("inventory")
-        ]);
+        _focusRouter = BuildFocusRouter(template);
     }
 
     public string TemplateId => _template.TemplateId;
@@ -110,7 +108,7 @@ internal sealed class EntityTemplateEditScreen
         {
             "presentation" => "Presentation focused: Up/Down chooses field. Enter edits name/glyph/color or chooses action plan. Esc releases focus.",
             "targeting" => _targetingSlotPanelOpen
-                ? "Targeting requirement detail focused: Up/Down chooses target template/range. Enter edits. Esc closes 3.2.1 detail panel."
+                ? "Targeting requirement detail focused: Up/Down chooses target template/adjectives/range. Enter edits. Esc closes 3.2.1 detail panel."
                 : "Targeting focused: Up/Down chooses action-plan target label. Enter opens 3.2.1 details. Esc releases focus.",
             "inventory" => "Inventory focused: Up/Down chooses metadata field or grid editor. Enter edits/opens. Esc releases focus.",
             _ => "Esc releases focus."
@@ -134,13 +132,13 @@ internal sealed class EntityTemplateEditScreen
 
             if (command is UiComponentCommand.Up or UiComponentCommand.Left)
             {
-                _selectedTargetingDetailFieldIndex = Math.Clamp(_selectedTargetingDetailFieldIndex - 1, 0, 1);
+                _selectedTargetingDetailFieldIndex = Math.Clamp(_selectedTargetingDetailFieldIndex - 1, 0, 2);
                 return EntityTemplateEditResult.Stay(TargetingDetailSelectionMessage());
             }
 
             if (command is UiComponentCommand.Down or UiComponentCommand.Right)
             {
-                _selectedTargetingDetailFieldIndex = Math.Clamp(_selectedTargetingDetailFieldIndex + 1, 0, 1);
+                _selectedTargetingDetailFieldIndex = Math.Clamp(_selectedTargetingDetailFieldIndex + 1, 0, 2);
                 return EntityTemplateEditResult.Stay(TargetingDetailSelectionMessage());
             }
 
@@ -149,7 +147,7 @@ internal sealed class EntityTemplateEditScreen
                 return ActivateSelectedTargetingDetailField();
             }
 
-            return EntityTemplateEditResult.Stay("Use Up/Down to choose target template or range. Enter edits. Esc closes detail panel.");
+            return EntityTemplateEditResult.Stay("Use Up/Down to choose target template/adjectives/range. Enter edits. Esc closes detail panel.");
         }
 
         if (FocusedComponentId is { } focused)
@@ -343,6 +341,8 @@ internal sealed class EntityTemplateEditScreen
             {
                 return _activeTargetingFieldId == "target-template"
                     ? ConfirmTargetingTemplateEdit(choice.Id)
+                    : _activeTargetingFieldId == "target-adjectives"
+                        ? ConfirmTargetingAdjectiveToggle(choice.Id)
                     : _activePresentationFieldId == "action-plan"
                         ? ConfirmActionPlanChoice(choice.Id)
                     : ConfirmPresentationEdit(choice.Id);
@@ -453,10 +453,28 @@ internal sealed class EntityTemplateEditScreen
                 "target-template-editor",
                 $"Choose target template for {requirement.Label}",
                 "target template",
-                _entityTemplates.Select(template => new SelectableListItem(template.TemplateId, template.Name, template.TemplateId)),
+                TargetTemplateChoices(requirement),
                 SadConsoleRect.FromSize(42, 10, 58, 14),
                 SelectedTargetTemplateIndex(requirement));
             return EntityTemplateEditResult.Stay($"Opened target-template picker for {requirement.Label}.");
+        }
+
+        if (_selectedTargetingDetailFieldIndex == 1)
+        {
+            var choices = TargetCapabilityChoices(requirement).ToList();
+            if (choices.Count == 0)
+            {
+                return EntityTemplateEditResult.Stay($"Target label {requirement.Label} has no action-step adjectives available from the current action plan.");
+            }
+
+            _activeTargetingFieldId = "target-adjectives";
+            _activeFieldOverlay = new ChoicePickerOverlayComponent(
+                "target-adjectives-editor",
+                $"Toggle target adjectives for {requirement.Label}",
+                "target adjectives",
+                choices,
+                SadConsoleRect.FromSize(42, 10, 62, 14));
+            return EntityTemplateEditResult.Stay($"Opened target-adjectives picker for {requirement.Label}.");
         }
 
         _activeTargetingFieldId = "target-range";
@@ -472,26 +490,61 @@ internal sealed class EntityTemplateEditScreen
         return EntityTemplateEditResult.Stay($"Opened target-range editor for {requirement.Label}.");
     }
 
-    private EntityTemplateEditResult ConfirmTargetingTemplateEdit(string targetTemplateId)
+    private EntityTemplateEditResult ConfirmTargetingTemplateEdit(string targetTemplateChoiceId)
     {
         var requirement = SelectedTargetingRequirement();
+        var targetTemplateId = targetTemplateChoiceId == NullTargetTemplateChoiceId ? null : targetTemplateChoiceId;
         return ConfirmTargetingRuleEdit(targetTemplateId, requirement.Rule?.Range ?? 0);
     }
 
     private EntityTemplateEditResult ConfirmTargetingRangeEdit(int range)
     {
         var requirement = SelectedTargetingRequirement();
-        var targetTemplateId = requirement.Rule?.TargetTemplateId ?? _entityTemplates.FirstOrDefault()?.TemplateId;
-        if (string.IsNullOrWhiteSpace(targetTemplateId))
+        var targetTemplateId = requirement.Rule?.TargetTemplateId
+            ?? (requirement.Rule?.TargetCapabilities.Count > 0 ? null : _entityTemplates.FirstOrDefault()?.TemplateId);
+        if (string.IsNullOrWhiteSpace(targetTemplateId) && requirement.Rule?.TargetCapabilities.Count is not > 0)
         {
             ClearFieldOverlay();
-            return EntityTemplateEditResult.Stay("Choose a target template before setting target range.");
+            return EntityTemplateEditResult.Stay("Choose a target template or at least one adjective before setting target range.");
         }
 
         return ConfirmTargetingRuleEdit(targetTemplateId, range);
     }
 
-    private EntityTemplateEditResult ConfirmTargetingRuleEdit(string targetTemplateId, int range)
+    private EntityTemplateEditResult ConfirmTargetingAdjectiveToggle(string choiceId)
+    {
+        var requirement = SelectedTargetingRequirement();
+        var current = requirement.Rule?.TargetCapabilities.ToList() ?? [];
+        List<ActionPlanBehaviorStepKind> next;
+        if (choiceId == ClearTargetCapabilitiesChoiceId)
+        {
+            next = [];
+        }
+        else if (!Enum.TryParse<ActionPlanBehaviorStepKind>(choiceId, out var capability))
+        {
+            ClearFieldOverlay();
+            return EntityTemplateEditResult.Stay($"Unknown target adjective {choiceId}.");
+        }
+        else if (current.Contains(capability))
+        {
+            next = current.Where(item => item != capability).ToList();
+        }
+        else
+        {
+            next = [.. current, capability];
+        }
+
+        var targetTemplateId = requirement.Rule?.TargetTemplateId;
+        if (string.IsNullOrWhiteSpace(targetTemplateId) && next.Count == 0)
+        {
+            ClearFieldOverlay();
+            return EntityTemplateEditResult.Stay("Choose a target template before clearing the last target adjective.");
+        }
+
+        return ConfirmTargetingRuleEdit(targetTemplateId, requirement.Rule?.Range ?? 0, next);
+    }
+
+    private EntityTemplateEditResult ConfirmTargetingRuleEdit(string? targetTemplateId, int range, IReadOnlyList<ActionPlanBehaviorStepKind>? targetCapabilities = null)
     {
         if (_service is null)
         {
@@ -503,7 +556,7 @@ internal sealed class EntityTemplateEditScreen
         var slot = requirement.Rule?.Slot ?? _selectedTargetingSlotIndex + 1;
         var result = _service.SetTemplateTargetingRule(
             _template.TemplateId,
-            new FrontendEditorTargetingRuleUpdate(slot, requirement.Label, targetTemplateId, range));
+            new FrontendEditorTargetingRuleUpdate(slot, requirement.Label, targetTemplateId, range, targetCapabilities ?? requirement.Rule?.TargetCapabilities));
         ReplaceAfterMutation(result.Snapshot);
         _selectedTargetingSlotIndex = Math.Clamp(_selectedTargetingSlotIndex, 0, Math.Max(0, _template.TargetingRequirements.Count - 1));
         _targetingSlotPanelOpen = true;
@@ -514,13 +567,17 @@ internal sealed class EntityTemplateEditScreen
     private int SelectedTargetTemplateIndex(FrontendEditorTargetingRequirementSummary requirement)
     {
         if (requirement.Rule is null) return 0;
+        if (string.IsNullOrWhiteSpace(requirement.Rule.TargetTemplateId)) return 0;
+        var offset = AllowsNullTargetTemplate(requirement) ? 1 : 0;
         var index = _entityTemplates.FindIndex(template => template.TemplateId == requirement.Rule.TargetTemplateId);
-        return index < 0 ? 0 : index;
+        return index < 0 ? 0 : index + offset;
     }
 
     private string TargetingDetailSelectionMessage() => _selectedTargetingDetailFieldIndex == 0
         ? $"Selected target template for {SelectedTargetingRequirement().Label}."
-        : $"Selected target range for {SelectedTargetingRequirement().Label}.";
+        : _selectedTargetingDetailFieldIndex == 1
+            ? $"Selected target adjectives for {SelectedTargetingRequirement().Label}."
+            : $"Selected target range for {SelectedTargetingRequirement().Label}.";
 
     private EntityTemplateEditResult ConfirmPresentationEdit(string value)
     {
@@ -556,6 +613,7 @@ internal sealed class EntityTemplateEditScreen
         _entityTemplates.AddRange(snapshot.EntityTemplates);
         _actionPlans.Clear();
         _actionPlans.AddRange(snapshot.ActionPlans);
+        _focusRouter = BuildFocusRouter(_template);
         _snapshotMutated?.Invoke(snapshot);
     }
 
@@ -635,7 +693,7 @@ internal sealed class EntityTemplateEditScreen
         {
             rows.Add("unused authored targeting rules:");
             rows.AddRange(_template.OrphanedTargetingRules.Select(rule =>
-                $"  {rule.Label ?? $"slot {DisplaySlotNumber(rule)}"}: {rule.TargetTemplateName ?? rule.TargetTemplateId} range {rule.Range}"));
+                $"  {rule.Label ?? $"slot {DisplaySlotNumber(rule)}"}: {FormatTargetingRuleCriteria(rule)} range {rule.Range}"));
         }
 
         return new PanelComponent(
@@ -658,8 +716,9 @@ internal sealed class EntityTemplateEditScreen
             SadConsoleRect.FromSize(60, 8, 45, 11),
             [
                 new EditableFieldComponent("target-label", "target label", requirement.Label, EditableFieldMode.ReadOnly),
-                TargetingDetailField(0, "target-template", "target template", rule?.TargetTemplateName ?? rule?.TargetTemplateId ?? "(unset)", EditableFieldMode.Editable),
-                TargetingDetailField(1, "target-range", "target range", rule?.Range.ToString() ?? "0", EditableFieldMode.Editable)
+                TargetingDetailField(0, "target-template", "target template", FormatTargetTemplate(rule), EditableFieldMode.Editable),
+                TargetingDetailField(1, "target-adjectives", "target adjectives", FormatTargetCapabilities(rule), EditableFieldMode.Editable),
+                TargetingDetailField(2, "target-range", "target range", rule?.Range.ToString() ?? "0", EditableFieldMode.Editable)
             ],
             UiComponentState.Focused);
     }
@@ -667,7 +726,7 @@ internal sealed class EntityTemplateEditScreen
     private EditableFieldComponent TargetingDetailField(int index, string id, string label, string value, EditableFieldMode mode)
     {
         var selected = index == _selectedTargetingDetailFieldIndex;
-        var editMode = _activeTargetingFieldId == (id == "target-template" ? "target-template" : "target-range") ? EditableFieldMode.Editing : mode;
+        var editMode = _activeTargetingFieldId == id ? EditableFieldMode.Editing : mode;
         return new EditableFieldComponent(id, selected ? $"> {label}" : label, value, editMode);
     }
 
@@ -681,7 +740,67 @@ internal sealed class EntityTemplateEditScreen
             return "(unset) range 0";
         }
 
-        return $"{rule.TargetTemplateName ?? rule.TargetTemplateId} range {rule.Range}";
+        return $"{FormatTargetingRuleCriteria(rule)} range {rule.Range}";
+    }
+
+    private const string NullTargetTemplateChoiceId = "__no_target_template__";
+
+    private static FocusRouter BuildFocusRouter(FrontendEditorEntityTemplateSummary template) => new([
+        new FocusTarget("presentation"),
+        new FocusTarget("targeting", template.TargetingRequirements.Count > 0),
+        new FocusTarget("inventory")
+    ]);
+
+    private IEnumerable<SelectableListItem> TargetTemplateChoices(FrontendEditorTargetingRequirementSummary requirement)
+    {
+        if (AllowsNullTargetTemplate(requirement))
+        {
+            yield return new SelectableListItem(NullTargetTemplateChoiceId, "(none / adjective-only)", "keep only target-capability adjectives");
+        }
+
+        foreach (var template in _entityTemplates)
+        {
+            yield return new SelectableListItem(template.TemplateId, template.Name, template.TemplateId);
+        }
+    }
+
+    private IEnumerable<SelectableListItem> TargetCapabilityChoices(FrontendEditorTargetingRequirementSummary requirement)
+    {
+        var current = requirement.Rule?.TargetCapabilities ?? [];
+        foreach (var capability in requirement.StepKinds.Where(IsSupportedTargetCapability).Distinct())
+        {
+            var enabled = current.Contains(capability);
+            yield return new SelectableListItem(capability.ToString(), enabled ? $"[x] {capability}" : $"[ ] {capability}", enabled ? "currently selected" : "available from current action plan");
+        }
+
+        if (current.Count > 0)
+        {
+            yield return new SelectableListItem(ClearTargetCapabilitiesChoiceId, "(none)", "clear all target adjectives");
+        }
+    }
+
+    private static bool IsSupportedTargetCapability(ActionPlanBehaviorStepKind kind) => kind is
+        ActionPlanBehaviorStepKind.PickupTarget or
+        ActionPlanBehaviorStepKind.EnterTarget or
+        ActionPlanBehaviorStepKind.GiveTarget or
+        ActionPlanBehaviorStepKind.TakeTarget or
+        ActionPlanBehaviorStepKind.DestroyTarget or
+        ActionPlanBehaviorStepKind.PushFacing;
+
+    private static bool AllowsNullTargetTemplate(FrontendEditorTargetingRequirementSummary requirement) =>
+        requirement.Rule?.TargetCapabilities.Count > 0;
+
+    private static string FormatTargetTemplate(FrontendEditorTargetingRuleSummary? rule) =>
+        rule is null ? "(unset)" : rule.TargetTemplateName ?? rule.TargetTemplateId ?? "(none)";
+
+    private static string FormatTargetCapabilities(FrontendEditorTargetingRuleSummary? rule) =>
+        rule is null || rule.TargetCapabilities.Count == 0 ? "(none)" : string.Join(", ", rule.TargetCapabilities);
+
+    private static string FormatTargetingRuleCriteria(FrontendEditorTargetingRuleSummary rule)
+    {
+        var target = rule.TargetTemplateName ?? rule.TargetTemplateId ?? "any entity";
+        var capabilities = rule.TargetCapabilities.Count == 0 ? string.Empty : $" [{string.Join(", ", rule.TargetCapabilities)}]";
+        return $"{target}{capabilities}";
     }
 
     private static int DisplaySlotNumber(FrontendEditorTargetingRuleSummary slot) => slot.Slot + 1;

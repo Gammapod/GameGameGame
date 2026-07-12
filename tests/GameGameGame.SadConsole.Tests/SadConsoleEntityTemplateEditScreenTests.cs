@@ -232,11 +232,11 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         var screen = EntityTemplateEditScreen.FromSnapshot(snapshot, "player");
 
         screen.Handle(UiComponentCommand.Down);
-        screen.Handle(UiComponentCommand.Select);
         var result = screen.Handle(UiComponentCommand.Select);
 
-        Assert.Contains("Choose an Action Plan", result.Message);
+        Assert.Contains("inventory", result.Message);
         Assert.Null(screen.OverlayComponent());
+        Assert.Equal(UiComponentState.Disabled, screen.Components().Single(component => component.Id == "targeting").State);
         Assert.Contains(screen.Components().SelectMany(component => component.RenderRows(SadConsoleTheme.Default)), row => row.Contains("Choose an Action Plan"));
     }
 
@@ -258,6 +258,7 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
 
         screen.Handle(UiComponentCommand.Cancel);
         screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
         var rangeOpen = screen.Handle(UiComponentCommand.Select);
         var rangeOverlay = screen.OverlayComponent();
 
@@ -265,6 +266,40 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         Assert.NotNull(rangeOverlay);
         Assert.Equal("target-range-editor", rangeOverlay.Id);
         Assert.Contains(rangeOverlay.RenderRows(SadConsoleTheme.Default), row => row.Contains("between 0 and 10"));
+    }
+
+    [Fact]
+    public void EntityTemplateEditTargetingAdjectivesDeriveFromCurrentActionPlanAndToggleThroughService()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var createActor = service.CreateEntityTemplate("Thief");
+        var actorId = createActor.Snapshot.EntityTemplates.Single().TemplateId;
+        var plan = service.CreatePassiveActionPlan("Thief Action Plan");
+        var planId = plan.Snapshot.ActionPlans.Single().ActionPlanId;
+        service.InsertActionPlanStep(planId, 0, ActionPlanBehaviorStepKind.PickupTarget);
+        service.SetActionPlanStepTargetLabel(planId, 0, "wants");
+        service.SetTemplateDefaultActionPlan(actorId, planId);
+        var screen = EntityTemplateEditScreen.FromSnapshot(service.GetSnapshot(), actorId, service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        var open = screen.Handle(UiComponentCommand.Select);
+        var overlay = screen.OverlayComponent();
+
+        Assert.Contains("target-adjectives picker", open.Message);
+        Assert.NotNull(overlay);
+        Assert.Equal("target-adjectives-editor", overlay.Id);
+        Assert.Contains(overlay.RenderRows(SadConsoleTheme.Default), row => row.Contains("PickupTarget"));
+
+        var toggle = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Updated targeting rule", toggle.Message);
+        var rule = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == actorId).TargetingRules.Single();
+        Assert.Equal("wants", rule.Label);
+        Assert.Null(rule.TargetTemplateId);
+        Assert.Equal([ActionPlanBehaviorStepKind.PickupTarget], rule.TargetCapabilities);
     }
 
     [Fact]

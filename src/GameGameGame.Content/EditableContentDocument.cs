@@ -426,6 +426,8 @@ public sealed class EditableContentDocument
 
         public string? TargetTemplateId { get; set; }
 
+        public List<ActionPlanBehaviorStepKind>? TargetCapabilities { get; set; }
+
         public int Range { get; set; }
 
         public static EntityTargetingRuleDto From(EntityTargetingRule rule) => new()
@@ -433,7 +435,8 @@ public sealed class EditableContentDocument
             Slot = rule.Slot,
             Hint = rule.Hint,
             Label = rule.Label,
-            TargetTemplateId = rule.TargetTemplateId.Value,
+            TargetTemplateId = rule.TargetTemplateId?.Value,
+            TargetCapabilities = rule.TargetCapabilities.Count == 0 ? null : rule.TargetCapabilities.ToList(),
             Range = rule.Range
         };
     }

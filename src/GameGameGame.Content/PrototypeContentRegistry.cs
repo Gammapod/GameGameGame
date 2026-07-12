@@ -267,14 +267,70 @@ public sealed class PrototypeContentRegistry(
                     entityTemplateId: templateId));
             }
 
-            if (!entityTemplates.ContainsKey(rule.TargetTemplateId))
+            if (rule.TargetTemplateId is null && rule.TargetCapabilities.Count == 0)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidTargetingRule,
+                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} must declare a target template, at least one target capability, or both.",
+                    entityTemplateId: templateId));
+            }
+
+            if (rule.TargetTemplateId is { } targetTemplateId && !entityTemplates.ContainsKey(targetTemplateId))
             {
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.MissingTargetTemplateReference,
-                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} references missing target template {rule.TargetTemplateId}.",
+                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} references missing target template {targetTemplateId}.",
                     entityTemplateId: templateId));
             }
+
+            foreach (var capability in rule.TargetCapabilities)
+            {
+                if (!EntityInteractionAffordanceService.IsSupportedTargetCapability(capability))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidTargetingRule,
+                        $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} references unsupported target capability {capability}.",
+                        entityTemplateId: templateId));
+                    continue;
+                }
+
+                if (!TemplatePlanUsesTargetCapability(template, rule, capability))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidTargetingRule,
+                        $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} capability {capability} is not consumed by its default action plan with the same target label/slot.",
+                        entityTemplateId: templateId));
+                }
+            }
         }
+    }
+
+    private bool TemplatePlanUsesTargetCapability(
+        EntityTemplate template,
+        EntityTargetingRule rule,
+        ActionPlanBehaviorStepKind capability)
+    {
+        if (template.DefaultActionPlanId is not { } planId
+            || !actionPlanTemplates.TryGetValue(planId, out var plan)
+            || plan.Behavior?.Steps is not { Count: > 0 } steps)
+        {
+            return false;
+        }
+
+        return steps.Any(step =>
+            step.Kind == capability
+            && TargetReferenceMatchesRule(step, rule));
+    }
+
+    private static bool TargetReferenceMatchesRule(ActionPlanBehaviorStepDescriptor step, EntityTargetingRule rule)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.Label)
+            && string.Equals(step.TargetLabel, rule.Label, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return (step.TargetSlot ?? 1) == rule.Slot && string.IsNullOrWhiteSpace(step.TargetLabel);
     }
 
     private static void ValidateCarriedEntityLayout(

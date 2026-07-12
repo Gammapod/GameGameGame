@@ -66,10 +66,11 @@ public static class YamlContentLoader
         return rules
             .Select(rule => new EntityTargetingRule(
                 rule.Slot,
-                new EntityTemplateId(Required(rule.TargetTemplateId, nameof(rule.TargetTemplateId))),
+                string.IsNullOrWhiteSpace(rule.TargetTemplateId) ? null : new EntityTemplateId(rule.TargetTemplateId),
                 rule.Range,
                 rule.Hint,
-                rule.Label))
+                rule.Label,
+                rule.TargetCapabilities))
             .ToList();
     }
 
@@ -321,6 +322,8 @@ public static class YamlContentLoader
         public string? Label { get; set; }
 
         public string? TargetTemplateId { get; set; }
+
+        public List<ActionPlanBehaviorStepKind>? TargetCapabilities { get; set; }
 
         public int Range { get; set; }
     }

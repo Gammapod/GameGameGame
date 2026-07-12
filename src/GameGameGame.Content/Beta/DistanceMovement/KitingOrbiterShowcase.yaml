@@ -97,22 +97,24 @@ presentations:
     glyph: '@'
     color: Yellow
   betaKitingOrbiter:
-    glyph: 'O'
+    glyph: O
     color: Green
   betaOrbitTarget:
-    glyph: 'T'
+    glyph: T
     color: Cyan
 actionPlans:
   kitingOrbiterBehavior:
     id: kitingOrbiterBehavior
     behavior:
       steps:
-      - kind: AcquireNearestTarget
+      - kind: DestroyTarget
+        targetLabel: hate
       - kind: MaintainChebyshevDistanceTwo
       - kind: StrafeClockwise
       - kind: StrafeAnticlockwise
       - kind: FleeTarget
       - kind: SeekTarget
+    steps: []
 scenarios:
   beta-kiting-orbiter:
     name: Beta Kiting Orbiter

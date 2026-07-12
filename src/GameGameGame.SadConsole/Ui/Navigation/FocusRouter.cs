@@ -8,10 +8,11 @@ internal sealed class FocusRouter
 {
     private readonly List<FocusTarget> _targets;
 
-    public FocusRouter(IEnumerable<FocusTarget> targets)
+    public FocusRouter(IEnumerable<FocusTarget> targets, bool focusFirstEnabled = false)
     {
         _targets = targets.ToList();
         SelectedIndex = FirstEnabledIndex();
+        HasFocusedComponent = focusFirstEnabled && SelectedIndex >= 0;
     }
 
     public int SelectedIndex { get; private set; }

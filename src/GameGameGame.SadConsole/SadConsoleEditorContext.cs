@@ -1400,7 +1400,7 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Failure("No authored template is selected; targeting rule edit cancelled.");
         }
 
-        var result = _service.SetTemplateTargetingRule(template.TemplateId, new FrontendEditorTargetingRuleUpdate(edit.Slot, edit.Label, edit.TargetTemplateId, edit.Range));
+        var result = _service.SetTemplateTargetingRule(template.TemplateId, new FrontendEditorTargetingRuleUpdate(edit.Slot, edit.Label, edit.TargetTemplateId, edit.Range, edit.TargetCapabilities));
         ReplaceSnapshotAfterMutation(
             result.Snapshot,
             template.TemplateId,
@@ -1593,21 +1593,24 @@ internal sealed class SadConsoleEditorContext
         slot = Math.Clamp(slot, 1, 4);
         var existing = template.TargetingRules.FirstOrDefault(rule => rule.Slot == slot);
         var options = TargetTemplatePickerOptions();
-        var defaultTarget = existing?.TargetTemplateId ?? template.TemplateId;
-        var targetIndex = options.ToList().FindIndex(option => string.Equals(option.TemplateId, defaultTarget, StringComparison.Ordinal));
-        if (targetIndex < 0)
+        var defaultTarget = existing is null ? template.TemplateId : existing.TargetTemplateId;
+        var targetIndex = defaultTarget is null
+            ? -1
+            : options.ToList().FindIndex(option => string.Equals(option.TemplateId, defaultTarget, StringComparison.Ordinal));
+        if (targetIndex < 0 && defaultTarget is not null)
         {
             targetIndex = options.ToList().FindIndex(option => string.Equals(option.TemplateId, template.TemplateId, StringComparison.Ordinal));
         }
 
-        targetIndex = ClampIndex(targetIndex, options.Count);
-        var targetId = options.Count == 0 ? string.Empty : options[targetIndex].TemplateId;
+        targetIndex = targetIndex < 0 ? -1 : ClampIndex(targetIndex, options.Count);
+        var targetId = targetIndex < 0 || options.Count == 0 ? null : options[targetIndex].TemplateId;
         _targetingRuleEdit = new SadConsoleEditorTargetingRuleEditState(
             slot,
             existing?.Label ?? string.Empty,
             targetId,
             targetIndex,
             existing?.Range ?? 0,
+            existing?.TargetCapabilities ?? [],
             activeField,
             IsEditingLabel: false,
             LabelBuffer: existing?.Label ?? string.Empty,
@@ -1982,9 +1985,10 @@ internal sealed record SadConsoleEditorInventoryBrushState(GridCoord Cursor, int
 internal sealed record SadConsoleEditorTargetingRuleEditState(
     int Slot,
     string Label,
-    string TargetTemplateId,
+    string? TargetTemplateId,
     int TargetTemplateIndex,
     int Range,
+    IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities,
     SadConsoleEditorTargetingRuleField ActiveField,
     bool IsEditingLabel,
     string LabelBuffer,
@@ -2445,7 +2449,7 @@ internal static class SadConsoleEditorViewBuilder
             "Targeting rule editor active: Up/Down slot, Left/Right field, Enter activates focused label/target/range, X/Delete clears slot, Esc exits.",
             edit.IsEditingLabel
                 ? $"Editing slot {edit.Slot} label buffer: '{edit.LabelBuffer}' (lowercase alphanumeric required by service; Enter applies label through editor service; Esc cancels label edit)."
-                : $"Pending slot {edit.Slot}: {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Label, $"label '{(string.IsNullOrWhiteSpace(edit.Label) ? "<blank>" : edit.Label)}'")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Target, $"target {FormatTargetTemplate(snapshot, edit.TargetTemplateId)}")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Range, $"range {edit.Range}")} | {(edit.ExistingRulePresent ? "existing rule" : "empty slot/new rule")}",
+                : $"Pending slot {edit.Slot}: {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Label, $"label '{(string.IsNullOrWhiteSpace(edit.Label) ? "<blank>" : edit.Label)}'")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Target, $"target {FormatTargetTemplate(snapshot, edit.TargetTemplateId)}")} | adjectives {FormatTargetCapabilities(edit.TargetCapabilities)} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Range, $"range {edit.Range}")} | {(edit.ExistingRulePresent ? "existing rule" : "empty slot/new rule")}",
             "Slots 1-4:"
         };
 
@@ -2459,10 +2463,14 @@ internal static class SadConsoleEditorViewBuilder
         }
 
         var options = context.TargetTemplatePickerOptions();
-        if (options.Count > 0)
+        if (options.Count > 0 && edit.TargetTemplateIndex >= 0)
         {
             var option = options[Math.Clamp(edit.TargetTemplateIndex, 0, options.Count - 1)];
             rows.Add($"Target template picker: {option.Label} ({edit.TargetTemplateIndex + 1}/{options.Count}); self/current template is allowed.");
+        }
+        else if (edit.TargetCapabilities.Count > 0)
+        {
+            rows.Add("Target template picker: (none / adjective-only); existing adjective-only rule is preserved until target is cycled.");
         }
 
         return rows;
@@ -2471,11 +2479,19 @@ internal static class SadConsoleEditorViewBuilder
     private static string FocusTargetingField(SadConsoleEditorTargetingRuleEditState edit, SadConsoleEditorTargetingRuleField field, string text) =>
         !edit.IsEditingLabel && edit.ActiveField == field ? $">[{text}]<" : $"[{text}]";
 
-    private static string FormatTargetTemplate(FrontendEditorSnapshot snapshot, string templateId)
+    private static string FormatTargetTemplate(FrontendEditorSnapshot snapshot, string? templateId)
     {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            return "(none)";
+        }
+
         var template = snapshot.EntityTemplates.FirstOrDefault(candidate => string.Equals(candidate.TemplateId, templateId, StringComparison.Ordinal));
         return template is null ? templateId : $"{template.Name} ({template.TemplateId})";
     }
+
+    private static string FormatTargetCapabilities(IReadOnlyList<ActionPlanBehaviorStepKind> capabilities) =>
+        capabilities.Count == 0 ? "(none)" : string.Join(", ", capabilities);
 
     private static string FormatAssignedActionPlanSummary(FrontendEditorSnapshot snapshot, string? actionPlanId)
     {
@@ -2867,8 +2883,9 @@ internal static class SadConsoleEditorViewBuilder
         var hint = string.IsNullOrWhiteSpace(rule.Hint) ? "no hint" : rule.Hint;
         var target = !string.IsNullOrWhiteSpace(rule.TargetTemplateName)
             ? $"{rule.TargetTemplateName} ({rule.TargetTemplateId})"
-            : rule.TargetTemplateId;
-        return $"slot {rule.Slot} {label}; hint:{hint}; target:{target}; range:{rule.Range}";
+            : rule.TargetTemplateId ?? "any entity";
+        var capabilities = rule.TargetCapabilities.Count == 0 ? string.Empty : $"; adjectives:{string.Join(",", rule.TargetCapabilities)}";
+        return $"slot {rule.Slot} {label}; hint:{hint}; target:{target}{capabilities}; range:{rule.Range}";
     }
 
     private static int WindowFirst(int selected, int total, int count) =>

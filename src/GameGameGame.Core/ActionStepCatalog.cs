@@ -14,7 +14,8 @@ public sealed record ActionStepDescriptor(
     IReadOnlyList<PlanPrimitiveSlotDescriptor>? RequiredState = null,
     IReadOnlyList<PlanPrimitiveSlotDescriptor>? DefaultableState = null,
     IReadOnlyList<PlanPrimitiveSlotDescriptor>? StateWrites = null,
-    ActionStepAuthoringTier Tier = ActionStepAuthoringTier.Stable)
+    ActionStepAuthoringTier Tier = ActionStepAuthoringTier.Stable,
+    ActionPlanBehaviorStepKind? TargetCapability = null)
 {
     public IReadOnlyList<PlanPrimitiveSlotDescriptor> RequiredState { get; } = RequiredState ?? [];
 
@@ -39,7 +40,8 @@ public static class ActionStepCatalog
             "Pickup Target",
             "Attempts to pick up the persistent Target into the first available actor inventory coordinate in deterministic row-major order; when pickup fails, falls through to the next Action Step.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.PickupTarget),
         new(
             ActionPlanBehaviorStepKind.DropFacing,
             "Drop Facing",
@@ -51,13 +53,15 @@ public static class ActionStepCatalog
             "Push Facing",
             "Attempts to push the blocking entity in the actor's persistent Facing direction, then moves the actor into the blocker original location; a successful push consumes the turn.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
-            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            TargetCapability: ActionPlanBehaviorStepKind.PushFacing),
         new(
             ActionPlanBehaviorStepKind.DestroyTarget,
             "Destroy Target",
             "Destroys the persistent Target entity recursively, including its inventory space and contained entities.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.DestroyTarget),
         new(
             ActionPlanBehaviorStepKind.CreateFacing,
             "Create Facing",
@@ -136,19 +140,22 @@ public static class ActionStepCatalog
             "Give Target",
             "Transfers the first carried entity from actor inventory into the persistent Target inventory using deterministic row-major source and destination order; falls through when transfer cannot be completed.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.GiveTarget),
         new(
             ActionPlanBehaviorStepKind.TakeTarget,
             "Take Target",
             "Transfers the first carried entity from the persistent Target inventory into actor inventory using deterministic row-major source and destination order; falls through when transfer cannot be completed.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.TakeTarget),
         new(
             ActionPlanBehaviorStepKind.EnterTarget,
             "Enter Target",
             "Moves the actor into the persistent Target inventory using deterministic row-major destination order; falls through when target adjacency, inventory space, or aperture checks fail.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.EnterTarget),
         new(
             ActionPlanBehaviorStepKind.ExitFacing,
             "Exit Facing",

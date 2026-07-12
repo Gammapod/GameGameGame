@@ -392,6 +392,22 @@ public sealed class CoreActionPlanTests
         Assert.Contains(pickupTarget.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
         Assert.Contains(pickupTarget.DefaultableState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
         Assert.Empty(pickupTarget.StateWrites);
+        Assert.Equal(ActionPlanBehaviorStepKind.PickupTarget, pickupTarget.TargetCapability);
+    }
+
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.PickupTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.EnterTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.GiveTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.TakeTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.DestroyTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.PushFacing)]
+    public void ActionStepCatalogDeclaresTargetCapabilitiesForAffordanceTargeting(ActionPlanBehaviorStepKind kind)
+    {
+        var step = ActionStepCatalog.Get(kind);
+
+        Assert.Equal(kind, step.TargetCapability);
+        Assert.True(EntityInteractionAffordanceService.IsSupportedTargetCapability(kind));
     }
 
     [Theory]

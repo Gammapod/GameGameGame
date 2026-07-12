@@ -58,6 +58,28 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsInvalidTargetingCapabilityAdjectives()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with
+                {
+                    TargetingRules =
+                    [
+                        new EntityTargetingRule(1, null, 3, Label: "loves", TargetCapabilities: [ActionPlanBehaviorStepKind.SeekTarget]),
+                        new EntityTargetingRule(2, null, 3, Label: "wants", TargetCapabilities: [ActionPlanBehaviorStepKind.PickupTarget])
+                    ]
+                });
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("unsupported target capability SeekTarget"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("PickupTarget") && diagnostic.Message.Contains("default action plan"));
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsInvalidBehaviorTargetSlot()
     {
         var registry = PrototypeContent.CreateRegistry()

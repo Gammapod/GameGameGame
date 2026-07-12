@@ -26,10 +26,14 @@ public sealed record EntityTemplate(
 
 public sealed record EntityTargetingRule(
     int Slot,
-    EntityTemplateId TargetTemplateId,
+    EntityTemplateId? TargetTemplateId,
     int Range,
     string? Hint = null,
-    string? Label = null);
+    string? Label = null,
+    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null)
+{
+    public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
+}
 
 public sealed record ActorActionStateDefaults(
     Direction? Facing = null,

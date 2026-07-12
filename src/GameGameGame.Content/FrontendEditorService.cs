@@ -438,10 +438,11 @@ public sealed class FrontendEditorService(ContentEditorSession session)
                 template,
                 new EntityTargetingRule(
                     update.Slot,
-                    new EntityTemplateId(update.TargetTemplateId),
+                    string.IsNullOrWhiteSpace(update.TargetTemplateId) ? null : new EntityTemplateId(update.TargetTemplateId),
                     update.Range,
                     Hint: null,
-                    Label: update.Label));
+                    Label: update.Label,
+                    TargetCapabilities: update.TargetCapabilities));
             return FrontendEditorMutationResult.Success(
                 $"Updated targeting rule slot {update.Slot} on template {templateId}. Preview stale until P rematerializes.",
                 GetSnapshot());
@@ -810,6 +811,49 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         }
     }
 
+    public FrontendEditorMutationResult SetActionPlanStepTargetLabel(
+        string actionPlanId,
+        int stepIndex,
+        string? targetLabel)
+    {
+        var validationError = ValidateActionPlanMutation(actionPlanId);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, GetSnapshot());
+        }
+
+        try
+        {
+            var planId = new ActionPlanTemplateId(actionPlanId);
+            var steps = GetEditableBehaviorSteps(planId);
+            if (stepIndex < 0 || stepIndex >= steps.Count)
+            {
+                return FrontendEditorMutationResult.Failure(
+                    $"Action plan {actionPlanId} step index {stepIndex} is outside editable step range 0..{Math.Max(steps.Count - 1, 0)}.",
+                    GetSnapshot());
+            }
+
+            var normalizedLabel = targetLabel?.Trim();
+            var labelValidationError = ValidateActionPlanStepTargetLabel(normalizedLabel);
+            if (labelValidationError is not null)
+            {
+                return FrontendEditorMutationResult.Failure(labelValidationError, GetSnapshot());
+            }
+
+            Session.Editor.SetActionPlanBehaviorStepTargetLabel(planId, stepIndex, normalizedLabel);
+            var displayLabel = normalizedLabel is null ? "cleared" : $"set to {normalizedLabel}";
+            return FrontendEditorMutationResult.Success(
+                $"Action plan {actionPlanId} step {stepIndex} target label {displayLabel}. Preview stale until P rematerializes.",
+                GetSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not set action plan {actionPlanId} step {stepIndex} target label: {ex.Message}",
+                GetSnapshot());
+        }
+    }
+
     private string? ValidateActionPlanStepMutation(string actionPlanId, ActionPlanBehaviorStepKind kind)
     {
         var validationError = ValidateActionPlanMutation(actionPlanId);
@@ -837,6 +881,26 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         if (Session.Document.ActionPlans.ContainsKey(actionPlanId) is false)
         {
             return $"Action plan {actionPlanId} does not exist.";
+        }
+
+        return null;
+    }
+
+    private static string? ValidateActionPlanStepTargetLabel(string? targetLabel)
+    {
+        if (targetLabel is null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(targetLabel))
+        {
+            return "Action step target label must not be blank.";
+        }
+
+        if (targetLabel.All(character => character is >= 'a' and <= 'z' or >= '0' and <= '9') is false)
+        {
+            return "Action step target label must be lowercase alphanumeric with no spaces.";
         }
 
         return null;
@@ -943,10 +1007,23 @@ public sealed class FrontendEditorService(ContentEditorSession session)
             return "Targeting rule label must be lowercase alphanumeric with no spaces.";
         }
 
-        if (string.IsNullOrWhiteSpace(update.TargetTemplateId)
-            || Session.Document.EntityTemplates.ContainsKey(update.TargetTemplateId) is false)
+        if (string.IsNullOrWhiteSpace(update.TargetTemplateId) && update.TargetCapabilities.Count == 0)
+        {
+            return "Targeting rule requires a target template, at least one target capability, or both.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(update.TargetTemplateId)
+            && Session.Document.EntityTemplates.ContainsKey(update.TargetTemplateId) is false)
         {
             return $"Target template {update.TargetTemplateId} does not exist.";
+        }
+
+        foreach (var capability in update.TargetCapabilities)
+        {
+            if (!EntityInteractionAffordanceService.IsSupportedTargetCapability(capability))
+            {
+                return $"Target capability {capability} is not supported for targeting rules.";
+            }
         }
 
         if (update.Range is < 0 or > 10)
@@ -1027,9 +1104,10 @@ public sealed class FrontendEditorService(ContentEditorSession session)
                         rule.Slot,
                         rule.Label,
                         rule.Hint,
-                        rule.TargetTemplateId.Value,
-                        TryGetTemplateName(rule.TargetTemplateId.Value),
-                        rule.Range))
+                        rule.TargetTemplateId?.Value,
+                        rule.TargetTemplateId is { } targetTemplateId ? TryGetTemplateName(targetTemplateId.Value) : null,
+                        rule.Range,
+                        rule.TargetCapabilities))
                     .ToList();
                 var targetRequirements = GetTargetingRequirements(model.Template.DefaultActionPlanId, targetingRules);
                 var requirementLabels = targetRequirements
@@ -1159,7 +1237,15 @@ public sealed class FrontendEditorService(ContentEditorSession session)
                 .Select((step, index) =>
                 {
                     var metadata = ActionStepCatalog.Get(step.Kind);
-                    return new FrontendEditorActionPlanStepSummary(index, step.Kind, metadata.DisplayName);
+                    var consumesTargetReference = metadata.RequiredState
+                        .Any(state => state.Slot == ActionPlanSlot.Target);
+                    return new FrontendEditorActionPlanStepSummary(
+                        index,
+                        step.Kind,
+                        metadata.DisplayName,
+                        step.TargetLabel,
+                        step.TargetSlot,
+                        consumesTargetReference);
                 })
                 .ToList();
         }
@@ -1213,8 +1299,12 @@ public sealed record FrontendEditorTemplateMetadataUpdate(
 public sealed record FrontendEditorTargetingRuleUpdate(
     int Slot,
     string Label,
-    string TargetTemplateId,
-    int Range);
+    string? TargetTemplateId,
+    int Range,
+    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null)
+{
+    public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
+}
 
 public sealed record FrontendEditorMutationResult(
     bool IsSuccess,
@@ -1275,9 +1365,13 @@ public sealed record FrontendEditorTargetingRuleSummary(
     int Slot,
     string? Label,
     string? Hint,
-    string TargetTemplateId,
+    string? TargetTemplateId,
     string? TargetTemplateName,
-    int Range);
+    int Range,
+    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null)
+{
+    public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
+}
 
 public sealed record FrontendEditorTargetingRequirementSummary(
     string Label,
@@ -1312,7 +1406,10 @@ public sealed record FrontendEditorActionPlanTargetLabelRequirementSummary(
 public sealed record FrontendEditorActionPlanStepSummary(
     int Index,
     ActionPlanBehaviorStepKind Kind,
-    string DisplayName);
+    string DisplayName,
+    string? TargetLabel = null,
+    int? TargetSlot = null,
+    bool ConsumesTargetReference = false);
 
 public sealed record FrontendEditorAvailableActionStepSummary(
     ActionPlanBehaviorStepKind Kind,

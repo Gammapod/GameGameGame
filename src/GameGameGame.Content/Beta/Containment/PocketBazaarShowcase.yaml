@@ -137,6 +137,13 @@ entityTemplates:
     carryingCapacity: 0
     bulk: 100
     aperture: 0
+    defaultActionPlanId: pocketBazaarMouseRetreat
+    targetingRules:
+    - slot: 1
+      label: want
+      targetCapabilities:
+      - PickupTarget
+      range: 0
   pocketBazaarRail:
     name: Workbench Rail
     inventoryWidth: 0
@@ -461,12 +468,13 @@ actionPlans:
     id: pocketBazaarMouseRetreat
     behavior:
       steps:
-      - kind: FleeTarget
-        targetSlot: 1
-      - kind: EnterTarget
-        targetSlot: 3
+      - kind: SeekTarget
+        targetLabel: want
+      - kind: PickupTarget
+        targetLabel: want
       - kind: EnterTarget
         targetSlot: 2
+    steps: []
   pocketBazaarSlimeWalkPickupReverse:
     id: pocketBazaarSlimeWalkPickupReverse
     behavior:

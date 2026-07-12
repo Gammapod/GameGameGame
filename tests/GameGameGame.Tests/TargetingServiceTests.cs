@@ -63,6 +63,123 @@ public sealed class TargetingServiceTests
         Assert.Equal(cat, world.GetActionTarget(mouse, slot: 1));
     }
 
+    [Fact]
+    public void RefreshTargetsCanFilterMatchingTemplateByPickupCapabilityAdjective()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              thief:
+                name: Thief
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 2
+                defaultActionPlanId: thiefPlan
+                targetingRules:
+                  - slot: 1
+                    label: loves
+                    targetTemplateId: gold
+                    targetCapabilities:
+                      - PickupTarget
+                    range: 4
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations:
+              thief:
+                glyph: t
+                color: Gray
+              gold:
+                glyph: '$'
+                color: Yellow
+            actionPlans:
+              thiefPlan:
+                id: thiefPlan
+                behavior:
+                  steps:
+                    - kind: SeekTarget
+                      targetLabel: loves
+                    - kind: PickupTarget
+                      targetLabel: loves
+            """);
+        var world = CreateTargetingWorld();
+        var thief = new EntityId("thief");
+        Spawn(registry, world, "thief", thief.Value, new GridCoord(2, 2));
+        Spawn(registry, world, "gold", "heavyGold", new GridCoord(2, 3));
+        world.Entities[new EntityId("heavyGold")] = world.Entities[new EntityId("heavyGold")] with { Bulk = 9 };
+        Spawn(registry, world, "gold", "portableGold", new GridCoord(2, 4));
+
+        TargetingService.RefreshTargets(world, registry, thief);
+
+        Assert.Equal(new EntityId("portableGold"), world.GetActionTarget(thief, label: "loves"));
+    }
+
+    [Fact]
+    public void RefreshTargetsCanSelectNounlessPickupCapabilityAdjective()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              thief:
+                name: Thief
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 2
+                defaultActionPlanId: thiefPlan
+                targetingRules:
+                  - slot: 1
+                    label: loves
+                    targetCapabilities:
+                      - PickupTarget
+                    range: 4
+              gem:
+                name: Gem
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+              chest:
+                name: Chest
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 9
+                aperture: 3
+            presentations:
+              thief:
+                glyph: t
+                color: Gray
+              gem:
+                glyph: '*'
+                color: Yellow
+              chest:
+                glyph: C
+                color: Earth
+            actionPlans:
+              thiefPlan:
+                id: thiefPlan
+                behavior:
+                  steps:
+                    - kind: SeekTarget
+                      targetLabel: loves
+                    - kind: PickupTarget
+                      targetLabel: loves
+            """);
+        var world = CreateTargetingWorld();
+        var thief = new EntityId("thief");
+        Spawn(registry, world, "thief", thief.Value, new GridCoord(2, 2));
+        Spawn(registry, world, "chest", "heavyChest", new GridCoord(2, 3));
+        Spawn(registry, world, "gem", "portableGem", new GridCoord(2, 4));
+
+        TargetingService.RefreshTargets(world, registry, thief);
+
+        Assert.Equal(new EntityId("portableGem"), world.GetActionTarget(thief, label: "loves"));
+    }
+
     private static PrototypeContentRegistry CreateTargetingRegistry() =>
         YamlContentLoader.LoadRegistry(
             """
@@ -120,10 +237,10 @@ public sealed class TargetingServiceTests
         return world;
     }
 
-    private static void Spawn(PrototypeContentRegistry registry, WorldState world, string templateId, string entityId, GridCoord coord) =>
+    private static void Spawn(PrototypeContentRegistry registry, WorldState world, string templateId, string entityId, GridCoord coord, EntityTemplateId? spawnTemplateId = null) =>
         registry.SpawnEntity(
             world,
-            new EntityTemplateId(templateId),
+            spawnTemplateId ?? new EntityTemplateId(templateId),
             new EntitySpawnOptions(new EntityId(entityId), new PlaneCoord(TestWorld.WorldPlaneId, coord)));
 
     private sealed class FixedEntityActionPlan(IActionIntent action) : IEntityActionPlan

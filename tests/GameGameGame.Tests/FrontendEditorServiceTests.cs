@@ -339,6 +339,68 @@ public sealed class FrontendEditorServiceTests
             Assert.Equal("editorPlayer", rule.TargetTemplateId);
             Assert.Equal("Editor Player", rule.TargetTemplateName);
             Assert.Equal(7, rule.Range);
+            Assert.Empty(rule.TargetCapabilities);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateTargetingRuleCanWriteCapabilityAdjectives()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              thief:
+                name: Thief
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 2
+                defaultActionPlanId: thiefPlan
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations:
+              thief:
+                glyph: t
+                color: Gray
+              gold:
+                glyph: '$'
+                color: Yellow
+            actionPlans:
+              thiefPlan:
+                id: thiefPlan
+                behavior:
+                  steps:
+                    - kind: PickupTarget
+                      targetLabel: loves
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetTemplateTargetingRule(
+                "thief",
+                new FrontendEditorTargetingRuleUpdate(
+                    1,
+                    "loves",
+                    "gold",
+                    5,
+                    [ActionPlanBehaviorStepKind.PickupTarget]));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var thief = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "thief");
+            var rule = Assert.Single(thief.TargetingRules);
+            Assert.Equal("gold", rule.TargetTemplateId);
+            Assert.Equal([ActionPlanBehaviorStepKind.PickupTarget], rule.TargetCapabilities);
+            Assert.Contains("targetCapabilities:", result.Snapshot.YamlPreview);
         }
         finally
         {
@@ -716,6 +778,121 @@ public sealed class FrontendEditorServiceTests
             Assert.Equal(
                 [ActionPlanBehaviorStepKind.PickupTarget, ActionPlanBehaviorStepKind.MoveFacing],
                 plan.ActionSteps.Select(step => step.Kind).ToArray());
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SnapshotIncludesActionPlanStepTargetReferencesAndTargetConsumptionMetadata()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              targetPlan:
+                id: targetPlan
+                behavior:
+                  steps:
+                  - kind: MoveFacing
+                  - kind: SeekTarget
+                    targetLabel: loves
+                  - kind: FleeTarget
+                    targetSlot: 2
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var plan = Assert.Single(service.GetSnapshot().ActionPlans, plan => plan.ActionPlanId == "targetPlan");
+
+            Assert.Collection(
+                plan.ActionSteps,
+                step =>
+                {
+                    Assert.Equal(0, step.Index);
+                    Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing, step.Kind);
+                    Assert.Null(step.TargetLabel);
+                    Assert.Null(step.TargetSlot);
+                    Assert.False(step.ConsumesTargetReference);
+                },
+                step =>
+                {
+                    Assert.Equal(1, step.Index);
+                    Assert.Equal(ActionPlanBehaviorStepKind.SeekTarget, step.Kind);
+                    Assert.Equal("loves", step.TargetLabel);
+                    Assert.Null(step.TargetSlot);
+                    Assert.True(step.ConsumesTargetReference);
+                },
+                step =>
+                {
+                    Assert.Equal(2, step.Index);
+                    Assert.Equal(ActionPlanBehaviorStepKind.FleeTarget, step.Kind);
+                    Assert.Null(step.TargetLabel);
+                    Assert.Equal(2, step.TargetSlot);
+                    Assert.True(step.ConsumesTargetReference);
+                });
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetActionPlanStepTargetLabelUpdatesAndClearsTargetLabelRequirements()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+            Assert.True(service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.SeekTarget).IsSuccess);
+
+            var set = service.SetActionPlanStepTargetLabel("moveEast", 0, "loves");
+
+            Assert.True(set.IsSuccess, set.StatusMessage);
+            var setPlan = Assert.Single(set.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            var setStep = Assert.Single(setPlan.ActionSteps);
+            Assert.Equal("loves", setStep.TargetLabel);
+            Assert.Null(setStep.TargetSlot);
+            var requirement = Assert.Single(setPlan.TargetLabelRequirements);
+            Assert.Equal("loves", requirement.Label);
+            Assert.Equal([0], requirement.StepIndexes.ToArray());
+
+            var clear = service.SetActionPlanStepTargetLabel("moveEast", 0, null);
+
+            Assert.True(clear.IsSuccess, clear.StatusMessage);
+            var clearPlan = Assert.Single(clear.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast");
+            Assert.Null(Assert.Single(clearPlan.ActionSteps).TargetLabel);
+            Assert.Empty(clearPlan.TargetLabelRequirements);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(9, "index")]
+    [InlineData(0, "label")]
+    public void SetActionPlanStepTargetLabelRejectsInvalidIndexesAndLabels(int stepIndex, string expectedMessagePart)
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+            var label = stepIndex == 0 ? "Has Space" : "loves";
+
+            var result = service.SetActionPlanStepTargetLabel("moveEast", stepIndex, label);
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains(expectedMessagePart, result.StatusMessage, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
