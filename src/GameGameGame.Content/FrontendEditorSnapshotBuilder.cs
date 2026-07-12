@@ -1,0 +1,225 @@
+using GameGameGame.Core;
+
+namespace GameGameGame.Content;
+
+public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
+{
+    public FrontendEditorSnapshot Build()
+    {
+        var validation = session.Editor.Validate();
+        var canonicalValidation = session.Document.ValidateCanonicalAuthoring();
+        var diagnostics = validation.Diagnostics
+            .Concat(canonicalValidation.Diagnostics)
+            .Select(FrontendEditorDiagnostic.From)
+            .ToList();
+
+        return new FrontendEditorSnapshot(
+            session.FilePath,
+            session.IsDirty,
+            ListScenarios(),
+            ListEntityTemplates(diagnostics),
+            ListActionPlans(),
+            ListAvailableActionSteps(),
+            diagnostics,
+            session.GetYamlPreview(),
+            session.GetYamlDiff().Lines);
+    }
+
+    private IReadOnlyList<FrontendEditorScenarioSummary> ListScenarios() =>
+        session.Document.Scenarios
+            .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+            .Select(entry =>
+            {
+                var scenario = entry.Value.ToDefinition(entry.Key);
+                return new FrontendEditorScenarioSummary(
+                    scenario.ScenarioId,
+                    scenario.Name,
+                    scenario.ScenarioRootEntityTemplateId.Value,
+                    scenario.PlayerEntityTemplateId.Value,
+                    scenario.PlayerEntityId.Value,
+                    scenario.PlayerStart);
+            })
+            .ToList();
+
+    private IReadOnlyList<FrontendEditorEntityTemplateSummary> ListEntityTemplates(IReadOnlyList<FrontendEditorDiagnostic> diagnostics) =>
+        session.Editor.ListEntityPresets()
+            .Select(model =>
+            {
+                var targetingRules = (model.Template.TargetingRules ?? [])
+                    .OrderBy(rule => rule.Slot)
+                    .ThenBy(rule => rule.Label ?? string.Empty, StringComparer.Ordinal)
+                    .Select(rule => new FrontendEditorTargetingRuleSummary(
+                        rule.Slot,
+                        rule.Label,
+                        rule.Hint,
+                        rule.TargetTemplateId?.Value,
+                        rule.TargetTemplateId is { } targetTemplateId ? TryGetTemplateName(targetTemplateId.Value) : null,
+                        rule.Range,
+                        rule.TargetCapabilities))
+                    .ToList();
+                var targetRequirements = GetTargetingRequirements(model.Template.DefaultActionPlanId, targetingRules);
+                var requirementLabels = targetRequirements
+                    .Select(requirement => requirement.Label)
+                    .ToHashSet(StringComparer.Ordinal);
+                var orphanedRules = model.Template.DefaultActionPlanId is null
+                    ? []
+                    : targetingRules
+                        .Where(rule => rule.Label is null || !requirementLabels.Contains(rule.Label))
+                        .ToList();
+
+                return new FrontendEditorEntityTemplateSummary(
+                    model.Id.Value,
+                    model.Template.Name,
+                    model.Presentation.Glyph,
+                    model.Presentation.Color,
+                    model.Template.InventoryWidth,
+                    model.Template.InventoryHeight,
+                    model.Template.Bulk,
+                    model.Template.Aperture,
+                    model.Template.DefaultActionPlanId?.Value,
+                    new FrontendEditorActionStateDefaultsSummary(
+                        model.Template.ActionStateDefaults?.Facing,
+                        model.Template.ActionStateDefaults?.Target?.Value),
+                    targetingRules,
+                    (model.Template.CarriedEntities ?? [])
+                        .OrderBy(carried => carried.Coord.Y)
+                        .ThenBy(carried => carried.Coord.X)
+                        .ThenBy(carried => carried.EntityId.Value, StringComparer.Ordinal)
+                        .Select(carried => new FrontendEditorCarriedEntitySummary(
+                            carried.EntityId.Value,
+                            carried.TemplateId?.Value,
+                            carried.TemplateId is null ? null : TryGetTemplateName(carried.TemplateId.Value.Value),
+                            carried.TemplateId is null ? null : TryGetGlyph(carried.TemplateId.Value.Value),
+                            carried.TemplateId is null ? null : TryGetColor(carried.TemplateId.Value.Value),
+                            carried.Coord,
+                            diagnostics
+                                .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value
+                                    && diagnostic.CarriedEntityId == carried.EntityId.Value)
+                                .ToList()))
+                        .ToList(),
+                    diagnostics
+                        .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value)
+                        .ToList())
+                {
+                    TargetingRequirements = targetRequirements,
+                    OrphanedTargetingRules = orphanedRules
+                };
+            })
+            .ToList();
+
+    private IReadOnlyList<FrontendEditorTargetingRequirementSummary> GetTargetingRequirements(
+        ActionPlanTemplateId? defaultActionPlanId,
+        IReadOnlyList<FrontendEditorTargetingRuleSummary> targetingRules)
+    {
+        if (defaultActionPlanId is null
+            || !session.Document.ActionPlans.TryGetValue(defaultActionPlanId.Value.Value, out var plan))
+        {
+            return [];
+        }
+
+        var rulesByLabel = targetingRules
+            .Where(rule => rule.Label is not null)
+            .GroupBy(rule => rule.Label!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.OrderBy(rule => rule.Slot).First(), StringComparer.Ordinal);
+
+        return ActionPlanTargetLabelRequirementProjection.Project(plan.ToDescriptor(defaultActionPlanId.Value.Value))
+            .Select(requirement =>
+            {
+                rulesByLabel.TryGetValue(requirement.Label, out var rule);
+                return new FrontendEditorTargetingRequirementSummary(
+                    requirement.Label,
+                    requirement.StepIndexes,
+                    requirement.StepKinds,
+                    rule is not null,
+                    rule);
+            })
+            .ToList();
+    }
+
+    private string? TryGetTemplateName(string templateId) =>
+        session.Document.EntityTemplates.TryGetValue(templateId, out var template)
+            ? template.Name ?? templateId
+            : null;
+
+    private char? TryGetGlyph(string templateId) =>
+        session.Document.Presentations.TryGetValue(templateId, out var presentation)
+            && !string.IsNullOrEmpty(presentation.Glyph)
+                ? presentation.Glyph[0]
+                : null;
+
+    private PresentationColor? TryGetColor(string templateId) =>
+        session.Document.Presentations.TryGetValue(templateId, out var presentation)
+            ? presentation.Color
+            : null;
+
+    private IReadOnlyList<FrontendEditorActionPlanSummary> ListActionPlans() =>
+        session.Editor.ListActionPlans()
+            .Select(model => new FrontendEditorActionPlanSummary(
+                model.TemplateId.Value,
+                ContentEditorService.FormatActionPlanShape(ActionPlanShapeClassifier.Classify(model.Descriptor)),
+                GetActionSteps(model.Descriptor),
+                GetActionStepNames(model.Descriptor))
+            {
+                TargetLabelRequirements = ActionPlanTargetLabelRequirementProjection.Project(model.Descriptor)
+                    .Select(requirement => new FrontendEditorActionPlanTargetLabelRequirementSummary(
+                        requirement.Label,
+                        requirement.StepIndexes,
+                        requirement.StepKinds))
+                    .ToList()
+            })
+            .ToList();
+
+    private IReadOnlyList<FrontendEditorAvailableActionStepSummary> ListAvailableActionSteps() =>
+        session.Editor.ListActionSteps()
+            .Select(step => new FrontendEditorAvailableActionStepSummary(
+                step.Kind,
+                step.DisplayName,
+                step.Description))
+            .ToList();
+
+    private static IReadOnlyList<FrontendEditorActionPlanStepSummary> GetActionSteps(ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior?.Steps.Count > 0)
+        {
+            return descriptor.Behavior.Steps
+                .Select((step, index) =>
+                {
+                    var metadata = ActionStepCatalog.Get(step.Kind);
+                    var consumesTargetReference = metadata.RequiredState
+                        .Any(state => state.Slot == ActionPlanSlot.Target);
+                    return new FrontendEditorActionPlanStepSummary(
+                        index,
+                        step.Kind,
+                        metadata.DisplayName,
+                        step.TargetLabel,
+                        step.TargetSlot,
+                        consumesTargetReference);
+                })
+                .ToList();
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<string> GetActionStepNames(ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior?.Steps.Count > 0)
+        {
+            return descriptor.Behavior.Steps
+                .Select(step => ActionStepCatalog.Get(step.Kind).DisplayName)
+                .ToList();
+        }
+
+        if (descriptor.Primitive is { } primitive)
+        {
+            return [primitive.Kind.ToString()];
+        }
+
+        if (descriptor.Steps.Count > 0)
+        {
+            return descriptor.Steps.Select(step => step.Label).ToList();
+        }
+
+        return [];
+    }
+}
