@@ -23,6 +23,8 @@ This document is the frontend/UI bible. It records design standards that may not
 
 These standards are intentionally distinct from Core invariants. They should not create simulation semantics. They should shape how shared frontend-neutral facts are displayed, prioritized, and interacted with.
 
+Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants records enforceable frontend/shared-service boundaries, ownership splits, and test traces; Standards records concrete presentation and interaction guidance. When the same idea appears in both places, the invariant should say what must not cross a layer boundary or what needs a test trace, while this document should say how the UI should look or feel.
+
 ## Entity-neutral presentation
 
 1. **Do not treat the player entity as visually special by default.**

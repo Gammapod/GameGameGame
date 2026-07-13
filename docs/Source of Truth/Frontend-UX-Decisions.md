@@ -92,8 +92,8 @@ Each decision should include:
 
 - **Decision:** SadConsole Editor mode treats its read-only authored-content browser as a cached snapshot. `R` refreshes/revalidates through shared editor services and clears/marks Preview stale; `P` explicitly rematerializes turn-0 Preview.
 - **Reasoning:** This keeps redraws responsive and preserves the authored-content/materialized-runtime boundary before mutation UI exists.
-- **Implications:** Future mutations should use the same invalidation policy unless a shared service contract proves a preview remains valid. Mutation/save controls should remain absent or clearly disabled until a mutation design is promoted.
-- **Status:** Active / Phase 5A hardening implemented.
+- **Implications:** Superseded for the componentized editor by FED-013. Keep this as historical context for the legacy read-only browser only; do not reintroduce separate `R`/`P` preview-stale controls unless a future richer preview surface proves that Save cannot be the primary refresh boundary.
+- **Status:** Superseded by FED-013.
 
 ### FED-011: Editor navigation uses semantic focus targets
 
@@ -106,8 +106,8 @@ Each decision should include:
 
 - **Decision:** The existing monolithic SadConsole shell/list-detail implementation is deprecated as legacy reference. New SadConsole exploration work should build reusable, testable screen/component models first, then attach SadConsole rendering and input adapters.
 - **Reasoning:** The current implementation proved catalog launch, editor-service-backed mutation, preview/materialization, Simulation launch/return, and runtime play/debug paths, but it stayed too close to Console-inspired row-list rendering and accumulated too much shell-owned drawing/input behavior.
-- **Implications:** Keep legacy behavior available for reference while replacing it with clean architecture slices. Durable screens should model selection, focused components, contextual controls, and authored/runtime data boundaries explicitly. Do not bypass shared editor/content/runtime services while rebuilding.
-- **Status:** Active / implemented. The componentized SadConsole editor is now the default launch path; the legacy shell is available only as `--beta-editor` reference.
+- **Implications:** Keep only the minimum legacy Simulation Play stopgap needed while replacing it with clean architecture slices. Durable screens should model selection, focused components, contextual controls, and authored/runtime data boundaries explicitly. Do not bypass shared editor/content/runtime services while rebuilding. Do not add new editor features to the legacy shell.
+- **Status:** Active / implemented. The componentized SadConsole editor is now the default launch path. The former user-launchable `--beta-editor` path has been removed; legacy shell usage is internal stopgap only.
 
 ### FED-013: Save is the editor refresh boundary for authored preview state
 

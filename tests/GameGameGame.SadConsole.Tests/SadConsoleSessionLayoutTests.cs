@@ -44,8 +44,8 @@ public sealed class SadConsoleSessionLayoutTests
         var previousRight = 0;
         foreach (var slot in slots)
         {
-            Assert.InRange(slot.Bounds.Left, 1, SadConsoleShell.ScreenWidth - 1);
-            Assert.InRange(slot.Bounds.Left + slot.Bounds.Width, 1, SadConsoleShell.ScreenWidth - 1);
+            Assert.InRange(slot.Bounds.Left, 1, SadConsoleScreenMetrics.ScreenWidth - 1);
+            Assert.InRange(slot.Bounds.Left + slot.Bounds.Width, 1, SadConsoleScreenMetrics.ScreenWidth - 1);
             Assert.Equal(6, slot.Bounds.Top);
             Assert.Equal(32, slot.Bounds.Bottom);
             Assert.True(slot.Bounds.Left > previousRight);

@@ -13,8 +13,8 @@ namespace GameGameGame.SadConsoleApp;
 // componentized exploration architecture is built.
 internal sealed class SadConsoleShell : Console
 {
-    public const int ScreenWidth = 120;
-    public const int ScreenHeight = 42;
+    public const int ScreenWidth = SadConsoleScreenMetrics.ScreenWidth;
+    public const int ScreenHeight = SadConsoleScreenMetrics.ScreenHeight;
     private readonly MovementService _movement = new();
     private readonly EntityPanelProjectionService _panelProjection;
     private readonly ControlledActorAffordanceService _affordances;

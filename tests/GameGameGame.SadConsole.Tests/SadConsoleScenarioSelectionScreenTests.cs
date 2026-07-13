@@ -105,22 +105,10 @@ public sealed class SadConsoleScenarioSelectionScreenTests
     }
 
     [Fact]
-    public void StartupUsesNewScenarioSelectionByDefaultAndKeepsAlias()
+    public void StartupUsesScenarioSelectionByDefault()
     {
-        var startup = SadConsoleStartup.FromArgs(["--new-scenario-selection", "--content", "missing-file.yaml"]);
+        var startup = SadConsoleStartup.FromArgs(["--content", "missing-file.yaml"]);
 
-        Assert.False(startup.LaunchLegacyBetaEditor);
-        Assert.False(startup.LaunchGallery);
-        Assert.NotNull(startup.Catalog);
-        Assert.Contains("missing-file.yaml", startup.Catalog.Diagnostics[0]);
-    }
-
-    [Fact]
-    public void StartupRecognizesBetaEditorFlagForLegacyShell()
-    {
-        var startup = SadConsoleStartup.FromArgs(["--beta-editor", "--content", "missing-file.yaml"]);
-
-        Assert.True(startup.LaunchLegacyBetaEditor);
         Assert.False(startup.LaunchGallery);
         Assert.NotNull(startup.Catalog);
         Assert.Contains("missing-file.yaml", startup.Catalog.Diagnostics[0]);

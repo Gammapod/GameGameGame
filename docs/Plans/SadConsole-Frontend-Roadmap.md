@@ -6,8 +6,8 @@ Read when:
 
 - selecting short-term frontend, UI/UX, debug-browser, or frontend-contract work;
 - deciding what should be owned by Core/Content/Headless versus a frontend application;
-- handing SadConsole/Console work to the frontend-owner agent;
-- deciding whether Console work is fallback tooling or canonical frontend work.
+- handing SadConsole work to the frontend-owner agent;
+- deciding whether a requested workflow belongs in SadConsole or in shared frontend-neutral tooling.
 
 Related source of truth:
 
@@ -21,9 +21,9 @@ Related source of truth:
 
 ## Direction
 
-SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The componentized SadConsole editor is now the default launch path. The existing monolithic SadConsole shell remains available as `--beta-editor` legacy/deprecated reference code.
+SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The componentized SadConsole editor is now the default launch path. The former user-launchable `--beta-editor` legacy shell has been removed. A small internal legacy Simulation Play stopgap still uses the old shell while the componentized Simulation screen is rebuilt; it should not receive new editor features.
 
-Console remains valuable, but its long-term role should shift toward fallback CLI tooling, smoke/debug paths, scenario scanning, legacy scenario recording, and simple developer commands. New rich UI investment should prefer SadConsole or shared frontend-neutral services unless a task explicitly targets Console fallback behavior.
+The former Console frontend has been removed. Simple developer commands, scenario scanning, reports, and recording workflows should live in shared Content/Headless tooling or future explicit CLI tools rather than reviving Console-specific UI workflows. New rich UI investment should prefer SadConsole or shared frontend-neutral services.
 
 ## Design principles
 
@@ -51,7 +51,7 @@ Examples:
 
 ### Frontend-owner work
 
-Use frontend-owner ownership for SadConsole/Console presentation and interaction work that consumes existing contracts without changing Core semantics.
+Use frontend-owner ownership for SadConsole and future frontend presentation/interaction work that consumes existing contracts without changing Core semantics.
 
 Examples:
 
@@ -60,7 +60,7 @@ Examples:
 - rendering logs, breadcrumbs, metadata, grids, and contents lists;
 - mouse hit-testing and visual affordances;
 - packaging/distribution experiments;
-- Console fallback cleanup that does not alter engine behavior.
+- future frontend or explicit CLI-tool cleanup that does not alter engine behavior.
 
 ### Content/editor-aware work
 
@@ -86,7 +86,7 @@ Remaining active work should be grouped around the Gamma Editor MVP plan: SadCon
 
 Completed componentized editor parity slice:
 
-- Default SadConsole launch opens the componentized editor UI; legacy shell is `--beta-editor`.
+- Default SadConsole launch opens the componentized editor UI. The former `--beta-editor` legacy editor path has been removed; legacy shell usage remains only as an internal Simulation Play stopgap until replaced by a componentized Simulation screen.
 - Scenario Edit supports save/dirty/unsaved-exit, template/action-plan create/duplicate/delete, and service-backed navigation to dedicated editors.
 - Entity Template Edit supports presentation, default action plan, targeting requirements/rules, inventory metadata, and inventory-grid contents/layout editing.
 - Action Plan Edit supports canonical behavior-step insert/replace/delete/move through shared editor services.

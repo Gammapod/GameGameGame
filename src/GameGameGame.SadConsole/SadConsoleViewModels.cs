@@ -51,9 +51,9 @@ internal static class SadConsoleSessionLayout
     private const int PanelBottom = 32;
     private const int PanelGap = 2;
     private const int CollapsedPanelWidth = 14;
-    private const int PanelAreaWidth = SadConsoleShell.ScreenWidth - 2;
+    private const int PanelAreaWidth = SadConsoleScreenMetrics.ScreenWidth - 2;
 
-    public static SadConsoleRect GlobalLogRect => new(1, 33, SadConsoleShell.ScreenWidth - 2, SadConsoleShell.ScreenHeight);
+    public static SadConsoleRect GlobalLogRect => new(1, 33, SadConsoleScreenMetrics.ScreenWidth - 2, SadConsoleScreenMetrics.ScreenHeight);
 
     public static IReadOnlyList<SadConsolePanelSlot> BuildPanelChainSlots(int panelCount)
     {

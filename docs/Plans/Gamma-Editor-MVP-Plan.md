@@ -183,7 +183,7 @@ Scope:
 1. Materialize the selected scenario at turn 0 from Editor mode.
 2. Render preview entity panels/grids using shared projection data where possible.
 3. Show materialization diagnostics and capability gaps next to the preview.
-4. Add manual refresh/revalidate/rematerialize controls.
+4. Keep Save as the primary preview refresh boundary for authored mutations; add extra manual refresh/revalidate/rematerialize controls only if a richer preview surface proves they are still needed.
 
 Exit criteria:
 

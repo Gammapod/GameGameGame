@@ -137,7 +137,7 @@ Gamma/editor promoted stages:
 1. Completed in Sprint 22: read-only Core inspection path service that produces cycle-safe structural containment paths for entities, including upward, root-relative, max-depth, and shared-root queries.
 2. SadConsole roadmap Stage 0/1 contract paving: frontend UX source-of-truth cleanup, debt inventory, and shared playable-session launch extraction.
 3. Shared controlled action / Action Choice-compatible command result, action target/affordance queries, structured outcome/log projection, and entity panel projection.
-4. Completed componentized SadConsole Editor shell: default SadConsole launch now opens the clean editor UI, with legacy `--beta-editor` retained as reference.
+4. Completed componentized SadConsole Editor shell: default SadConsole launch now opens the clean editor UI. The former `--beta-editor` legacy editor path has been removed; a temporary internal legacy Simulation Play stopgap remains until the componentized Simulation screen replaces it.
 5. Completed service-backed Editor authoring parity slice: entity template presentation/default plan/targeting/inventory editing, action-plan step insert/replace/delete/move, template/action-plan create/duplicate/delete, save/dirty/unsaved-exit behavior, and Save-as-preview-refresh boundary.
 6. Next Gamma work: turn-0 scenario preview quality, Simulation handoff/return over the new componentized editor, history/log continuity, and first provenance-backed source jump.
 7. Scenario/tester curation using the scenario manifest and descriptions only if tester confusion, deprecated/crashy entries, or naming issues make it necessary.

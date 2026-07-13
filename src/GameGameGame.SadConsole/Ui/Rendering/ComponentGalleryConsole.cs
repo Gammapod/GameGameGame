@@ -11,8 +11,8 @@ namespace GameGameGame.SadConsoleApp.Ui.Rendering;
 
 internal sealed class ComponentGalleryConsole : Console
 {
-    public const int ScreenWidth = 120;
-    public const int ScreenHeight = 42;
+    public const int ScreenWidth = SadConsoleScreenMetrics.ScreenWidth;
+    public const int ScreenHeight = SadConsoleScreenMetrics.ScreenHeight;
     internal const int ColorSampleGlyph = 219;
 
     private readonly ComponentGalleryScreen _gallery;
