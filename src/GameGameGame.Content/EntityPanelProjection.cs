@@ -14,7 +14,25 @@ public sealed record EntityPanelProjection(
     string? ActionPlanSummary,
     InventoryInspectionGrid? InventoryGrid,
     IReadOnlyList<EntityPanelContentRow> Contents,
-    IReadOnlyList<ActionOutcome> LocalLog);
+    IReadOnlyList<ActionOutcome> LocalLog,
+    EntityPointOfViewProjection? PointOfView = null);
+
+public sealed record EntityPointOfViewProjection(
+    EntityId ObserverEntityId,
+    EntityContainmentPath Breadcrumb,
+    EntityPointOfViewCurrentPlaceProjection? CurrentPlace,
+    IReadOnlyList<PointOfViewDiagnostic> Diagnostics);
+
+public sealed record EntityPointOfViewCurrentPlaceProjection(
+    EntityId EntityId,
+    string Name,
+    char Glyph,
+    PresentationColor Color,
+    PlaneId ContainingPlaneId,
+    PointOfViewPlaceSelectionRule SelectionRule,
+    int ObserverBulk,
+    int PlaceAperture,
+    decimal? BulkToApertureRatio);
 
 public sealed record EntityPanelActionStateProjection(
     Direction? Facing,
@@ -34,6 +52,7 @@ public sealed class EntityPanelProjectionService(Func<EntityId, EntityInspection
 {
     private readonly EntityInspectionService _inspection = new(getAppearance);
     private readonly EntityContainmentPathService _paths = new();
+    private readonly PointOfViewService _pointOfView = new();
 
     public EntityPanelProjection Project(
         WorldState world,
@@ -60,7 +79,38 @@ public sealed class EntityPanelProjectionService(Func<EntityId, EntityInspection
             actionPlans.ContainsKey(entityId) ? actionPlans[entityId].GetType().Name : null,
             panel.InventoryGrid,
             contents,
-            localLog);
+            localLog,
+            BuildPointOfView(world, entityId));
+    }
+
+    private EntityPointOfViewProjection BuildPointOfView(WorldState world, EntityId entityId)
+    {
+        var pointOfView = _pointOfView.Describe(world, entityId);
+        return new EntityPointOfViewProjection(
+            pointOfView.ObserverEntityId,
+            pointOfView.Breadcrumb,
+            BuildCurrentPlaceProjection(world, pointOfView.CurrentPlace),
+            pointOfView.Diagnostics);
+    }
+
+    private EntityPointOfViewCurrentPlaceProjection? BuildCurrentPlaceProjection(WorldState world, PointOfViewCurrentPlace? currentPlace)
+    {
+        if (currentPlace is null)
+        {
+            return null;
+        }
+
+        var appearance = _inspection.Inspect(world, currentPlace.EntityId);
+        return new EntityPointOfViewCurrentPlaceProjection(
+            currentPlace.EntityId,
+            appearance.Name,
+            appearance.Glyph,
+            appearance.Color,
+            currentPlace.ContainingPlaneId,
+            currentPlace.SelectionRule,
+            currentPlace.ObserverBulk,
+            currentPlace.PlaceAperture,
+            currentPlace.BulkToApertureRatio);
     }
 
     private static EntityPanelActionStateProjection BuildActionState(WorldState world, EntityId entityId)

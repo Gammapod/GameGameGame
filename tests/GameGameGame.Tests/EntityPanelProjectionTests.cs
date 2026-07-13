@@ -33,6 +33,52 @@ public sealed class EntityPanelProjectionTests
     }
 
     [Fact]
+    public void EntityPanelProjectionIncludesPointOfViewFactsForProjectedEntity()
+    {
+        var document = CreateProjectionDocument();
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "panel-projection");
+        var service = new EntityPanelProjectionService(entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance());
+
+        var projection = service.Project(
+            session.World,
+            session.PlayerEntityId,
+            session.ActionPlans,
+            playerId: session.PlayerEntityId);
+
+        Assert.NotNull(projection.PointOfView);
+        Assert.Equal(session.PlayerEntityId, projection.PointOfView.ObserverEntityId);
+        Assert.Equal(EntityContainmentPathStatus.Complete, projection.PointOfView.Breadcrumb.Status);
+        Assert.NotNull(projection.PointOfView.CurrentPlace);
+        var currentPlace = projection.PointOfView.CurrentPlace;
+        Assert.Equal(session.ActiveContainerEntityId, currentPlace.EntityId);
+        Assert.Equal("Projection Room", currentPlace.Name);
+        Assert.Equal('#', currentPlace.Glyph);
+        Assert.Equal(PresentationColor.Gray, currentPlace.Color);
+        Assert.Equal(1, currentPlace.ObserverBulk);
+        Assert.Equal(100, currentPlace.PlaceAperture);
+        Assert.Equal(0.01m, currentPlace.BulkToApertureRatio);
+        Assert.Equal(PointOfViewPlaceSelectionRule.NearestContainingInventoryOwner, currentPlace.SelectionRule);
+        Assert.Empty(projection.PointOfView.Diagnostics);
+    }
+
+    [Fact]
+    public void EntityPanelProjectionCarriesPointOfViewDiagnosticsWithoutFrontendGuessing()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new EntityPanelProjectionService();
+
+        var projection = service.Project(
+            world,
+            TestWorld.PlayerId,
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            playerId: TestWorld.PlayerId);
+
+        Assert.NotNull(projection.PointOfView);
+        Assert.Null(projection.PointOfView.CurrentPlace);
+        Assert.Contains(projection.PointOfView.Diagnostics, diagnostic => diagnostic.Code == PointOfViewDiagnosticCode.CurrentPlaceNotFound);
+    }
+
+    [Fact]
     public void EntityPanelProjectionIncludesStructuredLocalLogSnippetsWhenAnchored()
     {
         var document = CreateProjectionDocument();

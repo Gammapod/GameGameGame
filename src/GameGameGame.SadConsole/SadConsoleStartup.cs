@@ -2,13 +2,18 @@ using GameGameGame.Content;
 
 namespace GameGameGame.SadConsoleApp;
 
-internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchDirectSimulation = false)
+internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchDirectSimulation = false, bool LaunchPlayMock = false)
 {
     public static SadConsoleStartup FromArgs(string[] args)
     {
         if (args.Contains("--gallery", StringComparer.OrdinalIgnoreCase))
         {
             return new SadConsoleStartup(null, null, null, LaunchGallery: true);
+        }
+
+        if (args.Length >= 3 && args[0].Equals("--play-mock", StringComparison.OrdinalIgnoreCase))
+        {
+            return new SadConsoleStartup(null, null, null, args[1], args[2], LaunchPlayMock: true);
         }
 
         if (args.Length >= 2 && !args[0].StartsWith("--", StringComparison.Ordinal))
@@ -66,5 +71,5 @@ internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession,
         return new ScenarioCatalogResult([], [Usage]);
     }
 
-    private const string Usage = "Usage: GameGameGame.SadConsole [--content <file> | --discover <folder> | --manifest <manifest>], or --gallery.";
+    private const string Usage = "Usage: GameGameGame.SadConsole [--content <file> | --discover <folder> | --manifest <manifest>], --gallery, or --play-mock <file> <scenario-id>.";
 }

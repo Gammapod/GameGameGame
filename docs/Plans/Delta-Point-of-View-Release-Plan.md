@@ -126,6 +126,12 @@ Exit criteria:
 
 - The first Core point-of-view slice has explicit testable outcomes and invariant trace expectations.
 
+Invariant/test trace for Phase 1:
+
+- Affected existing invariants: Entity And Space / cycle-safe traversal; Inventory, Bulk, And Aperture / entity bulk and aperture facts. No previous invariant directly covers point-of-view semantics.
+- Existing tests to preserve: `EntityContainmentPathServiceBuildsUpwardPathForNestedEntity`, `EntityContainmentPathServiceLimitsUpwardPathByMaxDepth`, `EntityContainmentPathServiceReportsMissingEntity`, `EntityContainmentPathServiceDetectsContainmentCycle`, and bulk/aperture transition tests listed in `invariants.md`.
+- New intentionally failing tests: `PointOfViewUsesContainmentBreadcrumbsAndSelectsNearestContainerAsCurrentPlace`, `PointOfViewReportsObserverBulkPlaceApertureAndRatio`, `PointOfViewReportsMissingObserverDiagnostic`, `PointOfViewReportsNoCurrentPlaceWhenObserverHasNoContainingInventoryOwner`, and `PointOfViewPreservesBreadcrumbTruncationFromQueryOptions`.
+
 ### Phase 1: Core point-of-view foundation
 
 Goal: implement the observer-relative structural and ratio model.
@@ -140,6 +146,10 @@ Scope:
 Exit criteria:
 
 - Core tests pass for arbitrary observer entities, nested containment, current-place selection, ratio calculation, and missing-data diagnostics.
+
+Current status:
+
+- Initial Core read-only `PointOfViewService` foundation is implemented and traced by `PointOfViewServiceTests`. Content/frontend projection, place qualities, and affordance/adjective language remain follow-up phases.
 
 ### Phase 2: Flexible place and breadcrumb options
 
@@ -168,6 +178,16 @@ Scope:
 Exit criteria:
 
 - The frontend can present a non-player-special observer perspective from shared point-of-view facts.
+
+Invariant/test trace for initial Content projection seam:
+
+- Affected existing frontend boundary invariant: frontends do not invent simulation semantics; entity panel projections provide frontend-neutral facts while layout/wording remains frontend-owned.
+- Existing tests to preserve: `EntityPanelProjectionCombinesIdentityPathStateGridAndContents`, `EntityPanelProjectionIncludesStructuredLocalLogSnippetsWhenAnchored`, and Core `PointOfViewServiceTests`.
+- New intentionally failing tests: `EntityPanelProjectionIncludesPointOfViewFactsForProjectedEntity` and `EntityPanelProjectionCarriesPointOfViewDiagnosticsWithoutFrontendGuessing`.
+
+Current status:
+
+- Initial Content projection seam is implemented through `EntityPanelProjectionService`. Entity panel projections now include point-of-view current-place facts, bulk/aperture ratio, and structured diagnostics. SadConsole presentation/wording is not yet updated.
 
 ### Phase 4: Affordance/adjective design slice
 
