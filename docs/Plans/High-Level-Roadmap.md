@@ -1,6 +1,6 @@
 # High-Level Roadmap
 
-Status: Roadmap reset / on hold. No active implementation plan is selected until the next priorities are chosen.
+Status: Active roadmap. Delta point-of-view is the selected release direction.
 
 Read when:
 
@@ -17,7 +17,7 @@ Related source of truth:
 
 ## Current strategic direction
 
-Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and scenario catalog services. Gamma now shifts from adding mechanics to preparing the existing scenarios for real tester feedback. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
+Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and scenario catalog services. After the major refactor/code cleanup, Delta shifts the roadmap toward an arbitrary-entity point-of-view model: shared services should describe what any entity's current place, breadcrumbs, and relative bulk/aperture context mean so frontend/content presentation and future player-control semantics do not depend on a special player entity. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
 
 The former Avalonia GUI has been removed. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and SadConsole/future frontend readiness.
 
@@ -82,13 +82,39 @@ This target promoted the following items out of backlog buckets and into the com
 - Future integrated frontend replacement.
 - Retired Avalonia GUI parity for scenario authoring.
 
-## Roadmap reset holding area
+## Active / likely next sprint
 
-Status: On hold pending reprioritization after the major refactor/code cleanup.
+### Delta release target: arbitrary-entity point of view
 
-The sections below preserve the previous strategic context and backlog ordering, but they are no longer a selected next-sprint commitment. Use this document as a backlog/reference until the next roadmap update promotes a new active plan.
+Status: Selected after the refactor/code-cleanup roadmap reset.
 
-## Previous active / likely next sprint
+Active Delta planning document:
+
+- [Delta Point-of-View Release Plan](Delta-Point-of-View-Release-Plan.md)
+
+Immediate Delta priority:
+
+- Build a Core/shared point-of-view foundation for arbitrary observer entities.
+- Reuse the existing containment/breadcrumb/path service rather than creating parallel ancestry logic.
+- Return current-place selection facts, observer breadcrumbs, observer bulk, place aperture, and `BulkToApertureRatio` before finalizing size labels.
+- Keep the first slice read-only and projection-oriented, with stable invariant traces and tests.
+- Follow with a frontend/content MVP that presents point-of-view facts without making the player entity special.
+- Defer rich affordance/adjective and reciprocal-awareness language until the current-place and ratio foundation is stable.
+
+Delta target statement:
+
+- The engine/shared services can answer “what is this arbitrary entity's point of view?” in terms of structural breadcrumbs, current place, and relative bulk/aperture context.
+- The frontend can consume that projection for the entity currently being commanded or inspected.
+- The model prepares for future player controls implemented as an action step, where the player can control any arbitrary entity and see from that entity's point of view.
+- Future action steps may consume stable point-of-view concepts, such as affecting all entities in the current room/place, after the projection invariants mature.
+
+Planned next sprint:
+
+- Start Phase 0/1 of `docs/Plans/Delta-Point-of-View-Release-Plan.md`: review breadcrumb/path services, trace existing invariants, add tests for arbitrary observer POV, and implement the smallest Core/shared read-only point-of-view query that returns breadcrumbs, current place, selection basis, bulk/aperture facts, ratio, and diagnostics.
+
+## Previous Gamma/frontend direction now on hold
+
+The previous Gamma/SadConsole editor direction is preserved below as backlog context, but it is no longer the selected next-sprint commitment.
 
 ### Gamma release target: tester-shareable frontend demo
 

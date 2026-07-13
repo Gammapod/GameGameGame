@@ -1,6 +1,6 @@
 # SadConsole Frontend Roadmap
 
-Status: Backlog/reference during roadmap reset. Not an active implementation plan unless the next roadmap selection promotes SadConsole/frontend work again.
+Status: Backlog/reference. Not an active implementation plan unless a future roadmap selection promotes SadConsole/frontend work again.
 
 Read when:
 
@@ -82,7 +82,7 @@ The completed shared-service foundation and unified simulation history/log/rollb
 
 Implemented support status now lives in `docs/Source of Truth/Engine-Editor-Capabilities.md`; stable behavior/test traces live in `docs/Source of Truth/invariants.md`.
 
-Remaining backlog work was previously grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. During roadmap reset this is backlog/context rather than selected active work. The editor parity slice is complete enough for service-backed template/action-plan/inventory authoring; if this lane is re-promoted, likely follow-up remains preview quality, Simulation handoff/return, provenance/source jumps, and capability gaps discovered by the editor sprint. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
+Remaining backlog work was previously grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. With Delta selected, this is backlog/context rather than active work. The editor parity slice is complete enough for service-backed template/action-plan/inventory authoring; if this lane is re-promoted, likely follow-up remains preview quality, Simulation handoff/return, provenance/source jumps, and capability gaps discovered by the editor sprint. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
 
 Completed componentized editor parity slice:
 

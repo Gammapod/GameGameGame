@@ -1,6 +1,6 @@
 # Sprint Retrospective
 
-Status: Retrospective reference. No active sprint plan is selected during roadmap reset.
+Status: Retrospective reference. Delta point-of-view is now the active release direction; these notes remain process context only.
 
 ## What went well
 

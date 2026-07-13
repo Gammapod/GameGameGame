@@ -33,45 +33,49 @@ Do not read when:
    - Source of truth for core-owner-facing TDD invariant/test traces.
    - Use this before planning changes to stable behavior.
 4. `docs/Plans/High-Level-Roadmap.md`
-   - Canonical source of truth for active strategic direction, prioritized backlog buckets, deferred ideas, dependencies, and promotion triggers.
+    - Canonical source of truth for active strategic direction, prioritized backlog buckets, deferred ideas, dependencies, and promotion triggers.
 5. `docs/Source of Truth/vertical-slice-map.md`
-   - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
-   - Read selectively when a planned slice spans multiple layers.
-6. `docs/Plans/Gamma-Editor-MVP-Plan.md`
-   - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until the roadmap reset selects it again.
-7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
-   - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not an active implementation plan during roadmap reset.
-8. `docs/Plans/Beta-Capability-Gap-Log.md`
+    - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
+    - Read selectively when a planned slice spans multiple layers.
+6. `docs/Plans/Delta-Point-of-View-Release-Plan.md`
+   - Active Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and future affordance/adjective groundwork.
+7. `docs/Plans/Gamma-Editor-MVP-Plan.md`
+   - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
+8. `docs/Plans/SadConsole-Frontend-Roadmap.md`
+   - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not the active implementation plan while Delta is selected.
+9. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-9. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+10. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
    - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-10. `docs/Plans/Sprint-Retrospective.md`
-     - Recent process observations and open retrospective questions.
-11. `docs/Archived/`
+11. `docs/Plans/Sprint-Retrospective.md`
+      - Recent process observations and open retrospective questions.
+12. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
      - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current strategic priority
 
-Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. After the major refactor/code cleanup, the roadmap is in reset mode: no implementation plan is currently selected as active until the next priorities are chosen.
+Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. Delta is now the active release direction: finalize a point-of-view model for arbitrary entities, then let frontend/content presentation consume that model without making the player entity special.
 
 ## Current highest-priority backlog buckets
 
-No active sprint/release plan is selected while the roadmap is being reset. Previously active Gamma/SadConsole work is on hold/backlog, and the following backlog buckets remain available for reprioritization:
+The active release plan is `docs/Plans/Delta-Point-of-View-Release-Plan.md`. Current backlog buckets remain available for reprioritization after Delta's early stages clarify needs:
 
-1. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
-2. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
-3. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
-4. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
-5. Future integrated game/editor frontend requirements discovered from SadConsole/Gamma feedback.
-6. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
-7. Inventory, containment, and transfer mechanics.
-8. Spawning, creation, and template materialization.
-9. Runtime architecture and simulation scale.
-10. Behavior authoring reuse and organization.
-11. Reactions and cross-entity behavior.
-12. Future player control and action choice model.
-13. Long-horizon diegetic/meta systems.
+1. Delta arbitrary-entity point-of-view foundation, as described in `docs/Plans/Delta-Point-of-View-Release-Plan.md`.
+2. Frontend/content point-of-view MVP consumption, as the Delta foundation becomes available.
+3. Future player control and Action Choice / `PlayerInputStep` model, once POV can follow the currently commanded entity.
+4. Point-of-view affordance/adjective and reciprocal-awareness extensions.
+5. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
+6. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
+7. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
+8. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
+9. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
+10. Inventory, containment, and transfer mechanics.
+11. Spawning, creation, and template materialization.
+12. Runtime architecture and simulation scale.
+13. Behavior authoring reuse and organization.
+14. Reactions and cross-entity behavior.
+15. Long-horizon diegetic/meta systems.
 
 See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies, defer reasons, and promotion triggers within each bucket.
 
@@ -83,7 +87,7 @@ See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies
 - Canonical Action Step outcome and verb-affordance decision tables belong in `Action-Step-Outcome-And-Affordance-Logic.md`.
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint plan under `docs/Plans/`; during roadmap reset there may intentionally be no active sprint plan.
+- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently that plan is `Delta-Point-of-View-Release-Plan.md`.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.

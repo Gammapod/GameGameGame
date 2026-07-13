@@ -1,6 +1,6 @@
 # Beta Capability Gap Log
 
-Status: Reference log for beta-discovered gaps, not an active implementation plan. New work should only be promoted from this log through `docs/Plans/High-Level-Roadmap.md` after roadmap reset re-prioritizes it.
+Status: Reference log for beta-discovered gaps, not an active implementation plan. New work should only be promoted from this log through `docs/Plans/High-Level-Roadmap.md` after the active roadmap re-prioritizes it.
 
 Read when:
 

@@ -1,6 +1,6 @@
 # Gamma Editor MVP Plan
 
-Status: On hold / backlog reference during roadmap reset. Promote again only if the next roadmap selection chooses Gamma Editor MVP work.
+Status: On hold / backlog reference. Promote again only if a future roadmap selection chooses Gamma Editor MVP work.
 
 Read when:
 
@@ -20,7 +20,7 @@ Related source of truth:
 
 ## Reset note
 
-This plan preserves the previous Gamma Editor MVP release bar and implementation sequence. It is not currently an active implementation commitment after the major refactor/code cleanup; use it as backlog/context until roadmap priorities are reassessed.
+This plan preserves the previous Gamma Editor MVP release bar and implementation sequence. It is not currently an active implementation commitment after the major refactor/code cleanup and Delta selection; use it as backlog/context until roadmap priorities promote it again.
 
 ## Gamma release target
 

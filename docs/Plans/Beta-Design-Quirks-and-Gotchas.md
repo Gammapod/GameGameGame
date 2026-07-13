@@ -1,6 +1,6 @@
 # Beta Design Quirks and Gotchas
 
-Status: Reference log for unexpected-but-not-necessarily-wrong beta behavior, not an active implementation plan. Use as design context only while roadmap priorities are reassessed.
+Status: Reference log for unexpected-but-not-necessarily-wrong beta behavior, not an active implementation plan. Use as design context when roadmap priorities touch beta scenario behavior.
 
 Read when:
 
