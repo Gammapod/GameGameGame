@@ -1,0 +1,73 @@
+entityTemplates:
+  slimeLovesPlayerRoom:
+    name: Slime Loves Player Room
+    inventoryWidth: 8
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: slime
+      templateId: lovingSlime
+      coord:
+        x: 0
+        y: 0
+  slimeLovesPlayer:
+    name: Slime Loves Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 2
+    actionStateDefaults:
+      facing: West
+  lovingSlime:
+    name: Loving Slime
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: slimeLovesPlayerBehavior
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      hint: Player within four spaces
+      label: loves
+      targetTemplateId: slimeLovesPlayer
+      range: 4
+presentations:
+  slimeLovesPlayerRoom:
+    glyph: '#'
+    color: Gray
+  slimeLovesPlayer:
+    glyph: '@'
+    color: Yellow
+  lovingSlime:
+    glyph: s
+    color: Green
+actionPlans:
+  slimeLovesPlayerBehavior:
+    id: slimeLovesPlayerBehavior
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: loves
+      - kind: SeekTarget
+        targetLabel: loves
+      - kind: MoveFacing
+      - kind: Backstep
+    steps: []
+scenarios:
+  beta-slime-loves-player:
+    name: Beta Slime Loves Player
+    scenarioRootEntityTemplateId: slimeLovesPlayerRoom
+    playerEntityTemplateId: slimeLovesPlayer
+    playerEntityId: player
+    playerStart:
+      x: 7
+      y: 0

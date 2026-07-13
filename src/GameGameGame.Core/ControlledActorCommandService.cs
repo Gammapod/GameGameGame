@@ -6,7 +6,8 @@ public enum ControlledActorCommandKind
     Pickup,
     Drop,
     Enter,
-    Exit
+    Exit,
+    Wait
 }
 
 public sealed record ControlledActorCommand(
@@ -30,6 +31,9 @@ public sealed record ControlledActorCommand(
 
     public static ControlledActorCommand Exit(Direction direction) =>
         new(ControlledActorCommandKind.Exit, Direction: direction);
+
+    public static ControlledActorCommand Wait() =>
+        new(ControlledActorCommandKind.Wait);
 }
 
 public sealed record ControlledActorCommandResult(
@@ -103,6 +107,7 @@ public sealed class ControlledActorCommandService(
             ControlledActorCommandKind.Drop when command.TargetId is { } targetId && command.Destination is { } destination => new DropAction(targetId, destination),
             ControlledActorCommandKind.Enter when command.TargetId is { } targetId => new EnterAction(targetId),
             ControlledActorCommandKind.Exit when command.Direction is { } direction => new ExitAction(direction),
+            ControlledActorCommandKind.Wait => new WaitAction(),
             _ => throw new InvalidOperationException($"Controlled command {command.Kind} is missing required command data.")
         };
 

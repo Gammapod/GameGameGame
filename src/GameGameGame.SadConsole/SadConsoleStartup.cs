@@ -2,7 +2,7 @@ using GameGameGame.Content;
 
 namespace GameGameGame.SadConsoleApp;
 
-internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchLegacyBetaEditor = false)
+internal sealed record SadConsoleStartup(PlayableScenarioSession? DirectSession, ScenarioCatalogResult? Catalog, string? Error, string? DirectContentPath = null, string? DirectScenarioId = null, bool LaunchGallery = false, bool LaunchLegacyBetaEditor = false, bool LaunchDirectSimulation = false)
 {
     public static SadConsoleStartup FromArgs(string[] args)
     {

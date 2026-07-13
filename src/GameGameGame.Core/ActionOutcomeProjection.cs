@@ -115,6 +115,7 @@ public static class ActionOutcomeProjection
         ControlledActorCommandKind.Drop => "drop",
         ControlledActorCommandKind.Enter => "enter",
         ControlledActorCommandKind.Exit => "exit",
+        ControlledActorCommandKind.Wait => "wait",
         _ => kind.ToString().ToLowerInvariant()
     };
 
@@ -129,6 +130,7 @@ public static class ActionOutcomeProjection
         "drop" => targetName is { } dropTarget ? $"{actorName} dropped {dropTarget}" : $"{actorName} dropped target",
         "enter" => targetName is { } enterTarget ? $"{actorName} entered {enterTarget}" : $"{actorName} entered target",
         "exit" => direction is { } exitDirection ? $"{actorName} exited {exitDirection}" : $"{actorName} exited",
+        "wait" => $"{actorName} waited",
         _ => $"{actorName} {actionKind}ed"
     };
 

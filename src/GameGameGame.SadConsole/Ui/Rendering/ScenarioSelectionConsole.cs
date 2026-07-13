@@ -20,6 +20,7 @@ internal sealed class ScenarioSelectionConsole : Console
     private EntityTemplateEditScreen? _entityTemplateEditScreen;
     private InventoryGridEditScreen? _inventoryGridEditScreen;
     private ActionPlanEditScreen? _actionPlanEditScreen;
+    private SadConsoleShell? _legacyPlayShell;
     private bool _overlayAttached;
     private string _message = "New Scenario Selection. Up/Down selects scenario. Enter opens Play/Edit. Esc exits.";
 
@@ -35,6 +36,11 @@ internal sealed class ScenarioSelectionConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
+        if (_legacyPlayShell is not null)
+        {
+            return _legacyPlayShell.ProcessKeyboard(keyboard);
+        }
+
         if (_entityTemplateEditScreen?.IsTextEntryOverlayActive == true)
         {
             if (keyboard.IsKeyReleased(Keys.Back))
@@ -166,12 +172,38 @@ internal sealed class ScenarioSelectionConsole : Console
         if (result.Kind is ScenarioSelectionResultKind.Play or ScenarioSelectionResultKind.Edit)
         {
             _message = result.Message;
-            if (result.Kind == ScenarioSelectionResultKind.Edit && result.Scenario is { } scenario)
+            if (result.Kind == ScenarioSelectionResultKind.Play && result.Scenario is { } playScenario)
+            {
+                LaunchLegacyPlay(playScenario);
+            }
+            else if (result.Kind == ScenarioSelectionResultKind.Edit && result.Scenario is { } scenario)
             {
                 _scenarioEditScreen = ScenarioEditScreen.Open(scenario).Screen;
                 _message = $"Opened Scenario Edit for {scenario.Name}.";
             }
         }
+    }
+
+    private void LaunchLegacyPlay(GameGameGame.Content.ScenarioCatalogEntry scenario)
+    {
+        if (_overlayAttached)
+        {
+            Children.Remove(_overlayLayer!);
+            _overlayAttached = false;
+        }
+
+        _legacyPlayShell = new SadConsoleShell(new SadConsoleStartup(
+            DirectSession: null,
+            Catalog: null,
+            Error: null,
+            DirectContentPath: scenario.ContentPath,
+            DirectScenarioId: scenario.ScenarioId,
+            LaunchLegacyBetaEditor: true,
+            LaunchDirectSimulation: true));
+        Children.Add(_legacyPlayShell);
+        _legacyPlayShell.IsFocused = true;
+        _legacyPlayShell.FocusedMode = FocusBehavior.Set;
+        _message = $"Launched legacy Play mode for {scenario.Name}.";
     }
 
     private void HandleScenarioEdit(UiComponentCommand command)

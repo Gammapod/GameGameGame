@@ -50,7 +50,7 @@ internal sealed class SadConsoleShell : Console
 
         if (!string.IsNullOrWhiteSpace(startup.DirectContentPath))
         {
-            OpenEditorContext(startup.DirectContentPath, startup.DirectScenarioId, launchSimulation: false);
+            OpenEditorContext(startup.DirectContentPath, startup.DirectScenarioId, launchSimulation: startup.LaunchDirectSimulation);
         }
         else if (startup.DirectSession is { } direct)
         {
@@ -634,7 +634,11 @@ internal sealed class SadConsoleShell : Console
             return;
         }
 
-        if (keyboard.IsKeyReleased(Keys.I))
+        if (keyboard.IsKeyReleased(Keys.Space))
+        {
+            Execute(ControlledActorCommand.Wait(), "Player waited.");
+        }
+        else if (keyboard.IsKeyReleased(Keys.I))
         {
             _worldCursor = PlayerLocation().Coord;
             _mode = ShellMode.InspectSource;
@@ -882,7 +886,7 @@ internal sealed class SadConsoleShell : Console
         _inventoryCursor = new GridCoord(0, 0);
         _actionLog = ActionLogProjection.FromHistory(_history);
         _message = session.ValidationDiagnostics.Count == 0 && session.RuntimeFailures.Count == 0
-            ? $"Scenario {session.ScenarioId}. Arrows move. I inspect. P pickup. D drop. E enter. X exit. U undo (unavailable at frame 0). Esc returns."
+            ? $"Scenario {session.ScenarioId}. Arrows move. Space wait. I inspect. P pickup. D drop. E enter. X exit. U undo (unavailable at frame 0). Esc returns."
             : $"Scenario {session.ScenarioId} diagnostics: {string.Join(" | ", session.ValidationDiagnostics.Concat(session.RuntimeFailures))}";
     }
 

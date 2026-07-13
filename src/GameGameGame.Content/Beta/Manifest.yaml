@@ -14,6 +14,11 @@ scenarios:
   name: Beta Collector
   description: A creature that picks everything up, including the player.
 
+- contentPath: src\GameGameGame.Content\Beta\Targeting\SlimeLovesPlayerShowcase.yaml
+  scenarioId: beta-slime-loves-player
+  name: Beta Slime Loves Player
+  description: A slime chases the player once close enough, then picks them up.
+
 - contentPath: src\GameGameGame.Content\Beta\Transfer\CollectorTraderHandoffShowcase.yaml
   scenarioId: beta-collector-trader-handoff
   name: Beta Collector Trader Handoff

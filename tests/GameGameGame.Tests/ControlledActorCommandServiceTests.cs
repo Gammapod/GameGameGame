@@ -48,6 +48,35 @@ public sealed class ControlledActorCommandServiceTests
     }
 
     [Fact]
+    public void ControlledActorCommandWaitReturnsStructuredSuccessAndAdvancesTurnWithoutMovement()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var startTurn = world.TurnNumber;
+        var startLocation = world.GetEntityLocation(TestWorld.PlayerId);
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Wait());
+
+        Assert.Equal(TestWorld.PlayerId, result.ActorId);
+        Assert.Equal(ControlledActorCommandKind.Wait, result.Kind);
+        Assert.Null(result.Direction);
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumedTurn);
+        Assert.True(result.AdvancedTurn);
+        Assert.Null(result.FailureReason);
+        Assert.Null(result.FailureDetail);
+        Assert.Equal(startLocation, world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.Equal(startTurn + 1, world.TurnNumber);
+        Assert.NotNull(result.Trace);
+        Assert.True(TraceContains(result.Trace, "Wait"));
+        Assert.NotNull(result.TurnReport);
+        Assert.Equal(world.LastTurnReport, result.TurnReport);
+        var report = Assert.Single(result.TurnReport!.Actions);
+        Assert.Equal(TestWorld.PlayerId, report.ActorId);
+        Assert.Equal("Waited", report.Summary);
+    }
+
+    [Fact]
     public void ControlledActorCommandPickupReportsTargetAndDestinationAnchors()
     {
         var world = TestWorld.CreateWorld();
@@ -63,4 +92,7 @@ public sealed class ControlledActorCommandServiceTests
         Assert.Equal(destination, world.GetEntityLocation(TestWorld.SlimeId));
         Assert.True(result.AdvancedTurn);
     }
+
+    private static bool TraceContains(TraceNode trace, string label) =>
+        trace.Label == label || trace.Children.Any(child => TraceContains(child, label));
 }
