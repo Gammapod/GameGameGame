@@ -1,6 +1,6 @@
 # Beta Design Quirks and Gotchas
 
-Status: Active reference log for unexpected-but-not-necessarily-wrong beta behavior, not an active implementation plan. Use as design context only while the SadConsole frontend roadmap is the implementation priority.
+Status: Reference log for unexpected-but-not-necessarily-wrong beta behavior, not an active implementation plan. Use as design context only while roadmap priorities are reassessed.
 
 Read when:
 

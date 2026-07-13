@@ -1,6 +1,6 @@
 # Gamma Editor MVP Plan
 
-Status: Active Gamma release plan.
+Status: On hold / backlog reference during roadmap reset. Promote again only if the next roadmap selection chooses Gamma Editor MVP work.
 
 Read when:
 
@@ -17,6 +17,10 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented Core/Editor/frontend-facing support tiers.
 - `docs/Source of Truth/Content-Authoring-Manual.md` records what authors can safely create today.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the broader SadConsole/debug-browser roadmap.
+
+## Reset note
+
+This plan preserves the previous Gamma Editor MVP release bar and implementation sequence. It is not currently an active implementation commitment after the major refactor/code cleanup; use it as backlog/context until roadmap priorities are reassessed.
 
 ## Gamma release target
 

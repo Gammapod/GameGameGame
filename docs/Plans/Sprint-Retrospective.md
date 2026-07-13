@@ -1,6 +1,6 @@
 # Sprint Retrospective
 
-Status: Living retrospective notes from the current wrap-up.
+Status: Retrospective reference. No active sprint plan is selected during roadmap reset.
 
 ## What went well
 

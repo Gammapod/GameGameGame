@@ -1,6 +1,6 @@
 # SadConsole Frontend Roadmap
 
-Status: Active roadmap for paving the way toward SadConsole as the canonical debug/editor browser frontend.
+Status: Backlog/reference during roadmap reset. Not an active implementation plan unless the next roadmap selection promotes SadConsole/frontend work again.
 
 Read when:
 
@@ -82,7 +82,7 @@ The completed shared-service foundation and unified simulation history/log/rollb
 
 Implemented support status now lives in `docs/Source of Truth/Engine-Editor-Capabilities.md`; stable behavior/test traces live in `docs/Source of Truth/invariants.md`.
 
-Remaining active work should be grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. The editor parity slice is complete enough for service-backed template/action-plan/inventory authoring; next work should focus on preview quality, Simulation handoff/return, provenance/source jumps, and capability gaps discovered by the editor sprint. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
+Remaining backlog work was previously grouped around the Gamma Editor MVP plan: SadConsole should prove an Editor -> Preview -> Simulation -> Return loop over shared content/editor services and shared runtime/session/action/log/panel contracts. During roadmap reset this is backlog/context rather than selected active work. The editor parity slice is complete enough for service-backed template/action-plan/inventory authoring; if this lane is re-promoted, likely follow-up remains preview quality, Simulation handoff/return, provenance/source jumps, and capability gaps discovered by the editor sprint. Debug-browser UX, richer autonomous anchors, saved runlogs/playback, and future Action Choice semantics remain important roadmap items when they support or follow that editor loop.
 
 Completed componentized editor parity slice:
 
@@ -227,4 +227,4 @@ Promote or consider while planning SadConsole work:
 
 ## Near-term selection recommendation
 
-The next implementation sequence should be selected from `docs/Plans/Gamma-Editor-MVP-Plan.md`. Stage 6+ work above remains the broader SadConsole roadmap, but Gamma release selection should prioritize the Editor -> Preview -> Simulation -> Return loop and classify remaining items as Must Have or Could Have for Editor MVP.
+No next implementation sequence is currently selected from this roadmap. If SadConsole/frontend work is re-promoted, select the sequence through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a new active plan, and classify remaining items as Must Have or Could Have for the chosen release checkpoint.

@@ -38,9 +38,9 @@ Do not read when:
    - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
    - Read selectively when a planned slice spans multiple layers.
 6. `docs/Plans/Gamma-Editor-MVP-Plan.md`
-   - Active Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. This is the next-sprint selection authority for Gamma work.
+   - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until the roadmap reset selects it again.
 7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
-   - Broader roadmap for paving frontend contracts and promoting SadConsole as the canonical debug/editor browser direction.
+   - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not an active implementation plan during roadmap reset.
 8. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
 9. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
@@ -53,9 +53,11 @@ Do not read when:
 
 ## Current strategic priority
 
-Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Gamma now prioritizes the SadConsole Editor MVP: an Editor -> Preview -> Simulation -> Return loop over shared content/editor and runtime services. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`.
+Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. After the major refactor/code cleanup, the roadmap is in reset mode: no implementation plan is currently selected as active until the next priorities are chosen.
 
 ## Current highest-priority backlog buckets
+
+No active sprint/release plan is selected while the roadmap is being reset. Previously active Gamma/SadConsole work is on hold/backlog, and the following backlog buckets remain available for reprioritization:
 
 1. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
 2. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
@@ -81,7 +83,7 @@ See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies
 - Canonical Action Step outcome and verb-affordance decision tables belong in `Action-Step-Outcome-And-Affordance-Logic.md`.
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint plan under `docs/Plans/`.
+- Active implementation details belong in an active sprint plan under `docs/Plans/`; during roadmap reset there may intentionally be no active sprint plan.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.

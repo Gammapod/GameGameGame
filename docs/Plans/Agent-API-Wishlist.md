@@ -1,6 +1,6 @@
 # Agent Content API Wishlist
 
-Status: Wishlist / backlog reference, not an active implementation plan. Promote items only through the active roadmap when frontend/editor-browser work needs them.
+Status: Wishlist / backlog reference, not an active implementation plan. Promote items only through the roadmap reset when frontend/editor-browser work needs them.
 
 This document describes the remaining API surface that would make GameGameGame content authoring practical and reliable for code agents. It has been updated to reflect the current editor/content services.
 

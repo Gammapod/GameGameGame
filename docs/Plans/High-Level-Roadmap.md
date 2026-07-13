@@ -1,6 +1,6 @@
 # High-Level Roadmap
 
-Status: Active roadmap.
+Status: Roadmap reset / on hold. No active implementation plan is selected until the next priorities are chosen.
 
 Read when:
 
@@ -82,11 +82,17 @@ This target promoted the following items out of backlog buckets and into the com
 - Future integrated frontend replacement.
 - Retired Avalonia GUI parity for scenario authoring.
 
-## Active / likely next sprint
+## Roadmap reset holding area
+
+Status: On hold pending reprioritization after the major refactor/code cleanup.
+
+The sections below preserve the previous strategic context and backlog ordering, but they are no longer a selected next-sprint commitment. Use this document as a backlog/reference until the next roadmap update promotes a new active plan.
+
+## Previous active / likely next sprint
 
 ### Gamma release target: tester-shareable frontend demo
 
-Status: Selected after Sprint 21 scenario catalog work and later Console deletion. Beta mechanics expansion is paused while current authored scenarios are prepared for external feedback.
+Status: On hold / returned to backlog after the refactor/code-cleanup reset. Previously selected after Sprint 21 scenario catalog work and later Console deletion; beta mechanics expansion remains paused unless re-promoted.
 
 Recently completed supporting documents:
 
@@ -107,12 +113,12 @@ Recently completed supporting documents:
 - [SadConsole UI Pattern Discovery Sprint](../Archived/SadConsole-UI-Pattern-Discovery-Sprint.md)
 - [Beta Content Exploration Plan](../Archived/Beta-Content-Exploration-Plan.md)
 
-Active Gamma/frontend planning documents:
+On-hold/backlog Gamma/frontend planning documents:
 
 - [Gamma Editor MVP Plan](Gamma-Editor-MVP-Plan.md)
 - [SadConsole Frontend Roadmap](SadConsole-Frontend-Roadmap.md)
 
-Immediate Gamma priority:
+Previous immediate Gamma priority, now on hold:
 
 - Use the Gamma Editor MVP plan as the release checkpoint: SadConsole should prove the Editor -> Preview -> Simulation -> Return loop over shared content/editor and runtime services.
 - Carry the completed SadConsole spike findings into the current SadConsole editor/debug-browser path.
@@ -120,7 +126,7 @@ Immediate Gamma priority:
 - Prioritize shared controlled-action, valid-target, scenario/session-launch, and turn-log projection services so SadConsole, Godot, or future editor-facing surfaces consume the same capabilities.
 - Make SadConsole the supported shareable editor/debug frontend surface; the former Console fallback has been removed.
 
-Planned next sprint:
+Previously planned next sprint, now on hold:
 
 - Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` paved the initial frontend contracts, and the archived SadConsole UI pattern discovery sprint rebuilt the editor as the default componentized SadConsole UI with core service-backed authoring parity. The selected Gamma work now continues from `docs/Plans/Gamma-Editor-MVP-Plan.md`: improve turn-0 preview quality, complete Simulation handoff/return from the componentized editor, add a first provenance-backed source jump, and then harden for release. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole editor/debug-browser path unless explicitly re-selected as fallback polish.
 
@@ -426,7 +432,7 @@ Promotion trigger:
 
 ### Bucket 8: Unified frontend, inspection UX, and integrated editor
 
-Status: Active strategic bucket with SadConsole now serving as the canonical debug/browser frontend project. Console and the former Avalonia editor have been removed.
+Status: Strategic backlog bucket. SadConsole was the canonical debug/browser frontend project before roadmap reset; Console and the former Avalonia editor have been removed.
 
 Consolidated scope:
 
