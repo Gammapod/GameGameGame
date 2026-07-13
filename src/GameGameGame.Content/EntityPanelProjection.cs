@@ -21,7 +21,14 @@ public sealed record EntityPointOfViewProjection(
     EntityId ObserverEntityId,
     EntityContainmentPath Breadcrumb,
     EntityPointOfViewCurrentPlaceProjection? CurrentPlace,
+    IReadOnlyList<EntityPointOfViewTargetAdjectiveProjection> TargetAdjectives,
+    IReadOnlyList<EntityPointOfViewTargetAdjectiveProjection> ReciprocalAdjectives,
     IReadOnlyList<PointOfViewDiagnostic> Diagnostics);
+
+public sealed record EntityPointOfViewTargetAdjectiveProjection(
+    EntityId EntityId,
+    ActionPlanBehaviorStepKind Capability,
+    string Adjective);
 
 public sealed record EntityPointOfViewCurrentPlaceProjection(
     EntityId EntityId,
@@ -48,9 +55,12 @@ public sealed record EntityPanelContentRow(
     LocalTurnParticipation Participation,
     string PreviousAction);
 
-public sealed class EntityPanelProjectionService(Func<EntityId, EntityInspectionAppearance>? getAppearance = null)
+public sealed class EntityPanelProjectionService(
+    Func<EntityId, EntityInspectionAppearance>? getAppearance = null,
+    Func<EntityId, ActionPlanDescriptor?>? getActionPlanDescriptor = null)
 {
     private readonly EntityInspectionService _inspection = new(getAppearance);
+    private readonly Func<EntityId, ActionPlanDescriptor?>? _getActionPlanDescriptor = getActionPlanDescriptor;
     private readonly EntityContainmentPathService _paths = new();
     private readonly PointOfViewService _pointOfView = new();
 
@@ -85,13 +95,27 @@ public sealed class EntityPanelProjectionService(Func<EntityId, EntityInspection
 
     private EntityPointOfViewProjection BuildPointOfView(WorldState world, EntityId entityId)
     {
-        var pointOfView = _pointOfView.Describe(world, entityId);
+        var pointOfView = _pointOfView.Describe(
+            world,
+            entityId,
+            _getActionPlanDescriptor?.Invoke(entityId),
+            _getActionPlanDescriptor);
         return new EntityPointOfViewProjection(
             pointOfView.ObserverEntityId,
             pointOfView.Breadcrumb,
             BuildCurrentPlaceProjection(world, pointOfView.CurrentPlace),
+            ProjectAdjectives(pointOfView.TargetAdjectives),
+            ProjectAdjectives(pointOfView.ReciprocalAdjectives),
             pointOfView.Diagnostics);
     }
+
+    private static IReadOnlyList<EntityPointOfViewTargetAdjectiveProjection> ProjectAdjectives(IReadOnlyList<PointOfViewTargetAdjective> adjectives) =>
+        adjectives
+            .Select(adjective => new EntityPointOfViewTargetAdjectiveProjection(
+                adjective.EntityId,
+                adjective.Capability,
+                adjective.Adjective))
+            .ToList();
 
     private EntityPointOfViewCurrentPlaceProjection? BuildCurrentPlaceProjection(WorldState world, PointOfViewCurrentPlace? currentPlace)
     {

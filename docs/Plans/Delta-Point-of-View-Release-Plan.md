@@ -204,6 +204,11 @@ Exit criteria:
 
 - A small tested adjective/reciprocal model exists or a concrete follow-up plan is recorded.
 
+Current status:
+
+- Initial one-way target-adjective projection is implemented. `PointOfViewService` can derive adjectives from target-capability Action Steps in the observer's supplied action-plan descriptor and checks those capabilities against other entities in the current place through existing non-mutating affordance queries. Current proof adjectives include portable, enterable, pushable, breakable, receivable, and takeable as frontend-facing labels over Action Step capabilities. Reciprocal awareness remains follow-up work.
+- Reciprocal target-adjective projection is implemented for the same capability/adjective vocabulary. `PointOfViewService` can derive reciprocal adjectives from other current-place entities' supplied action-plan descriptors and checks those capabilities against the observer. The `--play-mock` frontend consumes the projection and displays separate `adjectives ...` and `reciprocal ...` groups without recomputing semantics.
+
 ### Phase 5: Polish and release decision
 
 Goal: decide whether Delta is ready to become the foundation for arbitrary-entity player control.

@@ -21,6 +21,7 @@ entityTemplates:
     carryingCapacity: 0
     bulk: 1
     aperture: 2
+    defaultActionPlanId: slimeLovesPlayerBehavior
     actionStateDefaults:
       facing: West
   lovingSlime:

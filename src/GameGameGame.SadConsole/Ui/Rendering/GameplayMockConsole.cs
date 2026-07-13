@@ -14,7 +14,6 @@ internal sealed class GameplayMockConsole : Console
     private readonly SadConsoleComponentRenderer _renderer;
     private Console? _hudLayer;
     private readonly GameplayMockScreen? _screen;
-    private bool _fullscreenRequested;
     private string _message;
 
     public GameplayMockConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null) : base(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight)
@@ -35,7 +34,7 @@ internal sealed class GameplayMockConsole : Console
             {
                 var session = PlayableScenarioLauncher.CreateFromFile(startup.DirectContentPath, startup.DirectScenarioId);
                 _screen = new GameplayMockScreen(session);
-                _message = "Turn-0 Play UX mock. I inspect | F11 fullscreen | Esc exits.";
+                _message = "Turn-0 Play UX mock. I cycles inspect targets. Esc exits.";
             }
         }
         catch (Exception ex)
@@ -48,20 +47,9 @@ internal sealed class GameplayMockConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
-        var resized = ResizeToDetectedScreenSize();
-
         if (keyboard.IsKeyReleased(Keys.Escape))
         {
             SadConsole.Game.Instance.MonoGameInstance.Exit();
-            return true;
-        }
-
-        if (keyboard.IsKeyReleased(Keys.F11))
-        {
-            SadConsole.Game.Instance.ToggleFullScreen();
-            _fullscreenRequested = !_fullscreenRequested;
-            _message = $"Fullscreen {(_fullscreenRequested ? "requested" : "windowed requested")}; detected cells {Width}x{Height}.";
-            Redraw();
             return true;
         }
 
@@ -72,36 +60,7 @@ internal sealed class GameplayMockConsole : Console
             return true;
         }
 
-        if (resized)
-        {
-            Redraw();
-            return true;
-        }
-
         return false;
-    }
-
-    public override void Update(TimeSpan delta)
-    {
-        if (ResizeToDetectedScreenSize())
-        {
-            Redraw();
-        }
-
-        base.Update(delta);
-    }
-
-    private bool ResizeToDetectedScreenSize()
-    {
-        SadConsole.Game.Instance.GetDeviceScreenSize(out var width, out var height);
-        if (width <= 0 || height <= 0 || width > 400 || height > 200 || (width == Width && height == Height))
-        {
-            return false;
-        }
-
-        Resize(width, height, clear: true);
-        _message = $"Detected screen cells {width}x{height}; layout ratios preserved.";
-        return true;
     }
 
     private void Redraw()
@@ -125,7 +84,8 @@ internal sealed class GameplayMockConsole : Console
             frame.CurrentPlaceProjection,
             frame.CurrentPlaceBounds,
             frame.CurrentPlaceProjection is null ? "Current place viewport" : $"Current place: {frame.CurrentPlaceProjection.Name}",
-            ["player POV current place", frame.CurrentPlaceProjection?.InventoryGrid is { } currentGrid ? $"inventory: {currentGrid.Width}x{currentGrid.Height} {currentGrid.PlaneId}" : "inventory: none"],
+            [.. new[] { "player POV current place", $"room size: {frame.CurrentRoomSizeLabel}", frame.CurrentPlaceProjection?.InventoryGrid is { } currentGrid ? $"inventory: {currentGrid.Width}x{currentGrid.Height} {currentGrid.PlaneId}" : "inventory: none" }, .. frame.CurrentPlaceEntityRows],
+            [],
             [$"log: {_message}"],
             Color.Gold);
 
@@ -143,6 +103,7 @@ internal sealed class GameplayMockConsole : Console
                 frame.InspectionBounds,
                 "Inspected entity panel",
                 rows,
+                [.. frame.InspectedTargetingRows, .. frame.InspectedActionPlanRows],
                 [],
                 Color.HotPink);
         }
@@ -151,7 +112,7 @@ internal sealed class GameplayMockConsole : Console
         Surface.IsDirty = true;
     }
 
-    private void DrawInventoryPanel(EntityPanelProjection? projection, SadConsoleRect bounds, string title, IReadOnlyList<string> rows, IReadOnlyList<string> footerRows, Color border)
+    private void DrawInventoryPanel(EntityPanelProjection? projection, SadConsoleRect bounds, string title, IReadOnlyList<string> rows, IReadOnlyList<string> afterGridRows, IReadOnlyList<string> footerRows, Color border)
     {
         DrawBox(bounds, border);
         PrintOnMain(bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), title, Color.White);
@@ -186,8 +147,10 @@ internal sealed class GameplayMockConsole : Console
         var gridLeft = Math.Max(bounds.Left + 4, bounds.Left + ((bounds.Width - gridPixelWidth) / 2));
         var gridTop = Math.Max(gridAreaTop, gridAreaTop + ((gridAreaBottom - gridAreaTop - grid.Height) / 2));
         var cells = grid.Cells.ToDictionary(cell => cell.Coord);
+        var gridBottom = gridTop;
         for (var row = 0; row < grid.Height && gridTop + row < gridAreaBottom; row++)
         {
+            gridBottom = gridTop + row + 1;
             PrintOnMain(bounds.Left + 1, gridTop + row, 3, $"{row,2}:", Color.DarkGray);
             for (var column = 0; column < grid.Width; column++)
             {
@@ -203,6 +166,13 @@ internal sealed class GameplayMockConsole : Console
                 SetMainCell(x + 1, gridTop + row, glyph, cell?.EntityId == _screen?.PlayerEntityId ? Color.Yellow : foreground, background);
                 SetMainCell(x + 2, gridTop + row, ' ', foreground, background);
             }
+        }
+
+        var afterGridY = gridBottom + 1;
+        foreach (var row in afterGridRows)
+        {
+            if (afterGridY >= gridAreaBottom) break;
+            PrintOnMain(bounds.Left + 1, afterGridY++, Math.Max(0, bounds.Width - 2), row, Color.LightGray);
         }
     }
 
@@ -264,11 +234,9 @@ internal sealed class GameplayMockConsole : Console
         DrawHudBox(new SadConsoleRect(0, 0, bounds.Width, bounds.Height), Color.Gold);
         PrintOnHud(2, 0, Math.Max(0, bounds.Width - 4), "Player HUD", Color.White);
         PrintOnHud(1, 1, Math.Max(0, bounds.Width - 2), frame.Title, Color.Yellow);
-        PrintOnHud(1, 2, Math.Max(0, bounds.Width - 2), $"Detected cells: {Width}x{Height}", Color.Gray);
-        PrintOnHud(1, 3, Math.Max(0, bounds.Width - 2), $"Fullscreen: {(_fullscreenRequested ? "requested" : "windowed")}", Color.Gray);
-        for (var index = 0; index < frame.HudRows.Count && index < bounds.Height - 5; index++)
+        for (var index = 0; index < frame.HudRows.Count && index < bounds.Height - 3; index++)
         {
-            PrintOnHud(1, 4 + index, Math.Max(0, bounds.Width - 2), frame.HudRows[index], index == frame.HudRows.Count - 1 ? Color.Gray : Color.White);
+            PrintOnHud(1, 2 + index, Math.Max(0, bounds.Width - 2), frame.HudRows[index], index == frame.HudRows.Count - 1 ? Color.Gray : Color.White);
         }
 
         _hudLayer!.Surface.IsDirty = true;

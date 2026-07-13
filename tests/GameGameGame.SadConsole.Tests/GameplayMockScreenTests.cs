@@ -58,24 +58,6 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
-    public void LargerScreenPreservesRelativeGameplayRegions()
-    {
-        var session = CreateGameplayMockSession();
-        var screen = new GameplayMockScreen(session);
-
-        var frame = screen.BuildFrame(200, 60);
-
-        Assert.InRange(frame.HudBounds.Width, 38, 42);
-        Assert.Equal(0, frame.HudBounds.Top);
-        Assert.Equal(60, frame.HudBounds.Bottom);
-        Assert.Equal(40, frame.InspectionBounds.Top);
-        Assert.Equal(60, frame.InspectionBounds.Bottom);
-        Assert.Equal(0, frame.CurrentPlaceBounds.Top);
-        Assert.Equal(frame.InspectionBounds.Top, frame.CurrentPlaceBounds.Bottom);
-        Assert.True(frame.CurrentPlaceBounds.Width > 150);
-    }
-
-    [Fact]
     public void InspectionCyclesVisibleNonPlayerEntitiesWithoutAdvancingTurn()
     {
         var session = CreateGameplayMockSession();
@@ -92,12 +74,155 @@ public sealed class GameplayMockScreenTests
         Assert.Contains(frame.Components, component => component.Id == "inspected-entity");
     }
 
-    private static PlayableScenarioSession CreateGameplayMockSession()
+    [Fact]
+    public void CurrentPlaceEntityRowsShowFacingAndLabeledTarget()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains(frame.CurrentPlaceEntityRows, row => row.Contains("Mock Crate") && row.Contains("facing East") && row.Contains("loves -> Mock Player"));
+    }
+
+    [Fact]
+    public void CurrentPlaceEntityRowsShowPlayerPointOfViewTargetAdjectivesWithoutAdvancingTurn()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+        var turn = session.World.TurnNumber;
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Equal(turn, session.World.TurnNumber);
+        Assert.Contains(frame.CurrentPlaceEntityRows, row => row.Contains("Mock Crate") && row.Contains("adjectives portable, enterable"));
+    }
+
+    [Fact]
+    public void CurrentPlaceEntityRowsShowPlayerPointOfViewReciprocalAdjectivesWithoutAdvancingTurn()
+    {
+        var session = CreateGameplayMockSession(includePlayerReciprocalAdjectives: true);
+        var screen = new GameplayMockScreen(session);
+        var turn = session.World.TurnNumber;
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Equal(turn, session.World.TurnNumber);
+        Assert.Contains(frame.CurrentPlaceEntityRows, row => row.Contains("Mock Crate") && row.Contains("reciprocal portable"));
+    }
+
+    [Fact]
+    public void CurrentPlaceEntityRowsOmitReciprocalAdjectivesWhenProjectionDoesNotExposeThem()
+    {
+        var session = CreateGameplayMockSession(includePlayerReciprocalAdjectives: false);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        var crateRow = Assert.Single(frame.CurrentPlaceEntityRows, row => row.Contains("Mock Crate"));
+        Assert.DoesNotContain("reciprocal", crateRow);
+    }
+
+    [Fact]
+    public void CurrentPlaceEntityRowsOmitTargetAdjectivesWhenProjectionDoesNotExposeThem()
+    {
+        var session = CreateGameplayMockSession(includePlayerTargetAdjectives: false);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        var crateRow = Assert.Single(frame.CurrentPlaceEntityRows, row => row.Contains("Mock Crate"));
+        Assert.DoesNotContain("portable", crateRow);
+        Assert.DoesNotContain("enterable", crateRow);
+    }
+
+    [Fact]
+    public void InspectedPanelRowsShowTargetingRulesAndActionPlanSteps()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        screen.InspectNextEntity();
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains(frame.InspectedTargetingRows, row => row.Contains("rule loves") && row.Contains("Mock Player"));
+        Assert.Contains(frame.InspectedActionPlanRows, row => row.Contains("action plan: mockCratePlan"));
+        Assert.Contains(frame.InspectedActionPlanRows, row => row.Contains("SeekTarget loves"));
+    }
+
+    [Fact]
+    public void CurrentRoomSizeIsLargeWhenPlayerBulkIsLessThanTenPercentOfAperture()
+    {
+        var session = CreateGameplayMockSession(playerBulk: 5, roomAperture: 100);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Equal("Large", frame.CurrentRoomSizeLabel);
+    }
+
+    [Fact]
+    public void CurrentRoomSizeIsSmallWhenPlayerBulkIsWithinTenPercentOfAperture()
+    {
+        var session = CreateGameplayMockSession(playerBulk: 95, roomAperture: 100);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Equal("Small", frame.CurrentRoomSizeLabel);
+    }
+
+    private static PlayableScenarioSession CreateGameplayMockSession(
+        int playerBulk = 1,
+        int roomAperture = 100,
+        bool includePlayerTargetAdjectives = true,
+        bool includePlayerReciprocalAdjectives = false)
     {
         var document = new EditableContentDocument();
+        var playerInteractionPlanId = new ActionPlanTemplateId("mockPlayerInteractionPlan");
+        document.ActionPlans[playerInteractionPlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
+            new ActionPlanId(playerInteractionPlanId.Value),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget)
+            ])));
+        var playerTemplateId = document.AddEntityTemplate(
+            "Mock Player",
+            new EntityTemplate(
+                "Mock Player",
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Bulk: playerBulk,
+                Aperture: 5,
+                DefaultActionPlanId: includePlayerTargetAdjectives ? playerInteractionPlanId : null),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        var cratePlanId = new ActionPlanTemplateId("mockCratePlan");
+        var crateSteps = new List<ActionPlanBehaviorStepDescriptor>
+        {
+            new(ActionPlanBehaviorStepKind.SeekTarget, TargetLabel: "loves"),
+            new(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, TargetLabel: "loves")
+        };
+        if (includePlayerReciprocalAdjectives)
+        {
+            crateSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget, TargetLabel: "loves"));
+        }
+
+        document.ActionPlans[cratePlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
+            new ActionPlanId(cratePlanId.Value),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(crateSteps)));
         var crateTemplateId = document.AddEntityTemplate(
             "Mock Crate",
-            new EntityTemplate("Mock Crate", InventoryWidth: 2, InventoryHeight: 1, Bulk: 2, Aperture: 2),
+            new EntityTemplate(
+                "Mock Crate",
+                InventoryWidth: 2,
+                InventoryHeight: 1,
+                Bulk: 2,
+                Aperture: 2,
+                DefaultActionPlanId: cratePlanId,
+                ActionStateDefaults: new ActorActionStateDefaults(Direction.East),
+                TargetingRules: [new EntityTargetingRule(1, playerTemplateId, Range: 10, Label: "loves")]),
             new EntityPresentation('c', PresentationColor.Earth));
         var roomTemplateId = document.AddEntityTemplate(
             "Mock Room",
@@ -106,13 +231,9 @@ public sealed class GameplayMockScreenTests
                 InventoryWidth: 6,
                 InventoryHeight: 4,
                 Bulk: 100,
-                Aperture: 100,
+                Aperture: roomAperture,
                 CarriedEntities: [new CarriedEntityTemplate(new EntityId("mockCrate"), crateTemplateId, new GridCoord(3, 1))]),
             new EntityPresentation('#', PresentationColor.Gray));
-        var playerTemplateId = document.AddEntityTemplate(
-            "Mock Player",
-            new EntityTemplate("Mock Player", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 5),
-            new EntityPresentation('@', PresentationColor.Yellow));
         document.UpsertScenario(new ScenarioDefinition(
             "play-mock-scenario",
             "Play Mock Scenario",

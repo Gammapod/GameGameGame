@@ -79,6 +79,68 @@ public sealed class EntityPanelProjectionTests
     }
 
     [Fact]
+    public void EntityPanelProjectionIncludesPointOfViewAdjectivesFromProjectedEntityActionPlan()
+    {
+        var document = CreateProjectionDocumentWithPlayerAffordances();
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "panel-projection-adjectives");
+        var service = new EntityPanelProjectionService(
+            entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance(),
+            entityId =>
+            {
+                if (!session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+                {
+                    return null;
+                }
+
+                var template = session.Registry.GetEntityTemplate(templateId);
+                return template.DefaultActionPlanId is { } planId && session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
+                    ? descriptor
+                    : null;
+            });
+
+        var projection = service.Project(
+            session.World,
+            session.PlayerEntityId,
+            session.ActionPlans,
+            playerId: session.PlayerEntityId);
+
+        var slimeId = new EntityId("lovingSlime");
+        Assert.Contains(projection.PointOfView!.TargetAdjectives, adjective => adjective.EntityId == slimeId && adjective.Adjective == "portable");
+        Assert.Contains(projection.PointOfView.TargetAdjectives, adjective => adjective.EntityId == slimeId && adjective.Adjective == "enterable");
+        Assert.DoesNotContain(projection.PointOfView.TargetAdjectives, adjective => adjective.EntityId == session.PlayerEntityId);
+    }
+
+    [Fact]
+    public void EntityPanelProjectionIncludesReciprocalPointOfViewAdjectivesFromOtherEntityActionPlan()
+    {
+        var document = CreateProjectionDocumentWithPlayerAffordances();
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "panel-projection-adjectives");
+        var service = new EntityPanelProjectionService(
+            entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance(),
+            entityId =>
+            {
+                if (!session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+                {
+                    return null;
+                }
+
+                var template = session.Registry.GetEntityTemplate(templateId);
+                return template.DefaultActionPlanId is { } planId && session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
+                    ? descriptor
+                    : null;
+            });
+
+        var projection = service.Project(
+            session.World,
+            session.PlayerEntityId,
+            session.ActionPlans,
+            playerId: session.PlayerEntityId);
+
+        var slimeId = new EntityId("lovingSlime");
+        Assert.Contains(projection.PointOfView!.ReciprocalAdjectives, adjective => adjective.EntityId == slimeId && adjective.Adjective == "portable");
+    }
+
+    [Fact]
     public void EntityPanelProjectionIncludesStructuredLocalLogSnippetsWhenAnchored()
     {
         var document = CreateProjectionDocument();
@@ -130,6 +192,52 @@ public sealed class EntityPanelProjectionTests
             roomId,
             playerTemplateId,
             new EntityId("projectionPlayer"),
+            new GridCoord(0, 0)));
+        return document;
+    }
+
+    private static EditableContentDocument CreateProjectionDocumentWithPlayerAffordances()
+    {
+        var document = new EditableContentDocument();
+        var playerPlanId = new ActionPlanTemplateId("playerAffordancePlan");
+        var slimePlanId = new ActionPlanTemplateId("slimeAffordancePlan");
+        document.ActionPlans[playerPlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
+            new ActionPlanId(playerPlanId.Value),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget)
+            ])));
+        document.ActionPlans[slimePlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
+            new ActionPlanId(slimePlanId.Value),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget)
+            ])));
+        var playerTemplateId = document.AddEntityTemplate(
+            "Mock Player",
+            new EntityTemplate("Mock Player", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 5, DefaultActionPlanId: playerPlanId),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        var slimeTemplateId = document.AddEntityTemplate(
+            "Loving Slime",
+            new EntityTemplate("Loving Slime", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 5, DefaultActionPlanId: slimePlanId),
+            new EntityPresentation('s', PresentationColor.Green));
+        var roomId = document.AddEntityTemplate(
+            "Affordance Room",
+            new EntityTemplate(
+                "Affordance Room",
+                InventoryWidth: 4,
+                InventoryHeight: 2,
+                Bulk: 100,
+                Aperture: 100,
+                CarriedEntities: [new CarriedEntityTemplate(new EntityId("lovingSlime"), slimeTemplateId, new GridCoord(2, 0))]),
+            new EntityPresentation('#', PresentationColor.Gray));
+        document.UpsertScenario(new ScenarioDefinition(
+            "panel-projection-adjectives",
+            "Panel Projection Adjectives",
+            roomId,
+            playerTemplateId,
+            new EntityId("mockPlayer"),
             new GridCoord(0, 0)));
         return document;
     }
