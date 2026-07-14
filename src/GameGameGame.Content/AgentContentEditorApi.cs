@@ -60,6 +60,11 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             Session.Document,
             new PersistedScenarioRunRequest(scenarioId, turnCount))));
 
+    public AgentApiResult<AgentScenarioPlayerLogReport> RunScenarioPlayerLogById(string scenarioId, int turnCount, EntityId? observerEntityId = null) =>
+        Try("RunScenarioPlayerLogByIdFailed", () => ScenarioPlayerLogService.Run(
+            Session,
+            new ScenarioPlayerLogRequest(scenarioId, turnCount, observerEntityId)));
+
     public AgentApiResult<AgentScenarioRecordingReport> RecordScenario(AgentScenarioRecordingRequest request) =>
         scenarioRecorder is null
             ? AgentApiResult<AgentScenarioRecordingReport>.Failure(new AgentApiError(
@@ -429,6 +434,44 @@ public sealed record AgentScenarioPreviewRunReport(
     IReadOnlyList<AgentActionPlanPreview> ActionPlanPreviews,
     AgentScenarioMaterializationReport Materialization,
     AgentScenarioRunReport RunReport);
+
+public sealed record AgentScenarioPlayerLogReport(
+    string ScenarioId,
+    string? ScenarioName,
+    string? FilePath,
+    EntityId? ObserverEntityId,
+    int TurnCount,
+    string ProjectionKind,
+    ContentValidationResult DocumentValidation,
+    ContentValidationResult CanonicalValidation,
+    AgentScenarioMaterializationReport Materialization,
+    IReadOnlyList<string> ValidationDiagnostics,
+    IReadOnlyList<string> RuntimeFailures,
+    IReadOnlyList<string> CapabilityGaps,
+    IReadOnlyList<AgentScenarioPlayerLogTurn> Turns,
+    IReadOnlyList<AgentScenarioPlayerLogRow> Rows,
+    IReadOnlyList<string> FollowUps);
+
+public sealed record AgentScenarioPlayerLogTurn(int TurnNumber, string Heading, IReadOnlyList<string> Lines);
+
+public sealed record AgentScenarioPlayerLogRow(
+    int TurnNumber,
+    int InitiativeIndex,
+    int OrderIndex,
+    EntityId ActorEntityId,
+    string ActorDisplayName,
+    ActionPlanId? ActionPlanId,
+    string? ActionStepKind,
+    int? ActionStepIndex,
+    bool Succeeded,
+    string Result,
+    string MessageId,
+    string? Variant,
+    string? Text,
+    EntityId? TargetEntityId,
+    string? TargetDisplayName,
+    IReadOnlyDictionary<string, string> MessageArgs,
+    bool? IsPlayerVisible);
 
 public sealed record AgentActionPlanPreview(
     ActionPlanTemplateId PlanId,

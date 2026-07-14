@@ -36,6 +36,11 @@ public sealed record ScenarioRunReport(
     IReadOnlyList<string> RuntimeFailures,
     IReadOnlyList<string> CapabilityGaps);
 
+internal sealed record ScenarioRunHistoryResult(
+    ScenarioRunReport Report,
+    ScenarioMaterializationResult Materialization,
+    SimulationHistorySession? History);
+
 public static class ScenarioRunService
 {
     private static readonly EntityId ScenarioRootEntityId = ScenarioMaterializer.DefaultScenarioRootEntityId;
@@ -70,9 +75,19 @@ public static class ScenarioRunService
             throw new ArgumentOutOfRangeException(nameof(request), "Scenario turn count must be non-negative.");
         }
 
+        return RunPersistedWithHistory(document, request).Report;
+    }
+
+    internal static ScenarioRunHistoryResult RunPersistedWithHistory(EditableContentDocument document, PersistedScenarioRunRequest request)
+    {
+        if (request.TurnCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Scenario turn count must be non-negative.");
+        }
+
         var materialization = ScenarioMaterializer.Materialize(document, request.ScenarioId);
 
-        return RunMaterialized(
+        return RunMaterializedWithHistory(
             new ScenarioRunRequest(materialization.ScenarioRootEntityTemplateId, request.TurnCount),
             materialization,
             request.TurnCount,
@@ -83,6 +98,13 @@ public static class ScenarioRunService
         ScenarioRunRequest reportRequest,
         ScenarioMaterializationResult materialization,
         int turnCount,
+        string runMode) =>
+        RunMaterializedWithHistory(reportRequest, materialization, turnCount, runMode).Report;
+
+    private static ScenarioRunHistoryResult RunMaterializedWithHistory(
+        ScenarioRunRequest reportRequest,
+        ScenarioMaterializationResult materialization,
+        int turnCount,
         string runMode)
     {
         var validationDiagnostics = materialization.ValidationDiagnostics.ToList();
@@ -90,7 +112,7 @@ public static class ScenarioRunService
 
         if (!materialization.CanPlay && materialization.ScenarioPlaneId is null)
         {
-            return CreateReport(
+            var report = CreateReport(
                 reportRequest,
                 scenarioPlaneId: ScenarioPlaneId,
                 world,
@@ -101,6 +123,7 @@ public static class ScenarioRunService
                 [],
                 [],
                 materialization.CapabilityGaps);
+            return new ScenarioRunHistoryResult(report, materialization, History: null);
         }
 
         var scenarioPlaneId = materialization.ScenarioPlaneId ?? ScenarioPlaneId;
@@ -108,7 +131,7 @@ public static class ScenarioRunService
         var setupLines = CreateSetupLines(materialization, scenarioPlaneId, actorOrder, runMode);
         if (validationDiagnostics.Count > 0 || materialization.RuntimeFailures.Count > 0)
         {
-            return CreateReport(
+            var report = CreateReport(
                 reportRequest,
                 scenarioPlaneId,
                 world,
@@ -119,6 +142,7 @@ public static class ScenarioRunService
                 [],
                 materialization.RuntimeFailures,
                 materialization.CapabilityGaps);
+            return new ScenarioRunHistoryResult(report, materialization, History: null);
         }
 
         var runtimeObservations = new List<string>();
@@ -169,7 +193,7 @@ public static class ScenarioRunService
             }
         }
 
-        return CreateReport(
+        var completedReport = CreateReport(
             reportRequest,
             scenarioPlaneId,
             world,
@@ -180,6 +204,7 @@ public static class ScenarioRunService
             runtimeObservations,
             runtimeFailures,
             materialization.CapabilityGaps);
+        return new ScenarioRunHistoryResult(completedReport, materialization, history);
     }
 
     private static IReadOnlyList<ScenarioTurnReport> CreateTurnReports(SimulationHistorySession history) =>

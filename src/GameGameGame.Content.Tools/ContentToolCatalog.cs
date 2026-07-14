@@ -37,6 +37,7 @@ public static class ContentToolCatalog
         ContentToolNames.UpsertScenario,
         ContentToolNames.MaterializeScenario,
         ContentToolNames.RunScenarioById,
+        ContentToolNames.RunScenarioPlayerLogById,
         ContentToolNames.PreviewAndRunScenarioById
     ];
 
@@ -73,6 +74,7 @@ public static class ContentToolCatalog
         ContentToolNames.UpsertScenario => "Create or update a persisted scenario definition.",
         ContentToolNames.MaterializeScenario => "Materialize a persisted scenario by ID and report diagnostics.",
         ContentToolNames.RunScenarioById => "Run a persisted scenario by ID and report outcomes.",
+        ContentToolNames.RunScenarioPlayerLogById => "Run a persisted scenario by ID and return compact player narrative projection message IDs/args without debug traces/final state/inventory summaries.",
         ContentToolNames.PreviewAndRunScenarioById => "Return validation, previews, materialization, and scenario run report for one scenario.",
         _ => "GameGameGame content editor tool."
     };
@@ -131,7 +133,7 @@ public static class ContentToolCatalog
             case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false); break;
             case ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario: AddString("scenarioId"); break;
             case ContentToolNames.UpsertScenario: AddObject("scenario"); break;
-            case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById: AddString("scenarioId"); AddInteger("turnCount"); break;
+            case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById: AddString("scenarioId"); AddInteger("turnCount"); if (name is ContentToolNames.RunScenarioPlayerLogById) AddString("observerEntityId", isRequired: false); break;
         }
 
         return new JsonObject

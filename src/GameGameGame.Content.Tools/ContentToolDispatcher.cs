@@ -48,6 +48,7 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 ContentToolNames.UpsertScenario => WithSession((ContentToolUpsertScenarioRequest)request, api => FromAgentResult(api, api.UpsertScenario(((ContentToolUpsertScenarioRequest)request).Scenario))),
                 ContentToolNames.MaterializeScenario => WithSession((ContentToolScenarioRequest)request, api => FromAgentResult(api, api.MaterializeScenario(((ContentToolScenarioRequest)request).ScenarioId))),
                 ContentToolNames.RunScenarioById => WithSession((ContentToolRunScenarioByIdRequest)request, api => FromAgentResult(api, api.RunScenarioById(((ContentToolRunScenarioByIdRequest)request).ScenarioId, ((ContentToolRunScenarioByIdRequest)request).TurnCount))),
+                ContentToolNames.RunScenarioPlayerLogById => WithSession((ContentToolRunScenarioPlayerLogByIdRequest)request, api => FromAgentResult(api, api.RunScenarioPlayerLogById(((ContentToolRunScenarioPlayerLogByIdRequest)request).ScenarioId, ((ContentToolRunScenarioPlayerLogByIdRequest)request).TurnCount, ((ContentToolRunScenarioPlayerLogByIdRequest)request).ObserverEntityId))),
                 ContentToolNames.PreviewAndRunScenarioById => WithSession((ContentToolRunScenarioByIdRequest)request, api => FromAgentResult(api, api.PreviewAndRunScenarioById(((ContentToolRunScenarioByIdRequest)request).ScenarioId, ((ContentToolRunScenarioByIdRequest)request).TurnCount))),
                 _ => ContentToolResponse.Failure(new AgentApiError("UnknownTool", $"Unknown content tool '{toolName}'.", Recoverable: true))
             };
@@ -172,6 +173,7 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
         ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario => arguments.Deserialize<ContentToolScenarioRequest>(JsonOptions)!,
         ContentToolNames.UpsertScenario => arguments.Deserialize<ContentToolUpsertScenarioRequest>(JsonOptions)!,
         ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById => arguments.Deserialize<ContentToolRunScenarioByIdRequest>(JsonOptions)!,
+        ContentToolNames.RunScenarioPlayerLogById => arguments.Deserialize<ContentToolRunScenarioPlayerLogByIdRequest>(JsonOptions)!,
         _ => new { }
     };
 }

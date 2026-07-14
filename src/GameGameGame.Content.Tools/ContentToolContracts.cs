@@ -45,6 +45,7 @@ public sealed record ContentToolPreviewActionPlanRequest(string SessionId, Actio
 public sealed record ContentToolScenarioRequest(string SessionId, string ScenarioId) : IContentToolSessionRequest;
 public sealed record ContentToolUpsertScenarioRequest(string SessionId, AgentAlphaScenarioDefinition Scenario) : IContentToolSessionRequest;
 public sealed record ContentToolRunScenarioByIdRequest(string SessionId, string ScenarioId, int TurnCount) : IContentToolSessionRequest;
+public sealed record ContentToolRunScenarioPlayerLogByIdRequest(string SessionId, string ScenarioId, int TurnCount, EntityId? ObserverEntityId = null) : IContentToolSessionRequest;
 
 public sealed record ContentToolSessionOpened(string SessionId, string? FilePath, bool IsDirty);
 public sealed record ContentToolCreatedEntityTemplate(EntityTemplateId EntityTemplateId);

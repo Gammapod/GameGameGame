@@ -123,6 +123,53 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
+    public void ContentToolDispatcherRunsScenarioPlayerNarrativeLogById()
+    {
+        var sessions = new ContentToolSessionRegistry();
+        var dispatcher = new ContentToolDispatcher(sessions);
+        var sessionId = Assert.IsType<ContentToolSessionOpened>(
+            dispatcher.Invoke(ContentToolNames.CreateNew, new ContentToolCreateNewRequest()).Data).SessionId;
+        var roomId = Assert.IsType<ContentToolCreatedEntityTemplate>(
+            dispatcher.Invoke(ContentToolNames.CreateEntityTemplate, new ContentToolCreateEntityTemplateRequest(sessionId, "Tool Log Room")).Data).EntityTemplateId;
+        Assert.True(dispatcher.Invoke(ContentToolNames.UpdateEntityTemplate, new ContentToolUpdateEntityTemplateRequest(
+            sessionId,
+            roomId,
+            new AgentEntityTemplateUpdate(InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100, Glyph: '#', Color: PresentationColor.Gray))).Ok);
+        var playerTemplateId = Assert.IsType<ContentToolCreatedEntityTemplate>(
+            dispatcher.Invoke(ContentToolNames.CreateEntityTemplate, new ContentToolCreateEntityTemplateRequest(sessionId, "Tool Log Player")).Data).EntityTemplateId;
+        Assert.True(dispatcher.Invoke(ContentToolNames.UpdateEntityTemplate, new ContentToolUpdateEntityTemplateRequest(
+            sessionId,
+            playerTemplateId,
+            new AgentEntityTemplateUpdate(InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5, Glyph: '@', Color: PresentationColor.Yellow))).Ok);
+        var planId = Assert.IsType<ContentToolCreatedActionPlan>(
+            dispatcher.Invoke(ContentToolNames.CreateActionPlan, new ContentToolCreateActionPlanRequest(sessionId, "Tool Log Move")).Data).ActionPlanTemplateId;
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetActionPlanBehavior, new ContentToolSetActionPlanBehaviorRequest(sessionId, planId, [ActionPlanBehaviorStepKind.MoveFacing])).Ok);
+        var api = sessions.Get(sessionId).Value!;
+        Assert.True(api.SetInitialFacing(playerTemplateId, Direction.East).IsSuccess);
+        Assert.True(api.SetDefaultActionPlan(playerTemplateId, planId).IsSuccess);
+        Assert.True(dispatcher.Invoke(ContentToolNames.UpsertScenario, new ContentToolUpsertScenarioRequest(
+            sessionId,
+            new AgentAlphaScenarioDefinition("tool-player-log-run", "Tool Player Log Run", roomId, playerTemplateId, new EntityId("toolLogPlayer"), new GridCoord(0, 1)))).Ok);
+
+        var result = dispatcher.Invoke(ContentToolNames.RunScenarioPlayerLogById, new ContentToolRunScenarioPlayerLogByIdRequest(sessionId, "tool-player-log-run", 1));
+
+        Assert.True(result.Ok, result.Error?.Message);
+        var data = Assert.IsType<AgentScenarioPlayerLogReport>(result.Data);
+        Assert.Equal(new EntityId("toolLogPlayer"), data.ObserverEntityId);
+        Assert.Equal("player narrative projection", data.ProjectionKind);
+        var turn = Assert.Single(data.Turns);
+        Assert.Equal("Turn 1", turn.Heading);
+        Assert.Equal("action.move_facing.success", Assert.Single(turn.Lines));
+        var row = Assert.Single(data.Rows);
+        Assert.Equal("action.move_facing.success", row.MessageId);
+        Assert.Null(row.Text);
+        var serialized = JsonSerializer.Serialize(result, ContentToolJson.Options);
+        Assert.DoesNotContain("traceLines", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("finalStateLines", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("inventorySummaryLines", serialized, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void ContentToolDispatcherRejectsInvalidSessionWithRecoverableError()
     {
         var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());

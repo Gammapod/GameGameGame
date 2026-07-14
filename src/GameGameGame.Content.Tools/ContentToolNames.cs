@@ -33,5 +33,6 @@ public static class ContentToolNames
     public const string UpsertScenario = "ggg_content_upsert_scenario";
     public const string MaterializeScenario = "ggg_content_materialize_scenario";
     public const string RunScenarioById = "ggg_content_run_scenario_by_id";
+    public const string RunScenarioPlayerLogById = "ggg_content_run_scenario_player_log_by_id";
     public const string PreviewAndRunScenarioById = "ggg_content_preview_and_run_scenario_by_id";
 }

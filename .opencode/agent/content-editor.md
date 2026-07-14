@@ -10,7 +10,7 @@ permission:
     "src/GameGameGame.Content/*": allow
   edit:
     "*": ask
-    "docs/*": deny
+    "docs/*": allow
     "src/*": deny
     "src/GameGameGame.Content/*": allow
   task:

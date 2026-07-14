@@ -276,6 +276,49 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiRunsPersistedScenarioPlayerNarrativeLogById()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("Narrative Room"));
+        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100, Glyph: '#', Color: PresentationColor.Gray)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Narrative Player"));
+        AssertSuccess(api.UpdateEntityTemplate(playerTemplateId, new AgentEntityTemplateUpdate(InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5, Glyph: '@', Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));
+        var planId = AssertSuccess(api.CreateActionPlan("Narrative Player Move"));
+        AssertSuccess(api.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(playerTemplateId, planId));
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "api-player-log-run",
+            "API Player Log Run",
+            roomId,
+            playerTemplateId,
+            new EntityId("narrativePlayer"),
+            new GridCoord(0, 1))));
+
+        var report = AssertSuccess(api.RunScenarioPlayerLogById("api-player-log-run", turnCount: 1));
+
+        Assert.Equal("api-player-log-run", report.ScenarioId);
+        Assert.Equal("API Player Log Run", report.ScenarioName);
+        Assert.Equal(new EntityId("narrativePlayer"), report.ObserverEntityId);
+        Assert.Equal("player narrative projection", report.ProjectionKind);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+        var turn = Assert.Single(report.Turns);
+        Assert.Equal(1, turn.TurnNumber);
+        Assert.Equal("Turn 1", turn.Heading);
+        Assert.Equal(["action.move_facing.success"], turn.Lines);
+        var row = Assert.Single(report.Rows);
+        Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing.ToString(), row.ActionStepKind);
+        Assert.Equal(1, row.ActionStepIndex);
+        Assert.True(row.Succeeded);
+        Assert.Equal("action.move_facing.success", row.MessageId);
+        Assert.Null(row.Text);
+        Assert.Equal("Narrative Player", row.MessageArgs["actor"]);
+        Assert.Null(row.TargetEntityId);
+        Assert.Contains(report.FollowUps, item => item.Contains("line-of-sight", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void AgentContentEditorApiCreatesCombinedPersistedScenarioReport()
     {
         var api = AgentContentEditorApi.CreateNew();
