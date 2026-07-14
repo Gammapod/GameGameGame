@@ -53,6 +53,46 @@ public sealed class ScenarioToolingServiceTests
     }
 
     [Fact]
+    public void ScenarioRunServiceRunsNestedScenarioRootInventoryActors()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Nested Actor Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Nested Actor Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+
+        var containerId = editor.CreateEntityPreset("Nested Actor Container");
+        editor.UpdateEntityPreset(
+            containerId,
+            new EntityTemplate("Nested Actor Container", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 10),
+            new EntityPresentation('c', PresentationColor.Cyan));
+
+        var nestedActorId = editor.CreateEntityPreset("Nested Walker");
+        editor.UpdateEntityPreset(
+            nestedActorId,
+            new EntityTemplate("Nested Walker", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
+            new EntityPresentation('n', PresentationColor.Green));
+        editor.SetInitialFacing(nestedActorId, Direction.North);
+        var nestedPlanId = editor.CreateActionPlan("Nested Walker Behavior");
+        editor.SetActionPlanBehavior(nestedPlanId, [ActionPlanBehaviorStepKind.MoveFacing]);
+        editor.SetDefaultActionPlan(nestedActorId, nestedPlanId);
+
+        editor.PlaceCarriedEntity(containerId, new EntityId("nestedActor"), nestedActorId, new GridCoord(0, 0));
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("nestedContainer"), containerId, new GridCoord(0, 0));
+
+        var report = ScenarioRunService.Run(document, new ScenarioRunRequest(scenarioRootId, TurnCount: 1));
+
+        Assert.Equal([new EntityId("nestedActor")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
+        Assert.Equal(["Nested Walker"], report.Turns.Select(turn => turn.ActorName).ToArray());
+        Assert.Contains("Nested Actor Container inventory:", report.InventorySummaryLines);
+        Assert.Contains("  - Nested Walker nestedActor at (0,0)", report.InventorySummaryLines);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+    }
+
+    [Fact]
     public void ScenarioRunServiceLabelsRootOnlyCompatibilityRuns()
     {
         var document = new EditableContentDocument();

@@ -111,8 +111,8 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .Where(step => step.Tier == ActionStepAuthoringTier.Stable)
             .ToList();
 
-    public ActionPlanPreview PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null)
-        => new ActionPlanPreviewService(Document).Preview(planId, entityTemplateId);
+    public ActionPlanPreview PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null, bool includeYamlPreview = true)
+        => new ActionPlanPreviewService(Document).Preview(planId, entityTemplateId, includeYamlPreview);
 
     public ActionPlanTemplateId CreateActionPlan(string name)
         => new ActionPlanEditorService(Document, onChanged).CreateActionPlan(name);

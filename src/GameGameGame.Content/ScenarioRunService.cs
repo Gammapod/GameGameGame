@@ -234,19 +234,43 @@ public static class ScenarioRunService
     private static IReadOnlyList<ScenarioActorSummary> GetScenarioActorsInInitiativeOrder(
         WorldState world,
         IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
-        PlaneId scenarioPlaneId) =>
-        actionPlans.Keys
+        PlaneId scenarioPlaneId)
+    {
+        var containmentPaths = new EntityContainmentPathService();
+
+        return actionPlans.Keys
             .Where(world.Entities.ContainsKey)
-            .Select(entityId => (EntityId: entityId, Location: world.GetEntityLocation(entityId)))
-            .Where(entry => entry.Location.PlaneId == scenarioPlaneId)
-            .OrderBy(entry => entry.Location.Coord.Y)
-            .ThenBy(entry => entry.Location.Coord.X)
+            .Where(entityId => entityId != ScenarioRootEntityId)
+            .Select(entityId => (
+                EntityId: entityId,
+                Location: world.GetEntityLocation(entityId),
+                Path: containmentPaths.GetPathFromRoot(world, ScenarioRootEntityId, entityId)))
+            .Where(entry => IsScheduledScenarioActor(entry.Path, scenarioPlaneId))
+            .OrderBy(entry => FormatScenarioInitiativePath(entry.Path), StringComparer.Ordinal)
             .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
             .Select(entry => new ScenarioActorSummary(
                 entry.EntityId,
                 world.Entities[entry.EntityId].Name,
                 entry.Location))
             .ToList();
+    }
+
+    private static bool IsScheduledScenarioActor(EntityContainmentPath path, PlaneId scenarioPlaneId) =>
+        path.Status == EntityContainmentPathStatus.Complete
+        && path.Segments.Count > 1
+        && path.Segments[0].EntityId == ScenarioRootEntityId
+        && path.Segments[1].ContainingPlaneId == scenarioPlaneId;
+
+    private static string FormatScenarioInitiativePath(EntityContainmentPath path) =>
+        string.Join(
+            "/",
+            path.Segments
+                .Skip(1)
+                .Select(segment =>
+                {
+                    var coord = segment.CoordinateInContainingPlane ?? new GridCoord(0, 0);
+                    return $"{coord.Y:D6},{coord.X:D6},{segment.EntityId.Value}";
+                }));
 
     private static IReadOnlyList<string> CreateSetupLines(
         ScenarioMaterializationResult materialization,

@@ -153,7 +153,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
                     plan.TemplateId,
                     Session.Editor.ListActionPlanReferences(plan.TemplateId)
                         .FirstOrDefault(reference => reference.EntityTemplateId is not null)
-                        ?.EntityTemplateId))
+                        ?.EntityTemplateId,
+                    includeYamlPreview: false))
+                .Select(AgentActionPlanPreview.FromPreview)
                 .ToList();
             var runReport = ToAgentReport(ScenarioRunService.Run(
                 Session.Document,
@@ -424,9 +426,29 @@ public sealed record AgentScenarioPreviewRunReport(
     string ScenarioId,
     ContentValidationResult DocumentValidation,
     ContentValidationResult CanonicalValidation,
-    IReadOnlyList<ActionPlanPreview> ActionPlanPreviews,
+    IReadOnlyList<AgentActionPlanPreview> ActionPlanPreviews,
     AgentScenarioMaterializationReport Materialization,
     AgentScenarioRunReport RunReport);
+
+public sealed record AgentActionPlanPreview(
+    ActionPlanTemplateId PlanId,
+    EntityTemplateId? EntityTemplateId,
+    string Shape,
+    IReadOnlyList<string> Guidance,
+    IReadOnlyList<ActionPlanPreviewStep> ActionSteps,
+    IReadOnlyList<string> StateHints,
+    IReadOnlyList<string> ValidationDiagnostics)
+{
+    public static AgentActionPlanPreview FromPreview(ActionPlanPreview preview) =>
+        new(
+            preview.PlanId,
+            preview.EntityTemplateId,
+            preview.Shape,
+            preview.Guidance,
+            preview.ActionSteps,
+            preview.StateHints,
+            preview.ValidationDiagnostics);
+}
 
 public sealed record AlphaScenarioMaterializationResult(
     string ScenarioId,

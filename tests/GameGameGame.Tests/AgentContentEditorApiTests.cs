@@ -319,6 +319,9 @@ public sealed class AgentContentEditorApiTests
         var preview = Assert.Single(report.ActionPlanPreviews, item => item.PlanId == planId);
         Assert.Equal("Canonical Behavior Chain", preview.Shape);
         Assert.Contains(preview.ActionSteps, step => step.Kind == ActionPlanBehaviorStepKind.MoveFacing);
+        Assert.DoesNotContain(
+            preview.GetType().GetProperties(),
+            property => property.Name == "YamlPreview");
         Assert.Equal(new EntityId("reviewPlayer"), report.Materialization.PlayerEntityId);
         Assert.Contains("Run mode: Persisted scenario simulation", report.RunReport.SetupLines);
         Assert.Contains("Review Player: scenarioRoot(1,1), facing East, target none", report.RunReport.FinalStateLines);

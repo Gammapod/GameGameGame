@@ -37,10 +37,11 @@ Default workflow:
 1. Author normal content definitions: entity templates, presentations, inventories, action plans, and persisted scenarios.
 2. Prefer canonical ordered behavior chains for new behavior.
 3. Use currently authorable Action Steps from this manual.
-4. Validate after edits.
-5. Preview action plans when behavior changes.
-6. Materialize or run scenarios when behavior needs inspection; use SadConsole/manual play for visual inspection and treat the current PNG/GIF recorder as legacy fallback tooling.
-7. Log a capability gap when desired content cannot be expressed cleanly with the authoring surface listed here.
+4. Prefer direct `ggg_content_*` tools backed by `AgentContentEditorApi` when available: open/create a session, inspect existing content, make semantic edits, validate, review the snapshot diff, and save deliberately.
+5. Validate after edits.
+6. Preview action plans when behavior changes.
+7. Materialize or run scenarios when behavior needs inspection; use SadConsole/manual play for visual inspection and treat the current PNG/GIF recorder as legacy fallback tooling.
+8. Log a capability gap when desired content cannot be expressed cleanly with the authoring surface listed here.
 
 ## Authoring decision rules
 
@@ -56,7 +57,7 @@ Default workflow:
 
 | Area | Currently authorable |
 |---|---|
-| Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. |
+| Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. Content-editing agents may use session-aware `ggg_content_*` tools from `GameGameGame.Content.Tools` for direct AgentContentEditorApi-backed open/create/snapshot/validate/save workflows. |
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
 | Presentations | Assign/edit presentation data used by authored templates. |
 | Inventory / containment | Inventory dimensions, bulk, aperture, and carried entity layout. |

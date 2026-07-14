@@ -12,8 +12,8 @@ permission:
     "/*": ask
     "docs/*": allow
     "src/GameGameGame.Core/*": allow
-    "src/GameGameGame.SadConsole/*": deny
     "src/GameGameGame.Content/*": allow
+    "src/GameGameGame.SadConsole/*": deny
     "tests/*": allow
     "tests/GameGameGame.SadConsole.Tests/*": deny
   task:

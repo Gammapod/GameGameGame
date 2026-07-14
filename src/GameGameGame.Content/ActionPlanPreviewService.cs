@@ -4,7 +4,7 @@ namespace GameGameGame.Content;
 
 public sealed class ActionPlanPreviewService(EditableContentDocument document)
 {
-    public ActionPlanPreview Preview(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null)
+    public ActionPlanPreview Preview(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null, bool includeYamlPreview = true)
     {
         var registry = document.ToRegistry();
         var plan = registry.ActionPlanDescriptors
@@ -29,7 +29,7 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
             GetActionPlanPreviewSteps(plan),
             GetActionPlanStateHints(plan, entityTemplateId),
             diagnostics,
-            document.SaveYaml());
+            includeYamlPreview ? document.SaveYaml() : string.Empty);
     }
 
     public static string FormatActionPlanShape(ActionPlanShape shape) =>

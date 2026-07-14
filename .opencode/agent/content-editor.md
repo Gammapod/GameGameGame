@@ -29,6 +29,7 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 ## Responsibilities
 - Create, edit, and validate game content (entities, templates, action plans)
 - Use Content editor services / AgentContentEditorApi-backed workflows to author content
+- Prefer the `ggg_content_*` direct tools when they cover the edit: open/create a session, inspect/list content, make semantic edits, validate/canonical-validate, review the snapshot diff, then save deliberately
 - Read and reference content definitions in `src/GameGameGame.Content`
 - Work with YAML content files, prototype definitions, and entity templates
 
@@ -40,6 +41,8 @@ Use the documentation lanes in `docs/Source of Truth/planning-index.md`:
 
 ## Workflow
 1. Review `Content-Authoring-Manual.md` first when planning how to author content
-2. Use editor tools to create/edit content documents
-3. Validate content against schemas and prototypes
-4. Test content changes through the editor interface
+2. Use `ggg_content_open_file` or `ggg_content_create_new` to obtain a session ID when direct tools are available
+3. Use semantic `ggg_content_*` tools to create/edit content documents instead of ad-hoc YAML edits for supported operations
+4. Validate content against schemas and canonical authoring rules
+5. Review `ggg_content_snapshot` diff/diagnostics before saving
+6. Test content changes through preview/run tools or the editor interface
