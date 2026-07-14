@@ -1,13 +1,13 @@
 # Delta Point-of-View Release Plan
 
-Status: Active Delta release plan.
+Status: Foundation/reference plan. Delta POV foundation has been implemented enough to support the new active canonical-actions vertical-slice direction; promote follow-up POV work only when canonical actions, Action Choice, or frontend presentation need it.
 
 Read when:
 
 - selecting Delta release work;
 - deciding where observer-relative room/place, breadcrumb, bulk/aperture, or affordance semantics belong;
 - planning frontend presentation that depends on the controlled entity's point of view;
-- preparing future `PlayerInputStep` / Action Choice work where the player can command arbitrary entities.
+- preparing future runtime control-source / Action Choice work where the player can command arbitrary entities.
 
 Related source of truth:
 
@@ -27,7 +27,7 @@ Target statement:
 - Given any observer entity, the engine/shared services can describe that entity's structural and semantic context relative to the current world state.
 - The observer's point of view is built on containment ancestry/breadcrumbs, a flexible current-place rule, and observer bulk versus place aperture data.
 - Frontends consume point-of-view projections to present the world from the perspective of the entity currently being commanded or inspected.
-- The first implementation avoids hardcoded player-only semantics and prepares for future `PlayerInputStep` / Action Choice work where player controls can be assigned to arbitrary entities.
+- The first implementation avoids hardcoded player-only semantics and prepares for future runtime control-source / Action Choice work where player controls can be assigned to arbitrary entities.
 - Rich affordance/adjective and reciprocal-awareness language is designed after the current-place and ratio foundation is stable.
 
 ## Core model principles
@@ -102,7 +102,7 @@ Target statement:
 
 ## Explicit non-goals for Delta MVP
 
-- Implementing full `PlayerInputStep` / Action Choice control semantics.
+- Implementing full runtime control-source / Action Choice control semantics.
 - Making point-of-view action execution authoritative before projection invariants are stable.
 - Finalizing all size labels or thresholds in Core.
 - Finalizing height/width/area semantics.
@@ -217,7 +217,7 @@ Scope:
 
 1. Refine frontend wording and debug display.
 2. Update capability/source-of-truth docs.
-3. Decide whether the next release should promote `PlayerInputStep` / Action Choice or continue point-of-view affordance work.
+3. Decide whether the next release should promote runtime control-source / Action Choice or continue point-of-view affordance work.
 
 Exit criteria:
 

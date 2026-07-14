@@ -28,7 +28,7 @@ Minimum read path for content work:
 1. `Agent quick start`
 2. `Authoring decision rules`
 3. `Current authoring surface`
-4. `Canonical Action Step catalog`
+4. `Currently authorable Action Step catalog`
 5. `Scenario authoring`, when working on scenarios
 6. `Capability gap workflow`, when blocked
 
@@ -164,9 +164,11 @@ Do not use for new normal content:
 
 Maintainer/runtime details for canonical, transitional, and legacy action-plan forms live in `docs/Source of Truth/Engine-Editor-Capabilities.md`.
 
-## Canonical Action Step catalog
+## Currently authorable Action Step catalog
 
-This table is the content-facing catalog of currently authorable canonical Action Steps. Keep rows compact when adding new steps. Put layer details and deep runtime semantics in `Engine-Editor-Capabilities.md` instead.
+This table is the content-facing catalog of currently authorable behavior-chain Action Steps. Keep rows compact when adding new steps. Put layer details and deep runtime semantics in `Engine-Editor-Capabilities.md` instead.
+
+Planning note: the active canonical-actions release plan freezes the current broad Action Step catalog as legacy/prototype-compatible for release purposes, then promotes actions one at a time through complete vertical slices. Until a step is explicitly promoted under `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`, authors may still use the currently supported steps below, but content intended to prove release-canonical behavior should follow the new two-room fixture requirement for the selected action.
 
 ### Movement and facing
 

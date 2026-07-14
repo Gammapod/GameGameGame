@@ -1,6 +1,6 @@
 # High-Level Roadmap
 
-Status: Active roadmap. Delta point-of-view is the selected release direction.
+Status: Active roadmap. Canonical action vertical slices are the selected release direction.
 
 Read when:
 
@@ -17,7 +17,7 @@ Related source of truth:
 
 ## Current strategic direction
 
-Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and scenario catalog services. After the major refactor/code cleanup, Delta shifts the roadmap toward an arbitrary-entity point-of-view model: shared services should describe what any entity's current place, breadcrumbs, and relative bulk/aperture context mean so frontend/content presentation and future player-control semantics do not depend on a special player entity. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
+Alpha MVP is complete: the game can launch and be played in an authored scenario, and a player entity can be inserted into scenarios through persisted scenario definitions and reusable materialization. Beta produced several authored gameplay vignettes, scenario reports/recordings, transfer showcases, and scenario catalog services. Delta established the arbitrary-entity point-of-view foundation: shared services can describe an observer's current place, breadcrumbs, relative bulk/aperture context, and first affordance/adjective facts so frontend/content presentation and future player-control semantics do not depend on a special player entity. The selected direction now promotes actions vertically: freeze the current broad Action Step catalog as legacy/prototype-compatible, then promote canonical actions one at a time with engine semantics, structured outcomes, POV/affordance facts, player-facing log IDs, content test rooms, editor support, and componentized play-mode consumption. Direction, inventory, spawning, scheduler, reaction, and frontend decisions should continue to be informed by scenario and tester evidence rather than broad speculative mechanics.
 
 The former Avalonia GUI has been removed. New authoring and scenario-feedback work should prioritize editor services, agent/headless APIs, tests, and SadConsole/future frontend readiness.
 
@@ -44,7 +44,7 @@ This target promoted the following items out of backlog buckets and into the com
    - Define how a player entity template and runtime player entity ID are selected or overridden for a scenario.
    - Define how the player is inserted into the scenario-root inventory/play space: location, inventory plane behavior, initial action state, and conflict diagnostics when the start cell is occupied or invalid.
    - Preserve the existing direct player-input model initially; do not require AI/default-plan behavior or a player-controlled Action Step for alpha.
-   - Treat `PlayerInputStep` / action-choice discovery as a future player-control model, not an alpha prerequisite.
+   - Treat runtime control-source / Action Choice discovery as a future player-control model, not an alpha prerequisite.
 
 3. **Scenario materialization service** - Complete
    - Promote reusable scenario materialization out of `AgentContentEditorApi.RunScenario` into a service usable by tests, editor/agent APIs, and Console without duplicating spawn/setup logic.
@@ -84,33 +84,48 @@ This target promoted the following items out of backlog buckets and into the com
 
 ## Active / likely next sprint
 
-### Delta release target: arbitrary-entity point of view
+### Canonical action release target: vertical slices and player control
 
-Status: Selected after the refactor/code-cleanup roadmap reset.
+Status: Selected after the Delta point-of-view foundation and player-facing log groundwork.
 
-Active Delta planning document:
+Active canonical action planning document:
 
-- [Delta Point-of-View Release Plan](Delta-Point-of-View-Release-Plan.md)
+- [Canonical Actions Vertical Slice Plan](Canonical-Actions-Vertical-Slice-Plan.md)
 
-Immediate Delta priority:
+Immediate canonical action priority:
 
-- Build a Core/shared point-of-view foundation for arbitrary observer entities.
-- Reuse the existing containment/breadcrumb/path service rather than creating parallel ancestry logic.
-- Return current-place selection facts, observer breadcrumbs, observer bulk, place aperture, and `BulkToApertureRatio` before finalizing size labels.
-- Keep the first slice read-only and projection-oriented, with stable invariant traces and tests.
-- Follow with a frontend/content MVP that presents point-of-view facts without making the player entity special.
-- Defer rich affordance/adjective and reciprocal-awareness language until the current-place and ratio foundation is stable.
+- Classify the current broad Action Step catalog as legacy/prototype-compatible while preserving load/run/editor compatibility for existing content.
+- Define the promoted canonical-action tier and vertical-slice checklist in source-of-truth docs.
+- Promote the first simple canonical action, recommended `MoveFacing`, through engine rules, structured outcomes, player-facing log IDs, two content rooms, editor support, and componentized play-mode consumption.
+- Follow with the first target-facing canonical action, recommended `PickupTarget` or `EnterTarget`, to prove success criteria, POV adjective, and threshold-vs-actual ratio facts.
+- Design and implement the canonical runtime control-source / Action Choice model: control source is mutable runtime state, fallback-controlled actors use normal fallback resolution, player-controlled actors choose from their effective authored Action Plan through Core-owned choice/target requests, and control source can change during gameplay.
+- Replace the remaining legacy/internal play-mode stopgap with the componentized Gamma play-mode surface based on the existing mock, consuming shared scenario launch, history, POV/entity-panel, action-choice, target, and log services.
 
-Delta target statement:
+Canonical action target statement:
 
-- The engine/shared services can answer “what is this arbitrary entity's point of view?” in terms of structural breadcrumbs, current place, and relative bulk/aperture context.
-- The frontend can consume that projection for the entity currently being commanded or inspected.
-- The model prepares for future player controls implemented as an action step, where the player can control any arbitrary entity and see from that entity's point of view.
-- Future action steps may consume stable point-of-view concepts, such as affecting all entities in the current room/place, after the projection invariants mature.
+- Existing Action Steps remain compatible but are no longer all implicitly release-canonical.
+- A canonical action is release-ready only when its engine semantics, success/failure outcome projection, POV/affordance facts where applicable, frontend log IDs, and content test rooms are complete.
+- Player control becomes runtime decision-source state over normal authored action steps rather than a permanently special player entity command path or a meta-control Action Step.
+- Componentized play mode consumes canonical action/Action Choice/POV/log contracts without inventing frontend-only simulation semantics.
 
 Planned next sprint:
 
-- Start Phase 0/1 of `docs/Plans/Delta-Point-of-View-Release-Plan.md`: review breadcrumb/path services, trace existing invariants, add tests for arbitrary observer POV, and implement the smallest Core/shared read-only point-of-view query that returns breadcrumbs, current place, selection basis, bulk/aperture facts, ratio, and diagnostics.
+- Start Phase 0/1 of `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`: update capability/authoring/action-logic/text/invariant docs for the legacy/prototype freeze and canonical-action Definition of Done, trace existing `MoveFacing` tests, add intentionally failing coverage for missing canonical vertical-slice pieces, and implement the smallest first promoted canonical action slice.
+
+### Delta release target: arbitrary-entity point of view
+
+Status: Foundation implemented; retained as reference/follow-up context for canonical action POV, adjective, ratio, and presentation needs.
+
+Delta planning document:
+
+- [Delta Point-of-View Release Plan](Delta-Point-of-View-Release-Plan.md)
+
+Delta foundation summary:
+
+- Core/shared point-of-view queries can return observer breadcrumbs, selected current place, observer bulk, place aperture, `BulkToApertureRatio`, diagnostics, and max-depth breadcrumb truncation status.
+- Content/entity-panel projections expose POV current-place, ratio, adjective, reciprocal adjective, and diagnostic facts for frontend consumption.
+- Aperture-backed success criteria can expose structured ratios, and player narrative log tooling provides stable message IDs/args for wording experiments.
+- Follow-up size language, place qualities, richer reciprocal language, and graphical representation should be promoted only when canonical action or frontend needs require them.
 
 ## Previous Gamma/frontend direction now on hold
 
@@ -547,25 +562,25 @@ Promotion trigger:
 
 ### Bucket 10: Future player control and action choice model
 
-Status: Deferred until alpha scenario launch/play works with direct Console control.
+Status: Promoted into the active canonical-actions direction as runtime control-source / Action Choice work.
 
 Concept:
 
-- A future `PlayerInputStep` could be assignable to an entity Action Plan.
-- When simulation reaches `PlayerInputStep`, the engine/frontend would pause for player input rather than automatically resolving the chain.
-- Subsequent Action Steps in the plan could describe available player choices, such as move, pickup, drop, or interact, instead of behaving as ordinary fallback attempts.
-- This would allow any entity to become player-controlled through authored behavior rather than through a special hardcoded player entity.
+- Runtime control source should be mutable per actor, likely with or adjacent to persistent entity action state.
+- Fallback-controlled actors resolve their effective Action Plans through normal ordered fallback policy.
+- Player-controlled actors produce Core-owned `ActionChoiceRequest` / target-choice / submission results over the actor's normal authored action steps rather than a hardcoded player command set.
+- This allows any entity to become player-controlled through runtime state changes rather than through a special hardcoded player entity or a required input-sentinel Action Step in every controllable plan.
 - Deferred design item: a future `Use` action may let an actor use a carried entity as an action source, for example using a carried goblin's special action against an adjacent target. This is intentionally not part of the runtime behavior-override spike because it needs explicit actor/source attribution, target legality, selected Action Step semantics, trace/log shape, and turn-consumption decisions.
 
 Dependencies:
 
-- Requires alpha scenario materialization/player insertion to exist first so direct-control play has a stable baseline.
-- Requires action-choice discovery, frontend/Console input integration, and likely revised action-plan resolution semantics.
-- Should be designed with future integrated frontend needs in mind, not just the current Console.
+- Requires action-choice discovery, frontend input integration, and revised action-plan resolution semantics.
+- Requires `WorldState` clone/rollback/history handling for control-source state and pending/submitted choices.
+- Should be designed with future integrated frontend needs in mind, not just the current SadConsole debug/browser surface.
 
 Promotion trigger:
 
-- Promote after alpha launch/play works and scenarios need authored player capability sets or controllable non-player entities.
+- Continue promoting through `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md` when canonical action rooms need arbitrary controlled entities, control-source changes, or multi-entity/team control.
 
 ### Bucket 11: Long-horizon diegetic/meta systems
 

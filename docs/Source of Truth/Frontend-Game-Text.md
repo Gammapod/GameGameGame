@@ -13,13 +13,14 @@ Related documents:
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records the boundary rule that logs derive from structured outcomes, not parsed display strings.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records log presentation standards for global and local activity surfaces.
 - `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome and affordance semantics.
+- `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md` records the active requirement that every promoted canonical action has player-facing success/failure log IDs and any needed ratio/reason variants.
 - `docs/Plans/Delta-Point-of-View-Release-Plan.md` records the current point-of-view, target adjective, and reciprocal adjective direction.
 
 ## Purpose
 
 This document catalogs stable player-facing message ID slots for current Action Step logs. Final sentence wording is intentionally deferred until later frontend development. It is intentionally a text/presentation document: it does not define action legality, success criteria, threshold values, failure policy, turn consumption, or materialization semantics.
 
-The current entries are allowed to be placeholders. The important first step is that every log-producing Action Step has an explicit message ID slot, and Action Steps with success-ratio data have explicit large/barely variant slots. Tests should prefer message IDs, variants, args, and structured anchors over exact prose.
+The current entries are allowed to be placeholders. The important first step is that every promoted canonical action has explicit success/failure message ID slots, and actions with success-ratio data have explicit ratio/reason variant slots where those variants are supported. Tests should prefer message IDs, variants, args, and structured anchors over exact prose.
 
 ## Ownership and composition rules
 

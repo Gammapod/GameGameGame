@@ -28,7 +28,7 @@ The former Console frontend has been removed. Simple developer commands, scenari
 ## Design principles
 
 - Frontends must not invent simulation semantics or frontend-only gameplay rules.
-- Player actions should converge toward normal action-plan/action-step semantics. The long-term model is an input-requiring Action Step that pauses simulation and resumes through a selected Action Choice, not a permanently special player command path.
+- Player actions should converge toward normal action-plan/action-step semantics. The long-term model is Core-owned runtime control-source state plus Action Choice request/submission/resolution over an actor's normal authored action steps, not a permanently special player command path or a required input-sentinel Action Step.
 - Logs should be generated from structured action outcomes, not parsed display strings. Target shape: successful entries such as `{entity} {verb}ed {target/recipient}` and failed entries such as `{entity} tried to {verb} {target}, but {failure reason}`.
 - The canonical debug UI should be composed of entity panels. Each panel should eventually show identity/metadata, action plans/slots, inventory/grid, and a contents list in initiative order with previous-turn trace/log context.
 - SadConsole-specific state may include layout, focus, cursor, prompt mode, collapse state, hover state, and styling. It must not include independent simulation state or duplicate action legality rules.
@@ -46,7 +46,7 @@ Examples:
 - action target and affordance queries;
 - structured action/turn outcome models;
 - eliminating duplicated turn/action resolution paths;
-- `PlayerInputStep` semantics when promoted;
+- runtime control-source / Action Choice semantics when promoted;
 - tests that assert turn consumption, trace, target, movement, inventory, and containment behavior.
 
 ### Frontend-owner work
@@ -159,24 +159,24 @@ Exit criteria:
 
 - SadConsole can answer common “what is this entity/template/plan doing?” questions without opening YAML.
 
-### Stage 9: Long-term Action Choice / PlayerInputStep promotion
+### Stage 9: Long-term Runtime Control Source / Action Choice Promotion
 
 Owner: Core-aware implementation first, frontend-owner consumption second.
 
-Goal: replace special direct player controls with authored, non-special player input semantics.
+Goal: replace special direct player controls with Core-owned runtime control-source and Action Choice semantics over normal authored action steps.
 
 Scope:
 
-1. Design `PlayerInputStep` or equivalent input-requiring Action Step.
-2. Define simulation pause/resume semantics.
-3. Define `ActionChoiceRequest`, available choices, target requirements, and choice submission.
+1. Design mutable runtime control-source state for actors, including clone/rollback/history behavior.
+2. Define Core resolver policy for fallback-controlled actors versus player-controlled actors.
+3. Define `ActionChoiceRequest`, available choices, target requirements, and choice submission from the actor's effective authored Action Plan.
 4. Resolve submitted choices through normal action-step semantics.
 5. Migrate SadConsole controls from direct-control compatibility commands to Action Choice requests where possible.
 6. Preserve trace, outcome, log, and turn-consumption invariants.
 
 Exit criteria:
 
-- A player-controlled entity is designated by authored behavior, not by a permanent frontend special case.
+- A player-controlled entity is designated by runtime control-source state, not by a permanent frontend special case.
 - Frontends present available choices from the engine/authored plan instead of hardcoding the player command set.
 
 ### Stage 10: Mouse, packaging, and frontend-engine decision
@@ -222,7 +222,7 @@ Promote or consider while planning SadConsole work:
 - SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs.
 - Saved runlogs / runlog stepper backed by shared history.
 - Reaction trace causality when reactions are promoted.
-- Future Action Choice / `PlayerInputStep` model.
+- Future runtime control-source / Action Choice model.
 - Long-horizon diegetic action-plan UI if action plans become gameplay objects.
 
 ## Near-term selection recommendation

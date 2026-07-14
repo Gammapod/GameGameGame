@@ -391,10 +391,12 @@ See `docs/Archived/Agent-Editor-API-Plan.md` for the historical implementation p
 
 ## Upcoming behavior-system priorities
 
-Near-term work follows the Delta point-of-view release plan:
+Near-term work follows the canonical actions vertical-slice release plan:
 
-1. extend the Core point-of-view foundation only where the frontend/content MVP needs additional stable facts;
-2. add content/frontend projection over current place, breadcrumbs, and bulk/aperture ratio facts;
-3. then design the affordance/adjective and reciprocal-awareness layer before promoting future Action Choice / `PlayerInputStep` work.
+1. preserve the current broad Action Step catalog as loadable/runnable/editor-compatible legacy/prototype support while promoted canonical-action status is earned one action at a time;
+2. define and track a promoted canonical-action tier whose Definition of Done includes engine semantics, structured outcomes, POV/affordance facts where applicable, frontend log IDs, two content test rooms, editor/API support, and componentized play-mode consumption;
+3. promote the first simple action slice, recommended `MoveFacing`, then the first target-facing adjective/ratio slice, recommended `PickupTarget` or `EnterTarget`;
+4. add the canonical runtime control-source / Action Choice foundation so any player-controlled actor can choose among its normal authored action steps while fallback-controlled actors keep normal fallback resolution;
+5. extend Delta point-of-view facts only where canonical actions, player control, or componentized play-mode consumption need additional stable data.
 
 Behavior templates, scheduler/speed work, reaction slots, diegetic action-plan entities, and broad new gameplay primitives remain conceptualized until selected for a concrete content/design need.

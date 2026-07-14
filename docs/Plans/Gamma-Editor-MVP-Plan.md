@@ -110,7 +110,7 @@ These are valuable, but should not block Editor MVP unless user testing shows th
 9. Strict/canonical validation toggle and schema/catalog export surfaced in the UI.
 10. Scenario curation UI for manifest ordering, descriptions, visibility, or deprecated/headless-only markers.
 11. Batch/dry-run mutation workflows with ordered semantic diffs.
-12. Action Choice / `PlayerInputStep` promotion if direct-control compatibility becomes the main editor/simulation blocker.
+12. Runtime control-source / Action Choice promotion if direct-control compatibility becomes the main editor/simulation blocker.
 13. Runtime debug mutation mode, clearly separated from authored-content editing.
 14. Live hot-edit/re-materialize while Simulation is paused.
 15. Packaging/distribution polish for external tester builds.

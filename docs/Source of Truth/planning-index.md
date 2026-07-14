@@ -38,37 +38,39 @@ Do not read when:
 5. `docs/Source of Truth/vertical-slice-map.md`
     - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
     - Read selectively when a planned slice spans multiple layers.
-6. `docs/Plans/Delta-Point-of-View-Release-Plan.md`
-   - Active Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and future affordance/adjective groundwork.
-7. `docs/Plans/Gamma-Editor-MVP-Plan.md`
+6. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
+   - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible, promoting canonical actions through vertical slices, adding runtime control-source / Action Choice support, and replacing the legacy play-mode stopgap with the componentized Gamma play surface.
+7. `docs/Plans/Delta-Point-of-View-Release-Plan.md`
+   - Recently active Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
+8. `docs/Plans/Gamma-Editor-MVP-Plan.md`
    - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
-8. `docs/Plans/SadConsole-Frontend-Roadmap.md`
-   - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not the active implementation plan while Delta is selected.
-9. `docs/Plans/Beta-Capability-Gap-Log.md`
+9. `docs/Plans/SadConsole-Frontend-Roadmap.md`
+   - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not the active implementation plan while canonical action vertical slices are selected, except for the componentized play-mode replacement called out by that plan.
+10. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-10. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+11. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
    - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-11. `docs/Plans/Sprint-Retrospective.md`
-      - Recent process observations and open retrospective questions.
-12. `docs/Archived/`
+12. `docs/Plans/Sprint-Retrospective.md`
+       - Recent process observations and open retrospective questions.
+13. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
      - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current strategic priority
 
-Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. Delta is now the active release direction: finalize a point-of-view model for arbitrary entities, then let frontend/content presentation consume that model without making the player entity special.
+Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Delta established the point-of-view foundation needed for arbitrary observer/current-place/bulk-aperture/adjective projection. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. The active release direction is now canonical action vertical slices: freeze the current Action Step catalog as legacy/prototype-compatible, promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, and componentized play-mode consumption, then add Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
 
 ## Current highest-priority backlog buckets
 
-The active release plan is `docs/Plans/Delta-Point-of-View-Release-Plan.md`. Current backlog buckets remain available for reprioritization after Delta's early stages clarify needs:
+The active release plan is `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`. Current backlog buckets remain available for reprioritization after the first canonical action and Action Choice slices clarify needs:
 
-1. Delta arbitrary-entity point-of-view foundation, as described in `docs/Plans/Delta-Point-of-View-Release-Plan.md`.
-2. Frontend/content point-of-view MVP consumption, as the Delta foundation becomes available.
-3. Future player control and Action Choice / `PlayerInputStep` model, once POV can follow the currently commanded entity.
-4. Point-of-view affordance/adjective and reciprocal-awareness extensions.
+1. Canonical action vertical slices, as described in `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
+2. Canonical runtime control-source / Action Choice model, where control source is mutable runtime state and player-controlled actors choose from their normal authored action steps.
+3. Componentized Gamma play-mode replacement for the remaining legacy/internal play-mode stopgap, consuming canonical action/Action Choice/POV/log services.
+4. Delta point-of-view follow-through where needed by canonical actions: affordance adjectives, reciprocal awareness, ratio facts, and presentation polish.
 5. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
 6. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
-7. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports the editor loop.
+7. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports canonical action rooms.
 8. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
 9. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
 10. Inventory, containment, and transfer mechanics.
@@ -88,7 +90,7 @@ See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies
 - Canonical Action Step outcome and verb-affordance decision tables belong in `Action-Step-Outcome-And-Affordance-Logic.md`.
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently that plan is `Delta-Point-of-View-Release-Plan.md`.
+- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently that plan is `Canonical-Actions-Vertical-Slice-Plan.md`.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.
