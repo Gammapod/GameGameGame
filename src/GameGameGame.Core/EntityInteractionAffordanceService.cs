@@ -6,7 +6,8 @@ public sealed record EntityInteractionCapabilityResult(
     EntityId TargetId,
     bool CanTarget,
     FailureReason? FailureReason = null,
-    string? FailureDetail = null);
+    string? FailureDetail = null,
+    IReadOnlyList<ActionSuccessCriterion>? SuccessCriteria = null);
 
 public sealed class EntityInteractionAffordanceService(MovementService movement)
 {
@@ -200,14 +201,20 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
                 var evaluation = constrained.Evaluate(world, movingId, MovementDestination.Plane(destination));
                 if (evaluation.CanRelocate)
                 {
-                    return Success(capability, actorId, targetId);
+                    return Success(capability, actorId, targetId, ExtractSuccessCriteria(evaluation.Trace));
                 }
 
                 lastFailure = evaluation;
             }
         }
 
-        return Failure(capability, actorId, targetId, lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement, lastFailure?.Trace.Detail ?? $"no inventory coordinate in {inventoryPlaneId} can accept {movingId}");
+        return Failure(
+            capability,
+            actorId,
+            targetId,
+            lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement,
+            lastFailure?.Trace.Detail ?? $"no inventory coordinate in {inventoryPlaneId} can accept {movingId}",
+            lastFailure is null ? [] : ExtractSuccessCriteria(lastFailure.Trace));
     }
 
     private static EntityId? FindFirstCarriedEntity(WorldState world, EntityId actorId)
@@ -227,9 +234,34 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
             .FirstOrDefault();
     }
 
-    private static EntityInteractionCapabilityResult Success(ActionPlanBehaviorStepKind capability, EntityId actorId, EntityId targetId) =>
-        new(capability, actorId, targetId, CanTarget: true);
+    private static EntityInteractionCapabilityResult Success(
+        ActionPlanBehaviorStepKind capability,
+        EntityId actorId,
+        EntityId targetId,
+        IReadOnlyList<ActionSuccessCriterion>? successCriteria = null) =>
+        new(capability, actorId, targetId, CanTarget: true, SuccessCriteria: successCriteria ?? []);
 
-    private static EntityInteractionCapabilityResult Failure(ActionPlanBehaviorStepKind capability, EntityId actorId, EntityId targetId, FailureReason? reason, string? detail) =>
-        new(capability, actorId, targetId, CanTarget: false, reason, detail);
+    private static EntityInteractionCapabilityResult Failure(
+        ActionPlanBehaviorStepKind capability,
+        EntityId actorId,
+        EntityId targetId,
+        FailureReason? reason,
+        string? detail,
+        IReadOnlyList<ActionSuccessCriterion>? successCriteria = null) =>
+        new(capability, actorId, targetId, CanTarget: false, reason, detail, successCriteria ?? []);
+
+    private static IReadOnlyList<ActionSuccessCriterion> ExtractSuccessCriteria(TraceNode trace) =>
+        DescendantsAndSelf(trace).SelectMany(node => node.SuccessCriteria).ToList();
+
+    private static IEnumerable<TraceNode> DescendantsAndSelf(TraceNode trace)
+    {
+        yield return trace;
+        foreach (var child in trace.Children)
+        {
+            foreach (var descendant in DescendantsAndSelf(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
 }

@@ -31,6 +31,15 @@ public sealed class InventoryTransitionService
                 $"Compare {movingEntity.Name} bulk to {owner.Name} aperture",
                 TraceStatus.Info,
                 detail: $"bulk={movingEntity.Bulk}, aperture={owner.Aperture}");
+            comparison.SuccessCriteria.Add(new ActionSuccessCriterion(
+                ActionSuccessCriterionKind.Aperture,
+                Satisfied: movingEntity.Bulk <= owner.Aperture,
+                SuccessRatio: movingEntity.Bulk == 0 ? null : decimal.Divide(owner.Aperture, movingEntity.Bulk),
+                RequiredValue: movingEntity.Bulk,
+                AvailableValue: owner.Aperture,
+                SubjectEntityId: movingEntityId,
+                LimitEntityId: ownerId,
+                Detail: $"{movingEntity.Name} bulk {movingEntity.Bulk} vs {owner.Name} aperture {owner.Aperture}"));
 
             if (movingEntity.Bulk > owner.Aperture)
             {

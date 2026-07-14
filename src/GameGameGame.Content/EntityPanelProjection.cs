@@ -28,7 +28,10 @@ public sealed record EntityPointOfViewProjection(
 public sealed record EntityPointOfViewTargetAdjectiveProjection(
     EntityId EntityId,
     ActionPlanBehaviorStepKind Capability,
-    string Adjective);
+    string Adjective)
+{
+    public IReadOnlyList<ActionSuccessCriterion> SuccessCriteria { get; init; } = [];
+}
 
 public sealed record EntityPointOfViewCurrentPlaceProjection(
     EntityId EntityId,
@@ -114,7 +117,10 @@ public sealed class EntityPanelProjectionService(
             .Select(adjective => new EntityPointOfViewTargetAdjectiveProjection(
                 adjective.EntityId,
                 adjective.Capability,
-                adjective.Adjective))
+                adjective.Adjective)
+            {
+                SuccessCriteria = adjective.SuccessCriteria
+            })
             .ToList();
 
     private EntityPointOfViewCurrentPlaceProjection? BuildCurrentPlaceProjection(WorldState world, PointOfViewCurrentPlace? currentPlace)

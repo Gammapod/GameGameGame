@@ -31,7 +31,10 @@ public sealed record PointOfViewCurrentPlace(
 public sealed record PointOfViewTargetAdjective(
     EntityId EntityId,
     ActionPlanBehaviorStepKind Capability,
-    string Adjective);
+    string Adjective)
+{
+    public IReadOnlyList<ActionSuccessCriterion> SuccessCriteria { get; init; } = [];
+}
 
 public sealed record PointOfViewResult(
     EntityId ObserverEntityId,
@@ -185,11 +188,23 @@ public sealed class PointOfViewService(EntityContainmentPathService? containment
         }
 
         var affordances = new EntityInteractionAffordanceService(new MovementService());
-        return CurrentPlaceEntityIds(world, observerEntityId, currentPlace)
-            .SelectMany(entityId => capabilities
-                .Where(capability => affordances.QueryTargetCapability(world, observerEntityId, entityId, capability).CanTarget)
-                .Select(capability => new PointOfViewTargetAdjective(entityId, capability, ToAdjective(capability))))
-            .ToList();
+        var adjectives = new List<PointOfViewTargetAdjective>();
+        foreach (var entityId in CurrentPlaceEntityIds(world, observerEntityId, currentPlace))
+        {
+            foreach (var capability in capabilities)
+            {
+                var result = affordances.QueryTargetCapability(world, observerEntityId, entityId, capability);
+                if (result.CanTarget)
+                {
+                    adjectives.Add(new PointOfViewTargetAdjective(entityId, capability, ToAdjective(capability))
+                    {
+                        SuccessCriteria = result.SuccessCriteria ?? []
+                    });
+                }
+            }
+        }
+
+        return adjectives;
     }
 
     private static IReadOnlyList<PointOfViewTargetAdjective> BuildReciprocalAdjectives(
@@ -204,11 +219,23 @@ public sealed class PointOfViewService(EntityContainmentPathService? containment
         }
 
         var affordances = new EntityInteractionAffordanceService(new MovementService());
-        return CurrentPlaceEntityIds(world, observerEntityId, currentPlace)
-            .SelectMany(entityId => CapabilitiesFromPlan(actionPlanResolver(entityId))
-                .Where(capability => affordances.QueryTargetCapability(world, entityId, observerEntityId, capability).CanTarget)
-                .Select(capability => new PointOfViewTargetAdjective(entityId, capability, ToAdjective(capability))))
-            .ToList();
+        var adjectives = new List<PointOfViewTargetAdjective>();
+        foreach (var entityId in CurrentPlaceEntityIds(world, observerEntityId, currentPlace))
+        {
+            foreach (var capability in CapabilitiesFromPlan(actionPlanResolver(entityId)))
+            {
+                var result = affordances.QueryTargetCapability(world, entityId, observerEntityId, capability);
+                if (result.CanTarget)
+                {
+                    adjectives.Add(new PointOfViewTargetAdjective(entityId, capability, ToAdjective(capability))
+                    {
+                        SuccessCriteria = result.SuccessCriteria ?? []
+                    });
+                }
+            }
+        }
+
+        return adjectives;
     }
 
     private static IReadOnlyList<ActionPlanBehaviorStepKind> CapabilitiesFromPlan(ActionPlanDescriptor? actionPlan) =>

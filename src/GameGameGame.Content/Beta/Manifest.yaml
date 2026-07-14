@@ -39,6 +39,11 @@ scenarios:
   name: Beta Push Showcase
   description: Creatures that can push things.
 
+- contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
+  scenarioId: beta-success-criteria-log-room
+  name: Beta Success Criteria Log Room
+  description: A log test room with barely/easy success and failure examples for aperture-backed action success criteria.
+
 - contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\PatrolTurnShowcase.yaml
   scenarioId: beta-patrol-turn
   name: Beta Patrol Turn

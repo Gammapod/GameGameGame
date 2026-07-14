@@ -28,6 +28,21 @@ public enum FailureReason
     TargetInventoryUnusable
 }
 
+public enum ActionSuccessCriterionKind
+{
+    Aperture
+}
+
+public sealed record ActionSuccessCriterion(
+    ActionSuccessCriterionKind Kind,
+    bool Satisfied,
+    decimal? SuccessRatio,
+    int? RequiredValue,
+    int? AvailableValue,
+    EntityId? SubjectEntityId = null,
+    EntityId? LimitEntityId = null,
+    string? Detail = null);
+
 public sealed class TraceNode(
     string label,
     TraceStatus status,
@@ -43,6 +58,8 @@ public sealed class TraceNode(
     public string? Detail { get; set; } = detail;
 
     public List<TraceNode> Children { get; } = [];
+
+    public List<ActionSuccessCriterion> SuccessCriteria { get; } = [];
 
     public TraceNode Add(TraceNode child)
     {

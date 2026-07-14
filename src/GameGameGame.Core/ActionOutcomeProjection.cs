@@ -21,6 +21,8 @@ public sealed record ActionOutcome(
     public bool ConsumedTurn { get; init; }
 
     public IReadOnlyList<ActionStepAttempt> ActionStepAttempts { get; init; } = [];
+
+    public IReadOnlyList<ActionSuccessCriterion> SuccessCriteria { get; init; } = [];
 }
 
 public static class ActionOutcomeProjection
@@ -71,7 +73,8 @@ public static class ActionOutcomeProjection
             result.Trace)
         {
             ConsumedTurn = result.ConsumedTurn,
-            ActionStepAttempts = ExtractActionStepAttempts(result.Trace)
+            ActionStepAttempts = ExtractActionStepAttempts(result.Trace),
+            SuccessCriteria = ExtractSuccessCriteria(result.Trace)
         };
     }
 
@@ -104,7 +107,8 @@ public static class ActionOutcomeProjection
             log.Trace)
         {
             ConsumedTurn = log.ConsumedTurn,
-            ActionStepAttempts = attempts
+            ActionStepAttempts = attempts,
+            SuccessCriteria = ExtractSuccessCriteria(log.Trace)
         };
     }
 
@@ -185,6 +189,9 @@ public static class ActionOutcomeProjection
 
     private static string? FindFailureDetail(TraceNode trace) =>
         DescendantsAndSelf(trace).FirstOrDefault(node => node.Status == TraceStatus.Failure && !string.IsNullOrWhiteSpace(node.Detail))?.Detail;
+
+    private static IReadOnlyList<ActionSuccessCriterion> ExtractSuccessCriteria(TraceNode trace) =>
+        DescendantsAndSelf(trace).SelectMany(node => node.SuccessCriteria).ToList();
 
     private static IEnumerable<TraceNode> DescendantsAndSelf(TraceNode trace)
     {

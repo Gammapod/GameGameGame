@@ -1,0 +1,1004 @@
+entityTemplates:
+  logPayloadBulk10:
+    name: Log Payload Bulk 10
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+  logSuccessCriteriaTestRoom:
+    name: Log Success Criteria Test Room
+    inventoryWidth: 20
+    inventoryHeight: 16
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: logPickupBarelySucceedsActor
+      templateId: logPickupBarelySuccessActor
+      coord:
+        x: 1
+        y: 1
+    - entityId: logPickupBarelySucceedsTarget
+      templateId: logPickupBarelySuccessTarget
+      coord:
+        x: 2
+        y: 1
+    - entityId: logGiveBarelySucceedsActor
+      templateId: logGiveBarelySuccessActor
+      coord:
+        x: 5
+        y: 1
+    - entityId: logGiveBarelySucceedsTarget
+      templateId: logGiveBarelySuccessTarget
+      coord:
+        x: 6
+        y: 1
+    - entityId: logTakeBarelySucceedsActor
+      templateId: logTakeBarelySuccessActor
+      coord:
+        x: 9
+        y: 1
+    - entityId: logTakeBarelySucceedsTarget
+      templateId: logTakeBarelySuccessTarget
+      coord:
+        x: 10
+        y: 1
+    - entityId: logEnterBarelySucceedsActor
+      templateId: logEnterBarelySuccessActor
+      coord:
+        x: 13
+        y: 1
+    - entityId: logEnterBarelySucceedsTarget
+      templateId: logEnterBarelySuccessTarget
+      coord:
+        x: 14
+        y: 1
+    - entityId: logDropBarelySucceedsActor
+      templateId: logDropBarelySuccessActor
+      coord:
+        x: 1
+        y: 8
+    - entityId: logExitBarelySucceedsTarget
+      templateId: logExitBarelySuccessTarget
+      coord:
+        x: 5
+        y: 8
+    - entityId: logPickupEasilySucceedsActor
+      templateId: logPickupEasySuccessActor
+      coord:
+        x: 1
+        y: 2
+    - entityId: logPickupEasilySucceedsTarget
+      templateId: logPickupEasySuccessTarget
+      coord:
+        x: 2
+        y: 2
+    - entityId: logGiveEasilySucceedsActor
+      templateId: logGiveEasySuccessActor
+      coord:
+        x: 5
+        y: 2
+    - entityId: logGiveEasilySucceedsTarget
+      templateId: logGiveEasySuccessTarget
+      coord:
+        x: 6
+        y: 2
+    - entityId: logTakeEasilySucceedsActor
+      templateId: logTakeEasySuccessActor
+      coord:
+        x: 9
+        y: 2
+    - entityId: logTakeEasilySucceedsTarget
+      templateId: logTakeEasySuccessTarget
+      coord:
+        x: 10
+        y: 2
+    - entityId: logEnterEasilySucceedsActor
+      templateId: logEnterEasySuccessActor
+      coord:
+        x: 13
+        y: 2
+    - entityId: logEnterEasilySucceedsTarget
+      templateId: logEnterEasySuccessTarget
+      coord:
+        x: 14
+        y: 2
+    - entityId: logDropEasilySucceedsActor
+      templateId: logDropEasySuccessActor
+      coord:
+        x: 1
+        y: 9
+    - entityId: logExitEasilySucceedsTarget
+      templateId: logExitEasySuccessTarget
+      coord:
+        x: 5
+        y: 9
+    - entityId: logPickupBarelyFailsActor
+      templateId: logPickupBarelyFailureActor
+      coord:
+        x: 1
+        y: 3
+    - entityId: logPickupBarelyFailsTarget
+      templateId: logPickupBarelyFailureTarget
+      coord:
+        x: 2
+        y: 3
+    - entityId: logGiveBarelyFailsActor
+      templateId: logGiveBarelyFailureActor
+      coord:
+        x: 5
+        y: 3
+    - entityId: logGiveBarelyFailsTarget
+      templateId: logGiveBarelyFailureTarget
+      coord:
+        x: 6
+        y: 3
+    - entityId: logTakeBarelyFailsActor
+      templateId: logTakeBarelyFailureActor
+      coord:
+        x: 9
+        y: 3
+    - entityId: logTakeBarelyFailsTarget
+      templateId: logTakeBarelyFailureTarget
+      coord:
+        x: 10
+        y: 3
+    - entityId: logEnterBarelyFailsActor
+      templateId: logEnterBarelyFailureActor
+      coord:
+        x: 13
+        y: 3
+    - entityId: logEnterBarelyFailsTarget
+      templateId: logEnterBarelyFailureTarget
+      coord:
+        x: 14
+        y: 3
+    - entityId: logDropBarelyFailsActor
+      templateId: logDropBarelyFailureActor
+      coord:
+        x: 1
+        y: 10
+    - entityId: logExitBarelyFailsTarget
+      templateId: logExitBarelyFailureTarget
+      coord:
+        x: 5
+        y: 10
+    - entityId: logPickupEasilyFailsActor
+      templateId: logPickupEasyFailureActor
+      coord:
+        x: 1
+        y: 4
+    - entityId: logPickupEasilyFailsTarget
+      templateId: logPickupEasyFailureTarget
+      coord:
+        x: 2
+        y: 4
+    - entityId: logGiveEasilyFailsActor
+      templateId: logGiveEasyFailureActor
+      coord:
+        x: 5
+        y: 4
+    - entityId: logGiveEasilyFailsTarget
+      templateId: logGiveEasyFailureTarget
+      coord:
+        x: 6
+        y: 4
+    - entityId: logTakeEasilyFailsActor
+      templateId: logTakeEasyFailureActor
+      coord:
+        x: 9
+        y: 4
+    - entityId: logTakeEasilyFailsTarget
+      templateId: logTakeEasyFailureTarget
+      coord:
+        x: 10
+        y: 4
+    - entityId: logEnterEasilyFailsActor
+      templateId: logEnterEasyFailureActor
+      coord:
+        x: 13
+        y: 4
+    - entityId: logEnterEasilyFailsTarget
+      templateId: logEnterEasyFailureTarget
+      coord:
+        x: 14
+        y: 4
+    - entityId: logDropEasilyFailsActor
+      templateId: logDropEasyFailureActor
+      coord:
+        x: 1
+        y: 11
+    - entityId: logExitEasilyFailsTarget
+      templateId: logExitEasyFailureTarget
+      coord:
+        x: 5
+        y: 11
+  logObserverPlayer:
+    name: Log Observer Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    actionStateDefaults:
+      facing: West
+  logPickupBarelySuccessActor:
+    name: Log Pickup Barely Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 11
+    defaultActionPlanId: logPickupTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logPickupBarelySuccessTarget
+      range: 1
+  logPickupBarelySuccessTarget:
+    name: Log Pickup Barely Success Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+  logGiveBarelySuccessActor:
+    name: Log Give Barely Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    defaultActionPlanId: logGiveTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logGiveBarelySuccessTarget
+      range: 1
+    carriedEntities:
+    - entityId: logGiveBarelySucceedsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logGiveBarelySuccessTarget:
+    name: Log Give Barely Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 11
+  logTakeBarelySuccessActor:
+    name: Log Take Barely Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 11
+    defaultActionPlanId: logTakeTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logTakeBarelySuccessTarget
+      range: 1
+  logTakeBarelySuccessTarget:
+    name: Log Take Barely Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    carriedEntities:
+    - entityId: logTakeBarelySucceedsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logEnterBarelySuccessActor:
+    name: Log Enter Barely Success Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logEnterTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logEnterBarelySuccessTarget
+      range: 1
+  logEnterBarelySuccessTarget:
+    name: Log Enter Barely Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 11
+  logDropBarelySuccessActor:
+    name: Log Drop Barely Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 11
+    defaultActionPlanId: logDropFacing
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: logDropBarelySucceedsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logExitBarelySuccessActor:
+    name: Log Exit Barely Success Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logExitFacing
+    actionStateDefaults:
+      facing: East
+  logExitBarelySuccessTarget:
+    name: Log Exit Barely Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 11
+    carriedEntities:
+    - entityId: logExitBarelySucceedsActor
+      templateId: logExitBarelySuccessActor
+      coord:
+        x: 0
+        y: 0
+  logPickupEasySuccessActor:
+    name: Log Pickup Easy Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 20
+    defaultActionPlanId: logPickupTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logPickupEasySuccessTarget
+      range: 1
+  logPickupEasySuccessTarget:
+    name: Log Pickup Easy Success Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+  logGiveEasySuccessActor:
+    name: Log Give Easy Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    defaultActionPlanId: logGiveTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logGiveEasySuccessTarget
+      range: 1
+    carriedEntities:
+    - entityId: logGiveEasilySucceedsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logGiveEasySuccessTarget:
+    name: Log Give Easy Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 20
+  logTakeEasySuccessActor:
+    name: Log Take Easy Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 20
+    defaultActionPlanId: logTakeTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logTakeEasySuccessTarget
+      range: 1
+  logTakeEasySuccessTarget:
+    name: Log Take Easy Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    carriedEntities:
+    - entityId: logTakeEasilySucceedsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logEnterEasySuccessActor:
+    name: Log Enter Easy Success Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logEnterTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logEnterEasySuccessTarget
+      range: 1
+  logEnterEasySuccessTarget:
+    name: Log Enter Easy Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 20
+  logDropEasySuccessActor:
+    name: Log Drop Easy Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 20
+    defaultActionPlanId: logDropFacing
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: logDropEasilySucceedsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logExitEasySuccessActor:
+    name: Log Exit Easy Success Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logExitFacing
+    actionStateDefaults:
+      facing: East
+  logExitEasySuccessTarget:
+    name: Log Exit Easy Success Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 20
+    carriedEntities:
+    - entityId: logExitEasilySucceedsActor
+      templateId: logExitEasySuccessActor
+      coord:
+        x: 0
+        y: 0
+  logPickupBarelyFailureActor:
+    name: Log Pickup Barely Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 9
+    defaultActionPlanId: logPickupTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logPickupBarelyFailureTarget
+      range: 1
+  logPickupBarelyFailureTarget:
+    name: Log Pickup Barely Failure Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+  logGiveBarelyFailureActor:
+    name: Log Give Barely Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    defaultActionPlanId: logGiveTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logGiveBarelyFailureTarget
+      range: 1
+    carriedEntities:
+    - entityId: logGiveBarelyFailsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logGiveBarelyFailureTarget:
+    name: Log Give Barely Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 9
+  logTakeBarelyFailureActor:
+    name: Log Take Barely Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 9
+    defaultActionPlanId: logTakeTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logTakeBarelyFailureTarget
+      range: 1
+  logTakeBarelyFailureTarget:
+    name: Log Take Barely Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    carriedEntities:
+    - entityId: logTakeBarelyFailsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logEnterBarelyFailureActor:
+    name: Log Enter Barely Failure Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logEnterTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logEnterBarelyFailureTarget
+      range: 1
+  logEnterBarelyFailureTarget:
+    name: Log Enter Barely Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 9
+  logDropBarelyFailureActor:
+    name: Log Drop Barely Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 9
+    defaultActionPlanId: logDropFacing
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: logDropBarelyFailsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logExitBarelyFailureActor:
+    name: Log Exit Barely Failure Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logExitFacing
+    actionStateDefaults:
+      facing: East
+  logExitBarelyFailureTarget:
+    name: Log Exit Barely Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 9
+    carriedEntities:
+    - entityId: logExitBarelyFailsActor
+      templateId: logExitBarelyFailureActor
+      coord:
+        x: 0
+        y: 0
+  logPickupEasyFailureActor:
+    name: Log Pickup Easy Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 8
+    defaultActionPlanId: logPickupTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logPickupEasyFailureTarget
+      range: 1
+  logPickupEasyFailureTarget:
+    name: Log Pickup Easy Failure Target
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+  logGiveEasyFailureActor:
+    name: Log Give Easy Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    defaultActionPlanId: logGiveTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logGiveEasyFailureTarget
+      range: 1
+    carriedEntities:
+    - entityId: logGiveEasilyFailsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logGiveEasyFailureTarget:
+    name: Log Give Easy Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 8
+  logTakeEasyFailureActor:
+    name: Log Take Easy Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 8
+    defaultActionPlanId: logTakeTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logTakeEasyFailureTarget
+      range: 1
+  logTakeEasyFailureTarget:
+    name: Log Take Easy Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 100
+    carriedEntities:
+    - entityId: logTakeEasilyFailsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logEnterEasyFailureActor:
+    name: Log Enter Easy Failure Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logEnterTarget
+    targetingRules:
+    - slot: 1
+      hint: nearest paired target for success-criteria log showcase
+      label: target
+      targetTemplateId: logEnterEasyFailureTarget
+      range: 1
+  logEnterEasyFailureTarget:
+    name: Log Enter Easy Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 8
+  logDropEasyFailureActor:
+    name: Log Drop Easy Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 8
+    defaultActionPlanId: logDropFacing
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: logDropEasilyFailsPayload
+      templateId: logPayloadBulk10
+      coord:
+        x: 0
+        y: 0
+  logExitEasyFailureActor:
+    name: Log Exit Easy Failure Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 0
+    defaultActionPlanId: logExitFacing
+    actionStateDefaults:
+      facing: East
+  logExitEasyFailureTarget:
+    name: Log Exit Easy Failure Target
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 8
+    carriedEntities:
+    - entityId: logExitEasilyFailsActor
+      templateId: logExitEasyFailureActor
+      coord:
+        x: 0
+        y: 0
+presentations:
+  logPayloadBulk10:
+    glyph: '*'
+    color: White
+  logSuccessCriteriaTestRoom:
+    glyph: '#'
+    color: Gray
+  logObserverPlayer:
+    glyph: '@'
+    color: Yellow
+  logPickupBarelySuccessActor:
+    glyph: p
+    color: Green
+  logPickupBarelySuccessTarget:
+    glyph: '*'
+    color: White
+  logGiveBarelySuccessActor:
+    glyph: g
+    color: Green
+  logGiveBarelySuccessTarget:
+    glyph: G
+    color: Cyan
+  logTakeBarelySuccessActor:
+    glyph: t
+    color: Green
+  logTakeBarelySuccessTarget:
+    glyph: T
+    color: Cyan
+  logEnterBarelySuccessActor:
+    glyph: e
+    color: Green
+  logEnterBarelySuccessTarget:
+    glyph: E
+    color: Cyan
+  logDropBarelySuccessActor:
+    glyph: d
+    color: Green
+  logExitBarelySuccessActor:
+    glyph: x
+    color: Green
+  logExitBarelySuccessTarget:
+    glyph: X
+    color: Cyan
+  logPickupEasySuccessActor:
+    glyph: p
+    color: Cyan
+  logPickupEasySuccessTarget:
+    glyph: '*'
+    color: White
+  logGiveEasySuccessActor:
+    glyph: g
+    color: Cyan
+  logGiveEasySuccessTarget:
+    glyph: G
+    color: Cyan
+  logTakeEasySuccessActor:
+    glyph: t
+    color: Cyan
+  logTakeEasySuccessTarget:
+    glyph: T
+    color: Cyan
+  logEnterEasySuccessActor:
+    glyph: e
+    color: Cyan
+  logEnterEasySuccessTarget:
+    glyph: E
+    color: Cyan
+  logDropEasySuccessActor:
+    glyph: d
+    color: Cyan
+  logExitEasySuccessActor:
+    glyph: x
+    color: Cyan
+  logExitEasySuccessTarget:
+    glyph: X
+    color: Cyan
+  logPickupBarelyFailureActor:
+    glyph: p
+    color: Earth
+  logPickupBarelyFailureTarget:
+    glyph: '*'
+    color: White
+  logGiveBarelyFailureActor:
+    glyph: g
+    color: Earth
+  logGiveBarelyFailureTarget:
+    glyph: G
+    color: Cyan
+  logTakeBarelyFailureActor:
+    glyph: t
+    color: Earth
+  logTakeBarelyFailureTarget:
+    glyph: T
+    color: Cyan
+  logEnterBarelyFailureActor:
+    glyph: e
+    color: Earth
+  logEnterBarelyFailureTarget:
+    glyph: E
+    color: Cyan
+  logDropBarelyFailureActor:
+    glyph: d
+    color: Earth
+  logExitBarelyFailureActor:
+    glyph: x
+    color: Earth
+  logExitBarelyFailureTarget:
+    glyph: X
+    color: Cyan
+  logPickupEasyFailureActor:
+    glyph: p
+    color: Gray
+  logPickupEasyFailureTarget:
+    glyph: '*'
+    color: White
+  logGiveEasyFailureActor:
+    glyph: g
+    color: Gray
+  logGiveEasyFailureTarget:
+    glyph: G
+    color: Cyan
+  logTakeEasyFailureActor:
+    glyph: t
+    color: Gray
+  logTakeEasyFailureTarget:
+    glyph: T
+    color: Cyan
+  logEnterEasyFailureActor:
+    glyph: e
+    color: Gray
+  logEnterEasyFailureTarget:
+    glyph: E
+    color: Cyan
+  logDropEasyFailureActor:
+    glyph: d
+    color: Gray
+  logExitEasyFailureActor:
+    glyph: x
+    color: Gray
+  logExitEasyFailureTarget:
+    glyph: X
+    color: Cyan
+actionPlans:
+  logPickupTarget:
+    id: logPickupTarget
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: target
+    steps: []
+  logGiveTarget:
+    id: logGiveTarget
+    behavior:
+      steps:
+      - kind: GiveTarget
+        targetLabel: target
+    steps: []
+  logTakeTarget:
+    id: logTakeTarget
+    behavior:
+      steps:
+      - kind: TakeTarget
+        targetLabel: target
+    steps: []
+  logEnterTarget:
+    id: logEnterTarget
+    behavior:
+      steps:
+      - kind: EnterTarget
+        targetLabel: target
+    steps: []
+  logDropFacing:
+    id: logDropFacing
+    behavior:
+      steps:
+      - kind: DropFacing
+    steps: []
+  logExitFacing:
+    id: logExitFacing
+    behavior:
+      steps:
+      - kind: ExitFacing
+    steps: []
+scenarios:
+  beta-success-criteria-log-room:
+    name: Beta Success Criteria Log Room
+    scenarioRootEntityTemplateId: logSuccessCriteriaTestRoom
+    playerEntityTemplateId: logObserverPlayer
+    playerEntityId: logObserverPlayer
+    playerStart:
+      x: 18
+      y: 14

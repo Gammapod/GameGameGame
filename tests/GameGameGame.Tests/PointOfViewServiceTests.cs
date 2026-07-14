@@ -112,8 +112,14 @@ public sealed class PointOfViewServiceTests
         var result = service.Describe(world, observer, plan);
 
         Assert.Contains(result.TargetAdjectives, adjective => adjective.EntityId == portableGem && adjective.Adjective == "portable" && adjective.Capability == ActionPlanBehaviorStepKind.PickupTarget);
+        var portable = Assert.Single(result.TargetAdjectives, adjective => adjective.EntityId == portableGem && adjective.Adjective == "portable");
+        var portableCriterion = Assert.Single(portable.SuccessCriteria, fact => fact.Kind == ActionSuccessCriterionKind.Aperture && fact.LimitEntityId == observer);
+        Assert.Equal(3m, portableCriterion.SuccessRatio);
         Assert.DoesNotContain(result.TargetAdjectives, adjective => adjective.EntityId == heavyRock && adjective.Adjective == "portable");
         Assert.Contains(result.TargetAdjectives, adjective => adjective.EntityId == enterableChest && adjective.Adjective == "enterable" && adjective.Capability == ActionPlanBehaviorStepKind.EnterTarget);
+        var enterable = Assert.Single(result.TargetAdjectives, adjective => adjective.EntityId == enterableChest && adjective.Adjective == "enterable");
+        var enterableCriterion = Assert.Single(enterable.SuccessCriteria, fact => fact.Kind == ActionSuccessCriterionKind.Aperture && fact.LimitEntityId == enterableChest);
+        Assert.Equal(5m, enterableCriterion.SuccessRatio);
         Assert.DoesNotContain(result.TargetAdjectives, adjective => adjective.EntityId == portableGem && adjective.Adjective == "enterable");
     }
 
