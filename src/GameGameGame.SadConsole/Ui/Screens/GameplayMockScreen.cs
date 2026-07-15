@@ -19,13 +19,19 @@ internal sealed record GameplayMockFrame(
     SadConsoleRect InspectionBounds,
     IReadOnlyList<IUiComponent> Components,
     IReadOnlyList<string> HudRows,
+    IReadOnlyList<string> CurrentPlacePlayerLogRows,
     IReadOnlyList<string> Diagnostics);
 
 internal sealed class GameplayMockScreen
 {
     private readonly PlayableScenarioSession _session;
     private readonly EntityPanelProjectionService _panelProjection;
+    private readonly ControlledActorCommandService _commands;
+    private readonly SimulationHistorySession _history;
+    private readonly MovementService _movement = new();
+    private ActionLogProjection? _actionLog;
     private EntityId? _inspectedEntityId;
+    private int _selectedActionStepIndex;
 
     public GameplayMockScreen(PlayableScenarioSession session)
     {
@@ -33,17 +39,36 @@ internal sealed class GameplayMockScreen
         _panelProjection = new EntityPanelProjectionService(
             entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance(),
             GetActionPlanDescriptorForEntity);
+        _commands = new ControlledActorCommandService(
+            _movement,
+            // Temporary debug wait uses direct-control compatibility: the controlled actor's authored plan
+            // must not also resolve autonomously while it is acting as the player-controlled entity.
+            session.ActionPlans
+                .Where(entry => entry.Key != session.PlayerEntityId)
+                .ToDictionary(entry => entry.Key, entry => entry.Value),
+            (world, entityId) => TargetingService.RefreshTargets(world, session.Registry, entityId));
+        _history = SimulationHistorySession.Start(
+            session.World,
+            session.PlayerEntityId,
+            session.ActivePlaneId,
+            session.ActiveContainerEntityId);
+        _actionLog = ActionLogProjection.FromHistory(_history);
     }
 
     public EntityId PlayerEntityId => _session.PlayerEntityId;
     public EntityId? InspectedEntityId => _inspectedEntityId;
+    public int FrameIndex => _history.CurrentFrame.FrameIndex;
+    public int SelectedActionStepIndex => _selectedActionStepIndex;
+    private WorldState World => _session.World;
+    private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _session.ActionPlans;
 
     public GameplayMockFrame BuildFrame(int width, int height)
     {
         var safeWidth = Math.Max(40, width);
         var safeHeight = Math.Max(18, height);
         RefreshDisplayTargets();
-        var playerProjection = _panelProjection.Project(_session.World, _session.PlayerEntityId, _session.ActionPlans, _session.PlayerEntityId);
+        var projectionActionPlans = ProjectionActionPlans;
+        var playerProjection = _panelProjection.Project(World, _session.PlayerEntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog);
         var diagnostics = new List<string>();
         diagnostics.AddRange(_session.ValidationDiagnostics);
         diagnostics.AddRange(_session.RuntimeFailures);
@@ -59,7 +84,7 @@ internal sealed class GameplayMockScreen
         }
 
         var currentPlaceProjection = playerProjection.PointOfView?.CurrentPlace is { } currentPlace
-            ? _panelProjection.Project(_session.World, currentPlace.EntityId, _session.ActionPlans, _session.PlayerEntityId)
+            ? _panelProjection.Project(World, currentPlace.EntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog)
             : null;
 
         var hudWidth = Math.Clamp(safeWidth / 5, 20, Math.Max(20, safeWidth - 42));
@@ -78,9 +103,9 @@ internal sealed class GameplayMockScreen
         var components = new List<IUiComponent>();
         components.Add(BuildCurrentPlaceComponent(currentPlaceProjection, currentPlaceBounds));
         EntityPanelProjection? inspectedProjection = null;
-        if (_inspectedEntityId is { } inspectedEntityId && _session.World.Entities.ContainsKey(inspectedEntityId))
+        if (_inspectedEntityId is { } inspectedEntityId && World.Entities.ContainsKey(inspectedEntityId))
         {
-            inspectedProjection = _panelProjection.Project(_session.World, inspectedEntityId, _session.ActionPlans, _session.PlayerEntityId);
+            inspectedProjection = _panelProjection.Project(World, inspectedEntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog);
             components.Add(BuildInspectionComponent(inspectedProjection, inspectionBounds));
         }
 
@@ -95,7 +120,7 @@ internal sealed class GameplayMockScreen
         }
 
         return new GameplayMockFrame(
-            $"Play UX Mock | {_session.Name} | turn-0 frame only",
+            $"Play UX Mock | {_session.Name} | frame {FrameIndex} | world turn {World.TurnNumber}",
             playerProjection,
             currentPlaceProjection,
             inspectedProjection,
@@ -110,7 +135,8 @@ internal sealed class GameplayMockScreen
             hudBounds,
             inspectionBounds,
             components,
-            BuildHudRows(playerProjection, currentPlaceProjection),
+            BuildHudRows(playerProjection, currentPlaceProjection, AvailablePlayerActionSteps(), _selectedActionStepIndex),
+            BuildCurrentPlacePlayerLogRows(currentPlaceProjection),
             diagnostics);
     }
 
@@ -133,16 +159,86 @@ internal sealed class GameplayMockScreen
 
         var nextIndex = _inspectedEntityId is null ? 0 : (candidates.IndexOf(_inspectedEntityId.Value) + 1) % candidates.Count;
         _inspectedEntityId = candidates[Math.Max(0, nextIndex)];
-        return $"Inspecting {_session.World.Entities[_inspectedEntityId.Value].Name}.";
+        return $"Inspecting {World.Entities[_inspectedEntityId.Value].Name}.";
     }
 
     public void ClearInspection() => _inspectedEntityId = null;
+
+    public string DebugAdvanceOneControlledTurn()
+    {
+        var result = _history.SubmitControlledCommand(_commands, ControlledActorCommand.Wait());
+        _actionLog = ActionLogProjection.FromHistory(_history);
+        RefreshDisplayTargets();
+        return result.Succeeded
+            ? $"Debug wait advanced to frame {FrameIndex}; world turn {World.TurnNumber}."
+            : $"Debug wait failed: {result.FailureReason?.ToString() ?? "unknown"}.";
+    }
+
+    public string SelectPreviousActionStep() => SelectActionStep(-1);
+
+    public string SelectNextActionStep() => SelectActionStep(1);
+
+    public string ExecuteSelectedActionStep()
+    {
+        var steps = AvailablePlayerActionSteps();
+        if (steps.Count == 0)
+        {
+            return "No authored action steps are available for the controlled entity.";
+        }
+
+        _selectedActionStepIndex = Math.Clamp(_selectedActionStepIndex, 0, steps.Count - 1);
+        var step = steps[_selectedActionStepIndex];
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId($"play-choice-{step.Kind}"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([step]));
+        var result = new ActionPlanInterpreter(_movement).Execute(World, _session.PlayerEntityId, plan, new ActionPlanContext());
+        PostActionStateUpdater.ApplyFacingFromMovement(World, _session.PlayerEntityId, result.ActorMovementDirection);
+        World.RecordTrace(result.Trace);
+        if (result.ConsumesTurn)
+        {
+            World.AdvanceTurn();
+        }
+
+        _history.RecordActorInterval([
+            new SimulationHistoryActorLog(
+                0,
+                _session.PlayerEntityId,
+                World.Entities[_session.PlayerEntityId].Name,
+                result.Succeeded,
+                result.ConsumesTurn,
+                result.ContinuePlan,
+                step.Kind.ToString(),
+                result.Trace)
+        ], _session.ActivePlaneId, _session.ActiveContainerEntityId);
+        _actionLog = ActionLogProjection.FromHistory(_history);
+        RefreshDisplayTargets();
+
+        var status = result.Succeeded ? "succeeded" : "failed";
+        return $"Selected action {step.Kind} {status}; frame {FrameIndex}, world turn {World.TurnNumber}.";
+    }
+
+    private string SelectActionStep(int delta)
+    {
+        var steps = AvailablePlayerActionSteps();
+        if (steps.Count == 0)
+        {
+            _selectedActionStepIndex = 0;
+            return "No authored action steps are available for the controlled entity.";
+        }
+
+        _selectedActionStepIndex = (_selectedActionStepIndex + delta + steps.Count) % steps.Count;
+        return $"Selected action step {_selectedActionStepIndex + 1}/{steps.Count}: {steps[_selectedActionStepIndex].Kind}.";
+    }
+
+    private IReadOnlyList<ActionPlanBehaviorStepDescriptor> AvailablePlayerActionSteps() =>
+        GetActionPlanDescriptorForEntity(_session.PlayerEntityId)?.Behavior?.Steps ?? [];
 
     private void RefreshDisplayTargets()
     {
         foreach (var entityId in _session.ActionPlans.Keys)
         {
-            TargetingService.RefreshTargets(_session.World, _session.Registry, entityId);
+            TargetingService.RefreshTargets(World, _session.Registry, entityId);
         }
     }
 
@@ -170,8 +266,8 @@ internal sealed class GameplayMockScreen
             .Where(entityId => entityId is not null)
             .Select(entityId => entityId!.Value)
             .Distinct()
-            .OrderBy(entityId => _session.World.GetEntityLocation(entityId).Coord.Y)
-            .ThenBy(entityId => _session.World.GetEntityLocation(entityId).Coord.X)
+            .OrderBy(entityId => World.GetEntityLocation(entityId).Coord.Y)
+            .ThenBy(entityId => World.GetEntityLocation(entityId).Coord.X)
             .ThenBy(entityId => entityId.Value, StringComparer.Ordinal)
             .ToList() ?? [];
 
@@ -198,8 +294,8 @@ internal sealed class GameplayMockScreen
         IReadOnlyDictionary<EntityId, IReadOnlyList<string>> adjectivesByEntity,
         IReadOnlyDictionary<EntityId, IReadOnlyList<string>> reciprocalAdjectivesByEntity)
     {
-        var entity = _session.World.Entities[entityId];
-        var facing = _session.World.GetActionFacing(entityId)?.ToString() ?? "none";
+        var entity = World.Entities[entityId];
+        var facing = World.GetActionFacing(entityId)?.ToString() ?? "none";
         var target = FormatCurrentTarget(entityId);
         var adjectives = adjectivesByEntity.TryGetValue(entityId, out var labels) && labels.Count > 0
             ? $"; adjectives {string.Join(", ", labels)}"
@@ -212,7 +308,7 @@ internal sealed class GameplayMockScreen
 
     private string FormatCurrentTarget(EntityId entityId)
     {
-        if (!_session.World.ActionStates.TryGetValue(entityId, out var state))
+        if (!World.ActionStates.TryGetValue(entityId, out var state))
         {
             return "none";
         }
@@ -252,7 +348,7 @@ internal sealed class GameplayMockScreen
         return rules.Select(rule =>
         {
             var label = string.IsNullOrWhiteSpace(rule.Label) ? $"slot {rule.Slot}" : rule.Label;
-            var target = _session.World.GetActionTarget(entityId, rule.Slot) is { } targetId
+            var target = World.GetActionTarget(entityId, rule.Slot) is { } targetId
                 ? FormatEntityName(targetId)
                 : "none";
             var template = rule.TargetTemplateId?.Value ?? "any";
@@ -296,7 +392,7 @@ internal sealed class GameplayMockScreen
     }
 
     private string FormatEntityName(EntityId entityId) =>
-        _session.World.Entities.TryGetValue(entityId, out var entity) ? entity.Name : entityId.Value;
+        World.Entities.TryGetValue(entityId, out var entity) ? entity.Name : entityId.Value;
 
     private static string FormatBehaviorStep(ActionPlanBehaviorStepDescriptor step)
     {
@@ -350,7 +446,11 @@ internal sealed class GameplayMockScreen
         return new PanelComponent("inspected-entity", "Inspected entity panel", bounds, rows, UiComponentState.Focused);
     }
 
-    private static IReadOnlyList<string> BuildHudRows(EntityPanelProjection playerProjection, EntityPanelProjection? currentPlaceProjection)
+    private static IReadOnlyList<string> BuildHudRows(
+        EntityPanelProjection playerProjection,
+        EntityPanelProjection? currentPlaceProjection,
+        IReadOnlyList<ActionPlanBehaviorStepDescriptor> actionSteps,
+        int selectedActionStepIndex)
     {
         var rows = new List<string>
         {
@@ -369,8 +469,72 @@ internal sealed class GameplayMockScreen
             rows.Add("POV rule: unresolved");
         }
 
-        rows.Add("Mock controls: I cycle inspect | Esc exits | no turns advance");
+        if (actionSteps.Count == 0)
+        {
+            rows.Add("Actions: none authored");
+        }
+        else
+        {
+            var clampedIndex = Math.Clamp(selectedActionStepIndex, 0, actionSteps.Count - 1);
+            rows.Add($"Action: {clampedIndex + 1}/{actionSteps.Count} {actionSteps[clampedIndex].Kind}");
+        }
+
+        rows.Add("Controls: Left/Right choose | Enter acts | Space debug wait | I inspect | Esc returns");
         return rows;
+    }
+
+    private static IReadOnlyList<string> BuildCurrentPlacePlayerLogRows(EntityPanelProjection? currentPlaceProjection)
+    {
+        if (currentPlaceProjection is null)
+        {
+            return ["player-log: current place unavailable"];
+        }
+
+        if (currentPlaceProjection.LocalLog.Count == 0)
+        {
+            return ["player-log: no local player-facing ids yet"];
+        }
+
+        return currentPlaceProjection.LocalLog
+            .SelectMany(ProjectPlayerFacingIds)
+            .Take(5)
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> ProjectPlayerFacingIds(ActionOutcome outcome)
+    {
+        if (outcome.ActionStepAttempts.Count == 0)
+        {
+            return [FormatPlayerFacingLogRow(outcome, outcome.ActionKind)];
+        }
+
+        return outcome.ActionStepAttempts
+            .Select(attempt => FormatPlayerFacingLogRow(outcome, attempt.StepKind))
+            .ToList();
+    }
+
+    private static string FormatPlayerFacingLogRow(ActionOutcome outcome, string? actionKind)
+    {
+        var result = outcome.Succeeded ? "success" : "failure";
+        var messageId = $"action.{ToSnakeCase(string.IsNullOrWhiteSpace(actionKind) ? "turn" : actionKind!)}.{result}";
+        return $"player-log: {messageId} actor={outcome.ActorName} result={result}";
+    }
+
+    private static string ToSnakeCase(string value)
+    {
+        var chars = new List<char>(value.Length + 4);
+        for (var index = 0; index < value.Length; index++)
+        {
+            var c = value[index];
+            if (char.IsUpper(c) && index > 0 && value[index - 1] != '_')
+            {
+                chars.Add('_');
+            }
+
+            chars.Add(char.IsWhiteSpace(c) || c == '-' ? '_' : char.ToLowerInvariant(c));
+        }
+
+        return new string(chars.ToArray());
     }
 
     private static string DescribeCurrentRoomSize(EntityPointOfViewCurrentPlaceProjection? currentPlace)

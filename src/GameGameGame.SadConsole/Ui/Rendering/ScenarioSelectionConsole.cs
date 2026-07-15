@@ -20,7 +20,7 @@ internal sealed class ScenarioSelectionConsole : Console
     private EntityTemplateEditScreen? _entityTemplateEditScreen;
     private InventoryGridEditScreen? _inventoryGridEditScreen;
     private ActionPlanEditScreen? _actionPlanEditScreen;
-    private Console? _legacyPlayConsole;
+    private GameplayMockConsole? _playMockConsole;
     private string _message = "New Scenario Selection. Up/Down selects scenario. Enter opens Play/Edit. Esc exits.";
 
     public ScenarioSelectionConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null) : base(ScreenWidth, ScreenHeight)
@@ -36,9 +36,9 @@ internal sealed class ScenarioSelectionConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
-        if (_legacyPlayConsole is not null)
+        if (_playMockConsole is not null)
         {
-            return _legacyPlayConsole.ProcessKeyboard(keyboard);
+            return _playMockConsole.ProcessKeyboard(keyboard);
         }
 
         if (_entityTemplateEditScreen?.IsTextEntryOverlayActive == true)
@@ -99,6 +99,18 @@ internal sealed class ScenarioSelectionConsole : Console
         {
             var result = _scenarioEditScreen.Save();
             _message = result.Message;
+            Redraw();
+            return true;
+        }
+
+        if (_scenarioEditScreen is not null
+            && _entityTemplateEditScreen is null
+            && _inventoryGridEditScreen is null
+            && _actionPlanEditScreen is null
+            && !_scenarioEditScreen.IsTextEntryOverlayActive
+            && keyboard.IsKeyReleased(Keys.P))
+        {
+            LaunchPlayMock(_scenarioEditScreen.CatalogEntry);
             Redraw();
             return true;
         }
@@ -174,7 +186,7 @@ internal sealed class ScenarioSelectionConsole : Console
             _message = result.Message;
             if (result.Kind == ScenarioSelectionResultKind.Play && result.Scenario is { } playScenario)
             {
-                LaunchLegacyPlay(playScenario);
+                LaunchPlayMock(playScenario);
             }
             else if (result.Kind == ScenarioSelectionResultKind.Edit && result.Scenario is { } scenario)
             {
@@ -184,13 +196,25 @@ internal sealed class ScenarioSelectionConsole : Console
         }
     }
 
-    private void LaunchLegacyPlay(GameGameGame.Content.ScenarioCatalogEntry scenario)
+    private void LaunchPlayMock(GameGameGame.Content.ScenarioCatalogEntry scenario)
     {
         _renderer.ClearOverlay();
 
-        _legacyPlayConsole = LegacySimulationConsoleFactory.CreateForScenario(scenario);
-        Children.Add(_legacyPlayConsole);
-        _message = $"Launched legacy Play mode for {scenario.Name}.";
+        _playMockConsole = new GameplayMockConsole(scenario, ReturnFromPlayMock, _theme);
+        Children.Add(_playMockConsole);
+        _message = $"Launched editor-connected Play UX mock for {scenario.Name}.";
+    }
+
+    private void ReturnFromPlayMock()
+    {
+        if (_playMockConsole is not null)
+        {
+            Children.Remove(_playMockConsole);
+            _playMockConsole = null;
+        }
+
+        _message = "Returned from Play UX mock.";
+        Redraw();
     }
 
     private void HandleScenarioEdit(UiComponentCommand command)
@@ -319,6 +343,13 @@ internal sealed class ScenarioSelectionConsole : Console
 
     private void Redraw()
     {
+        if (_playMockConsole is not null)
+        {
+            _renderer.ClearOverlay();
+            Surface.IsDirty = true;
+            return;
+        }
+
         _renderer.ClearSurface();
         if (_scenarioEditScreen is not null)
         {

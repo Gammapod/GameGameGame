@@ -19,6 +19,7 @@ permission:
   task:
     "frontend-owner": allow
     "content-editor": allow
+  ggg-content: allow
 ---
 
 You are Core-Owner for the GameGameGame project. Your role is to maintain parity between engine capabilities and the editor's ability to make use of those capabilities.

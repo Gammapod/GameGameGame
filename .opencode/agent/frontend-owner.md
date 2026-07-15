@@ -18,6 +18,7 @@ permission:
   task:
     "core-owner": allow
     "content-editor": allow
+  ggg-content: allow
 ---
 
 You are Frontend-Owner for the GameGameGame project. Your role is to own `src/GameGameGame.SadConsole` and future frontend applications.

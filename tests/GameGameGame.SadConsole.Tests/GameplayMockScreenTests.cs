@@ -51,10 +51,55 @@ public sealed class GameplayMockScreenTests
 
         Assert.Contains(frame.HudRows, row => row.Contains("Player:"));
         Assert.Contains(frame.HudRows, row => row.Contains("Current place: Mock Room"));
-        Assert.Contains(frame.HudRows, row => row.Contains("no turns advance"));
+        Assert.Contains(frame.HudRows, row => row.Contains("Action: 1/2 PickupTarget"));
+        Assert.Contains(frame.HudRows, row => row.Contains("Enter acts"));
         Assert.Equal(0, frame.HudBounds.Top);
         Assert.Equal(42, frame.HudBounds.Bottom);
         Assert.True(frame.InspectionBounds.Top >= 28);
+    }
+
+    [Fact]
+    public void DebugAdvanceOneControlledTurnMovesMockForwardThroughHistory()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.DebugAdvanceOneControlledTurn();
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("Debug wait advanced", message);
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.Contains("frame 1", frame.Title);
+        Assert.Contains("world turn 1", frame.Title);
+    }
+
+    [Fact]
+    public void DebugAdvanceExposesCurrentPlacePlayerFacingLogIds()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        screen.DebugAdvanceOneControlledTurn();
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains(frame.CurrentPlacePlayerLogRows, row => row.Contains("player-log: action.wait.success"));
+        Assert.All(frame.CurrentPlacePlayerLogRows, row => Assert.DoesNotContain("Trace", row, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ExecuteSelectedActionStepRunsAuthoredStepThroughHistory()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        screen.SelectNextActionStep();
+        var message = screen.ExecuteSelectedActionStep();
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("EnterTarget", message);
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.Contains("frame 1", frame.Title);
+        Assert.Contains(frame.CurrentPlacePlayerLogRows, row => row.Contains("player-log: action.enter_target.failure"));
     }
 
     [Fact]

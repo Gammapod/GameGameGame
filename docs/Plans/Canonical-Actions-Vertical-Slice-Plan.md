@@ -211,6 +211,10 @@ Exit criteria:
 
 Goal: replace the remaining legacy/internal play-mode stopgap with the componentized Gamma surface based on the existing mock.
 
+Shared log/POV backlog captured from frontend play-mode planning:
+
+- Add a shared POV-local player log projection, without full perception: given `WorldState`, `ActionLogProjection`, and an observer/current-place POV, return player-facing log rows with message IDs/categories and conservative inclusion reasons. Include outcomes when actor, target/actee, source, destination, or enter/exit crossing anchors intersect the observer's current place. Preserve traces only for debug expansion, not normal play output. Document that visibility/audibility is not implemented and the result is a narrative/local projection.
+
 Scope:
 
 1. Implement componentized play mode over shared scenario launch, history/session, entity-panel, POV, choice, target, and log projection services.

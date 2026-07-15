@@ -76,7 +76,9 @@ public sealed class SadConsoleScenarioSelectionScreenTests
         Assert.Equal(ScenarioSelectionResultKind.Edit, edit.Kind);
         Assert.Equal("scenario-one", edit.Scenario?.ScenarioId);
 
-        Assert.Equal(1, screen.SelectedCommandIndex);
+        Assert.False(screen.CommandPanelOpen);
+        Assert.Equal(0, screen.SelectedCommandIndex);
+        screen.Handle(UiComponentCommand.Select);
         screen.Handle(UiComponentCommand.Down);
         Assert.Equal(1, screen.SelectedCommandIndex);
     }

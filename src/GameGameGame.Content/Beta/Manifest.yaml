@@ -39,6 +39,11 @@ scenarios:
   name: Beta Push Showcase
   description: Creatures that can push things.
 
+- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PlayerControlHeroActionsTest.yaml
+  scenarioId: beta-player-control-hero-actions-test
+  name: Beta Player Control Hero Actions Test
+  description: Empty room with a player-controlled Hero using Move Facing, Backstep, and Pickup Target steps.
+
 - contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
   scenarioId: beta-success-criteria-log-room
   name: Beta Success Criteria Log Room

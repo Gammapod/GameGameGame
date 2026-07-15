@@ -12,18 +12,13 @@ internal sealed class GameplayMockConsole : Console
 {
     private readonly SadConsoleTheme _theme;
     private readonly SadConsoleComponentRenderer _renderer;
+    private readonly Action? _onExit;
     private Console? _hudLayer;
     private readonly GameplayMockScreen? _screen;
     private string _message;
 
-    public GameplayMockConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null) : base(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight)
+    public GameplayMockConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null) : this(theme)
     {
-        _theme = theme ?? SadConsoleTheme.Default;
-        _renderer = new SadConsoleComponentRenderer(this, _theme);
-        UseKeyboard = true;
-        IsFocused = true;
-        FocusedMode = FocusBehavior.Set;
-
         try
         {
             if (string.IsNullOrWhiteSpace(startup.DirectContentPath) || string.IsNullOrWhiteSpace(startup.DirectScenarioId))
@@ -34,7 +29,7 @@ internal sealed class GameplayMockConsole : Console
             {
                 var session = PlayableScenarioLauncher.CreateFromFile(startup.DirectContentPath, startup.DirectScenarioId);
                 _screen = new GameplayMockScreen(session);
-                _message = "Turn-0 Play UX mock. I cycles inspect targets. Esc exits.";
+                _message = "Play UX mock. Left/Right chooses authored action step. Enter acts. Space debug waits/advances. Esc exits.";
             }
         }
         catch (Exception ex)
@@ -45,17 +40,79 @@ internal sealed class GameplayMockConsole : Console
         Redraw();
     }
 
+    public GameplayMockConsole(ScenarioCatalogEntry scenario, Action onExit, SadConsoleTheme? theme = null) : this(theme, onExit)
+    {
+        try
+        {
+            var session = PlayableScenarioLauncher.CreateFromCatalogEntry(scenario);
+            _screen = new GameplayMockScreen(session);
+            _message = "Editor-connected Play UX mock. Left/Right chooses authored action step. Enter acts. Space debug waits/advances. Esc returns to editor.";
+        }
+        catch (Exception ex)
+        {
+            _message = $"Could not launch Play UX mock: {ex.Message}";
+        }
+
+        Redraw();
+    }
+
+    private GameplayMockConsole(SadConsoleTheme? theme = null, Action? onExit = null) : base(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight)
+    {
+        _theme = theme ?? SadConsoleTheme.Default;
+        _renderer = new SadConsoleComponentRenderer(this, _theme);
+        _onExit = onExit;
+        _message = string.Empty;
+        UseKeyboard = true;
+        IsFocused = true;
+        FocusedMode = FocusBehavior.Set;
+    }
+
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
         if (keyboard.IsKeyReleased(Keys.Escape))
         {
-            SadConsole.Game.Instance.MonoGameInstance.Exit();
+            if (_onExit is not null)
+            {
+                _onExit();
+            }
+            else
+            {
+                SadConsole.Game.Instance.MonoGameInstance.Exit();
+            }
             return true;
         }
 
         if (keyboard.IsKeyReleased(Keys.I) && _screen is not null)
         {
             _message = _screen.InspectNextEntity();
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Left) && _screen is not null)
+        {
+            _message = _screen.SelectPreviousActionStep();
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Right) && _screen is not null)
+        {
+            _message = _screen.SelectNextActionStep();
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Enter) && _screen is not null)
+        {
+            _message = _screen.ExecuteSelectedActionStep();
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Space) && _screen is not null)
+        {
+            _message = _screen.DebugAdvanceOneControlledTurn();
             Redraw();
             return true;
         }
@@ -86,7 +143,7 @@ internal sealed class GameplayMockConsole : Console
             frame.CurrentPlaceProjection is null ? "Current place viewport" : $"Current place: {frame.CurrentPlaceProjection.Name}",
             [.. new[] { "player POV current place", $"room size: {frame.CurrentRoomSizeLabel}", frame.CurrentPlaceProjection?.InventoryGrid is { } currentGrid ? $"inventory: {currentGrid.Width}x{currentGrid.Height} {currentGrid.PlaneId}" : "inventory: none" }, .. frame.CurrentPlaceEntityRows],
             [],
-            [$"log: {_message}"],
+            [.. new[] { $"message: {_message}" }, .. frame.CurrentPlacePlayerLogRows],
             Color.Gold);
 
         if (frame.InspectedProjection is { } inspectedProjection)

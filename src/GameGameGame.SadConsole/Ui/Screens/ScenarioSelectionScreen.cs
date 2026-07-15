@@ -146,9 +146,12 @@ internal sealed class ScenarioSelectionScreen
             return ScenarioSelectionResult.Stay("No scenario is available to activate.");
         }
 
-        return _commandItems[_selectedCommandIndex].Id switch
+        var commandId = _commandItems[_selectedCommandIndex].Id;
+        CloseCommandPanel();
+
+        return commandId switch
         {
-            "play" => ScenarioSelectionResult.Play(scenario, $"Play selected: {scenario.Name}. Simulation handoff is next screen work."),
+            "play" => ScenarioSelectionResult.Play(scenario, $"Play selected: {scenario.Name}. Opening Play UX mock."),
             "edit" => ScenarioSelectionResult.Edit(scenario, $"Edit selected: {scenario.Name}. Scenario Edit screen is next screen work."),
             _ => ScenarioSelectionResult.Stay("Unknown scenario command.")
         };

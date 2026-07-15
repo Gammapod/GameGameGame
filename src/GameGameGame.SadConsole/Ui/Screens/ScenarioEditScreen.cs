@@ -165,8 +165,8 @@ internal sealed class ScenarioEditScreen
         if (FocusedComponentId is null)
         {
             return IsDirty
-                ? "No component focused: arrows choose component. Enter focuses. S saves. Esc opens unsaved-exit options."
-                : "No component focused: arrows choose component. Enter focuses. S saves. Esc returns to Scenario Selection.";
+                ? "No component focused: arrows choose component. Enter focuses. P plays selected scenario. S saves. Esc opens unsaved-exit options."
+                : "No component focused: arrows choose component. Enter focuses. P plays selected scenario. S saves. Esc returns to Scenario Selection.";
         }
 
         return FocusedComponentId switch

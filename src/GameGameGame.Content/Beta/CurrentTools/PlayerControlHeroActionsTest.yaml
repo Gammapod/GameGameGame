@@ -1,0 +1,43 @@
+entityTemplates:
+  playerControlTestRoom:
+    name: Player Control Test Room
+    inventoryWidth: 9
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+  playerControlledHero:
+    name: Hero
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    defaultActionPlanId: playerControlledHeroActions
+    actionStateDefaults:
+      facing: North
+presentations:
+  playerControlTestRoom:
+    glyph: '#'
+    color: Gray
+  playerControlledHero:
+    glyph: '@'
+    color: Yellow
+actionPlans:
+  playerControlledHeroActions:
+    id: playerControlledHeroActions
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: Backstep
+      - kind: PickupTarget
+scenarios:
+  beta-player-control-hero-actions-test:
+    name: Beta Player Control Hero Actions Test
+    scenarioRootEntityTemplateId: playerControlTestRoom
+    playerEntityTemplateId: playerControlledHero
+    playerEntityId: hero
+    playerStart:
+      x: 4
+      y: 2
+    playerControls:
+      player-1:
+      - hero
