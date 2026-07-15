@@ -19,7 +19,8 @@ public static class ScenarioPlayerLogService
             scenario.ScenarioRootEntityTemplateId,
             scenario.PlayerEntityTemplateId,
             scenario.PlayerEntityId,
-            scenario.PlayerStart)).ToAgentReport();
+            scenario.PlayerStart,
+            scenario.PlayerControls)).ToAgentReport();
         var observerEntityId = request.ObserverEntityId ?? scenario.PlayerEntityId;
 
         var run = ScenarioRunService.RunPersistedWithHistory(

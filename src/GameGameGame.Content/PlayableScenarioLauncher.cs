@@ -14,7 +14,11 @@ public sealed record PlayableScenarioSession(
     bool CanPlay,
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeFailures,
-    IReadOnlyList<string> CapabilityGaps);
+    IReadOnlyList<string> CapabilityGaps,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
+{
+    public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+}
 
 public static class PlayableScenarioLauncher
 {
@@ -65,6 +69,7 @@ public static class PlayableScenarioLauncher
             result.CanPlay,
             result.ValidationDiagnostics,
             result.RuntimeFailures,
-            result.CapabilityGaps);
+            result.CapabilityGaps,
+            result.PlayerControls);
     }
 }

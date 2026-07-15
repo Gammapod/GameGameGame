@@ -142,6 +142,7 @@ public sealed class ConsoleScenarioLaunchTests
         Assert.Equal("playable-alpha", session.ScenarioId);
         Assert.Equal("Playable Alpha", session.Name);
         Assert.Equal(new EntityId("playable-alpha-player"), session.PlayerEntityId);
+        Assert.Equal([new EntityId("playable-alpha-player")], session.PlayerControls["player-1"]);
         Assert.Equal(new PlaneId("scenarioRoot"), session.ActivePlaneId);
         Assert.Equal(new EntityId("scenarioRoot"), session.ActiveContainerEntityId);
         Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(1, 0)), session.World.GetEntityLocation(session.PlayerEntityId));

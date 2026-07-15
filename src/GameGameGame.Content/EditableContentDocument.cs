@@ -256,6 +256,108 @@ public sealed class EditableContentDocument
                     entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
                     relatedEntityId: new EntityId(scenario.PlayerEntityId)));
             }
+
+            AddPlayerControlDiagnostics(diagnostics, scenarioId, scenario, root);
+        }
+    }
+
+    private void AddPlayerControlDiagnostics(
+        List<ContentDiagnostic> diagnostics,
+        string scenarioId,
+        ScenarioDefinitionDto scenario,
+        EntityTemplateDto root)
+    {
+        if (scenario.PlayerControls is null || scenario.PlayerControls.Count == 0)
+        {
+            return;
+        }
+
+        var materializedEntityIds = new HashSet<string>(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityId))
+        {
+            materializedEntityIds.Add(scenario.PlayerEntityId);
+        }
+
+        AddCarriedEntityIds(root, materializedEntityIds, new HashSet<string>(StringComparer.Ordinal));
+        var assignedEntities = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (playerId, controlledEntityIds) in scenario.PlayerControls)
+        {
+            if (string.IsNullOrWhiteSpace(playerId))
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidScenarioDefinition,
+                    $"Scenario {scenarioId} declares a player control binding with an empty player ID."));
+                continue;
+            }
+
+            if (controlledEntityIds is null || controlledEntityIds.Count == 0)
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidScenarioDefinition,
+                    $"Scenario {scenarioId} player control {playerId} has no controlled entities."));
+                continue;
+            }
+
+            var seenForPlayer = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var controlledEntityId in controlledEntityIds ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(controlledEntityId))
+                {
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidScenarioDefinition,
+                        $"Scenario {scenarioId} player control {playerId} references an empty entity ID."));
+                    continue;
+                }
+
+                if (!seenForPlayer.Add(controlledEntityId))
+                {
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidScenarioDefinition,
+                        $"Scenario {scenarioId} player control {playerId} lists entity {controlledEntityId} more than once.",
+                        relatedEntityId: new EntityId(controlledEntityId)));
+                    continue;
+                }
+
+                if (!materializedEntityIds.Contains(controlledEntityId))
+                {
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidScenarioDefinition,
+                        $"Scenario {scenarioId} player control {playerId} references missing entity {controlledEntityId}.",
+                        relatedEntityId: new EntityId(controlledEntityId)));
+                    continue;
+                }
+
+                if (assignedEntities.TryGetValue(controlledEntityId, out var previousPlayerId) && previousPlayerId != playerId)
+                {
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidScenarioDefinition,
+                        $"Scenario {scenarioId} controlled entity {controlledEntityId} is assigned to both {previousPlayerId} and {playerId}.",
+                        relatedEntityId: new EntityId(controlledEntityId)));
+                    continue;
+                }
+
+                assignedEntities[controlledEntityId] = playerId;
+            }
+        }
+    }
+
+    private void AddCarriedEntityIds(EntityTemplateDto template, HashSet<string> entityIds, HashSet<string> visitedTemplateIds)
+    {
+        foreach (var carried in template.CarriedEntities ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(carried.EntityId))
+            {
+                entityIds.Add(carried.EntityId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(carried.TemplateId)
+                && EntityTemplates.TryGetValue(carried.TemplateId, out var carriedTemplate)
+                && visitedTemplateIds.Add(carried.TemplateId))
+            {
+                AddCarriedEntityIds(carriedTemplate, entityIds, visitedTemplateIds);
+            }
         }
     }
 
@@ -521,13 +623,21 @@ public sealed class EditableContentDocument
 
         public GridCoordDto? PlayerStart { get; set; }
 
+        public Dictionary<string, List<string>>? PlayerControls { get; set; }
+
         public static ScenarioDefinitionDto From(ScenarioDefinition scenario) => new()
         {
             Name = scenario.Name,
             ScenarioRootEntityTemplateId = scenario.ScenarioRootEntityTemplateId.Value,
             PlayerEntityTemplateId = scenario.PlayerEntityTemplateId.Value,
             PlayerEntityId = scenario.PlayerEntityId.Value,
-            PlayerStart = GridCoordDto.From(scenario.PlayerStart)
+            PlayerStart = GridCoordDto.From(scenario.PlayerStart),
+            PlayerControls = scenario.PlayerControls.Count == 0
+                ? null
+                : scenario.PlayerControls.ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value.Select(entityId => entityId.Value).ToList(),
+                    StringComparer.Ordinal)
         };
 
         public ScenarioDefinition ToDefinition(string scenarioId) =>
@@ -537,7 +647,12 @@ public sealed class EditableContentDocument
                 new EntityTemplateId(ScenarioRootEntityTemplateId ?? string.Empty),
                 new EntityTemplateId(PlayerEntityTemplateId ?? string.Empty),
                 new EntityId(PlayerEntityId ?? string.Empty),
-                ToCoord(PlayerStart));
+                ToCoord(PlayerStart),
+                (PlayerControls ?? new Dictionary<string, List<string>>())
+                    .ToDictionary(
+                        entry => entry.Key,
+                        entry => (IReadOnlyList<EntityId>)entry.Value.Select(entityId => new EntityId(entityId)).ToList(),
+                        StringComparer.Ordinal));
     }
 
     public sealed class ActionPlanBehaviorDescriptorDto

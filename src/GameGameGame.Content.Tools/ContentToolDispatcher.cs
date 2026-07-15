@@ -147,7 +147,8 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 scenario.ScenarioRootEntityTemplateId,
                 scenario.PlayerEntityTemplateId,
                 scenario.PlayerEntityId,
-                scenario.PlayerStart))
+                scenario.PlayerStart,
+                scenario.PlayerControls))
             .ToList();
 
     private static object Deserialize(string toolName, JsonElement arguments) => toolName switch

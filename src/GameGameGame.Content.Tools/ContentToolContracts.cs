@@ -71,4 +71,11 @@ public sealed record ContentToolActionPlanSummary(
     IReadOnlyList<ActionPlanBehaviorStepDescriptor> BehaviorSteps,
     IReadOnlyList<ContentDiagnostic> Diagnostics);
 
-public sealed record ContentToolScenarioSummary(string ScenarioId, string Name, EntityTemplateId ScenarioRootEntityTemplateId, EntityTemplateId PlayerEntityTemplateId, EntityId PlayerEntityId, GridCoord PlayerStart);
+public sealed record ContentToolScenarioSummary(
+    string ScenarioId,
+    string Name,
+    EntityTemplateId ScenarioRootEntityTemplateId,
+    EntityTemplateId PlayerEntityTemplateId,
+    EntityId PlayerEntityId,
+    GridCoord PlayerStart,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null);

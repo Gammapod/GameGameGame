@@ -375,6 +375,175 @@ public sealed class ScenarioToolingServiceTests
     }
 
     [Fact]
+    public void ScenarioDefinitionsRoundTripAuthoredPlayerControlBindings()
+    {
+        var session = ContentEditorSession.CreateNew();
+        var document = session.Document;
+        var editor = session.Editor;
+        var scenarioRootId = editor.CreateEntityPreset("Controlled Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Controlled Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var playerTemplateId = editor.CreateEntityPreset("Controlled Actor");
+        editor.UpdateEntityPreset(
+            playerTemplateId,
+            new EntityTemplate("Controlled Actor", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
+            new EntityPresentation('@', PresentationColor.Yellow));
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "controlled-scenario",
+            "Controlled Scenario",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("insertedPlayer"),
+            new GridCoord(1, 1),
+            new Dictionary<string, IReadOnlyList<EntityId>>
+            {
+                ["player-1"] = [new EntityId("insertedPlayer")]
+            }));
+
+        var scenario = document.GetScenario("controlled-scenario");
+        var summary = new FrontendEditorService(session).GetSnapshot().Scenarios.Single();
+
+        Assert.Equal([new EntityId("insertedPlayer")], scenario.PlayerControls["player-1"]);
+        var summaryControls = Assert.IsType<Dictionary<string, IReadOnlyList<string>>>(summary.PlayerControls);
+        Assert.Equal(["insertedPlayer"], summaryControls["player-1"]);
+        Assert.True(document.ValidateCanonicalAuthoring().IsValid);
+    }
+
+    [Fact]
+    public void ScenarioMaterializerResolvesAuthoredPlayerControlBindings()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Resolved Control Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Resolved Control Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var playerTemplateId = editor.CreateEntityPreset("Resolved Control Actor");
+        editor.UpdateEntityPreset(
+            playerTemplateId,
+            new EntityTemplate("Resolved Control Actor", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
+            new EntityPresentation('@', PresentationColor.Yellow));
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "resolved-control",
+            "Resolved Control",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("insertedPlayer"),
+            new GridCoord(1, 1),
+            new Dictionary<string, IReadOnlyList<EntityId>>
+            {
+                ["player-1"] = [new EntityId("insertedPlayer")]
+            }));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "resolved-control");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal([new EntityId("insertedPlayer")], materialization.PlayerControls["player-1"]);
+        Assert.Contains("Control: player-1 -> insertedPlayer", materialization.SetupLines);
+    }
+
+    [Fact]
+    public void ScenarioMaterializerDefaultsLegacyPlayerControlWhenNoBindingIsAuthored()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Legacy Control Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Legacy Control Room", InventoryWidth: 2, InventoryHeight: 2, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var playerTemplateId = editor.CreateEntityPreset("Legacy Control Player");
+        editor.UpdateEntityPreset(
+            playerTemplateId,
+            new EntityTemplate("Legacy Control Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
+            new EntityPresentation('@', PresentationColor.Yellow));
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "legacy-control",
+            "Legacy Control",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(0, 0)));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "legacy-control");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal([new EntityId("legacyPlayer")], materialization.PlayerControls["player-1"]);
+    }
+
+    [Fact]
+    public void ScenarioValidationReportsMissingControlledEntityReferences()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Control Validation Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Control Validation Room", InventoryWidth: 2, InventoryHeight: 2, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var playerTemplateId = editor.CreateEntityPreset("Control Validation Player");
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "bad-control",
+            "Bad Control",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("insertedPlayer"),
+            new GridCoord(0, 0),
+            new Dictionary<string, IReadOnlyList<EntityId>>
+            {
+                ["player-1"] = [new EntityId("missingActor")]
+            }));
+
+        var validation = document.ValidateCanonicalAuthoring();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("Scenario bad-control player control player-1 references missing entity missingActor", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ScenarioValidationReportsInvalidPlayerControlBindingShapes()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Control Shape Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Control Shape Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorTemplateId = editor.CreateEntityPreset("Control Shape Actor");
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("authoredActor"), actorTemplateId, new GridCoord(1, 0));
+        var playerTemplateId = editor.CreateEntityPreset("Control Shape Player");
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "invalid-control-shapes",
+            "Invalid Control Shapes",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("insertedPlayer"),
+            new GridCoord(0, 0),
+            new Dictionary<string, IReadOnlyList<EntityId>>
+            {
+                ["player-1"] = [],
+                ["player-2"] = [new EntityId("authoredActor"), new EntityId("authoredActor")],
+                ["player-3"] = [new EntityId("authoredActor")]
+            }));
+
+        var validation = document.ValidateCanonicalAuthoring();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("Scenario invalid-control-shapes player control player-1 has no controlled entities", StringComparison.Ordinal));
+        Assert.Contains(validation.Errors, error => error.Contains("Scenario invalid-control-shapes player control player-2 lists entity authoredActor more than once", StringComparison.Ordinal));
+        Assert.Contains(validation.Errors, error => error.Contains("Scenario invalid-control-shapes controlled entity authoredActor is assigned to both player-2 and player-3", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ScenarioMaterializerValidatesPersistedAlphaScenarioDefinitions()
     {
         var document = new EditableContentDocument();

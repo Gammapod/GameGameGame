@@ -65,7 +65,7 @@ Default workflow:
 | Action-plan assignment | Assign or clear an entity template's default action plan. |
 | Action plans | Create, edit, delete, reorder, preview, and validate action plans. |
 | Canonical behavior chains | Add, remove, and reorder catalog-backed Action Steps. |
-| Scenarios | Persist scenario name/root/player template/player entity ID/player start placement. |
+| Scenarios | Persist scenario name/root/player template/player entity ID/player start placement, plus first-slice authored player-control bindings from player/input IDs to materialized entity IDs. |
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
 | Playable session launch | Create frontend-neutral playable sessions from persisted scenarios or catalog entries through the shared Content launcher, including world, registry/presentation lookup, action plans, player entity, active plane/container, diagnostics, runtime failures, and capability gaps. |
 | Scenario execution | Launch persisted scenarios in the official SadConsole frontend directly by content file/scenario ID or through the SadConsole scenario browser populated from one file, folder discovery, or a generated manifest/cache. Scenario catalog scan/save policy lives in Content through `ScenarioCatalogScanService`. Run persisted scenario reports by scenario ID with final-state and inventory/containment summaries; request compact player narrative projection message IDs/args through `ggg_content_run_scenario_player_log_by_id`; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
@@ -243,13 +243,14 @@ Current persisted scenario fields:
 | Player template | Template inserted as the runtime player. |
 | Player entity ID | Deterministic runtime ID for the inserted player. |
 | Player start coordinate | Requested placement in the scenario-root inventory/play plane. |
+| Player controls | Optional authored binding from a player/input ID such as `player-1` to one or more materialized entity IDs. Each authored binding must name at least one existing materialized entity; duplicate entity IDs within one binding and conflicting assignment of one entity to multiple players are invalid. Materialization resolves valid bindings for launch/session consumers; existing player-insertion scenarios default to `player-1` controlling the inserted player when no binding is authored. |
 
 Preferred scenario workflow:
 
 1. Define the vignette goal in terms of observable content behavior.
 2. Create or reuse entity templates, presentations, inventories, and action plans.
 3. Assign default action plans and initial `Facing` as needed.
-4. Create a persisted scenario using scenario root, player template, player entity ID, and start coordinate.
+4. Create a persisted scenario using scenario root, player template, player entity ID, start coordinate, and player-control bindings when the controlled actor should be explicit.
 5. Validate the content document.
 6. Materialize and run the scenario.
 7. Use SadConsole/manual play when spatial behavior needs visual review; use legacy frames/GIF recording only when an artifact is specifically needed.

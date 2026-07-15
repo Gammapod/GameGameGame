@@ -234,7 +234,8 @@ public sealed record FrontendEditorScenarioSummary(
     string ScenarioRootEntityTemplateId,
     string PlayerEntityTemplateId,
     string PlayerEntityId,
-    GridCoord PlayerStart);
+    GridCoord PlayerStart,
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? PlayerControls = null);
 
 public sealed record FrontendEditorEntityTemplateSummary(
     string TemplateId,

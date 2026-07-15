@@ -37,7 +37,11 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     scenario.ScenarioRootEntityTemplateId.Value,
                     scenario.PlayerEntityTemplateId.Value,
                     scenario.PlayerEntityId.Value,
-                    scenario.PlayerStart);
+                    scenario.PlayerStart,
+                    scenario.PlayerControls.ToDictionary(
+                        entry => entry.Key,
+                        entry => (IReadOnlyList<string>)entry.Value.Select(entityId => entityId.Value).ToList(),
+                        StringComparer.Ordinal));
             })
             .ToList();
 

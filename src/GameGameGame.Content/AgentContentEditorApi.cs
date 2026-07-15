@@ -283,7 +283,8 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             definition.ScenarioRootEntityTemplateId,
             definition.PlayerEntityTemplateId,
             definition.PlayerEntityId,
-            definition.PlayerStart);
+            definition.PlayerStart,
+            definition.PlayerControls);
 
     private static AgentAlphaScenarioDefinition ToAgentDefinition(ScenarioDefinition definition) =>
         new(
@@ -292,7 +293,8 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             definition.ScenarioRootEntityTemplateId,
             definition.PlayerEntityTemplateId,
             definition.PlayerEntityId,
-            definition.PlayerStart);
+            definition.PlayerStart,
+            definition.PlayerControls);
 
     private static AgentScenarioRunReport ToAgentReport(ScenarioRunReport report) =>
         new(
@@ -385,7 +387,11 @@ public sealed record AgentAlphaScenarioDefinition(
     EntityTemplateId ScenarioRootEntityTemplateId,
     EntityTemplateId PlayerEntityTemplateId,
     EntityId PlayerEntityId,
-    GridCoord PlayerStart);
+    GridCoord PlayerStart,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
+{
+    public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+}
 
 public sealed record AgentScenarioMaterializationReport(
     string ScenarioId,
@@ -399,7 +405,11 @@ public sealed record AgentScenarioMaterializationReport(
     IReadOnlyList<string> SetupLines,
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeFailures,
-    IReadOnlyList<string> CapabilityGaps);
+    IReadOnlyList<string> CapabilityGaps,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
+{
+    public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+}
 
 public sealed record AgentScenarioActorSummary(
     EntityId EntityId,
@@ -508,8 +518,11 @@ public sealed record AlphaScenarioMaterializationResult(
     IReadOnlyList<string> SetupLines,
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeFailures,
-    IReadOnlyList<string> CapabilityGaps)
+    IReadOnlyList<string> CapabilityGaps,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
 {
+    public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+
     public bool CanSimulate => ValidationDiagnostics.Count == 0 && RuntimeFailures.Count == 0 && ScenarioPlaneId is not null;
 
     public AgentScenarioMaterializationReport ToAgentReport() =>
@@ -525,7 +538,8 @@ public sealed record AlphaScenarioMaterializationResult(
             SetupLines,
             ValidationDiagnostics,
             RuntimeFailures,
-            CapabilityGaps);
+            CapabilityGaps,
+            PlayerControls);
 }
 
 public static class AlphaScenarioMaterializer
@@ -576,7 +590,8 @@ public static class AlphaScenarioMaterializer
             result.SetupLines,
             result.ValidationDiagnostics,
             result.RuntimeFailures,
-            result.CapabilityGaps);
+            result.CapabilityGaps,
+            result.PlayerControls);
 }
 
 public sealed record AgentApiError(

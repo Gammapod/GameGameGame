@@ -50,7 +50,11 @@ public sealed record ScenarioDefinition(
     EntityTemplateId ScenarioRootEntityTemplateId,
     EntityTemplateId PlayerEntityTemplateId,
     EntityId PlayerEntityId,
-    GridCoord PlayerStart);
+    GridCoord PlayerStart,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
+{
+    public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+}
 
 public sealed record CarriedEntityTemplate
 {

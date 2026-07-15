@@ -17,8 +17,11 @@ public sealed record ScenarioMaterializationResult(
     IReadOnlyList<string> SetupLines,
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeFailures,
-    IReadOnlyList<string> CapabilityGaps)
+    IReadOnlyList<string> CapabilityGaps,
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
 {
+    public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+
     public bool CanPlay => ValidationDiagnostics.Count == 0 && RuntimeFailures.Count == 0 && ScenarioPlaneId is not null && PlayerLocation is not null;
 }
 
@@ -41,7 +44,8 @@ public static class ScenarioMaterializer
             DefaultScenarioPlaneId,
             scenario.PlayerEntityTemplateId,
             scenario.PlayerEntityId,
-            scenario.PlayerStart);
+            scenario.PlayerStart,
+            scenario.PlayerControls);
 
     public static ScenarioMaterializationResult MaterializeRootOnly(
         EditableContentDocument document,
@@ -59,7 +63,8 @@ public static class ScenarioMaterializer
             scenarioPlaneId,
             playerEntityTemplateId: null,
             playerEntityId: null,
-            playerStart: null);
+            playerStart: null,
+            playerControls: null);
 
     private static ScenarioMaterializationResult Materialize(
         EditableContentDocument document,
@@ -70,12 +75,14 @@ public static class ScenarioMaterializer
         PlaneId scenarioPlaneId,
         EntityTemplateId? playerEntityTemplateId,
         EntityId? playerEntityId,
-        GridCoord? playerStart)
+        GridCoord? playerStart,
+        IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? playerControls)
     {
         var validationDiagnostics = document.ValidateCanonicalAuthoring().Errors.ToList();
         var runtimeFailures = new List<string>();
         var capabilityGaps = new List<string>();
         var setupLines = new List<string>();
+        var resolvedPlayerControls = new Dictionary<string, IReadOnlyList<EntityId>>(StringComparer.Ordinal);
         var world = new WorldState();
         var registry = new PrototypeContentRegistry(
             new Dictionary<EntityTemplateId, EntityTemplate>(),
@@ -183,6 +190,61 @@ public static class ScenarioMaterializer
             setupLines.Add($"Player: {playerName} {insertedPlayerEntityId} at {playerLocation}, {FormatActionState(world, insertedPlayerEntityId)}");
         }
 
+        var alreadyAssigned = new Dictionary<EntityId, string>();
+        foreach (var (playerId, controlledEntityIds) in ResolvePlayerControls(playerControls, playerEntityId))
+        {
+            if (string.IsNullOrWhiteSpace(playerId))
+            {
+                validationDiagnostics.Add("player control binding declares an empty player ID.");
+                continue;
+            }
+
+            if (controlledEntityIds.Count == 0)
+            {
+                validationDiagnostics.Add($"player control {playerId} has no controlled entities.");
+                continue;
+            }
+
+            var seenForPlayer = new HashSet<EntityId>();
+            var resolvedEntityIds = new List<EntityId>();
+            foreach (var controlledEntityId in controlledEntityIds)
+            {
+                if (!seenForPlayer.Add(controlledEntityId))
+                {
+                    validationDiagnostics.Add($"player control {playerId} lists entity {controlledEntityId} more than once.");
+                    continue;
+                }
+
+                if (!world.Entities.ContainsKey(controlledEntityId))
+                {
+                    validationDiagnostics.Add($"player control {playerId} references missing materialized entity {controlledEntityId}.");
+                    continue;
+                }
+
+                if (alreadyAssigned.TryGetValue(controlledEntityId, out var previousPlayerId) && previousPlayerId != playerId)
+                {
+                    validationDiagnostics.Add($"controlled entity {controlledEntityId} is assigned to both {previousPlayerId} and {playerId}.");
+                    continue;
+                }
+
+                alreadyAssigned[controlledEntityId] = playerId;
+                resolvedEntityIds.Add(controlledEntityId);
+            }
+
+            if (resolvedEntityIds.Count == 0)
+            {
+                continue;
+            }
+
+            resolvedPlayerControls[playerId] = resolvedEntityIds;
+            setupLines.Add($"Control: {playerId} -> {string.Join(", ", resolvedEntityIds)}");
+        }
+
+        if (validationDiagnostics.Count > 0)
+        {
+            return CreateResult(activeScenarioPlaneId, insertedPlayerLocation);
+        }
+
         return CreateResult(activeScenarioPlaneId, insertedPlayerLocation);
 
         ScenarioMaterializationResult CreateResult(PlaneId? resultScenarioPlaneId, PlaneCoord? playerLocation) =>
@@ -201,7 +263,25 @@ public static class ScenarioMaterializer
                 setupLines,
                 validationDiagnostics,
                 runtimeFailures,
-                capabilityGaps);
+                capabilityGaps,
+                resolvedPlayerControls);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<EntityId>> ResolvePlayerControls(
+        IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? authoredPlayerControls,
+        EntityId? legacyPlayerEntityId)
+    {
+        if (authoredPlayerControls is { Count: > 0 })
+        {
+            return authoredPlayerControls;
+        }
+
+        return legacyPlayerEntityId is { } playerEntityId
+            ? new Dictionary<string, IReadOnlyList<EntityId>>(StringComparer.Ordinal)
+            {
+                ["player-1"] = [playerEntityId]
+            }
+            : new Dictionary<string, IReadOnlyList<EntityId>>(StringComparer.Ordinal);
     }
 
     private static void AddActionPlans(Dictionary<EntityId, IEntityActionPlan> actionPlans, IReadOnlyDictionary<EntityId, IEntityActionPlan> additions)

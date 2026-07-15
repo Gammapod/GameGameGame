@@ -182,6 +182,17 @@ Exit criteria:
 
 Goal: replace special direct player control with Core-owned runtime control source and authored action choice.
 
+Core/shared backlog captured from frontend planning:
+
+1. Add Core-owned `ActionChoiceRequest`, submission, and result contracts.
+2. Add mutable runtime control-source state, cloned/restored through `WorldState` and history.
+3. Derive choices from effective authored plans after `Pre`/`Main`/`Post` overrides are composed.
+4. Add nested target/destination request DTOs for choices that require additional input.
+5. Define failed submitted-choice policy in Core.
+6. Integrate Action Choice with `SimulationHistorySession` and `ActionLogProjection`.
+7. Expose a reusable actor-turn stepper/scheduler for play-mode active-actor highlighting and animation.
+8. Promote materialized scenario `PlayerControls` from binding data into initial runtime control-source setup once the Core model exists.
+
 Scope:
 
 1. Add mutable runtime control-source state for actors, with clone/rollback/history behavior.
