@@ -51,6 +51,9 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 ContentToolNames.RunScenarioById => WithSession((ContentToolRunScenarioByIdRequest)request, api => FromAgentResult(api, api.RunScenarioById(((ContentToolRunScenarioByIdRequest)request).ScenarioId, ((ContentToolRunScenarioByIdRequest)request).TurnCount))),
                 ContentToolNames.RunScenarioPlayerLogById => WithSession((ContentToolRunScenarioPlayerLogByIdRequest)request, api => FromAgentResult(api, api.RunScenarioPlayerLogById(((ContentToolRunScenarioPlayerLogByIdRequest)request).ScenarioId, ((ContentToolRunScenarioPlayerLogByIdRequest)request).TurnCount, ((ContentToolRunScenarioPlayerLogByIdRequest)request).ObserverEntityId))),
                 ContentToolNames.PreviewAndRunScenarioById => WithSession((ContentToolRunScenarioByIdRequest)request, api => FromAgentResult(api, api.PreviewAndRunScenarioById(((ContentToolRunScenarioByIdRequest)request).ScenarioId, ((ContentToolRunScenarioByIdRequest)request).TurnCount))),
+                ContentToolNames.OpenScenarioManifest => ContentToolResponse.Success(ScenarioCatalog.LoadManifest(((ContentToolScenarioManifestRequest)request).Path)),
+                ContentToolNames.ScanScenarioManifestCandidates => ContentToolResponse.Success(ScenarioCatalog.ScanCandidates(((ContentToolScenarioManifestScanRequest)request).FolderPath)),
+                ContentToolNames.ValidateScenarioManifest => ValidateScenarioManifest((ContentToolScenarioManifestValidateRequest)request),
                 _ => ContentToolResponse.Failure(new AgentApiError("UnknownTool", $"Unknown content tool '{toolName}'.", Recoverable: true))
             };
         }
@@ -74,6 +77,12 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
 
     private ContentToolResponse Close(ContentToolSessionRequest request) =>
         ContentToolResponse.Success(new { closed = sessions.Close(request.SessionId) });
+
+    private static ContentToolResponse ValidateScenarioManifest(ContentToolScenarioManifestValidateRequest request)
+    {
+        var validation = ScenarioCatalog.ValidateManifest(request.Path, request.FolderPath);
+        return ContentToolResponse.Success(new ContentToolScenarioManifestValidationSummary(validation.IsValid, validation.Diagnostics));
+    }
 
     private ContentToolResponse WithSession(IContentToolSessionRequest request, Func<AgentContentEditorApi, ContentToolResponse> operation) =>
         WithSession(request.SessionId, operation);
@@ -156,6 +165,9 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
     {
         ContentToolNames.CreateNew => new ContentToolCreateNewRequest(),
         ContentToolNames.OpenFile => arguments.Deserialize<ContentToolOpenFileRequest>(JsonOptions)!,
+        ContentToolNames.OpenScenarioManifest => arguments.Deserialize<ContentToolScenarioManifestRequest>(JsonOptions)!,
+        ContentToolNames.ScanScenarioManifestCandidates => arguments.Deserialize<ContentToolScenarioManifestScanRequest>(JsonOptions)!,
+        ContentToolNames.ValidateScenarioManifest => arguments.Deserialize<ContentToolScenarioManifestValidateRequest>(JsonOptions)!,
         ContentToolNames.Snapshot or ContentToolNames.Validate or ContentToolNames.ValidateCanonicalAuthoring or ContentToolNames.Save or ContentToolNames.Close or ContentToolNames.ListEntityTemplates or ContentToolNames.ListActionPlans or ContentToolNames.ListActionSteps or ContentToolNames.ListScenarios => arguments.Deserialize<ContentToolSessionRequest>(JsonOptions)!,
         ContentToolNames.SaveAs => arguments.Deserialize<ContentToolSaveAsRequest>(JsonOptions)!,
         ContentToolNames.GetEntityTemplate or ContentToolNames.ListCarriedEntities => arguments.Deserialize<ContentToolEntityTemplateRequest>(JsonOptions)!,

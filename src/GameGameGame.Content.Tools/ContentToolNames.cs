@@ -36,4 +36,7 @@ public static class ContentToolNames
     public const string RunScenarioById = "ggg_content_run_scenario_by_id";
     public const string RunScenarioPlayerLogById = "ggg_content_run_scenario_player_log_by_id";
     public const string PreviewAndRunScenarioById = "ggg_content_preview_and_run_scenario_by_id";
+    public const string OpenScenarioManifest = "ggg_content_open_scenario_manifest";
+    public const string ScanScenarioManifestCandidates = "ggg_content_scan_scenario_manifest_candidates";
+    public const string ValidateScenarioManifest = "ggg_content_validate_scenario_manifest";
 }

@@ -191,6 +191,51 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
+    public void ContentToolDispatcherOpensScansAndValidatesCuratedScenarioManifest()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"ggg-content-tool-manifest-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var contentPath = Path.Combine(directory, "Delta.yaml");
+            var manifestPath = Path.Combine(directory, ScenarioCatalog.ManifestFileName);
+            var document = new EditableContentDocument();
+            var roomId = document.AddEntityTemplate("Room", new EntityTemplate("Room", InventoryWidth: 2, InventoryHeight: 2, Bulk: 100, Aperture: 100), new EntityPresentation('#', PresentationColor.Gray));
+            var playerId = document.AddEntityTemplate("Player", new EntityTemplate("Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5), new EntityPresentation('@', PresentationColor.Yellow));
+            document.UpsertScenario(new ScenarioDefinition("delta-canonical-move-outcomes", "Delta Canonical Move Outcomes", roomId, playerId, new EntityId("player"), new GridCoord(0, 0)));
+            File.WriteAllText(contentPath, document.SaveYaml());
+            File.WriteAllText(manifestPath, """
+                sections:
+                - id: delta
+                  name: Delta
+                  description: Vertical-slice requirements scenarios.
+                  entries:
+                  - contentPath: Delta.yaml
+                    scenarioId: delta-canonical-move-outcomes
+                    name: Delta Canonical Move Outcomes
+                    description: Demonstrates canonical movement outcomes for review; Delta vertical-slice provenance with no known caveats.
+                    status: active-delta
+                """);
+            var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
+
+            var opened = dispatcher.Invoke(ContentToolNames.OpenScenarioManifest, new ContentToolScenarioManifestRequest(manifestPath));
+            var scanned = dispatcher.Invoke(ContentToolNames.ScanScenarioManifestCandidates, new ContentToolScenarioManifestScanRequest(directory));
+            var validated = dispatcher.Invoke(ContentToolNames.ValidateScenarioManifest, new ContentToolScenarioManifestValidateRequest(manifestPath, directory));
+
+            Assert.True(opened.Ok, opened.Error?.Message);
+            Assert.Single(Assert.IsType<ScenarioCatalogResult>(opened.Data).Sections!);
+            Assert.True(scanned.Ok, scanned.Error?.Message);
+            Assert.Equal("delta-canonical-move-outcomes", Assert.Single(Assert.IsType<ScenarioCatalogResult>(scanned.Data).Entries).ScenarioId);
+            Assert.True(validated.Ok, validated.Error?.Message);
+            Assert.True(Assert.IsType<ContentToolScenarioManifestValidationSummary>(validated.Data).IsValid);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ContentToolDispatcherRejectsInvalidSessionWithRecoverableError()
     {
         var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());

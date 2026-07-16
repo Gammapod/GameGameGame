@@ -133,10 +133,16 @@ internal sealed class ComponentGalleryConsole : Console
         while (true)
         {
             var start = result.IndexOf('(');
-            if (start < 0) return CollapseSpaces(result);
+            if (start < 0) return result;
             var end = result.IndexOf(')', start + 1);
-            if (end < 0) return CollapseSpaces(result);
-            result = result.Remove(start, end - start + 1).TrimStart();
+            if (end < 0) return result;
+            var removeLength = end - start + 1;
+            if (end + 1 < result.Length && result[end + 1] == ' ')
+            {
+                removeLength++;
+            }
+
+            result = result.Remove(start, removeLength);
         }
     }
 
@@ -158,16 +164,6 @@ internal sealed class ComponentGalleryConsole : Console
         if (sampleIndex < 0 || sampleIndex >= width) return;
 
         SetCell(target, x + sampleIndex, y, ColorSampleGlyph, ColorFromToken(token), Color.Black);
-    }
-
-    private static string CollapseSpaces(string text)
-    {
-        while (text.Contains("  ", StringComparison.Ordinal))
-        {
-            text = text.Replace("  ", " ", StringComparison.Ordinal);
-        }
-
-        return text.Trim();
     }
 
     internal static Color ColorFromToken(string token) => token switch

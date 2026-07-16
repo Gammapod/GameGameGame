@@ -39,7 +39,10 @@ public static class ContentToolCatalog
         ContentToolNames.MaterializeScenario,
         ContentToolNames.RunScenarioById,
         ContentToolNames.RunScenarioPlayerLogById,
-        ContentToolNames.PreviewAndRunScenarioById
+        ContentToolNames.PreviewAndRunScenarioById,
+        ContentToolNames.OpenScenarioManifest,
+        ContentToolNames.ScanScenarioManifestCandidates,
+        ContentToolNames.ValidateScenarioManifest
     ];
 
     public static string Describe(string name) => name switch
@@ -78,6 +81,9 @@ public static class ContentToolCatalog
         ContentToolNames.RunScenarioById => "Run a persisted scenario by ID and report outcomes.",
         ContentToolNames.RunScenarioPlayerLogById => "Run a persisted scenario by ID and return compact player narrative projection message IDs/args without debug traces/final state/inventory summaries.",
         ContentToolNames.PreviewAndRunScenarioById => "Return validation, previews, materialization, and scenario run report for one scenario.",
+        ContentToolNames.OpenScenarioManifest => "Open a curated scenario manifest/catalog artifact with sections and entry metadata.",
+        ContentToolNames.ScanScenarioManifestCandidates => "Scan a content folder for scenario candidates without making the scan authoritative.",
+        ContentToolNames.ValidateScenarioManifest => "Validate a curated scenario manifest against content files and scanned unclassified candidates.",
         _ => "GameGameGame content editor tool."
     };
 
@@ -108,9 +114,13 @@ public static class ContentToolCatalog
 
         if (name is not ContentToolNames.CreateNew)
         {
-            if (name is ContentToolNames.OpenFile)
+            if (name is ContentToolNames.OpenFile or ContentToolNames.OpenScenarioManifest or ContentToolNames.ValidateScenarioManifest)
             {
                 AddString("path");
+            }
+            else if (name is ContentToolNames.ScanScenarioManifestCandidates)
+            {
+                AddString("folderPath");
             }
             else
             {
@@ -137,6 +147,7 @@ public static class ContentToolCatalog
             case ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario: AddString("scenarioId"); break;
             case ContentToolNames.UpsertScenario: AddObject("scenario"); break;
             case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById: AddString("scenarioId"); AddInteger("turnCount"); if (name is ContentToolNames.RunScenarioPlayerLogById) AddString("observerEntityId", isRequired: false); break;
+            case ContentToolNames.ValidateScenarioManifest: AddString("folderPath"); break;
         }
 
         return new JsonObject

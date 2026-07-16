@@ -68,7 +68,7 @@ Default workflow:
 | Scenarios | Persist scenario name/root/player template/player entity ID/player start placement, plus first-slice authored player-control bindings from player/input IDs to materialized entity IDs. |
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
 | Playable session launch | Create frontend-neutral playable sessions from persisted scenarios or catalog entries through the shared Content launcher, including world, registry/presentation lookup, action plans, player entity, active plane/container, diagnostics, runtime failures, and capability gaps. |
-| Scenario execution | Launch persisted scenarios in the official SadConsole frontend directly by content file/scenario ID or through the SadConsole scenario browser populated from one file, folder discovery, or a generated manifest/cache. Scenario catalog scan/save policy lives in Content through `ScenarioCatalogScanService`. Run persisted scenario reports by scenario ID with final-state and inventory/containment summaries; request compact player narrative projection message IDs/args through `ggg_content_run_scenario_player_log_by_id`; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
+| Scenario execution | Launch persisted scenarios in the official SadConsole frontend directly by content file/scenario ID or through the SadConsole scenario browser populated from one file, folder discovery, or a curated manifest. Scenario catalog candidate scanning lives in Content through `ScenarioCatalogScanService`/`ScenarioCatalog.ScanCandidates`, but curated manifests are the author-facing source for sections, ordering, descriptions, status/lifecycle, tags, provenance, and browsing intent. Run persisted scenario reports by scenario ID with final-state and inventory/containment summaries; request compact player narrative projection message IDs/args through `ggg_content_run_scenario_player_log_by_id`; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
 | Scenario recording | Legacy fallback: record persisted scenarios to PNG frames and GIF artifacts when reports/SadConsole are insufficient. Future visual recording should prefer history playback / SadConsole-rendered export. |
 | Gap logging | Record unsupported desired behavior in the active capability gap log. |
 
@@ -250,6 +250,10 @@ Current persisted scenario fields:
 | Player start coordinate | Requested placement in the scenario-root inventory/play plane. |
 | Player controls | Optional authored binding from a player/input ID such as `player-1` to one or more materialized entity IDs. Each authored binding must name at least one existing materialized entity; duplicate entity IDs within one binding and conflicting assignment of one entity to multiple players are invalid. Materialization resolves valid bindings for launch/session consumers; existing player-insertion scenarios default to `player-1` controlling the inserted player when no binding is authored. |
 
+Curated scenario manifests are now first-class content artifacts for scenario browsing and packaging. A manifest may use curated `sections` instead of only a flat `scenarios` cache. Supported section IDs are `legacy`, `delta`, `user`, and `canonical`. Supported entry statuses are `legacy`, `active-delta`, `user`, `canonical-candidate`, and `canonical`. Each entry should include `contentPath`, `scenarioId`, `name`, a required reviewer-facing `description`, `status`, optional `tags`, and optional `source`/provenance. Folder scanning remains useful for reconciliation and candidate discovery, but it is not the authority for curated section membership, ordering, lifecycle, or descriptions.
+
+Use this naming convention for new scenarios: `<section>-<feature-or-action>-<purpose>`, for example `legacy-beta-targeting-acquire-target`, `delta-canonical-move-outcomes`, `delta-canonical-move-player-interaction`, `user-my-room`, or `canonical-main-opening-room`. Descriptions should state the behavior/experience demonstrated, what a reviewer/player should observe, lifecycle/provenance, and caveats or known limitations.
+
 Preferred scenario workflow:
 
 1. Define the vignette goal in terms of observable content behavior.
@@ -259,7 +263,9 @@ Preferred scenario workflow:
 5. Validate the content document.
 6. Materialize and run the scenario.
 7. Use SadConsole/manual play when spatial behavior needs visual review; use legacy frames/GIF recording only when an artifact is specifically needed.
-8. Log gaps for unsupported behavior or insufficient reporting.
+8. Add or update the scenario in the curated manifest section (`legacy`, `delta`, `user`, or `canonical`) with description, status, tags, and provenance.
+9. Run scenario manifest validation; resolve missing paths/scenario IDs, duplicate scenario IDs, misplaced statuses, missing descriptions, and scanned unclassified candidates.
+10. Log gaps for unsupported behavior or insufficient reporting.
 
 Keep scenarios focused. Prefer multiple small vignettes over one scenario that depends on unclear interactions or unsupported filters.
 
@@ -275,7 +281,7 @@ Use the shortest review loop that answers the content question.
 | Inspect turn-by-turn behavior | Run a persisted headless scenario report by scenario ID when scenario setup/player insertion matters; use root-only compatibility runs only for scenario-root template isolation. |
 | Review a scenario end-to-end | Request a combined persisted scenario review report for document validation, canonical validation, action-plan previews, scenario materialization, run traces, final state, inventory summaries, and diagnostics. |
 | Inspect spatial layout over time | Prefer SadConsole/manual play; use legacy scenario frames/GIF only when a shareable artifact is specifically needed. |
-| Confirm interactive playability | Launch SadConsole with content file and scenario ID, or use the SadConsole scenario browser. Folder discovery refreshes `Manifest.yaml` in the scanned folder and preserves optional manifest-only `description` annotations for unchanged entries. By default, SadConsole reads `src\GameGameGame.Content\Beta\Manifest.yaml` when present and otherwise discovers scenarios under `src\GameGameGame.Content\Beta`. |
+| Confirm interactive playability | Launch SadConsole with content file and scenario ID, or use the SadConsole scenario browser. Curated `Manifest.yaml` files may contain sections and entry lifecycle metadata; folder scanning should be used to find candidates/unclassified scenarios rather than to replace curated ordering and descriptions. By default, SadConsole reads `src\GameGameGame.Content\Beta\Manifest.yaml` when present and otherwise discovers scenarios under `src\GameGameGame.Content\Beta`. |
 
 Treat validation diagnostics and runtime observations as content feedback. Expected in-simulation inability to act is not automatically a failed scenario; decide based on the vignette goal.
 

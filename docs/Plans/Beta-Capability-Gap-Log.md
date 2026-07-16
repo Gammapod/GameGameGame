@@ -138,3 +138,15 @@ Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario rep
 - **Unlocks:** Full action-plan authoring from SadConsole; fewer raw YAML edits; richer behavior composition.
 - **Classification:** Editor/API and frontend UX capability.
 - **Priority:** Medium-high once content authoring requires parameter-level edits through the frontend.
+
+### GAP-010: Curated scenario manifest edit sessions need deliberate save/move operations
+
+- **Discovered in:** Scenario curation request after Beta became a dumping ground.
+- **Scenario/content:** Future `Scenarios/LegacyBeta`, `Scenarios/Delta`, `Scenarios/User`, and `Scenarios/Canonical` organization, plus current curated manifests.
+- **Desired behavior:** Content tools should provide a first-class manifest editing session: open/create manifest, list/add/update/move sections, add/update/move entries, scan candidates, validate, snapshot diff, and save deliberately without rewriting unrelated content files.
+- **Current behavior:** `ScenarioCatalog` can load/save sectioned manifests, flatten entries for existing launch consumers, scan candidates without making them authoritative, and validate paths/scenario IDs/duplicates/descriptions/status placement/unclassified candidates. `GameGameGame.Content.Tools` exposes open, candidate scan, and validation operations. Full session-backed edit/diff/save operations remain follow-up.
+- **Current workaround:** Authors can curate sectioned manifests by YAML edits and use the scan/validate tools to check them before launch/browsing.
+- **Missing capability:** A dedicated manifest session registry and semantic mutation tools parallel to `AgentContentEditorApi` document sessions.
+- **Unlocks:** Safer frontend/user-generated scenario curation, deliberate promotion from user/delta to canonical, and reduced accidental Manifest.yaml rewrites.
+- **Classification:** Content/package organization issue; editor/agent API workflow request.
+- **Priority:** Medium-high if scenario browsing/editing becomes a regular content workflow.
