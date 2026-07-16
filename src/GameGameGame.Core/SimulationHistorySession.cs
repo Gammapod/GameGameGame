@@ -125,19 +125,7 @@ public sealed class SimulationHistorySession
             return result;
         }
 
-        var nextFrameIndex = fromFrameIndex + 1;
-        var activePlaneId = World.GetEntityLocation(controlledEntityId).PlaneId;
-        var nextFrame = new SimulationHistoryFrame(
-            nextFrameIndex,
-            World.TurnNumber,
-            controlledEntityId,
-            activePlaneId,
-            FindContainerForPlane(activePlaneId),
-            World.Clone());
-
-        _frames.Add(nextFrame);
-        _intervals.Add(new SimulationHistoryInterval(fromFrameIndex, nextFrameIndex, result, CreateActorLogs(result)));
-        CurrentFrameIndex = nextFrameIndex;
+        RecordSuccessfulControlledResult(fromFrameIndex, result);
 
         return result;
     }
@@ -163,12 +151,62 @@ public sealed class SimulationHistorySession
             return result;
         }
 
+        RecordSuccessfulControlledResult(fromFrameIndex, result);
+
+        return result;
+    }
+
+    public ControlledActorCommandResult SubmitPickupActionChoice(
+        ActionChoiceService choices,
+        ActionChoiceRequest request,
+        EntityId targetId,
+        PlaneCoord destination,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null) =>
+        SubmitActionChoiceResult(
+            request,
+            () => choices.SubmitPickupChoice(World, request, targetId, destination, actionPlans, beforePlan));
+
+    public ControlledActorCommandResult SubmitDropActionChoice(
+        ActionChoiceService choices,
+        ActionChoiceRequest request,
+        EntityId targetId,
+        PlaneCoord destination,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null) =>
+        SubmitActionChoiceResult(
+            request,
+            () => choices.SubmitDropChoice(World, request, targetId, destination, actionPlans, beforePlan));
+
+    private ControlledActorCommandResult SubmitActionChoiceResult(ActionChoiceRequest request, Func<ControlledActorCommandResult> submit)
+    {
+        if (request.ActorId != CurrentFrame.ControlledEntityId)
+        {
+            throw new InvalidOperationException($"Action choice actor {request.ActorId} does not match current controlled entity {CurrentFrame.ControlledEntityId}.");
+        }
+
+        var fromFrameIndex = CurrentFrameIndex;
+        var result = submit();
+
+        if (!result.Succeeded || !result.AdvancedTurn)
+        {
+            AddFrameLogEntry(fromFrameIndex, result);
+            return result;
+        }
+
+        RecordSuccessfulControlledResult(fromFrameIndex, result);
+        return result;
+    }
+
+    private void RecordSuccessfulControlledResult(int fromFrameIndex, ControlledActorCommandResult result)
+    {
         var nextFrameIndex = fromFrameIndex + 1;
-        var activePlaneId = World.GetEntityLocation(CurrentFrame.ControlledEntityId).PlaneId;
+        var controlledEntityId = CurrentFrame.ControlledEntityId;
+        var activePlaneId = World.GetEntityLocation(controlledEntityId).PlaneId;
         var nextFrame = new SimulationHistoryFrame(
             nextFrameIndex,
             World.TurnNumber,
-            CurrentFrame.ControlledEntityId,
+            controlledEntityId,
             activePlaneId,
             FindContainerForPlane(activePlaneId),
             World.Clone());
@@ -176,8 +214,6 @@ public sealed class SimulationHistorySession
         _frames.Add(nextFrame);
         _intervals.Add(new SimulationHistoryInterval(fromFrameIndex, nextFrameIndex, result, CreateActorLogs(result)));
         CurrentFrameIndex = nextFrameIndex;
-
-        return result;
     }
 
     private static IReadOnlyList<SimulationHistoryActorLog> CreateActorLogs(ControlledActorCommandResult result)

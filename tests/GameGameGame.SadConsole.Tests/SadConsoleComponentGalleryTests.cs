@@ -25,6 +25,7 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("int-setter-overlay", component.Id),
             component => Assert.Equal("choice-picker-overlay", component.Id),
             component => Assert.Equal("confirm-overlay", component.Id),
+            component => Assert.Equal("play-mode-components", component.Id),
             component => Assert.Equal("footer", component.Id));
     }
 
@@ -57,6 +58,8 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Choice picker overlay"));
         Assert.Contains(rows, row => row.Contains("■ Yellow"));
         Assert.Contains(rows, row => row.Contains("Confirm overlay"));
+        Assert.Contains(rows, row => row.Contains("Play mode component map"));
+        Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
         Assert.DoesNotContain(rows, row => row.Contains("Command palette overlay"));
         Assert.Contains(rows, row => row.Contains("Context footer"));
         Assert.Contains(rows, row => row.Contains("arrows select a component"));

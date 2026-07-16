@@ -100,14 +100,16 @@ Current inventory authoring supports:
 
 Use constrained inventory behavior where possible:
 
-- `PickupTarget` attempts to place the current `Target` into actor inventory.
-- `DropFacing` attempts to drop a carried entity in the actor's facing direction.
+- `TransformAdjacentToInventory` attempts to place the current adjacent `Target` into actor inventory. `PickupTarget` remains a compatibility name for the same semantics.
+- `TransformInventoryToAdjacent` attempts to drop a carried entity in the actor's facing direction. `DropFacing` remains a compatibility name for the same semantics.
 - `GiveTarget` transfers the actor's first carried entity into the current `Target` inventory.
 - `TakeTarget` transfers the current `Target`'s first carried entity into actor inventory.
 - `EnterTarget` moves the actor into the adjacent current `Target` inventory.
 - `ExitFacing` moves the actor out of its current containing entity toward `Facing`.
 
 Bulk/Aperture checks apply to every inventory boundary crossed by these constrained behaviors. For nested interiors, entering from inside one entity into another crosses both the source containing entity's aperture and the destination entity's aperture; exiting crosses the current containing entity's aperture. This is intentional: use larger apertures for interiors meant to allow passage, or use `Teleport` for exceptional movement that should bypass aperture rules.
+
+For player-controlled actors, the shared Core Action Choice seam can expose authored `TransformAdjacentToInventory`/`PickupTarget` as selectable adjacent pickup targets plus inventory-slot destinations, and authored `TransformInventoryToAdjacent`/`DropFacing` as selectable carried sources plus adjacent map destinations. Player-facing menu vocabulary may present them as Pickup and Drop.
 
 Use report `InventorySummaryLines`, direct validation output, or recorded scenarios to confirm containment behavior. Scenario reports summarize carried contents with inventory coordinates and guard against recursive containment cycles.
 
@@ -182,8 +184,10 @@ Planning note: the active canonical-actions release plan freezes the current bro
 
 | Step | Reads | Writes | Author-facing behavior | Common use |
 |---|---|---|---|---|
-| `PickupTarget` | `Target` | carried inventory state | Attempt to pick up current target into actor inventory; falls through when pickup cannot act. | collectors, item pickup after bump/acquisition |
-| `DropFacing` | `Facing` | carried/world placement | Drop the first carried entity into the facing cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
+| `TransformAdjacentToInventory` | `Target` | carried inventory state | Preferred name for pickup semantics: transform the current adjacent target into actor inventory; falls through when pickup cannot act. | collectors, item pickup after bump/acquisition |
+| `TransformInventoryToAdjacent` | `Facing` | carried/world placement | Preferred name for adjacent drop semantics: transform the first carried entity into the facing adjacent cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
+| `PickupTarget` | `Target` | carried inventory state | Compatibility name for `TransformAdjacentToInventory`. | existing/prototype pickup content |
+| `DropFacing` | `Facing` | carried/world placement | Compatibility name for `TransformInventoryToAdjacent`. | existing/prototype drop content |
 | `GiveTarget` | `Target` | actor/target inventory state | Transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/aperture checks fail. | peer transfer, offering, handoff demos |
 | `TakeTarget` | `Target` | target/actor inventory state | Transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/aperture checks fail. | taking from containers, stealing prototypes |
 | `EnterTarget` | `Target` | actor/container inventory state | Enter an adjacent target's inventory at the first open row-major coordinate; falls through when target adjacency, inventory, space, or aperture checks fail. | rooms-inside-entities, containers as spaces |

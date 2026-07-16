@@ -1,5 +1,12 @@
 namespace GameGameGame.Core;
 
+public sealed record AdjacencyEvaluation(
+    bool AreAdjacent,
+    Direction? Direction,
+    bool IsIntercardinal,
+    FailureReason? FailureReason,
+    string? FailureDetail);
+
 public sealed class MovementService
 {
     public RelocationEvaluation EvaluateRelocation(WorldState world, EntityId entityId, MovementDestination destination)
@@ -30,11 +37,7 @@ public sealed class MovementService
         }
 
         if (destination is MovementDestination.AdjacentMovementDestination adjacentDestination
-            && DirectionMath.OrthogonalCorners(adjacentDestination.Direction) is { } corners
-            && TryGetMoveDestination(world, adjacentDestination.AnchorId, corners.First, out var firstCorner)
-            && TryGetMoveDestination(world, adjacentDestination.AnchorId, corners.Second, out var secondCorner)
-            && world.GetOccupant(firstCorner) is not null
-            && world.GetOccupant(secondCorner) is not null)
+            && EvaluateAdjacency(world, world.GetEntityLocation(adjacentDestination.AnchorId), resolvedDestination).FailureReason == FailureReason.MoveBlocked)
         {
             trace.Status = TraceStatus.Failure;
             trace.Reason = FailureReason.MoveBlocked;
@@ -55,11 +58,65 @@ public sealed class MovementService
 
     public bool AreAdjacent(WorldState world, EntityId firstEntityId, EntityId secondEntityId)
     {
+        return EvaluateAdjacency(world, firstEntityId, secondEntityId).AreAdjacent;
+    }
+
+    public AdjacencyEvaluation EvaluateAdjacency(WorldState world, EntityId firstEntityId, EntityId secondEntityId)
+    {
+        if (!world.Entities.ContainsKey(firstEntityId))
+        {
+            return new(false, null, false, FailureReason.ActorMissing, $"first entity {firstEntityId} does not exist");
+        }
+
+        if (!world.Entities.ContainsKey(secondEntityId))
+        {
+            return new(false, null, false, FailureReason.TargetMissing, $"second entity {secondEntityId} does not exist");
+        }
+
         var first = world.GetEntityLocation(firstEntityId);
         var second = world.GetEntityLocation(secondEntityId);
 
-        return first.PlaneId == second.PlaneId
-            && Math.Abs(first.Coord.X - second.Coord.X) + Math.Abs(first.Coord.Y - second.Coord.Y) == 1;
+        return EvaluateAdjacency(world, first, second, firstEntityId);
+    }
+
+    public AdjacencyEvaluation EvaluateAdjacency(WorldState world, PlaneCoord first, PlaneCoord second, EntityId? cornerAnchorId = null)
+    {
+        if (first.PlaneId != second.PlaneId)
+        {
+            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not on the same plane as {first}");
+        }
+
+        var deltaX = second.Coord.X - first.Coord.X;
+        var deltaY = second.Coord.Y - first.Coord.Y;
+        if (Math.Max(Math.Abs(deltaX), Math.Abs(deltaY)) != 1)
+        {
+            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not adjacent to {first}");
+        }
+
+        var direction = DirectionFromDelta(deltaX, deltaY);
+        if (direction is null)
+        {
+            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not adjacent to {first}");
+        }
+
+        var corners = DirectionMath.OrthogonalCorners(direction.Value);
+        var isIntercardinal = corners is not null;
+        if (corners is { } intercardinalCorners)
+        {
+            var firstCorner = new PlaneCoord(first.PlaneId, first.Coord.Offset(intercardinalCorners.First));
+            var secondCorner = new PlaneCoord(first.PlaneId, first.Coord.Offset(intercardinalCorners.Second));
+            if (world.GetOccupant(firstCorner) is not null && world.GetOccupant(secondCorner) is not null)
+            {
+                return new(
+                    false,
+                    direction,
+                    true,
+                    FailureReason.MoveBlocked,
+                    $"intercardinal adjacency {direction} is blocked by both orthogonal corners");
+            }
+        }
+
+        return new(true, direction, isIntercardinal, null, null);
     }
 
     public bool CanPlace(WorldState world, PlaneCoord destination)
@@ -209,4 +266,17 @@ public sealed class MovementService
                 return false;
         }
     }
+
+    private static Direction? DirectionFromDelta(int deltaX, int deltaY) => (deltaX, deltaY) switch
+    {
+        (0, -1) => Direction.North,
+        (1, -1) => Direction.NorthEast,
+        (1, 0) => Direction.East,
+        (1, 1) => Direction.SouthEast,
+        (0, 1) => Direction.South,
+        (-1, 1) => Direction.SouthWest,
+        (-1, 0) => Direction.West,
+        (-1, -1) => Direction.NorthWest,
+        _ => null
+    };
 }

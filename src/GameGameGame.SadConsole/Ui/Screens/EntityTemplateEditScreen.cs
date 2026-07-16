@@ -781,6 +781,7 @@ internal sealed class EntityTemplateEditScreen
 
     private static bool IsSupportedTargetCapability(ActionPlanBehaviorStepKind kind) => kind is
         ActionPlanBehaviorStepKind.PickupTarget or
+        ActionPlanBehaviorStepKind.TransformAdjacentToInventory or
         ActionPlanBehaviorStepKind.EnterTarget or
         ActionPlanBehaviorStepKind.GiveTarget or
         ActionPlanBehaviorStepKind.TakeTarget or

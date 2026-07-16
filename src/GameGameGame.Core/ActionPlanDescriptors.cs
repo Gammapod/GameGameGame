@@ -90,7 +90,9 @@ public enum ActionPlanBehaviorStepKind
     ExitFacing,
     ApplyPrePlan,
     ApplyMainPlan,
-    ApplyPostPlan
+    ApplyPostPlan,
+    TransformAdjacentToInventory,
+    TransformInventoryToAdjacent
 }
 
 public enum ActionPlanMoveDirectionMode

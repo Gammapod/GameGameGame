@@ -128,9 +128,13 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
 
         trace.Add(TraceNode.Success("Destination is inside actor inventory", Destination.ToString()));
 
-        if (!movement.AreAdjacent(world, actorId, TargetId))
+        var adjacency = movement.EvaluateAdjacency(world, actorId, TargetId);
+        if (!adjacency.AreAdjacent)
         {
-            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}");
+            var detail = adjacency.FailureDetail is { Length: > 0 }
+                ? $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}: {adjacency.FailureDetail}"
+                : $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}";
+            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, detail);
         }
 
         trace.Add(TraceNode.Success("Target is adjacent"));
@@ -197,6 +201,17 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
 
         trace.Add(TraceNode.Success("Destination is on actor plane", Destination.ToString()));
 
+        var adjacency = movement.EvaluateAdjacency(world, actorLocation, Destination);
+        if (!adjacency.AreAdjacent)
+        {
+            var detail = adjacency.FailureDetail is { Length: > 0 }
+                ? $"destination {Destination} is not adjacent to {world.FormatEntityAddress(actorId)}: {adjacency.FailureDetail}"
+                : $"destination {Destination} is not adjacent to {world.FormatEntityAddress(actorId)}";
+            return ActionTrace.Fail(trace, adjacency.FailureReason ?? FailureReason.InvalidDropDestination, detail);
+        }
+
+        trace.Add(TraceNode.Success("Destination is adjacent", Destination.ToString()));
+
         var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
         var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
         trace.Add(relocation.Trace);
@@ -237,9 +252,13 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
             return ActionTrace.Fail(trace, FailureReason.TargetIsActor, "actor cannot enter itself");
         }
 
-        if (!movement.AreAdjacent(world, actorId, TargetId))
+        var adjacency = movement.EvaluateAdjacency(world, actorId, TargetId);
+        if (!adjacency.AreAdjacent)
         {
-            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}");
+            var detail = adjacency.FailureDetail is { Length: > 0 }
+                ? $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}: {adjacency.FailureDetail}"
+                : $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}";
+            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, detail);
         }
 
         trace.Add(TraceNode.Success("Target is adjacent"));

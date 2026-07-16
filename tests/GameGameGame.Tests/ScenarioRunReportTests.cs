@@ -29,6 +29,58 @@ public sealed class ScenarioRunReportTests
         Assert.Empty(playerReport.ValidationDiagnostics);
     }
 
+    [Fact]
+    public void CanonicalPickupDropShowcaseScenariosLoadValidateRunAndExposePlayerChoices()
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", "CanonicalActions", "CanonicalPickupDropShowcase.yaml"));
+        var document = EditableContentDocument.LoadYaml(File.ReadAllText(path));
+        var validation = new ContentEditorService(document).Validate();
+        var canonicalValidation = document.ValidateCanonicalAuthoring();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.True(canonicalValidation.IsValid, string.Join(Environment.NewLine, canonicalValidation.Errors));
+
+        var outcomeReport = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-pickup-drop-outcomes", TurnCount: 1));
+
+        Assert.Empty(outcomeReport.ValidationDiagnostics);
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Pickup Success Actor" && turn.TraceLines.Contains("1. PickupTarget: Success; fallback=stopped"));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Pickup Failure Actor" && turn.TraceLines.Any(line => line.Contains("PickupTarget: Failure", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Drop Success Actor" && turn.TraceLines.Contains("1. DropFacing: Success; fallback=stopped"));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Drop Failure Actor" && turn.TraceLines.Any(line => line.Contains("DropFacing: Failure", StringComparison.Ordinal)));
+        Assert.Contains("Pickup Success Actor inventory:", outcomeReport.InventorySummaryLines);
+        Assert.Contains("  - Pickup Success Gem pickupSuccessGem at (0,0)", outcomeReport.InventorySummaryLines);
+        Assert.Contains("Pickup Failure Boulder: scenarioRoot(2,3), facing none, target none", outcomeReport.FinalStateLines);
+        Assert.Contains("Drop Success Pebble: scenarioRoot(6,1), facing none, target none", outcomeReport.FinalStateLines);
+        Assert.Contains("Drop Failure Actor inventory:", outcomeReport.InventorySummaryLines);
+        Assert.Contains("  - Drop Failure Pebble dropFailurePebble at (0,0)", outcomeReport.InventorySummaryLines);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "beta-canonical-pickup-drop-player-interaction");
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Contains("Control: player-1 -> canonicalPickupDropPlayer", materialization.SetupLines);
+
+        var descriptor = materialization.Registry.ActionPlanDescriptors[new ActionPlanTemplateId("canonicalPickupDropPlayerChoices")];
+        var request = new ActionChoiceService(new MovementService()).CreateRequest(
+            materialization.World,
+            new EntityId("canonicalPickupDropPlayer"),
+            descriptor);
+
+        Assert.NotNull(request);
+        var pickup = Assert.Single(request!.Choices, choice => choice.Kind == ActionChoiceKind.Pickup);
+        Assert.Contains(pickup.EntityOptions, option => option.TargetId == new EntityId("playerPickupGem") && option.CanExecute);
+        Assert.Contains(
+            pickup.Destinations(new EntityId("playerPickupGem")),
+            destination => destination.CanExecute && destination.Destination.Coord == new GridCoord(1, 0));
+        var drop = Assert.Single(request.Choices, choice => choice.Kind == ActionChoiceKind.Drop);
+        Assert.Contains(drop.EntityOptions, option => option.TargetId == new EntityId("playerCarriedPebble") && option.CanExecute);
+        Assert.Contains(
+            drop.Destinations(new EntityId("playerCarriedPebble")),
+            destination => destination.Destination.Coord == new GridCoord(5, 3) && !destination.CanExecute && destination.BlockingEntityId == new EntityId("playerDropBlocker"));
+        Assert.Contains(
+            drop.Destinations(new EntityId("playerCarriedPebble")),
+            destination => destination.CanExecute && destination.Destination.Coord == new GridCoord(5, 4));
+    }
+
     private static string FindRepositoryFile(string relativePath, [CallerFilePath] string sourceFilePath = "")
     {
         var directory = new DirectoryInfo(Path.GetDirectoryName(sourceFilePath) ?? AppContext.BaseDirectory);

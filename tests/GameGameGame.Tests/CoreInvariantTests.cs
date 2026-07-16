@@ -32,6 +32,35 @@ public sealed class CoreInvariantTests
     }
 
     [Fact]
+    public void AdjacencyAllowsUnblockedIntercardinalNeighbor()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+
+        var evaluation = movement.EvaluateAdjacency(world, TestWorld.PlayerId, TestWorld.RockId);
+
+        Assert.True(evaluation.AreAdjacent);
+        Assert.Equal(Direction.NorthEast, evaluation.Direction);
+        Assert.True(evaluation.IsIntercardinal);
+    }
+
+    [Fact]
+    public void AdjacencyRejectsIntercardinalNeighborWhenBothCornersAreBlocked()
+    {
+        var world = TestWorld.CreateWorld();
+        var blockerId = new EntityId("east-corner-blocker");
+        AddEntity(world, blockerId, "East Corner Blocker", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+        var movement = new MovementService();
+
+        var evaluation = movement.EvaluateAdjacency(world, TestWorld.PlayerId, TestWorld.RockId);
+
+        Assert.False(evaluation.AreAdjacent);
+        Assert.Equal(Direction.NorthEast, evaluation.Direction);
+        Assert.Equal(FailureReason.MoveBlocked, evaluation.FailureReason);
+        Assert.Contains("blocked by both orthogonal corners", evaluation.FailureDetail);
+    }
+
+    [Fact]
     public void ZeroInventoryDimensionMakesInventoryUnusable()
     {
         var zeroWidth = new Entity(new EntityId("zeroWidth"), "Zero Width", new NodeId("node"), 0, 1, 0, 0);
@@ -54,6 +83,22 @@ public sealed class CoreInvariantTests
 
         Assert.False(evaluation.CanExecute);
         Assert.Equal(FailureReason.ApertureBlocked, evaluation.Trace.Reason);
+    }
+
+    [Fact]
+    public void PickupRejectsIntercardinalTargetWhenBothCornersAreBlocked()
+    {
+        var world = TestWorld.CreateWorld();
+        var blockerId = new EntityId("east-corner-blocker");
+        AddEntity(world, blockerId, "East Corner Blocker", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+        var movement = new MovementService();
+        var action = new PickupAction(TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+
+        var evaluation = action.Evaluate(world, TestWorld.PlayerId, movement);
+
+        Assert.False(evaluation.CanExecute);
+        Assert.Equal(FailureReason.TargetNotAdjacent, evaluation.Trace.Reason);
+        Assert.Contains("blocked by both orthogonal corners", evaluation.Trace.Detail);
     }
 
     [Fact]
@@ -243,5 +288,12 @@ public sealed class CoreInvariantTests
             Resolutions++;
             return resolution;
         }
+    }
+
+    private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, 0, 0, 1, 1));
+        world.Occupancy.Add(nodeId, entityId);
     }
 }

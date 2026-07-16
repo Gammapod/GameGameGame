@@ -72,6 +72,13 @@ internal sealed class GameplayMockConsole : Console
     {
         if (keyboard.IsKeyReleased(Keys.Escape))
         {
+            if (_screen?.IsActionMenuOpen == true)
+            {
+                _message = _screen.CancelActionMenu();
+                Redraw();
+                return true;
+            }
+
             if (_onExit is not null)
             {
                 _onExit();
@@ -88,6 +95,32 @@ internal sealed class GameplayMockConsole : Console
             _message = _screen.InspectNextEntity();
             Redraw();
             return true;
+        }
+
+        if (_screen?.IsActionMenuOpen == true)
+        {
+            if (keyboard.IsKeyReleased(Keys.Up) || keyboard.IsKeyReleased(Keys.NumPad8))
+            {
+                _message = _screen.SelectPreviousActionStep();
+                Redraw();
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Down) || keyboard.IsKeyReleased(Keys.NumPad2))
+            {
+                _message = _screen.SelectNextActionStep();
+                Redraw();
+                return true;
+            }
+
+            if (ReadMoveDirection(keyboard) is { } menuDirection)
+            {
+                _message = menuDirection is GggDirection.North or GggDirection.NorthWest or GggDirection.West or GggDirection.SouthWest
+                    ? _screen.SelectPreviousActionStep()
+                    : _screen.SelectNextActionStep();
+                Redraw();
+                return true;
+            }
         }
 
         if (_screen is not null && ReadMoveDirection(keyboard) is { } moveDirection)
@@ -137,18 +170,15 @@ internal sealed class GameplayMockConsole : Console
         }
 
         var frame = _screen.BuildFrame(Width, Height);
-        foreach (var component in frame.Components.Where(component => component.Id is not "current-place" and not "inspected-entity"))
-        {
-            _renderer.DrawComponent(component);
-        }
-
         DrawInventoryPanel(
             frame.CurrentPlaceProjection,
             frame.CurrentPlaceBounds,
-            frame.CurrentPlaceProjection is null ? "Current place viewport" : $"Current place: {frame.CurrentPlaceProjection.Name}",
+            frame.CurrentPlaceProjection is null ? "0.2 Current place" : $"0.2 Current place: {frame.CurrentPlaceProjection.Name}",
             [.. new[] { "player POV current place", $"room size: {frame.CurrentRoomSizeLabel}", frame.CurrentPlaceProjection?.InventoryGrid is { } currentGrid ? $"inventory: {currentGrid.Width}x{currentGrid.Height} {currentGrid.PlaneId}" : "inventory: none" }, .. frame.CurrentPlaceEntityRows],
             [],
             [.. new[] { $"message: {_message}" }, .. frame.CurrentPlacePlayerLogRows],
+            frame.CurrentPlaceValidSelectionCoords,
+            frame.CurrentPlaceSelectedCoord,
             Color.Gold);
 
         if (frame.InspectedProjection is { } inspectedProjection)
@@ -163,18 +193,33 @@ internal sealed class GameplayMockConsole : Console
             DrawInventoryPanel(
                 inspectedProjection,
                 frame.InspectionBounds,
-                "Inspected entity panel",
+                "0.3 Inspection panel",
                 rows,
                 [.. frame.InspectedTargetingRows, .. frame.InspectedActionPlanRows],
                 [],
+                frame.InspectionValidSelectionCoords,
+                frame.InspectionSelectedCoord,
                 Color.HotPink);
         }
 
         DrawHud(frame);
+        foreach (var component in frame.Components.Where(component => component.Id is not "0.2" and not "0.3"))
+        {
+            _renderer.DrawComponent(component);
+        }
         Surface.IsDirty = true;
     }
 
-    private void DrawInventoryPanel(EntityPanelProjection? projection, SadConsoleRect bounds, string title, IReadOnlyList<string> rows, IReadOnlyList<string> afterGridRows, IReadOnlyList<string> footerRows, Color border)
+    private void DrawInventoryPanel(
+        EntityPanelProjection? projection,
+        SadConsoleRect bounds,
+        string title,
+        IReadOnlyList<string> rows,
+        IReadOnlyList<string> afterGridRows,
+        IReadOnlyList<string> footerRows,
+        IReadOnlySet<GameGameGame.Core.GridCoord> validSelectionCoords,
+        GameGameGame.Core.GridCoord? selectedCoord,
+        Color border)
     {
         DrawBox(bounds, border);
         PrintOnMain(bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), title, Color.White);
@@ -223,7 +268,11 @@ internal sealed class GameplayMockConsole : Console
                 var cell = cells.GetValueOrDefault(coord);
                 var foreground = cell is null ? Color.DarkGray : ColorForPresentation(cell.Color);
                 var glyph = cell?.Glyph ?? '.';
-                var background = cell?.EntityId == _screen?.PlayerEntityId ? Color.DarkBlue : Color.Black;
+                var background = selectedCoord == coord
+                    ? Color.DarkGoldenrod
+                    : validSelectionCoords.Contains(coord)
+                        ? Color.DarkGreen
+                        : cell?.EntityId == _screen?.PlayerEntityId ? Color.DarkBlue : Color.Black;
                 SetMainCell(x, gridTop + row, ' ', foreground, background);
                 SetMainCell(x + 1, gridTop + row, glyph, cell?.EntityId == _screen?.PlayerEntityId ? Color.Yellow : foreground, background);
                 SetMainCell(x + 2, gridTop + row, ' ', foreground, background);

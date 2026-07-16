@@ -277,11 +277,12 @@ Scope selected after the canonical `Move` play-surface bridge:
 4. The first `Move` choice exposes eight absolute direction options with destination, can-execute, failure reason/detail, and blocking entity facts from Core movement evaluation. Complete.
 5. Submitting a selected direction executes through Core/shared turn/history semantics, consumes/advances on success, logs failure without advancement on failed movement, and preserves the canonical movement contract that success faces the moved direction while failure preserves facing. Complete.
 
-First-slice deferrals:
+First-slice status/deferrals:
 
-- nested target/destination requests for non-move actions;
+- Core Action Choice now has a first Pickup/Drop source/destination seam: `PickupTarget` choices expose adjacent pickup targets and inventory slots, `DropFacing` choices expose carried sources and adjacent map destinations, and submitted choices execute through controlled-command semantics;
+- history submission helpers for Pickup/Drop Action Choices are available, and the SadConsole play mock has the first action-step-first menu path: direct movement controls remain available, `Enter` opens authored action steps, then target/source and destination lists are selected from Core Action Choice facts;
 - full pre/main/post override descriptor composition in choice request projection;
-- frontend menu replacement for direct movement controls;
+- target-first action selection remains a future pathway that should reuse the same Core facts;
 - rich choice DTO fields for previous/new facing and source/destination beyond existing command outcome facts.
 
 Next non-movement Action Choice design avenues to evaluate before promoting `PickupTarget`/`DropTarget`:
@@ -341,6 +342,17 @@ Suggested order, subject to scenario pressure:
 3. `EnterTarget`, `PushFacing`, or `SeekTarget` after the first target-facing inventory slice clarifies log/ratio/menu patterns.
 4. Transfer actions such as `GiveTarget`/`TakeTarget` after inventory selection/log wording expectations are clearer.
 5. Prototype utility/world-mutation actions such as `CreateFacing` only after template-backed spawning direction is revisited.
+
+## Transform action family naming direction
+
+For maintainability, non-actor movement actions should converge on an internal/canonical `Transform<Source>To<Destination>` naming family. `Transform` means the actor moves or relocates an entity other than itself through constrained gameplay rules. Preferred future names:
+
+- `TransformAdjacentToInventory`: current Pickup semantics, adjacent map entity to actor inventory.
+- `TransformInventoryToAdjacent`: current adjacent Drop semantics, actor inventory entity to adjacent map space.
+- `TransformInventoryToRanged`: planned Throw semantics, actor inventory entity to ranged destination.
+- `TransformAdjacentToRanged`: planned Shove semantics, adjacent map entity to ranged destination.
+
+`TransformAdjacentToInventory` and `TransformInventoryToAdjacent` are now available as preferred behavior-chain Action Step aliases over the existing semantics. Existing `PickupTarget` and `DropFacing` names remain compatibility names while current content and older tests continue to use them.
 
 ## Explicit non-goals for the first release slice
 

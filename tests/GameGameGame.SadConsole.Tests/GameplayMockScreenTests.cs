@@ -33,7 +33,7 @@ public sealed class GameplayMockScreenTests
         Assert.Equal(session.ActiveContainerEntityId, frame.PlayerProjection.PointOfView.CurrentPlace.EntityId);
         Assert.Equal(session.ActiveContainerEntityId, frame.CurrentPlaceProjection?.EntityId);
         Assert.NotNull(frame.CurrentPlaceProjection?.InventoryGrid);
-        Assert.Equal("current-place", frame.Components[0].Id);
+        Assert.Equal("0.2", frame.Components[0].Id);
         Assert.Equal(0, frame.HudBounds.Left);
         Assert.InRange(frame.HudBounds.Width, 20, 28);
         Assert.True(frame.CurrentPlaceBounds.Left > frame.HudBounds.Left + frame.HudBounds.Width);
@@ -138,6 +138,122 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
+    public void PlayerChoicePickupTargetSurfacesCoreActionChoiceInHud()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.True(screen.UsesCoreActionChoicePickup);
+        Assert.NotNull(screen.CurrentActionChoiceRequest);
+        Assert.Contains(frame.ActionChoiceRows, row => row.Contains("Pickup") && row.Contains("Mock Crate"));
+        Assert.Contains(frame.HudRows, row => row.Contains("Choice: step 1 Pickup 1/1 targets"));
+    }
+
+    [Fact]
+    public void PlayerChoiceDropFacingSurfacesCoreActionChoiceInHud()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, includeDropStep: true, startWithCarriedItem: true);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.True(screen.UsesCoreActionChoiceDrop);
+        Assert.NotNull(screen.CurrentActionChoiceRequest);
+        Assert.Contains(frame.ActionChoiceRows, row => row.Contains("Drop") && row.Contains("Mock Token"));
+        Assert.Contains(frame.HudRows, row => row.Contains("Choice: step 2 Drop"));
+    }
+
+    [Fact]
+    public void EnterOpensActionStepFirstMenuBeforeChoosingPickupTargetAndDestination()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        var opened = screen.ExecuteSelectedActionStep();
+        var actionSelectorFrame = screen.BuildFrame(120, 42);
+        var targetPrompt = screen.ExecuteSelectedActionStep();
+        var destinationPrompt = screen.ExecuteSelectedActionStep();
+        var message = screen.ExecuteSelectedActionStep();
+
+        Assert.Contains("Opened action selector 0.2.1", opened);
+        Assert.Contains(actionSelectorFrame.Components, component => component.Id == "0.2.1");
+        Assert.Contains("Choose target", targetPrompt);
+        Assert.Contains("Mock Crate", targetPrompt);
+        Assert.Contains("Choose inventory location", destinationPrompt);
+        Assert.Contains("Pickup Mock Crate via Core Action Choice", message);
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.True(session.World.GetEntityLocation(new EntityId("mockCrate")).PlaneId.Value.Contains("mockPlayer", StringComparison.Ordinal));
+        Assert.Equal("Closed", screen.ActionMenuState);
+    }
+
+    [Fact]
+    public void PickupSelectionHighlightsCurrentPlaceTargetThenPlayerInventoryDestination()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        screen.ExecuteSelectedActionStep();
+        screen.ExecuteSelectedActionStep();
+        var targetFrame = screen.BuildFrame(120, 42);
+        Assert.Equal("PickupTarget", screen.ActionMenuState);
+        screen.ExecuteSelectedActionStep();
+        var inventoryFrame = screen.BuildFrame(120, 42);
+
+        Assert.Equal("PickupDestination", screen.ActionMenuState);
+        Assert.Contains(new GridCoord(2, 1), targetFrame.CurrentPlaceValidSelectionCoords);
+        Assert.Equal(new GridCoord(2, 1), targetFrame.CurrentPlaceSelectedCoord);
+        Assert.Equal(session.PlayerEntityId, screen.InspectedEntityId);
+        Assert.Contains(new GridCoord(0, 0), inventoryFrame.InspectionValidSelectionCoords);
+        Assert.Equal(new GridCoord(0, 0), inventoryFrame.InspectionSelectedCoord);
+    }
+
+    [Fact]
+    public void CancelReturnsThroughPickupPromptStackWithoutSubmitting()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        screen.ExecuteSelectedActionStep();
+        screen.ExecuteSelectedActionStep();
+        screen.ExecuteSelectedActionStep();
+        var backToTarget = screen.CancelActionMenu();
+        Assert.Contains("Returned to pickup target selection", backToTarget);
+        Assert.Equal("PickupTarget", screen.ActionMenuState);
+
+        var backToSelector = screen.CancelActionMenu();
+        Assert.Contains("Returned to action selector", backToSelector);
+        Assert.Equal("ActionList", screen.ActionMenuState);
+
+        var closed = screen.CancelActionMenu();
+        Assert.Contains("Closed action selector", closed);
+        Assert.Equal("Closed", screen.ActionMenuState);
+        Assert.Equal(0, screen.FrameIndex);
+    }
+
+    [Fact]
+    public void DropChoiceUsesTargetThenDestinationListsAndHistorySubmission()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, includeDropStep: true, startWithCarriedItem: true);
+        var screen = new GameplayMockScreen(session);
+
+        screen.ExecuteSelectedActionStep();
+        screen.SelectNextActionStep();
+        var targetPrompt = screen.ExecuteSelectedActionStep();
+        var destinationPrompt = screen.ExecuteSelectedActionStep();
+        var message = screen.ExecuteSelectedActionStep();
+
+        Assert.Contains("DropFacing", targetPrompt);
+        Assert.Contains("Mock Token", targetPrompt);
+        Assert.Contains("Choose drop destination", destinationPrompt);
+        Assert.Contains("Drop Mock Token via Core Action Choice", message);
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.Equal(session.ActivePlaneId, session.World.GetEntityLocation(new EntityId("mockToken")).PlaneId);
+        Assert.Equal("Closed", screen.ActionMenuState);
+    }
+
+    [Fact]
     public void PlayerWithoutPlayerChoiceFallsBackToDirectCompatibilityMovement()
     {
         var session = CreateGameplayMockSession(includeCanonicalMove: true, bindPlayerChoiceControl: false);
@@ -193,6 +309,7 @@ public sealed class GameplayMockScreenTests
         var screen = new GameplayMockScreen(session);
 
         screen.SelectNextActionStep();
+        screen.ExecuteSelectedActionStep();
         var message = screen.ExecuteSelectedActionStep();
         var frame = screen.BuildFrame(120, 42);
 
@@ -216,7 +333,7 @@ public sealed class GameplayMockScreenTests
         Assert.Equal(turn, session.World.TurnNumber);
         Assert.Equal(new EntityId("mockCrate"), screen.InspectedEntityId);
         Assert.NotNull(frame.InspectedProjection?.InventoryGrid);
-        Assert.Contains(frame.Components, component => component.Id == "inspected-entity");
+        Assert.Contains(frame.Components, component => component.Id == "0.3");
     }
 
     [Fact]
@@ -323,7 +440,9 @@ public sealed class GameplayMockScreenTests
         bool includePlayerTargetAdjectives = true,
         bool includePlayerReciprocalAdjectives = false,
         bool includeCanonicalMove = false,
-        bool bindPlayerChoiceControl = false)
+        bool bindPlayerChoiceControl = false,
+        bool includeDropStep = false,
+        bool startWithCarriedItem = false)
     {
         var document = new EditableContentDocument();
         var playerInteractionPlanId = new ActionPlanTemplateId("mockPlayerInteractionPlan");
@@ -334,11 +453,25 @@ public sealed class GameplayMockScreenTests
         }
 
         playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget));
+        if (includeDropStep)
+        {
+            playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DropFacing));
+        }
+
         playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget));
         document.ActionPlans[playerInteractionPlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
             new ActionPlanId(playerInteractionPlanId.Value),
             [],
             Behavior: new ActionPlanBehaviorDescriptor(playerSteps)));
+        var tokenTemplateId = document.AddEntityTemplate(
+            "Mock Token",
+            new EntityTemplate(
+                "Mock Token",
+                InventoryWidth: 1,
+                InventoryHeight: 1,
+                Bulk: 1,
+                Aperture: 1),
+            new EntityPresentation('t', PresentationColor.Cyan));
         var playerTemplateId = document.AddEntityTemplate(
             "Mock Player",
             new EntityTemplate(
@@ -347,6 +480,7 @@ public sealed class GameplayMockScreenTests
                 InventoryHeight: 1,
                 Bulk: playerBulk,
                 Aperture: 5,
+                CarriedEntities: startWithCarriedItem ? [new CarriedEntityTemplate(new EntityId("mockToken"), tokenTemplateId, new GridCoord(0, 0))] : null,
                 DefaultActionPlanId: includePlayerTargetAdjectives ? playerInteractionPlanId : null),
             new EntityPresentation('@', PresentationColor.Yellow));
         var cratePlanId = new ActionPlanTemplateId("mockCratePlan");

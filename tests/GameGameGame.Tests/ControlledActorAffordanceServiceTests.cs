@@ -41,6 +41,9 @@ public sealed class ControlledActorAffordanceServiceTests
         var source = Assert.Single(affordances.PickupSources, candidate => candidate.TargetId == TestWorld.SlimeId);
         Assert.True(source.CanExecute);
 
+        var diagonalSource = Assert.Single(affordances.PickupSources, candidate => candidate.TargetId == TestWorld.RockId);
+        Assert.True(diagonalSource.CanExecute);
+
         var destination = Assert.Single(affordances.PickupDestinations(TestWorld.SlimeId), candidate => candidate.Destination == new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
         Assert.True(destination.CanExecute);
     }
@@ -63,6 +66,23 @@ public sealed class ControlledActorAffordanceServiceTests
     }
 
     [Fact]
+    public void ControlledActorAffordanceQueryReportsIntercardinalDropBlockedByTwoCorners()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        AddEntity(world, new EntityId("east-corner-blocker"), "East Corner Blocker", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+        var query = new ControlledActorAffordanceService(movement);
+
+        var affordances = query.Query(world, TestWorld.PlayerId);
+
+        var northEast = Assert.Single(affordances.DropDestinations(TestWorld.RockId), candidate => candidate.Destination == new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)));
+        Assert.False(northEast.CanExecute);
+        Assert.Equal(FailureReason.MoveBlocked, northEast.FailureReason);
+        Assert.Contains("blocked by both orthogonal corners", northEast.FailureDetail);
+    }
+
+    [Fact]
     public void ControlledActorAffordanceQueryReportsEnterTargetsAndExitDirections()
     {
         var world = TestWorld.CreateWorld();
@@ -77,5 +97,12 @@ public sealed class ControlledActorAffordanceServiceTests
         var southExit = Assert.Single(insideAffordances.ExitDirections, candidate => candidate.Direction == Direction.South);
         Assert.True(southExit.CanExecute);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), southExit.Destination);
+    }
+
+    private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, 0, 0, 1, 1));
+        world.Occupancy.Add(nodeId, entityId);
     }
 }

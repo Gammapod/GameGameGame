@@ -83,9 +83,16 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
 
 ## Action highlighting and selection standards
 
+0. **The first canonical action-selection pathway is action-step first.**
+   - On a controlled actor's turn, direct movement controls may remain available for movement.
+   - `Enter` should open the authored action-step list for the controlled actor.
+   - Selecting an action that needs more information should open a target/source list, then a destination list when needed.
+   - Pickup/Drop lists should be built from shared Core Action Choice facts; the frontend owns focus/wording only.
+   - A future target-first pathway may let the player choose an entity first and then choose valid actions for it, but it should converge on the same Core facts and submission services.
+
 1. **Valid action highlighting is valuable but should not imply authoritative resolution.**
-   - Frontend highlights are affordance hints.
-   - Shared command execution remains authoritative.
+    - Frontend highlights are affordance hints.
+    - Shared command execution remains authoritative.
 
 2. **Selection should favor valid choices.**
    - When choosing a target/cell for an action, cycling through valid choices is preferred over moving an unrestricted cursor across mostly invalid cells.
@@ -104,8 +111,16 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
    - This is a presentation/input shortcut only. Shared command execution remains authoritative if a command is submitted through another path or the world changes.
 
 6. **Inspection selection can use valid-target style affordances, but it is navigation rather than action legality.**
-   - Inspect mode may highlight and cycle visible inspectable entities/cells to reduce cursor work.
-   - Inspection targeting should be derived from visible projected/runtime facts and should not be confused with Core action-target legality.
+    - Inspect mode may highlight and cycle visible inspectable entities/cells to reduce cursor work.
+    - Inspection targeting should be derived from visible projected/runtime facts and should not be confused with Core action-target legality.
+
+7. **Current play-mode component naming.**
+   - `0` is the play-mode screen.
+   - `0.1` is the HUD/status component. It may summarize current context and controls, but action choices should not be hidden inside HUD rows when a dedicated selector is active.
+   - `0.2` is the current-place component. Spatial target/source and world-destination selection should highlight valid Core-projected choices here.
+   - `0.2.1` is the action selector opened from `0.2`; Enter/Select chooses the focused action and Esc/Cancel closes or returns according to the prompt stack.
+   - `0.3` is the inspection panel. When selecting from the controlled actor's inventory, it may inspect the controlled actor and highlight valid carried entities or inventory cells.
+   - Movement keys in selection prompts should jump among valid choices rather than move the actor; mouse selection can later be added as a convenience path over the same choice facts.
 
 ## Editor and Simulation mode model
 

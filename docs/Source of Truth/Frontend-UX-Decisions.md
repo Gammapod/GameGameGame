@@ -144,3 +144,10 @@ Each decision should include:
 - **Reasoning:** SadConsole has built-in concepts that are easy to misuse or unnecessarily reimplement. Checking the docs first helps the project benefit from the breadth of the framework while still promoting only accepted patterns into the component gallery and decisions trace.
 - **Implications:** Prefer adopted gallery patterns when they exist. When no adopted pattern exists, research SadConsole docs, implement the smallest useful experiment, add a gallery example if accepted, and record any durable UX/API decision here.
 - **Status:** Active.
+
+### FED-018: Play-mode action prompts use numbered components and a Select/Cancel stack
+
+- **Decision:** The componentized play-mode UX uses `0` for the play screen, `0.1` for HUD, `0.2` for current place, `0.2.1` for the action selector, and `0.3` for inspection/player-inventory panels. Enter/Select advances through action -> target/source -> destination, while Esc/Cancel returns one prompt layer or closes the selector without submitting.
+- **Reasoning:** This names the player-facing workflow consistently with other componentized screens and keeps action choices out of the HUD. Spatial choices happen on spatial panels, and inventory choices happen through the player entity's inspection panel.
+- **Implications:** Future pickup/drop/target prompts should consume Core Action Choice facts for selectable/highlighted choices and should not reintroduce HUD-only option rows as the primary action selector. Mouse selection can be added later over the same component/choice model.
+- **Status:** Active / initial Play UX mock implementation.

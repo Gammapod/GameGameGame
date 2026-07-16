@@ -13,6 +13,7 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
 {
     public static bool IsSupportedTargetCapability(ActionPlanBehaviorStepKind capability) =>
         capability is ActionPlanBehaviorStepKind.PickupTarget
+            or ActionPlanBehaviorStepKind.TransformAdjacentToInventory
             or ActionPlanBehaviorStepKind.EnterTarget
             or ActionPlanBehaviorStepKind.GiveTarget
             or ActionPlanBehaviorStepKind.TakeTarget
@@ -26,7 +27,8 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
         ActionPlanBehaviorStepKind capability) =>
         capability switch
         {
-            ActionPlanBehaviorStepKind.PickupTarget => QueryPickupTarget(world, actorId, targetId),
+            ActionPlanBehaviorStepKind.PickupTarget => QueryPickupTarget(world, actorId, targetId, ActionPlanBehaviorStepKind.PickupTarget),
+            ActionPlanBehaviorStepKind.TransformAdjacentToInventory => QueryPickupTarget(world, actorId, targetId, ActionPlanBehaviorStepKind.TransformAdjacentToInventory),
             ActionPlanBehaviorStepKind.EnterTarget => QueryEnterTarget(world, actorId, targetId),
             ActionPlanBehaviorStepKind.GiveTarget => QueryGiveTarget(world, actorId, targetId),
             ActionPlanBehaviorStepKind.TakeTarget => QueryTakeTarget(world, actorId, targetId),
@@ -35,29 +37,29 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
             _ => Failure(capability, actorId, targetId, FailureReason.None, $"Action Step {capability} does not expose a target capability.")
         };
 
-    private EntityInteractionCapabilityResult QueryPickupTarget(WorldState world, EntityId actorId, EntityId targetId)
+    private EntityInteractionCapabilityResult QueryPickupTarget(WorldState world, EntityId actorId, EntityId targetId, ActionPlanBehaviorStepKind capability)
     {
         if (!world.Entities.TryGetValue(actorId, out var actor))
         {
-            return Failure(ActionPlanBehaviorStepKind.PickupTarget, actorId, targetId, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+            return Failure(capability, actorId, targetId, FailureReason.ActorMissing, $"actor {actorId} does not exist");
         }
 
         if (!world.Entities.ContainsKey(targetId))
         {
-            return Failure(ActionPlanBehaviorStepKind.PickupTarget, actorId, targetId, FailureReason.TargetMissing, $"target {targetId} does not exist");
+            return Failure(capability, actorId, targetId, FailureReason.TargetMissing, $"target {targetId} does not exist");
         }
 
         if (targetId == actorId)
         {
-            return Failure(ActionPlanBehaviorStepKind.PickupTarget, actorId, targetId, FailureReason.TargetIsActor, "actor cannot pick up itself");
+            return Failure(capability, actorId, targetId, FailureReason.TargetIsActor, "actor cannot pick up itself");
         }
 
         if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId || !actor.HasUsableInventory)
         {
-            return Failure(ActionPlanBehaviorStepKind.PickupTarget, actorId, targetId, FailureReason.ActorHasNoInventory, $"{actor.Name} has no usable inventory");
+            return Failure(capability, actorId, targetId, FailureReason.ActorHasNoInventory, $"{actor.Name} has no usable inventory");
         }
 
-        return CanRelocateToAnyInventoryCoord(world, targetId, inventoryPlaneId, ActionPlanBehaviorStepKind.PickupTarget, actorId, targetId);
+        return CanRelocateToAnyInventoryCoord(world, targetId, inventoryPlaneId, capability, actorId, targetId);
     }
 
     private EntityInteractionCapabilityResult QueryEnterTarget(WorldState world, EntityId actorId, EntityId targetId)
