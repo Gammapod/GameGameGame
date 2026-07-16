@@ -52,7 +52,8 @@ public sealed class GameplayMockScreenTests
         Assert.Contains(frame.HudRows, row => row.Contains("Player:"));
         Assert.Contains(frame.HudRows, row => row.Contains("Current place: Mock Room"));
         Assert.Contains(frame.HudRows, row => row.Contains("Action: 1/2 PickupTarget"));
-        Assert.Contains(frame.HudRows, row => row.Contains("Enter acts"));
+        Assert.Contains(frame.HudRows, row => row.Contains("Move: direct compatibility controls"));
+        Assert.Contains(frame.HudRows, row => row.Contains("move 8-way"));
         Assert.Equal(0, frame.HudBounds.Top);
         Assert.Equal(42, frame.HudBounds.Bottom);
         Assert.True(frame.InspectionBounds.Top >= 28);
@@ -84,6 +85,105 @@ public sealed class GameplayMockScreenTests
 
         Assert.Contains(frame.CurrentPlacePlayerLogRows, row => row.Contains("player-log: action.wait.success"));
         Assert.All(frame.CurrentPlacePlayerLogRows, row => Assert.DoesNotContain("Trace", row, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ExecuteControlledMoveNorthEastChangesLocationAndFacingAdvancesFrameAndLogsDirection()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.ExecuteControlledMove(Direction.NorthEast);
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("Moved NorthEast", message);
+        Assert.Equal(new GridCoord(2, 0), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.Equal(Direction.NorthEast, session.World.GetActionFacing(session.PlayerEntityId));
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.Contains("frame 1", frame.Title);
+        Assert.Contains(frame.CurrentPlacePlayerLogRows, row =>
+            row.Contains("player-log: action.move.success") && row.Contains("direction=NorthEast"));
+    }
+
+    [Fact]
+    public void PlayerChoiceCanonicalMoveUsesCoreActionChoiceMovementInHud()
+    {
+        var session = CreateGameplayMockSession(includeCanonicalMove: true, bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Equal(EntityControlSource.PlayerChoice, session.World.GetActionControlSource(session.PlayerEntityId));
+        Assert.True(screen.UsesCoreActionChoiceMovement);
+        Assert.NotNull(screen.CurrentActionChoiceRequest);
+        Assert.Contains(frame.HudRows, row => row.Contains("Move: Core Action Choice (8-way)"));
+    }
+
+    [Fact]
+    public void ExecuteControlledMoveNorthEastWithPlayerChoiceCanonicalMoveUsesActionChoicePath()
+    {
+        var session = CreateGameplayMockSession(includeCanonicalMove: true, bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.ExecuteControlledMove(Direction.NorthEast);
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("via Core Action Choice", message);
+        Assert.Equal(new GridCoord(2, 0), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.Equal(Direction.NorthEast, session.World.GetActionFacing(session.PlayerEntityId));
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.Contains("frame 1", frame.Title);
+        Assert.Contains(frame.CurrentPlacePlayerLogRows, row =>
+            row.Contains("player-log: action.move.success") && row.Contains("direction=NorthEast"));
+    }
+
+    [Fact]
+    public void PlayerWithoutPlayerChoiceFallsBackToDirectCompatibilityMovement()
+    {
+        var session = CreateGameplayMockSession(includeCanonicalMove: true, bindPlayerChoiceControl: false);
+        session.World.SetActionControlSource(session.PlayerEntityId, EntityControlSource.Automatic);
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.ExecuteControlledMove(Direction.NorthEast);
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("via direct compatibility controls", message);
+        Assert.False(screen.UsesCoreActionChoiceMovement);
+        Assert.Equal(new GridCoord(2, 0), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.Contains(frame.HudRows, row => row.Contains("Move: direct compatibility controls"));
+    }
+
+    [Fact]
+    public void PlayerChoiceWithoutCanonicalMoveFallsBackToDirectCompatibilityMovement()
+    {
+        var session = CreateGameplayMockSession(includeCanonicalMove: false, bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.ExecuteControlledMove(Direction.NorthEast);
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("via direct compatibility controls", message);
+        Assert.False(screen.UsesCoreActionChoiceMovement);
+        Assert.Equal(new GridCoord(2, 0), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.Contains(frame.HudRows, row => row.Contains("Move: direct compatibility controls"));
+    }
+
+    [Fact]
+    public void ExecuteControlledMoveBlockedEastDoesNotAdvanceAndLogsDirectionAndReason()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.ExecuteControlledMove(Direction.East);
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("Move East failed", message);
+        Assert.Equal(new GridCoord(1, 1), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.Equal(0, screen.FrameIndex);
+        Assert.Contains(frame.CurrentPlacePlayerLogRows, row =>
+            row.Contains("player-log: action.move.failure")
+            && row.Contains("direction=East")
+            && row.Contains("reason=", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -221,17 +321,24 @@ public sealed class GameplayMockScreenTests
         int playerBulk = 1,
         int roomAperture = 100,
         bool includePlayerTargetAdjectives = true,
-        bool includePlayerReciprocalAdjectives = false)
+        bool includePlayerReciprocalAdjectives = false,
+        bool includeCanonicalMove = false,
+        bool bindPlayerChoiceControl = false)
     {
         var document = new EditableContentDocument();
         var playerInteractionPlanId = new ActionPlanTemplateId("mockPlayerInteractionPlan");
+        var playerSteps = new List<ActionPlanBehaviorStepDescriptor>();
+        if (includeCanonicalMove)
+        {
+            playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Move, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        }
+
+        playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget));
+        playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget));
         document.ActionPlans[playerInteractionPlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
             new ActionPlanId(playerInteractionPlanId.Value),
             [],
-            Behavior: new ActionPlanBehaviorDescriptor([
-                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget),
-                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget)
-            ])));
+            Behavior: new ActionPlanBehaviorDescriptor(playerSteps)));
         var playerTemplateId = document.AddEntityTemplate(
             "Mock Player",
             new EntityTemplate(
@@ -277,7 +384,7 @@ public sealed class GameplayMockScreenTests
                 InventoryHeight: 4,
                 Bulk: 100,
                 Aperture: roomAperture,
-                CarriedEntities: [new CarriedEntityTemplate(new EntityId("mockCrate"), crateTemplateId, new GridCoord(3, 1))]),
+                CarriedEntities: [new CarriedEntityTemplate(new EntityId("mockCrate"), crateTemplateId, new GridCoord(2, 1))]),
             new EntityPresentation('#', PresentationColor.Gray));
         document.UpsertScenario(new ScenarioDefinition(
             "play-mock-scenario",
@@ -285,7 +392,10 @@ public sealed class GameplayMockScreenTests
             roomTemplateId,
             playerTemplateId,
             new EntityId("mockPlayer"),
-            new GridCoord(1, 1)));
+            new GridCoord(1, 1),
+            bindPlayerChoiceControl
+                ? new Dictionary<string, IReadOnlyList<EntityId>> { ["local-player"] = [new EntityId("mockPlayer")] }
+                : null));
 
         return PlayableScenarioLauncher.CreateFromDocument(document, "play-mock-scenario");
     }

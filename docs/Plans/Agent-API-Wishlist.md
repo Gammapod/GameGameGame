@@ -14,6 +14,15 @@ The editor now has a strong headless foundation in `GameGameGame.Content`, espec
 - Prefer structured inputs/outputs over free-form text.
 - Avoid direct YAML guessing when an editor operation exists.
 
+## Tool parity policy
+
+`ggg_*` tools should be agent-accessible versions of established user-facing editor and play-mode surfaces, not a separate agent-only product language. Prioritize:
+
+1. editing tools backed by shared Content editor services;
+2. validation, preview, run, and simulation-inspection tools backed by shared Core/Content runtime services.
+
+When a new canonical engine capability is promoted, the tool host should expose the same authoring and validation affordances that human-facing editor services use. Conversely, avoid adding a `ggg_*` mutation or simulation shortcut that cannot be represented in authored content or consumed by the engine/frontend path.
+
 ## Current foundation
 
 The existing services already provide these core authoring capabilities and should be wrapped rather than reimplemented:

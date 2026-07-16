@@ -67,6 +67,7 @@ public sealed record ActionPlanBehaviorDescriptor(
 
 public enum ActionPlanBehaviorStepKind
 {
+    Move,
     MoveFacing,
     PickupTarget,
     DropFacing,
@@ -92,11 +93,32 @@ public enum ActionPlanBehaviorStepKind
     ApplyPostPlan
 }
 
+public enum ActionPlanMoveDirectionMode
+{
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+    Forward,
+    ForwardRight,
+    Right,
+    BackRight,
+    Back,
+    BackLeft,
+    Left,
+    ForwardLeft
+}
+
 public sealed record ActionPlanBehaviorStepDescriptor(
     ActionPlanBehaviorStepKind Kind,
     int? TargetSlot = null,
     string? TargetLabel = null,
-    ActionPlanId? PlanId = null);
+    ActionPlanId? PlanId = null,
+    ActionPlanMoveDirectionMode? DirectionMode = null);
 
 public enum ActionPlanPrimitiveKind
 {

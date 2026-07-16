@@ -29,6 +29,12 @@ public static class ActionStepCatalog
     public static IReadOnlyList<ActionStepDescriptor> Steps { get; } =
     [
         new(
+            ActionPlanBehaviorStepKind.Move,
+            "Move",
+            "Canonical adjacent movement. Resolves directionMode, attempts one 8-way adjacent move, sets Facing to the actual moved direction on success, and does not write Target on failure.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
             ActionPlanBehaviorStepKind.MoveFacing,
             "Move Facing",
             "Attempts to move the actor one tile in its persistent Facing direction; when blocked by an entity, writes that entity to Target and falls through to the next Action Step.",

@@ -1,6 +1,6 @@
 # Tech Debt Destination Seam Map
 
-Status: Completed sprint record. Keep as a destination map for future optional follow-ups.
+Status: Archived completed sprint record. Keep as a destination map for future optional follow-ups.
 
 Read when:
 

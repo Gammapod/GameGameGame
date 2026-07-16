@@ -121,6 +121,28 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsCanonicalMoveMissingDirectionMode()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("canonicalMoveMissingDirectionMode"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Move)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField);
+        Assert.Equal(new ActionPlanId("canonicalMoveMissingDirectionMode"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("directionMode", diagnostic.Message);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingApplyPrePlanReference()
     {
         var missingPlanId = new ActionPlanId("missingFear");

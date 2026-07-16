@@ -155,6 +155,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId);
 
+    public void SetActionPlanBehaviorStepDirectionMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanMoveDirectionMode? directionMode)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepDirectionMode(planId, stepIndex, directionMode);
+
     private static void EnsureStableAuthoringStep(ActionPlanBehaviorStepKind kind)
     {
         _ = ActionStepCatalog.Get(kind);
@@ -401,7 +404,8 @@ public sealed record ActionPlanPreviewStep(
     IReadOnlyList<PlanPrimitiveSlotDescriptor> StateWrites,
     int? TargetSlot = null,
     string? TargetLabel = null,
-    ActionPlanId? PlanId = null);
+    ActionPlanId? PlanId = null,
+    ActionPlanMoveDirectionMode? DirectionMode = null);
 
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
 

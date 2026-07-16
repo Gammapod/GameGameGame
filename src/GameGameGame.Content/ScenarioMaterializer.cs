@@ -229,6 +229,7 @@ public static class ScenarioMaterializer
 
                 alreadyAssigned[controlledEntityId] = playerId;
                 resolvedEntityIds.Add(controlledEntityId);
+                world.SetActionControlSource(controlledEntityId, EntityControlSource.PlayerChoice);
             }
 
             if (resolvedEntityIds.Count == 0)

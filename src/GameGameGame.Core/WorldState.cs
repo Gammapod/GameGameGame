@@ -81,6 +81,7 @@ public sealed class WorldState
         var clone = new EntityActionState
         {
             Facing = source.Facing,
+            ControlSource = source.ControlSource,
             Target = source.Target
         };
 
@@ -154,6 +155,12 @@ public sealed class WorldState
 
     public Direction? GetActionFacing(EntityId entityId) =>
         ActionStates.TryGetValue(entityId, out var state) ? state.Facing : null;
+
+    public void SetActionControlSource(EntityId entityId, EntityControlSource controlSource) =>
+        GetOrCreateActionState(entityId).ControlSource = controlSource;
+
+    public EntityControlSource GetActionControlSource(EntityId entityId) =>
+        ActionStates.TryGetValue(entityId, out var state) ? state.ControlSource : EntityControlSource.Automatic;
 
     public void SetActionTarget(EntityId entityId, EntityId targetId) =>
         GetOrCreateActionState(entityId).Target = targetId;

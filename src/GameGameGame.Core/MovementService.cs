@@ -29,6 +29,19 @@ public sealed class MovementService
             return new RelocationEvaluation(false, resolvedDestination, trace);
         }
 
+        if (destination is MovementDestination.AdjacentMovementDestination adjacentDestination
+            && DirectionMath.OrthogonalCorners(adjacentDestination.Direction) is { } corners
+            && TryGetMoveDestination(world, adjacentDestination.AnchorId, corners.First, out var firstCorner)
+            && TryGetMoveDestination(world, adjacentDestination.AnchorId, corners.Second, out var secondCorner)
+            && world.GetOccupant(firstCorner) is not null
+            && world.GetOccupant(secondCorner) is not null)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.MoveBlocked;
+            trace.Detail = $"diagonal movement {adjacentDestination.Direction} is blocked by both orthogonal corners";
+            return new RelocationEvaluation(false, resolvedDestination, trace);
+        }
+
         trace.Status = TraceStatus.Success;
         return new RelocationEvaluation(true, resolvedDestination, trace);
     }

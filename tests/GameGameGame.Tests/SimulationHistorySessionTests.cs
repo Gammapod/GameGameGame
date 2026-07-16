@@ -10,6 +10,7 @@ public sealed class SimulationHistorySessionTests
         var world = TestWorld.CreateWorld();
         world.AdvanceTurn();
         world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
         world.SetActionTarget(TestWorld.PlayerId, 2, TestWorld.SlimeId);
         var overridePlan = PlannedActionPlan.Single(new WaitAction());
         world.SetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre, overridePlan);
@@ -26,6 +27,7 @@ public sealed class SimulationHistorySessionTests
         Assert.Equal(world.GetEntityLocation(TestWorld.PlayerId), clone.GetEntityLocation(TestWorld.PlayerId));
         Assert.Equal(TestWorld.PlayerInventoryPlaneId, clone.GetRegisteredInventoryPlaneId(TestWorld.PlayerId));
         Assert.Equal(Direction.East, clone.GetActionFacing(TestWorld.PlayerId));
+        Assert.Equal(EntityControlSource.PlayerChoice, clone.GetActionControlSource(TestWorld.PlayerId));
         Assert.Equal(TestWorld.SlimeId, clone.GetActionTarget(TestWorld.PlayerId, 2));
         Assert.Same(overridePlan, clone.GetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre));
         Assert.Equal("original trace", clone.LastTrace?.Label);

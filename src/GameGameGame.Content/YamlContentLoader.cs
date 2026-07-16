@@ -163,7 +163,12 @@ public static class YamlContentLoader
         new((behavior.Steps ?? []).Select(MaterializeBehaviorStep).ToList());
 
     private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(ActionPlanBehaviorStepDescriptorDto step) =>
-        new(step.Kind, step.TargetSlot, step.TargetLabel, step.PlanId is null ? null : new ActionPlanId(step.PlanId));
+        new(
+            step.Kind,
+            step.TargetSlot,
+            step.TargetLabel,
+            step.PlanId is null ? null : new ActionPlanId(step.PlanId),
+            step.DirectionMode is null ? null : Enum.Parse<ActionPlanMoveDirectionMode>(step.DirectionMode, ignoreCase: true));
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -376,6 +381,8 @@ public static class YamlContentLoader
         public string? TargetLabel { get; set; }
 
         public string? PlanId { get; set; }
+
+        public string? DirectionMode { get; set; }
     }
 
     private sealed class ActionPlanPrimitiveDescriptorDto

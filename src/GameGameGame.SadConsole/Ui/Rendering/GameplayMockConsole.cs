@@ -5,6 +5,7 @@ using SadConsole;
 using SadConsole.Input;
 using SadRogue.Primitives;
 using Console = SadConsole.Console;
+using GggDirection = GameGameGame.Core.Direction;
 
 namespace GameGameGame.SadConsoleApp.Ui.Rendering;
 
@@ -29,7 +30,7 @@ internal sealed class GameplayMockConsole : Console
             {
                 var session = PlayableScenarioLauncher.CreateFromFile(startup.DirectContentPath, startup.DirectScenarioId);
                 _screen = new GameplayMockScreen(session);
-                _message = "Play UX mock. Left/Right chooses authored action step. Enter acts. Space debug waits/advances. Esc exits.";
+                _message = "Play UX mock. Arrows/diagonals/numpad move. Enter acts. Space debug waits/advances. Esc exits.";
             }
         }
         catch (Exception ex)
@@ -46,7 +47,7 @@ internal sealed class GameplayMockConsole : Console
         {
             var session = PlayableScenarioLauncher.CreateFromCatalogEntry(scenario);
             _screen = new GameplayMockScreen(session);
-            _message = "Editor-connected Play UX mock. Left/Right chooses authored action step. Enter acts. Space debug waits/advances. Esc returns to editor.";
+            _message = "Editor-connected Play UX mock. Arrows/diagonals/numpad move. Enter acts. Space debug waits/advances. Esc returns to editor.";
         }
         catch (Exception ex)
         {
@@ -89,16 +90,9 @@ internal sealed class GameplayMockConsole : Console
             return true;
         }
 
-        if (keyboard.IsKeyReleased(Keys.Left) && _screen is not null)
+        if (_screen is not null && ReadMoveDirection(keyboard) is { } moveDirection)
         {
-            _message = _screen.SelectPreviousActionStep();
-            Redraw();
-            return true;
-        }
-
-        if (keyboard.IsKeyReleased(Keys.Right) && _screen is not null)
-        {
-            _message = _screen.SelectNextActionStep();
+            _message = _screen.ExecuteControlledMove(moveDirection);
             Redraw();
             return true;
         }
@@ -119,6 +113,17 @@ internal sealed class GameplayMockConsole : Console
 
         return false;
     }
+
+    private static GggDirection? ReadMoveDirection(Keyboard keyboard) =>
+        keyboard.IsKeyReleased(Keys.Up) || keyboard.IsKeyReleased(Keys.NumPad8) ? GggDirection.North :
+        keyboard.IsKeyReleased(Keys.Home) || keyboard.IsKeyReleased(Keys.NumPad7) ? GggDirection.NorthWest :
+        keyboard.IsKeyReleased(Keys.PageUp) || keyboard.IsKeyReleased(Keys.NumPad9) ? GggDirection.NorthEast :
+        keyboard.IsKeyReleased(Keys.Right) || keyboard.IsKeyReleased(Keys.NumPad6) ? GggDirection.East :
+        keyboard.IsKeyReleased(Keys.PageDown) || keyboard.IsKeyReleased(Keys.NumPad3) ? GggDirection.SouthEast :
+        keyboard.IsKeyReleased(Keys.Down) || keyboard.IsKeyReleased(Keys.NumPad2) ? GggDirection.South :
+        keyboard.IsKeyReleased(Keys.End) || keyboard.IsKeyReleased(Keys.NumPad1) ? GggDirection.SouthWest :
+        keyboard.IsKeyReleased(Keys.Left) || keyboard.IsKeyReleased(Keys.NumPad4) ? GggDirection.West :
+        null;
 
     private void Redraw()
     {

@@ -96,8 +96,8 @@ Immediate canonical action priority:
 
 - Classify the current broad Action Step catalog as legacy/prototype-compatible while preserving load/run/editor compatibility for existing content.
 - Define the promoted canonical-action tier and vertical-slice checklist in source-of-truth docs.
-- Promote the first simple canonical action, recommended `MoveFacing`, through engine rules, structured outcomes, player-facing log IDs, two content rooms, editor support, and componentized play-mode consumption.
-- Follow with the first target-facing canonical action, recommended `PickupTarget` or `EnterTarget`, to prove success criteria, POV adjective, and threshold-vs-actual ratio facts.
+- Treat the completed canonical `Move` slice as the reference promotion workflow: engine rules, structured outcomes, player-facing log IDs, two content rooms, editor/headless tool support, and Action Choice/play-mode consumption.
+- Follow with the first non-movement player-interaction pair, currently `PickupTarget` and `DropTarget`, to prove target/source menus, inventory selection, success criteria, POV adjective, and threshold-vs-actual ratio facts without reusing movement-specific 8-way prompts.
 - Design and implement the canonical runtime control-source / Action Choice model: control source is mutable runtime state, fallback-controlled actors use normal fallback resolution, player-controlled actors choose from their effective authored Action Plan through Core-owned choice/target requests, and control source can change during gameplay.
 - Replace the remaining legacy/internal play-mode stopgap with the componentized Gamma play-mode surface based on the existing mock, consuming shared scenario launch, history, POV/entity-panel, action-choice, target, and log services.
 
@@ -110,7 +110,13 @@ Canonical action target statement:
 
 Planned next sprint:
 
-- Start Phase 0/1 of `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`: update capability/authoring/action-logic/text/invariant docs for the legacy/prototype freeze and canonical-action Definition of Done, trace existing `MoveFacing` tests, add intentionally failing coverage for missing canonical vertical-slice pieces, and implement the smallest first promoted canonical action slice.
+- Start the next canonical non-movement slice from the completed `Move` baseline: design `PickupTarget`/`DropTarget` Action Choice/menu behavior, trace invariants/tests first, then implement the smallest Core/Content/editor/tooling/frontend bridge needed to prove one target/source interaction path.
+
+Open player-control models for the next slice:
+
+1. player opens a non-movement action menu first, then a target/source menu;
+2. player selects/highlights a target/source first, then sees legal actions for it;
+3. bump-to-interact opens a legal action menu against the bumped entity.
 
 ### Delta release target: arbitrary-entity point of view
 
@@ -118,7 +124,7 @@ Status: Foundation implemented; retained as reference/follow-up context for cano
 
 Delta planning document:
 
-- [Delta Point-of-View Release Plan](Delta-Point-of-View-Release-Plan.md)
+- [Delta Point-of-View Release Plan](../Archived/Delta-Point-of-View-Release-Plan.md)
 
 Delta foundation summary:
 
@@ -402,7 +408,7 @@ Status: Alpha-critical subset promoted into the alpha release roadmap. This buck
 
 Priority order:
 
-1. Gamma tester scenario curation: decide whether `src/GameGameGame.Content/Beta/Manifest.yaml` is a checked-in curated index or local generated cache, curate descriptions/order/visibility, and keep deprecated/crashy scenarios from confusing testers.
+1. Gamma tester scenario curation and manifest tooling: decide whether `src/GameGameGame.Content/Beta/Manifest.yaml` is a checked-in curated index or local generated cache, curate descriptions/order/visibility, keep deprecated/crashy scenarios from confusing testers, and make scan/refresh/editor workflows explicit enough that validation or play-testing does not accidentally rewrite checked-in manifests during unrelated content work.
 2. Beta/Gamma content file organization: introduce folders or multiple content documents when fixture count makes single-file navigation, scenario selection, or validation noisy.
 3. Scenario families and grouping once individual alpha scenario documents work.
 4. Richer scenario metadata beyond alpha launch needs.

@@ -1,0 +1,264 @@
+entityTemplates:
+  canonicalMoveOutcomeRoom:
+    name: Canonical Move Outcome Room
+    inventoryWidth: 12
+    inventoryHeight: 8
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: forwardFromNorthStartsAt_1_1_ends_1_0_facesNorth
+      templateId: canonicalMoveForwardFromNorthProbe
+      coord:
+        x: 1
+        y: 1
+    - entityId: backFromNorthStartsAt_3_1_ends_3_2_facesSouth
+      templateId: canonicalMoveBackFromNorthProbe
+      coord:
+        x: 3
+        y: 1
+    - entityId: rightFromNorthStartsAt_5_1_ends_6_1_facesEast
+      templateId: canonicalMoveRightFromNorthProbe
+      coord:
+        x: 5
+        y: 1
+    - entityId: backLeftFromEastStartsAt_8_2_ends_7_1_facesNorthWest
+      templateId: canonicalMoveBackLeftFromEastProbe
+      coord:
+        x: 8
+        y: 2
+    - entityId: diagonalOneCornerStartsAt_1_5_ends_2_4_facesNorthEast
+      templateId: canonicalMoveDiagonalOneCornerAllowedProbe
+      coord:
+        x: 1
+        y: 5
+    - entityId: oneCornerNorthBlocker_keptAt_1_4
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 1
+        y: 4
+    - entityId: diagonalTwoCornerBlockedStaysAt_4_5_facesSouth
+      templateId: canonicalMoveDiagonalTwoCornerBlockedProbe
+      coord:
+        x: 4
+        y: 5
+    - entityId: twoCornerNorthBlocker_keptAt_4_4
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 4
+        y: 4
+    - entityId: twoCornerEastBlocker_keptAt_5_5
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 5
+        y: 5
+    - entityId: entityBlockFailureStaysAt_8_5_facesEast_targetNotWritten
+      templateId: canonicalMoveEntityBlockedProbe
+      coord:
+        x: 8
+        y: 5
+    - entityId: entityBlockerShouldSurviveAt_8_4
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 8
+        y: 4
+  canonicalMoveInteractionRoom:
+    name: Canonical Move Interaction Room
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    carriedEntities:
+    - entityId: playerNorthBlocker_blocksNorthAndNorthEastCorner
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 4
+        y: 2
+    - entityId: playerEastBlocker_makesNorthEastTwoCornerBlocked
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 5
+        y: 3
+    - entityId: playerWestBlocker_blocksWestButLeavesNorthWestOneCornerTest
+      templateId: canonicalMoveBlocker
+      coord:
+        x: 3
+        y: 3
+  canonicalMovePlayer:
+    name: Canonical Move Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMovePlayerAuthoredRelativeForward
+    actionStateDefaults:
+      facing: North
+  canonicalMoveForwardFromNorthProbe:
+    name: Forward from North Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveRelativeForward
+    actionStateDefaults:
+      facing: North
+  canonicalMoveBackFromNorthProbe:
+    name: Back from North Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveRelativeBack
+    actionStateDefaults:
+      facing: North
+  canonicalMoveRightFromNorthProbe:
+    name: Right from North Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveRelativeRight
+    actionStateDefaults:
+      facing: North
+  canonicalMoveBackLeftFromEastProbe:
+    name: BackLeft from East Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveRelativeBackLeft
+    actionStateDefaults:
+      facing: East
+  canonicalMoveDiagonalOneCornerAllowedProbe:
+    name: Diagonal One-Corner Allowed Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveAbsoluteNorthEast
+    actionStateDefaults:
+      facing: South
+  canonicalMoveDiagonalTwoCornerBlockedProbe:
+    name: Diagonal Two-Corner Blocked Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveAbsoluteNorthEast
+    actionStateDefaults:
+      facing: South
+  canonicalMoveEntityBlockedProbe:
+    name: Entity Block Failure Probe
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    defaultActionPlanId: canonicalMoveBlockedThenDestroyTargetSentinel
+    actionStateDefaults:
+      facing: East
+  canonicalMoveBlocker:
+    name: Canonical Move Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+presentations:
+  canonicalMoveOutcomeRoom:
+    glyph: '#'
+    color: Gray
+  canonicalMoveInteractionRoom:
+    glyph: '#'
+    color: Gray
+  canonicalMovePlayer:
+    glyph: '@'
+    color: Yellow
+  canonicalMoveForwardFromNorthProbe:
+    glyph: F
+    color: Green
+  canonicalMoveBackFromNorthProbe:
+    glyph: B
+    color: Green
+  canonicalMoveRightFromNorthProbe:
+    glyph: R
+    color: Green
+  canonicalMoveBackLeftFromEastProbe:
+    glyph: L
+    color: Green
+  canonicalMoveDiagonalOneCornerAllowedProbe:
+    glyph: '1'
+    color: Cyan
+  canonicalMoveDiagonalTwoCornerBlockedProbe:
+    glyph: '2'
+    color: Earth
+  canonicalMoveEntityBlockedProbe:
+    glyph: E
+    color: Earth
+  canonicalMoveBlocker:
+    glyph: X
+    color: Earth
+actionPlans:
+  canonicalMoveRelativeForward:
+    id: canonicalMoveRelativeForward
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Forward
+  canonicalMoveRelativeBack:
+    id: canonicalMoveRelativeBack
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Back
+  canonicalMoveRelativeRight:
+    id: canonicalMoveRelativeRight
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Right
+  canonicalMoveRelativeBackLeft:
+    id: canonicalMoveRelativeBackLeft
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: BackLeft
+  canonicalMoveAbsoluteNorthEast:
+    id: canonicalMoveAbsoluteNorthEast
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: NorthEast
+  canonicalMoveBlockedThenDestroyTargetSentinel:
+    id: canonicalMoveBlockedThenDestroyTargetSentinel
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: North
+      - kind: DestroyTarget
+  canonicalMovePlayerAuthoredRelativeForward:
+    id: canonicalMovePlayerAuthoredRelativeForward
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Forward
+scenarios:
+  beta-canonical-move-outcomes:
+    name: Beta Canonical Move Outcomes
+    scenarioRootEntityTemplateId: canonicalMoveOutcomeRoom
+    playerEntityTemplateId: canonicalMovePlayer
+    playerEntityId: canonicalMoveOutcomeObserver
+    playerStart:
+      x: 11
+      y: 7
+    playerControls:
+      player-1:
+      - canonicalMoveOutcomeObserver
+  beta-canonical-move-player-interaction:
+    name: Beta Canonical Move Player Interaction
+    scenarioRootEntityTemplateId: canonicalMoveInteractionRoom
+    playerEntityTemplateId: canonicalMovePlayer
+    playerEntityId: canonicalMovePlayer
+    playerStart:
+      x: 4
+      y: 3
+    playerControls:
+      player-1:
+      - canonicalMovePlayer

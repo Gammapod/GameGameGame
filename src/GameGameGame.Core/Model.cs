@@ -20,8 +20,12 @@ public readonly record struct GridCoord(int X, int Y)
     public GridCoord Offset(Direction direction) => direction switch
     {
         Direction.North => this with { Y = Y - 1 },
+        Direction.NorthEast => new GridCoord(X + 1, Y - 1),
+        Direction.SouthEast => new GridCoord(X + 1, Y + 1),
         Direction.South => this with { Y = Y + 1 },
+        Direction.SouthWest => new GridCoord(X - 1, Y + 1),
         Direction.West => this with { X = X - 1 },
+        Direction.NorthWest => new GridCoord(X - 1, Y - 1),
         Direction.East => this with { X = X + 1 },
         _ => this
     };
@@ -37,9 +41,57 @@ public readonly record struct PlaneCoord(PlaneId PlaneId, GridCoord Coord)
 public enum Direction
 {
     North,
-    South,
+    NorthEast,
     East,
-    West
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest
+}
+
+public enum EntityControlSource
+{
+    Automatic,
+    PlayerChoice
+}
+
+public static class DirectionMath
+{
+    public static Direction[] AllDirections { get; } =
+    [
+        Direction.North,
+        Direction.NorthEast,
+        Direction.East,
+        Direction.SouthEast,
+        Direction.South,
+        Direction.SouthWest,
+        Direction.West,
+        Direction.NorthWest
+    ];
+
+    public static Direction Rotate(Direction direction, int eighthTurns)
+    {
+        var index = AllDirections.IndexOf(direction);
+        if (index < 0)
+        {
+            return direction;
+        }
+
+        var next = ((index + eighthTurns) % AllDirections.Length + AllDirections.Length) % AllDirections.Length;
+        return AllDirections[next];
+    }
+
+    public static Direction Reverse(Direction direction) => Rotate(direction, 4);
+
+    public static (Direction First, Direction Second)? OrthogonalCorners(Direction diagonal) => diagonal switch
+    {
+        Direction.NorthEast => (Direction.North, Direction.East),
+        Direction.SouthEast => (Direction.South, Direction.East),
+        Direction.SouthWest => (Direction.South, Direction.West),
+        Direction.NorthWest => (Direction.North, Direction.West),
+        _ => null
+    };
 }
 
 public sealed record Entity(
@@ -57,6 +109,8 @@ public sealed record Entity(
 public sealed class EntityActionState
 {
     public Direction? Facing { get; set; }
+
+    public EntityControlSource ControlSource { get; set; } = EntityControlSource.Automatic;
 
     public EntityId? Target { get; set; }
 

@@ -17,6 +17,7 @@ internal static class ActionPlanValidator
 
             ValidateActionPlanShape(diagnostics, templateId, descriptor);
             ValidateBehaviorTargetSlots(diagnostics, templateId, descriptor);
+            ValidateBehaviorStepFields(diagnostics, templateId, descriptor);
             ValidateBehaviorPlanReferences(diagnostics, templateId, descriptor, planIds);
             ValidatePrimitiveFallback(diagnostics, templateId, descriptor, planIds);
 
@@ -113,6 +114,31 @@ internal static class ActionPlanValidator
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionStepTargetReference,
                     $"Action plan {descriptor.Id} action step {step.Kind} targetLabel must not be blank.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+        }
+    }
+
+    private static void ValidateBehaviorStepFields(
+        List<ContentDiagnostic> diagnostics,
+        ActionPlanTemplateId actionPlanTemplateId,
+        ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior is not { } behavior)
+        {
+            return;
+        }
+
+        for (var index = 0; index < behavior.Steps.Count; index++)
+        {
+            var step = behavior.Steps[index];
+            if (step.Kind == ActionPlanBehaviorStepKind.Move && step.DirectionMode is null)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepField,
+                    $"Action plan {descriptor.Id} action step {step.Kind} requires directionMode.",
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: descriptor.Id,
                     stepIndex: index));

@@ -27,9 +27,12 @@ internal sealed class GameplayMockScreen
     private readonly PlayableScenarioSession _session;
     private readonly EntityPanelProjectionService _panelProjection;
     private readonly ControlledActorCommandService _commands;
+    private readonly ActionChoiceService _actionChoices;
     private readonly SimulationHistorySession _history;
+    private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _controlledCommandActionPlans;
     private readonly MovementService _movement = new();
     private ActionLogProjection? _actionLog;
+    private ActionChoiceRequest? _currentActionChoiceRequest;
     private EntityId? _inspectedEntityId;
     private int _selectedActionStepIndex;
 
@@ -39,19 +42,23 @@ internal sealed class GameplayMockScreen
         _panelProjection = new EntityPanelProjectionService(
             entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance(),
             GetActionPlanDescriptorForEntity);
+        // Temporary debug wait and direct/action-choice movement use controlled-command compatibility:
+        // the controlled actor's authored plan must not also resolve autonomously while it is acting as
+        // the player-controlled entity.
+        _controlledCommandActionPlans = session.ActionPlans
+            .Where(entry => entry.Key != session.PlayerEntityId)
+            .ToDictionary(entry => entry.Key, entry => entry.Value);
         _commands = new ControlledActorCommandService(
             _movement,
-            // Temporary debug wait uses direct-control compatibility: the controlled actor's authored plan
-            // must not also resolve autonomously while it is acting as the player-controlled entity.
-            session.ActionPlans
-                .Where(entry => entry.Key != session.PlayerEntityId)
-                .ToDictionary(entry => entry.Key, entry => entry.Value),
+            _controlledCommandActionPlans,
             (world, entityId) => TargetingService.RefreshTargets(world, session.Registry, entityId));
+        _actionChoices = new ActionChoiceService(_movement);
         _history = SimulationHistorySession.Start(
             session.World,
             session.PlayerEntityId,
             session.ActivePlaneId,
             session.ActiveContainerEntityId);
+        RefreshActionChoiceRequest();
         _actionLog = ActionLogProjection.FromHistory(_history);
     }
 
@@ -59,6 +66,8 @@ internal sealed class GameplayMockScreen
     public EntityId? InspectedEntityId => _inspectedEntityId;
     public int FrameIndex => _history.CurrentFrame.FrameIndex;
     public int SelectedActionStepIndex => _selectedActionStepIndex;
+    public ActionChoiceRequest? CurrentActionChoiceRequest => _currentActionChoiceRequest;
+    public bool UsesCoreActionChoiceMovement => _currentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move) == true;
     private WorldState World => _session.World;
     private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _session.ActionPlans;
 
@@ -67,6 +76,7 @@ internal sealed class GameplayMockScreen
         var safeWidth = Math.Max(40, width);
         var safeHeight = Math.Max(18, height);
         RefreshDisplayTargets();
+        RefreshActionChoiceRequest();
         var projectionActionPlans = ProjectionActionPlans;
         var playerProjection = _panelProjection.Project(World, _session.PlayerEntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog);
         var diagnostics = new List<string>();
@@ -135,7 +145,7 @@ internal sealed class GameplayMockScreen
             hudBounds,
             inspectionBounds,
             components,
-            BuildHudRows(playerProjection, currentPlaceProjection, AvailablePlayerActionSteps(), _selectedActionStepIndex),
+            BuildHudRows(playerProjection, currentPlaceProjection, AvailablePlayerActionSteps(), _selectedActionStepIndex, DescribeMovementControlMode()),
             BuildCurrentPlacePlayerLogRows(currentPlaceProjection),
             diagnostics);
     }
@@ -172,6 +182,28 @@ internal sealed class GameplayMockScreen
         return result.Succeeded
             ? $"Debug wait advanced to frame {FrameIndex}; world turn {World.TurnNumber}."
             : $"Debug wait failed: {result.FailureReason?.ToString() ?? "unknown"}.";
+    }
+
+    public string ExecuteControlledMove(Direction direction)
+    {
+        RefreshActionChoiceRequest();
+        var usedCoreChoice = _currentActionChoiceRequest is { } request
+            && request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move);
+        var result = usedCoreChoice
+            ? _history.SubmitActionChoice(
+                _actionChoices,
+                _currentActionChoiceRequest!,
+                direction,
+                _controlledCommandActionPlans,
+                (world, entityId) => TargetingService.RefreshTargets(world, _session.Registry, entityId))
+            : _history.SubmitControlledCommand(_commands, ControlledActorCommand.Move(direction));
+        _actionLog = ActionLogProjection.FromHistory(_history);
+        RefreshDisplayTargets();
+        RefreshActionChoiceRequest();
+
+        return result.Succeeded
+            ? $"Moved {direction} via {(usedCoreChoice ? "Core Action Choice" : "direct compatibility controls")}; frame {FrameIndex}, world turn {World.TurnNumber}."
+            : $"Move {direction} failed via {(usedCoreChoice ? "Core Action Choice" : "direct compatibility controls")}: {result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
     }
 
     public string SelectPreviousActionStep() => SelectActionStep(-1);
@@ -233,6 +265,21 @@ internal sealed class GameplayMockScreen
 
     private IReadOnlyList<ActionPlanBehaviorStepDescriptor> AvailablePlayerActionSteps() =>
         GetActionPlanDescriptorForEntity(_session.PlayerEntityId)?.Behavior?.Steps ?? [];
+
+    private void RefreshActionChoiceRequest()
+    {
+        _currentActionChoiceRequest = GetActionPlanDescriptorForEntity(_session.PlayerEntityId) is { } descriptor
+            ? _actionChoices.CreateRequest(World, _session.PlayerEntityId, descriptor)
+            : null;
+    }
+
+    private string DescribeMovementControlMode()
+    {
+        var moveChoice = _currentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Move);
+        return moveChoice is null
+            ? "Move: direct compatibility controls"
+            : $"Move: Core Action Choice ({moveChoice.DirectionOptions.Count}-way)";
+    }
 
     private void RefreshDisplayTargets()
     {
@@ -450,7 +497,8 @@ internal sealed class GameplayMockScreen
         EntityPanelProjection playerProjection,
         EntityPanelProjection? currentPlaceProjection,
         IReadOnlyList<ActionPlanBehaviorStepDescriptor> actionSteps,
-        int selectedActionStepIndex)
+        int selectedActionStepIndex,
+        string movementControlMode)
     {
         var rows = new List<string>
         {
@@ -479,7 +527,8 @@ internal sealed class GameplayMockScreen
             rows.Add($"Action: {clampedIndex + 1}/{actionSteps.Count} {actionSteps[clampedIndex].Kind}");
         }
 
-        rows.Add("Controls: Left/Right choose | Enter acts | Space debug wait | I inspect | Esc returns");
+        rows.Add(movementControlMode);
+        rows.Add("Controls: arrows/Home/PgUp/PgDn/End/numpad move 8-way | Enter acts | Space wait | I inspect | Esc");
         return rows;
     }
 
@@ -517,7 +566,25 @@ internal sealed class GameplayMockScreen
     {
         var result = outcome.Succeeded ? "success" : "failure";
         var messageId = $"action.{ToSnakeCase(string.IsNullOrWhiteSpace(actionKind) ? "turn" : actionKind!)}.{result}";
-        return $"player-log: {messageId} actor={outcome.ActorName} result={result}";
+        var fields = new List<string>
+        {
+            $"actor={outcome.ActorName}",
+            $"result={result}"
+        };
+
+        if (outcome.Direction is { } direction)
+        {
+            fields.Add($"direction={direction}");
+        }
+
+        var reason = outcome.FailureDetail ?? outcome.FailureReason?.ToString();
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            fields.Add($"reason={reason}");
+        }
+
+        fields.Add($"consumedTurn={outcome.ConsumedTurn}");
+        return $"player-log: {messageId} {string.Join(" ", fields)}";
     }
 
     private static string ToSnakeCase(string value)

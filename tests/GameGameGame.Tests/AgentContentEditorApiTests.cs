@@ -82,6 +82,26 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalMoveDirectionMode()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var planId = AssertSuccess(api.CreateActionPlan("Canonical Move"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.Move));
+        AssertSuccess(api.SetActionPlanBehaviorStepDirectionMode(planId, stepIndex: 0, ActionPlanMoveDirectionMode.BackLeft));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId));
+        var step = Assert.Single(preview.ActionSteps);
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Equal(ActionPlanBehaviorStepKind.Move, step.Kind);
+        Assert.Equal(ActionPlanMoveDirectionMode.BackLeft, step.DirectionMode);
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("kind: Move", snapshot.YamlPreview);
+        Assert.Contains("directionMode: BackLeft", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiRejectsLegacySetVariableAuthoring()
     {
         var api = AgentContentEditorApi.CreateNew();

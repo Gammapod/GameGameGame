@@ -13,9 +13,16 @@ public sealed class ControlledActorAffordanceServiceTests
 
         var affordances = query.Query(world, TestWorld.PlayerId);
 
+        Assert.Equal(8, affordances.MovementDirections.Count);
+
         var east = Assert.Single(affordances.MovementDirections, move => move.Direction == Direction.East);
         Assert.True(east.CanExecute);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), east.Destination);
+
+        var northEast = Assert.Single(affordances.MovementDirections, move => move.Direction == Direction.NorthEast);
+        Assert.False(northEast.CanExecute);
+        Assert.Equal(TestWorld.RockId, northEast.BlockingEntityId);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)), northEast.Destination);
 
         var north = Assert.Single(affordances.MovementDirections, move => move.Direction == Direction.North);
         Assert.False(north.CanExecute);

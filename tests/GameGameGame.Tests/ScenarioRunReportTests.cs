@@ -1,4 +1,5 @@
 using System.Text;
+using System.Runtime.CompilerServices;
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.Headless;
@@ -7,6 +8,44 @@ namespace GameGameGame.Tests;
 
 public sealed class ScenarioRunReportTests
 {
+    [Fact]
+    public void CanonicalMoveShowcaseScenariosLoadValidateAndRun()
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", "CanonicalActions", "CanonicalMoveShowcase.yaml"));
+        var document = EditableContentDocument.LoadYaml(File.ReadAllText(path));
+        var validation = new ContentEditorService(document).Validate();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+
+        var outcomeReport = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-move-outcomes", TurnCount: 1));
+        var playerReport = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-move-player-interaction", TurnCount: 0));
+
+        Assert.Empty(outcomeReport.ValidationDiagnostics);
+        Assert.Contains("Forward from North Probe: scenarioRoot(1,0), facing North, target none", outcomeReport.FinalStateLines);
+        Assert.Contains("Back from North Probe: scenarioRoot(3,2), facing South, target none", outcomeReport.FinalStateLines);
+        Assert.Contains("Diagonal One-Corner Allowed Probe: scenarioRoot(2,4), facing NorthEast, target none", outcomeReport.FinalStateLines);
+        Assert.Contains("Diagonal Two-Corner Blocked Probe: scenarioRoot(4,5), facing South, target none", outcomeReport.FinalStateLines);
+        Assert.Contains("Entity Block Failure Probe: scenarioRoot(8,5), facing East, target none", outcomeReport.FinalStateLines);
+        Assert.Empty(playerReport.ValidationDiagnostics);
+    }
+
+    private static string FindRepositoryFile(string relativePath, [CallerFilePath] string sourceFilePath = "")
+    {
+        var directory = new DirectoryInfo(Path.GetDirectoryName(sourceFilePath) ?? AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return Path.GetFullPath(relativePath);
+    }
+
     [Fact]
     public void ScenarioRunServiceCanUseEditorAuthoredTemporaryContentForReport()
     {

@@ -271,6 +271,34 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void CanonicalMoveDescriptorRoundTripsDirectionMode()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              canonicalMove:
+                id: canonicalMove
+                behavior:
+                  steps:
+                    - kind: Move
+                      directionMode: BackLeft
+            """);
+
+        var registry = document.ToRegistry();
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+
+        var step = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("canonicalMove")).Behavior!.Steps[0];
+        Assert.Equal(ActionPlanBehaviorStepKind.Move, step.Kind);
+        Assert.Equal(ActionPlanMoveDirectionMode.BackLeft, step.DirectionMode);
+        Assert.Contains("kind: Move", saved);
+        Assert.Contains("directionMode: BackLeft", saved);
+        Assert.Equal(ActionPlanMoveDirectionMode.BackLeft, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("canonicalMove")).Behavior!.Steps[0].DirectionMode);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCanonicalActorActionStateDefaults()
     {
         var registry = YamlContentLoader.LoadRegistry(

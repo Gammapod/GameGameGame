@@ -74,6 +74,27 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
+    public void ContentToolDispatcherSetsCanonicalMoveDirectionMode()
+    {
+        var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
+        var sessionId = Assert.IsType<ContentToolSessionOpened>(
+            dispatcher.Invoke(ContentToolNames.CreateNew, new ContentToolCreateNewRequest()).Data).SessionId;
+        var planId = Assert.IsType<ContentToolCreatedActionPlan>(
+            dispatcher.Invoke(ContentToolNames.CreateActionPlan, new ContentToolCreateActionPlanRequest(sessionId, "Canonical Move")).Data).ActionPlanTemplateId;
+
+        var add = dispatcher.Invoke(ContentToolNames.AddActionPlanBehaviorStep, new ContentToolAddActionPlanBehaviorStepRequest(sessionId, planId, ActionPlanBehaviorStepKind.Move));
+        var setMode = dispatcher.Invoke(ContentToolNames.SetBehaviorStepDirectionMode, new ContentToolSetBehaviorStepDirectionModeRequest(sessionId, planId, 0, ActionPlanMoveDirectionMode.ForwardLeft));
+        var plans = dispatcher.Invoke(ContentToolNames.ListActionPlans, new ContentToolSessionRequest(sessionId));
+
+        Assert.True(add.Ok, add.Error?.Message);
+        Assert.True(setMode.Ok, setMode.Error?.Message);
+        var plan = Assert.Single(Assert.IsAssignableFrom<IReadOnlyList<ContentToolActionPlanSummary>>(plans.Data));
+        var step = Assert.Single(plan.BehaviorSteps);
+        Assert.Equal(ActionPlanBehaviorStepKind.Move, step.Kind);
+        Assert.Equal(ActionPlanMoveDirectionMode.ForwardLeft, step.DirectionMode);
+    }
+
+    [Fact]
     public void ContentToolDispatcherPreviewAndRunScenarioOmitsRepeatedYamlPreviews()
     {
         var sessions = new ContentToolSessionRegistry();

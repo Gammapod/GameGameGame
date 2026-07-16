@@ -1657,6 +1657,106 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void CanonicalMoveRelativeBackSetsFacingToActualMovedDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-back"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.Back)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.South, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void CanonicalMoveBlockedByEntityDoesNotWriteTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-blocked"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.Forward)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.North, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CanonicalMoveDiagonalAllowsOneBlockedCorner()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-diagonal-one-corner"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.NorthEast)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(2,1)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.NorthEast, world.GetActionFacing(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void CanonicalMoveDiagonalRejectsTwoBlockedCorners()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-diagonal-two-corners"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.NorthEast)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Null(world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
+    }
+
+    [Fact]
     public void AcquireNearestTargetSelectsNearestSamePlaneTargetAndWritesTarget()
     {
         var world = TestWorld.CreateWorld();

@@ -152,7 +152,7 @@ Authoring model:
 - A failed/non-acting step may fall through to the next step, depending on the step.
 - Use Action Step order to express simple fallback behavior.
 - Target acquisition is not authored as an Action Step for new content. Use entity-template `targetingRules` instead, and set target-consuming Action Step `targetLabel` values to the matching stable labels when a plan needs multiple target concepts.
-- Facing changes after successful directional movement; use movement Action Steps such as `MoveFacing`, `Backstep`, `StrafeClockwise`, and `StrafeAnticlockwise` rather than turn-in-place metadata steps.
+- Facing changes after successful directional movement; use the promoted canonical `Move` Action Step for new adjacent movement where possible. Existing prototype-compatible movement Action Steps such as `MoveFacing`, `Backstep`, `StrafeClockwise`, and `StrafeAnticlockwise` remain available while migration continues.
 
 Do not use for new normal content:
 
@@ -174,6 +174,7 @@ Planning note: the active canonical-actions release plan freezes the current bro
 
 | Step | Reads | Writes | Author-facing behavior | Common use |
 |---|---|---|---|---|
+| `Move` | `directionMode`; `Facing` for relative modes | position; post-action `Facing` becomes actual moved direction | Promoted canonical adjacent movement. `directionMode` is required and may be one of the 8 absolute directions or the 8 relative modes. Failed movement preserves position/Facing and does not write `Target`. | ordinary movement, canonical movement rooms, player-controlled movement foundation |
 | `MoveFacing` | `Facing` | `Target` when blocked by entity; post-action `Facing` remains movement direction | Move one cell in facing direction; falls through when movement cannot act. | wandering, bump discovery, approach chains |
 | `Backstep` | `Facing` | `Target` when blocked by entity; post-action `Facing` becomes movement direction | Move one cell opposite facing; falls through when movement cannot act. | retreat, spacing, obstacle response |
 

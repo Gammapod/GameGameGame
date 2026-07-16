@@ -1,6 +1,6 @@
 # Delta Point-of-View Release Plan
 
-Status: Foundation/reference plan. Delta POV foundation has been implemented enough to support the new active canonical-actions vertical-slice direction; promote follow-up POV work only when canonical actions, Action Choice, or frontend presentation need it.
+Status: Archived foundation/reference plan. Delta POV foundation has been implemented enough to support the active canonical-actions vertical-slice direction; promote follow-up POV work only when canonical actions, Action Choice, or frontend presentation need it.
 
 Read when:
 
