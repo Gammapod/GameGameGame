@@ -1,15 +1,32 @@
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
+using GameGameGame.SadConsoleApp.Ui.Tiles;
 using SadRogue.Primitives;
 using Console = SadConsole.Console;
 
 namespace GameGameGame.SadConsoleApp.Ui.Rendering;
 
-internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme theme)
+internal sealed class SadConsoleComponentRenderer
 {
+    private readonly Console host;
+    private readonly SadConsoleTheme theme;
+    private readonly SadConsoleDisplaySettings displaySettings;
+    private readonly TilesetProfile tileset;
+    private readonly TilesetTextRenderer textRenderer;
     private Console? _overlayLayer;
     private bool _overlayAttached;
+
+    public SadConsoleComponentRenderer(Console host, SadConsoleTheme theme, SadConsoleDisplaySettings? displaySettings = null)
+    {
+        this.host = host;
+        this.theme = theme;
+        this.displaySettings = displaySettings ?? SadConsoleDisplaySettings.Default;
+        tileset = TilesetProfileLoader.Load(ResolveAssetPath("Candii.tileset.json"));
+        textRenderer = new TilesetTextRenderer(tileset);
+    }
+
+    public string DisplaySummary => displaySettings.Summary;
 
     public void ClearSurface() => ClearSurface(host);
 
@@ -38,7 +55,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
             _overlayLayer = new Console(bounds.Width, bounds.Height);
         }
 
-        _overlayLayer.Position = new Point(bounds.Left, bounds.Top);
+        _overlayLayer.Position = CenteredOverlayPosition(bounds.Width, bounds.Height);
         if (!_overlayAttached)
         {
             host.Children.Add(_overlayLayer);
@@ -48,6 +65,21 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         ClearSurface(_overlayLayer);
         DrawComponent(_overlayLayer, overlay, localBounds: true);
         _overlayLayer.Surface.IsDirty = true;
+    }
+
+    private Point CenteredOverlayPosition(int width, int height) => new(
+        Math.Max(0, (host.Width - width) / 2),
+        Math.Max(0, (host.Height - height) / 2));
+
+    private static string ResolveAssetPath(string fileName)
+    {
+        var outputPath = Path.Combine(AppContext.BaseDirectory, "assets", fileName);
+        if (File.Exists(outputPath)) return outputPath;
+
+        var workingPath = Path.Combine(Environment.CurrentDirectory, "assets", fileName);
+        if (File.Exists(workingPath)) return workingPath;
+
+        return outputPath;
     }
 
     public static Color ColorFromToken(string token) => ComponentGalleryConsole.ColorFromToken(token);
@@ -69,7 +101,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
         FillRect(target, bounds, Color.Black);
-        DrawBox(target, bounds, border, theme.Panel.BorderGlyphs);
+        DrawBox(target, bounds, border, tileset.Roles.PanelBorder);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
 
         var rows = component.RenderRows(theme).Skip(1).ToList();
@@ -79,7 +111,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
             var row = rows[index];
             var visibleRow = ComponentGalleryConsole.StripStyleTokens(row);
             PrintClipped(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, ColorForRow(row, component.State));
-            ComponentGalleryConsole.DrawColorSampleGlyph(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, row);
+            DrawColorSampleGlyph(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, row);
         }
     }
 
@@ -88,7 +120,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
         FillRect(target, bounds, Color.Black);
-        DrawBox(target, bounds, border, theme.Panel.BorderGlyphs);
+        DrawBox(target, bounds, border, tileset.Roles.PanelBorder);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
 
         var leftWidth = Math.Min(42, Math.Max(0, bounds.Width - 4));
@@ -130,9 +162,9 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
                 var cell = cells.GetValueOrDefault(coord);
                 var glyph = cell?.Glyph ?? '.';
                 var foreground = cell?.Color is { } color ? ColorFromToken(color.ToString()) : Color.DarkGray;
-                SetCell(target, xPos, gridTop + y, ' ', foreground, Color.Black);
+                SetCell(target, xPos, gridTop + y, tileset.Blank, foreground, Color.Black);
                 SetCell(target, xPos + 1, gridTop + y, glyph, foreground, Color.Black);
-                SetCell(target, xPos + 2, gridTop + y, ' ', foreground, Color.Black);
+                SetCell(target, xPos + 2, gridTop + y, tileset.Blank, foreground, Color.Black);
             }
         }
     }
@@ -142,7 +174,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
         FillRect(target, bounds, Color.Black);
-        DrawBox(target, bounds, border, theme.Panel.BorderGlyphs);
+        DrawBox(target, bounds, border, tileset.Roles.PanelBorder);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
 
         var rows = component.RenderRows(theme).Skip(1).Where(row => !row.Contains("grid cells are rendered", StringComparison.Ordinal)).ToList();
@@ -173,14 +205,14 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
                 var glyph = cell?.Glyph ?? '.';
                 var foreground = cell?.Color is { } color ? ColorFromToken(color.ToString()) : Color.DarkGray;
                 var isCursor = coord == component.Cursor;
-                SetCell(target, xPos, gridTop + y, ' ', foreground, isCursor ? Color.DarkBlue : Color.Black);
+                SetCell(target, xPos, gridTop + y, tileset.Blank, foreground, isCursor ? Color.DarkBlue : Color.Black);
                 SetCell(target, xPos + 1, gridTop + y, glyph, isCursor ? Color.Yellow : foreground, isCursor ? Color.DarkBlue : Color.Black);
-                SetCell(target, xPos + 2, gridTop + y, ' ', foreground, isCursor ? Color.DarkBlue : Color.Black);
+                SetCell(target, xPos + 2, gridTop + y, tileset.Blank, foreground, isCursor ? Color.DarkBlue : Color.Black);
             }
         }
     }
 
-    private void DrawBox(Console target, SadConsoleRect rect, Color color, BorderGlyphTheme glyphs)
+    private void DrawBox(Console target, SadConsoleRect rect, Color color, TileBorderGlyphSet glyphs)
     {
         var right = rect.Left + rect.Width - 1;
         var bottom = rect.Bottom - 1;
@@ -197,7 +229,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         }
     }
 
-    private static void FillRect(Console target, SadConsoleRect rect, Color background)
+    private void FillRect(Console target, SadConsoleRect rect, Color background)
     {
         var right = Math.Min(target.Width, rect.Left + rect.Width);
         var bottom = Math.Min(target.Height, rect.Bottom);
@@ -205,7 +237,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         {
             for (var x = Math.Max(0, rect.Left); x < right; x++)
             {
-                SetCell(target, x, y, ' ', Color.White, background);
+                SetCell(target, x, y, tileset.Blank, Color.White, background);
             }
         }
     }
@@ -222,30 +254,26 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         return componentState == UiComponentState.Focused ? Color.White : Color.LightGray;
     }
 
-    private static void PrintClipped(Console target, int x, int y, int width, string text, Color color)
+    private void PrintClipped(Console target, int x, int y, int width, string text, Color color)
     {
         if (y < 0 || y >= target.Height || x >= target.Width || width <= 0) return;
         var clipped = text.Length <= width ? text : text[..Math.Max(0, width - 1)];
-        PrintText(target, x, y, clipped.PadRight(Math.Max(0, width)), color);
+        textRenderer.Print(target, x, y, clipped.PadRight(Math.Max(0, width)), color, Color.Black);
     }
 
-    private static void PrintText(Console target, int x, int y, string text, Color foreground)
+    private void ClearSurface(Console target)
     {
-        for (var index = 0; index < text.Length && x + index < target.Width; index++)
-        {
-            SetCell(target, x + index, y, text[index], foreground, Color.Black);
-        }
+        textRenderer.Clear(target, Color.White, Color.Black);
     }
 
-    private static void ClearSurface(Console target)
+    private void DrawColorSampleGlyph(Console target, int x, int y, int width, string visibleRow, string styledRow)
     {
-        for (var y = 0; y < target.Height; y++)
-        {
-            for (var x = 0; x < target.Width; x++)
-            {
-                SetCell(target, x, y, ' ', Color.White, Color.Black);
-            }
-        }
+        if (width <= 0 || ComponentGalleryConsole.SampleColorTokenForRow(styledRow) is not { } token) return;
+
+        var sampleIndex = visibleRow.IndexOf('■');
+        if (sampleIndex < 0 || sampleIndex >= width) return;
+
+        SetCell(target, x + sampleIndex, y, tileset.Roles.ColorSample, ColorFromToken(token), Color.Black);
     }
 
     private static void SetCell(Console target, int x, int y, int glyph, Color foreground, Color background)

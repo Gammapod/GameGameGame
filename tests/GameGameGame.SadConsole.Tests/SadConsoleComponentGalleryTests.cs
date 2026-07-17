@@ -5,6 +5,7 @@ using GameGameGame.SadConsoleApp.Ui.Rendering;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 using GameGameGame.SadConsoleApp.Ui.Tiles;
+using SadRogue.Primitives;
 
 namespace GameGameGame.SadConsole.Tests;
 
@@ -197,6 +198,7 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Equal(0, profile.Blank);
         Assert.Equal(0, profile.ResolveTextGlyph(' '));
         Assert.Equal('&', profile.ResolveTextGlyph('&'));
+        Assert.Equal(181, profile.Roles.ColorSample);
         Assert.Equal(180, profile.Roles.PanelBorder.TopLeft);
         Assert.Equal(153, profile.Roles.PanelBorder.TopRight);
         Assert.Equal(154, profile.Roles.PanelBorder.BottomLeft);
@@ -204,5 +206,56 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Equal(158, profile.Roles.PanelBorder.Horizontal);
         Assert.Equal(141, profile.Roles.PanelBorder.Vertical);
         Assert.Empty(profile.Validate());
+    }
+
+    [Fact]
+    public void TilesetTextRendererConvertsTextThroughProfileMapping()
+    {
+        var profile = TilesetProfileLoader.Load(Path.Combine("assets", "Candii.tileset.json"));
+        var renderer = new TilesetTextRenderer(profile);
+
+        var glyphs = renderer.ToGlyphs("A B");
+
+        Assert.Equal(new[] { (int)'A', 0, (int)'B' }, glyphs);
+    }
+
+    [Fact]
+    public void TileLayoutConvertsParentCellsToActiveTileCells()
+    {
+        var rect = TileLayoutRect.FromParentCells(
+            left: 10,
+            top: 4,
+            width: 20,
+            height: 6,
+            parentCellSize: new Point(8, 16),
+            tileSize: new Point(8, 8));
+
+        Assert.Equal(10, rect.Left);
+        Assert.Equal(4, rect.Top);
+        Assert.Equal(20, rect.Width);
+        Assert.Equal(12, rect.Height);
+    }
+
+    [Fact]
+    public void DisplaySettingsUseIntegerScaledCandiiViewportPixels()
+    {
+        var settings = SadConsoleDisplaySettings.Default.WithUiScale(2);
+
+        Assert.Equal(2, settings.UiScale);
+        Assert.Equal(16, settings.ScaledTileWidth);
+        Assert.Equal(16, settings.ScaledTileHeight);
+        Assert.Equal(1920, settings.WindowWidthPixels);
+        Assert.Equal(672, settings.WindowHeightPixels);
+        Assert.Contains("Scale: 2x", settings.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StartupParsesUiScaleArgument()
+    {
+        var startup = SadConsoleStartup.FromArgs(["--gallery", "--ui-scale", "3"]);
+
+        Assert.True(startup.LaunchGallery);
+        Assert.Equal(3, startup.ActiveDisplaySettings.UiScale);
+        Assert.Equal(24, startup.ActiveDisplaySettings.ScaledTileWidth);
     }
 }

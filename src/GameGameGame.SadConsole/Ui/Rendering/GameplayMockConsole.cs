@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
+using GameGameGame.SadConsoleApp.Ui.Tiles;
 using SadConsole;
 using SadConsole.Input;
 using SadRogue.Primitives;
@@ -18,7 +19,7 @@ internal sealed class GameplayMockConsole : Console
     private readonly GameplayMockScreen? _screen;
     private string _message;
 
-    public GameplayMockConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null) : this(theme)
+    public GameplayMockConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null, SadConsoleDisplaySettings? displaySettings = null) : this(theme, displaySettings: displaySettings ?? startup.ActiveDisplaySettings)
     {
         try
         {
@@ -41,7 +42,7 @@ internal sealed class GameplayMockConsole : Console
         Redraw();
     }
 
-    public GameplayMockConsole(ScenarioCatalogEntry scenario, Action onExit, SadConsoleTheme? theme = null) : this(theme, onExit)
+    public GameplayMockConsole(ScenarioCatalogEntry scenario, Action onExit, SadConsoleTheme? theme = null, SadConsoleDisplaySettings? displaySettings = null) : this(theme, onExit, displaySettings)
     {
         try
         {
@@ -57,10 +58,10 @@ internal sealed class GameplayMockConsole : Console
         Redraw();
     }
 
-    private GameplayMockConsole(SadConsoleTheme? theme = null, Action? onExit = null) : base(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight)
+    private GameplayMockConsole(SadConsoleTheme? theme = null, Action? onExit = null, SadConsoleDisplaySettings? displaySettings = null) : base(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight)
     {
         _theme = theme ?? SadConsoleTheme.Default;
-        _renderer = new SadConsoleComponentRenderer(this, _theme);
+        _renderer = new SadConsoleComponentRenderer(this, _theme, displaySettings);
         _onExit = onExit;
         _message = string.Empty;
         UseKeyboard = true;

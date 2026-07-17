@@ -14,17 +14,19 @@ internal sealed class ComponentGalleryConsole : Console
 {
     public const int ScreenWidth = SadConsoleScreenMetrics.ScreenWidth;
     public const int ScreenHeight = SadConsoleScreenMetrics.ScreenHeight;
-    internal const int ColorSampleGlyph = 219;
+    internal const int ColorSampleGlyph = 181;
 
     private readonly ComponentGalleryScreen _gallery;
     private readonly SadConsoleTheme _theme;
+    private readonly SadConsoleComponentRenderer _renderer;
     private readonly TilesetProfile _candiiProfile;
     private Console? _candiiPreviewLayer;
     private string _message = "Component gallery. Arrows select components. Enter focuses. Esc releases focus or exits.";
 
-    public ComponentGalleryConsole(SadConsoleTheme? theme = null, TilesetProfile? candiiProfile = null) : base(ScreenWidth, ScreenHeight)
+    public ComponentGalleryConsole(SadConsoleTheme? theme = null, TilesetProfile? candiiProfile = null, SadConsoleDisplaySettings? displaySettings = null) : base(ScreenWidth, ScreenHeight)
     {
         _theme = theme ?? SadConsoleTheme.Default;
+        _renderer = new SadConsoleComponentRenderer(this, _theme, displaySettings);
         _candiiProfile = candiiProfile ?? TilesetProfileLoader.Load(ResolveAssetPath("Candii.tileset.json"));
         _gallery = ComponentGalleryScreen.CreateDefault(_theme);
         UseKeyboard = true;
@@ -68,10 +70,10 @@ internal sealed class ComponentGalleryConsole : Console
 
     private void Redraw()
     {
-        ClearSurface();
-        PrintClipped(1, 0, Width - 2, _gallery.Title, Color.Yellow);
-        PrintClipped(1, 1, Width - 2, _gallery.Purpose, Color.White);
-        PrintClipped(1, 2, Width - 2, _message, Color.Gray);
+        _renderer.ClearSurface();
+        _renderer.PrintClipped(1, 0, Width - 2, _gallery.Title, Color.Yellow);
+        _renderer.PrintClipped(1, 1, Width - 2, _gallery.Purpose, Color.White);
+        _renderer.PrintClipped(1, 2, Width - 2, _message, Color.Gray);
 
         foreach (var component in _gallery.Components())
         {
@@ -80,7 +82,7 @@ internal sealed class ComponentGalleryConsole : Console
                 continue;
             }
 
-            DrawComponent(component);
+            _renderer.DrawComponent(component);
         }
 
         RenderCandiiPreview();

@@ -1,6 +1,7 @@
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
+using GameGameGame.SadConsoleApp.Ui.Tiles;
 using SadConsole;
 using SadConsole.Input;
 using SadRogue.Primitives;
@@ -15,6 +16,7 @@ internal sealed class ScenarioSelectionConsole : Console
 
     private readonly ScenarioSelectionScreen _screen;
     private readonly SadConsoleTheme _theme;
+    private readonly SadConsoleDisplaySettings _displaySettings;
     private readonly SadConsoleComponentRenderer _renderer;
     private ScenarioEditScreen? _scenarioEditScreen;
     private EntityTemplateEditScreen? _entityTemplateEditScreen;
@@ -23,10 +25,11 @@ internal sealed class ScenarioSelectionConsole : Console
     private GameplayMockConsole? _playMockConsole;
     private string _message = "New Scenario Selection. Up/Down selects scenario. Enter opens Play/Edit. Esc exits.";
 
-    public ScenarioSelectionConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null) : base(ScreenWidth, ScreenHeight)
+    public ScenarioSelectionConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null, SadConsoleDisplaySettings? displaySettings = null) : base(ScreenWidth, ScreenHeight)
     {
         _theme = theme ?? SadConsoleTheme.Default;
-        _renderer = new SadConsoleComponentRenderer(this, _theme);
+        _displaySettings = displaySettings ?? startup.ActiveDisplaySettings;
+        _renderer = new SadConsoleComponentRenderer(this, _theme, _displaySettings);
         _screen = ScenarioSelectionScreen.FromCatalog(startup.Catalog);
         UseKeyboard = true;
         IsFocused = true;
@@ -200,7 +203,7 @@ internal sealed class ScenarioSelectionConsole : Console
     {
         _renderer.ClearOverlay();
 
-        _playMockConsole = new GameplayMockConsole(scenario, ReturnFromPlayMock, _theme);
+        _playMockConsole = new GameplayMockConsole(scenario, ReturnFromPlayMock, _theme, _displaySettings);
         Children.Add(_playMockConsole);
         _message = $"Launched editor-connected Play UX mock for {scenario.Name}.";
     }

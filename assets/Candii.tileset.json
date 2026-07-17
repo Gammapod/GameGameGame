@@ -9,6 +9,7 @@
   "blank": 0,
   "asciiCodepointMapping": true,
   "roles": {
+    "colorSample": 181,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

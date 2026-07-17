@@ -37,11 +37,12 @@ internal sealed record TilesetProfile(
     }
 }
 
-internal sealed record TilesetRoles(TileBorderGlyphSet PanelBorder)
+internal sealed record TilesetRoles(int ColorSample, TileBorderGlyphSet PanelBorder)
 {
     public IReadOnlyList<string> Validate(string path)
     {
         var errors = new List<string>();
+        if (ColorSample < 0) errors.Add($"{path}.colorSample must be non-negative.");
         if (PanelBorder is null)
         {
             errors.Add($"{path}.panelBorder is required.");
