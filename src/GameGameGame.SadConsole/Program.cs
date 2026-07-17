@@ -11,7 +11,11 @@ Settings.WindowTitle = startup.LaunchGallery
         : "GameGameGame SadConsole Editor";
 
 var configuration = Builder.GetBuilder()
-    .ConfigureFonts((fonts, _) => fonts.UseBuiltinFontExtended())
+    .ConfigureFonts((fonts, _) =>
+    {
+        fonts.UseBuiltinFontExtended();
+        fonts.AddExtraFonts("assets/Candii.font");
+    })
     .SetWindowSizeInCells(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight)
     .SetStartingScreen(_ => startup.LaunchGallery
         ? new ComponentGalleryConsole()

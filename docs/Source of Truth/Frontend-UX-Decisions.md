@@ -151,3 +151,10 @@ Each decision should include:
 - **Reasoning:** This names the player-facing workflow consistently with other componentized screens and keeps action choices out of the HUD. Spatial choices happen on spatial panels, and inventory choices happen through the player entity's inspection panel.
 - **Implications:** Future pickup/drop/target prompts should consume Core Action Choice facts for selectable/highlighted choices and should not reintroduce HUD-only option rows as the primary action selector. Mouse selection can be added later over the same component/choice model.
 - **Status:** Active / initial Play UX mock implementation.
+
+### FED-019: SadConsole uses a square-tile rendering baseline
+
+- **Decision:** SadConsole frontend presentation should move toward a square-cell tile font as the baseline graphics paradigm, initially targeting 8x8 cells. Text remains part of the UI, but new player-facing gameplay facts should not default to terminal-style text dumps when a square-tile visual treatment is needed for understanding.
+- **Reasoning:** The current UI exposes the correct player-facing information but often does so textually and with IBM/DOS-like assumptions. Establishing the square-tile baseline early lets text, entity glyphs, decorators, borders, menus, and future sprites share one rendering paradigm and reduces regression risk as new canonical actions are added.
+- **Implications:** Each new canonical action vertical slice should identify exposed player-facing facts, choose existing graphical treatments or prototype new ones in the component gallery, and record accepted reusable treatments in standards/decisions. Existing components may migrate gradually; this decision does not require converting the entire play surface in one pass.
+- **Status:** Active.

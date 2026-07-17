@@ -41,6 +41,33 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
    - Keyboard shortcuts may submit commands for the currently controlled entity.
    - The display of facing, target, logs, action state, inventory, and initiative should remain reusable for any entity.
 
+## Square-tile rendering baseline
+
+1. **SadConsole UI uses square tile cells as its baseline graphics paradigm.**
+   - The SadConsole frontend should move away from IBM 8x16 terminal assumptions and toward a square-cell tile font, initially targeting 8x8 cells.
+   - Text remains allowed and necessary for names, logs, explanations, editor fields, and debug drilldown, but text is a tile-rendered UI element rather than permission to build new features as terminal-style text dumps by default.
+   - Layout measurements should continue to be expressed in cells; accepted play/editor layouts should assume those cells are square unless a deliberate future mode says otherwise.
+
+2. **Gameplay graphics should fit the square tile model.**
+   - Entity identity glyphs, simulation-space cells, inventory-grid cells, selection cursors, action highlights, state decorators, and future sprites should fit within or layer over square tile units.
+   - Future tilesheets may use larger square multiples of the baseline tile size when UX needs justify it, but new graphical treatments should be designed so an 8x8-compatible version is possible.
+   - Rectangular UI regions such as panels, lists, logs, menus, and overlays remain valid; they are composed out of square tile cells.
+
+3. **New canonical action UX must choose a visual grammar.**
+   - For each promoted canonical Action Step, frontend planning should identify the player-facing facts exposed by the action and decide which facts need graphical presentation.
+   - Reuse an accepted visual treatment if one exists. If no accepted treatment exists, prototype the treatment in the SadConsole component gallery before applying it to the play surface.
+   - Keep textual explanation/inspection available, but do not treat text-only presentation as the default for facts that are central to player decision-making.
+
+4. **Canonical visual fact treatments should be reusable.**
+   - When a runtime fact such as Facing, current target, controlled actor, selected entity, valid action target, blocked action target, carrying/containment, or warning state is promoted to graphical presentation, record and reuse one canonical treatment across grids, panels, rows, and logs where practical.
+   - State treatments must preserve entity identity glyphs; use decorators, adjacent/layered tiles, backgrounds, borders, or labels instead of replacing identity glyphs with state glyphs.
+
+5. **Tileset glyph roles must be calibrated from actual tiles, not assumed from text encodings.**
+   - A SadConsole glyph number is a tilesheet index. Do not assume non-ASCII roles such as box borders, arrows, decorators, or UI icons match IBM/CP437 indexes unless the tilesheet has been inspected.
+   - For each tileset promoted beyond a smoke test, generate an indexed contact sheet with `tools/inspect-tileset.ps1`, inspect the actual tile shapes, choose role-specific indexes such as panel border corners/edges, and record the accepted mapping in frontend code or source-of-truth docs.
+   - Border suitability criteria: corner tiles must visually join horizontal and vertical edge tiles; edge tiles must repeat cleanly at one-cell thickness; tiles must be readable at the target scale and color treatment; and the mapping must be reusable across selected/focused/error border colors without changing the glyph role.
+   - If a tileset lacks suitable one-cell border tiles, use a tileset-specific fallback treatment such as filled panel backgrounds, two-cell frame art, or simple ASCII-like borders rather than forcing incorrect CP437 indexes.
+
 ## Glyph standards
 
 1. **Entity glyphs must identify the entity consistently.**

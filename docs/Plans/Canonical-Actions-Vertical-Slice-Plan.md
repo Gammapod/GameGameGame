@@ -89,6 +89,8 @@ These rooms are validation fixtures, not just demos. They should be runnable thr
 1. Componentized play mode can present the action through shared choice/target/log/POV services.
 2. The frontend does not own action legality, success/failure policy, or ratio semantics.
 3. Any frontend tests assert UI consumption of shared facts, not duplicated engine rules.
+4. For every newly promoted action, frontend planning explicitly decides which player-facing facts the action exposes, which of those facts need graphical presentation, and whether an existing canonical visual treatment can be reused or a new one must be prototyped in the SadConsole component gallery before changing the play surface.
+5. New player-facing graphical treatments should fit the SadConsole square-tile rendering baseline: text, entity glyphs, decorators, panels, menus, and future sprites are tile-rendered UI elements, while gameplay state should not default to terminal-style text dumps when a tile-based visual treatment is needed for player understanding.
 
 ## Runtime control source and Action Choice
 
@@ -131,8 +133,9 @@ Use the completed `Move` slice as the baseline workflow before promoting another
 4. **Keep authoring parity**: update descriptor/YAML loading, validation, editor services, agent/headless tools, previews, and schemas/catalogs so authors do not need to hand-edit unsupported fields.
 5. **Add fixture rooms**: maintain one deterministic log/outcome scenario and one player-interaction scenario for every promoted action.
 6. **Connect play surfaces through shared services**: frontends consume Core/Content choice, target, history, POV, and log facts; they do not own legality or action results.
-7. **Update docs in the source-of-truth lanes**: invariants for behavior/test traces, capability matrix for layer coverage/tier, authoring manual for content-facing usage, action-logic/game-text docs for outcome/log expectations, and this plan/roadmap for next-slice decisions.
-8. **Validate broadly enough**: run targeted tests for Core, Content/editor/tooling, and frontend consumers, then the relevant broader suites before declaring the slice complete.
+7. **Decide the frontend visual grammar**: list the player-facing facts exposed by the action, choose the canonical graphical treatment for each promoted visual fact, reuse existing gallery patterns when possible, and prototype any new treatment in the SadConsole component gallery before applying it to the play surface. Keep textual explanation/inspection available, but do not let new action UX regress to text-only terminal presentation when the fact is central to player decision-making.
+8. **Update docs in the source-of-truth lanes**: invariants for behavior/test traces, capability matrix for layer coverage/tier, authoring manual for content-facing usage, action-logic/game-text docs for outcome/log expectations, frontend UX standards/decisions for accepted visual treatments, and this plan/roadmap for next-slice decisions.
+9. **Validate broadly enough**: run targeted tests for Core, Content/editor/tooling, and frontend consumers, then the relevant broader suites before declaring the slice complete.
 
 Agent/headless tooling rule: `ggg_*` tools should be structured, agent-accessible versions of established user-facing editor/play-mode surfaces. Prioritize tools that edit content and tools that run/inspect simulations, and keep them in parity with shared editor services and supported play-mode workflows rather than adding agent-only semantics.
 

@@ -20,6 +20,7 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("int-setter-overlay"),
             new FocusTarget("choice-picker-overlay"),
             new FocusTarget("confirm-overlay"),
+            new FocusTarget("candii-tileset"),
             new FocusTarget("play-mode-components"),
             new FocusTarget("footer")
         ]);
@@ -44,6 +45,7 @@ internal sealed class ComponentGalleryScreen
             IntSetterOverlayExample(),
             ChoicePickerOverlayExample(),
             ConfirmOverlayExample(),
+            CandiiTilesetExample(),
             PlayModeComponentMapExample(),
             FooterPanel()
         ];
@@ -158,6 +160,21 @@ internal sealed class ComponentGalleryScreen
             ],
             _focusRouter.StateFor("play-mode-components"),
             "Player action prompts consume Core choice facts; highlights are hints.");
+    }
+
+    private PanelComponent CandiiTilesetExample()
+    {
+        return new PanelComponent(
+            "candii-tileset",
+            "Candii 8x8 tileset preview",
+            new SadConsoleRect(79, 24, 38, 39),
+            [
+                "Uses Candii.tileset.json role mappings.",
+                "Inner preview is a child Console with square 8x8 cells.",
+                "Blank, text spaces, and borders come from the profile."
+            ],
+            _focusRouter.StateFor("candii-tileset"),
+            "First square-tile baseline smoke test.");
     }
 
     private TextEntryOverlayComponent TextEntryOverlayExample()
