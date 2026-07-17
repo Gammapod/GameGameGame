@@ -41,11 +41,15 @@ public sealed record ContentToolRemoveActionPlanBehaviorStepRequest(string Sessi
 public sealed record ContentToolSetBehaviorStepTargetLabelRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, string? TargetLabel) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepTargetSlotRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, int? TargetSlot) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepPlanIdRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanId? PlanId) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepDirectionModeRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanMoveDirectionMode? DirectionMode) : IContentToolSessionRequest;
 public sealed record ContentToolPreviewActionPlanRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, EntityTemplateId? EntityTemplateId = null) : IContentToolSessionRequest;
 public sealed record ContentToolScenarioRequest(string SessionId, string ScenarioId) : IContentToolSessionRequest;
 public sealed record ContentToolUpsertScenarioRequest(string SessionId, AgentAlphaScenarioDefinition Scenario) : IContentToolSessionRequest;
 public sealed record ContentToolRunScenarioByIdRequest(string SessionId, string ScenarioId, int TurnCount) : IContentToolSessionRequest;
 public sealed record ContentToolRunScenarioPlayerLogByIdRequest(string SessionId, string ScenarioId, int TurnCount, EntityId? ObserverEntityId = null) : IContentToolSessionRequest;
+public sealed record ContentToolScenarioManifestRequest(string Path);
+public sealed record ContentToolScenarioManifestScanRequest(string FolderPath);
+public sealed record ContentToolScenarioManifestValidateRequest(string Path, string FolderPath);
 
 public sealed record ContentToolSessionOpened(string SessionId, string? FilePath, bool IsDirty);
 public sealed record ContentToolCreatedEntityTemplate(EntityTemplateId EntityTemplateId);
@@ -79,3 +83,5 @@ public sealed record ContentToolScenarioSummary(
     EntityId PlayerEntityId,
     GridCoord PlayerStart,
     IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null);
+
+public sealed record ContentToolScenarioManifestValidationSummary(bool IsValid, IReadOnlyList<string> Diagnostics);

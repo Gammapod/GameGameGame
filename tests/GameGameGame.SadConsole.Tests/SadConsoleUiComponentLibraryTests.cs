@@ -1,6 +1,7 @@
 using GameGameGame.SadConsoleApp;
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Navigation;
+using GameGameGame.SadConsoleApp.Ui.Rendering;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 
 namespace GameGameGame.SadConsole.Tests;
@@ -77,6 +78,13 @@ public sealed class SadConsoleUiComponentLibraryTests
         var rows = component.RenderRows(SadConsoleTheme.Default);
 
         Assert.Contains(rows, row => row.Contains("empty") && row.Contains(SadConsoleTheme.Default.List.EmptyText));
+    }
+
+    [Fact]
+    public void StyleTokenStrippingPreservesIntentionalIndentation()
+    {
+        Assert.Equal("> Entity", ComponentGalleryConsole.StripStyleTokens("> (HotPink) Entity"));
+        Assert.Equal("    Description", ComponentGalleryConsole.StripStyleTokens("(White)     Description"));
     }
 
     [Fact]

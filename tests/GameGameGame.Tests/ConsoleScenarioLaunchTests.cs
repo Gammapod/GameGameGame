@@ -79,6 +79,105 @@ public sealed class ConsoleScenarioLaunchTests
     }
 
     [Fact]
+    public void ScenarioCatalogLoadsCuratedManifestSectionsAndEntryMetadata()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var deltaPath = Path.Combine(directory, "Delta.yaml");
+            var legacyPath = Path.Combine(directory, "Legacy.yaml");
+            var manifestPath = Path.Combine(directory, ScenarioCatalog.ManifestFileName);
+            File.WriteAllText(deltaPath, CreateConsoleDocument("delta-canonical-move-outcomes", "Delta Canonical Move Outcomes", new GridCoord(0, 0)).SaveYaml());
+            File.WriteAllText(legacyPath, CreateConsoleDocument("legacy-beta-targeting-acquire-target", "Legacy Beta Targeting Acquire Target", new GridCoord(1, 0)).SaveYaml());
+            File.WriteAllText(manifestPath, """
+                sections:
+                - id: delta
+                  name: Delta
+                  description: Vertical-slice requirements scenarios.
+                  entries:
+                  - contentPath: Delta.yaml
+                    scenarioId: delta-canonical-move-outcomes
+                    name: Delta Canonical Move Outcomes
+                    description: Demonstrates canonical move reviewer outcomes; authored for Delta vertical-slice review with no known caveats.
+                    status: active-delta
+                    tags: [canonical, move]
+                    source: Canonical action vertical slice.
+                - id: legacy
+                  name: Legacy Beta
+                  description: Legacy/prototype behavior explorations.
+                  entries:
+                  - contentPath: Legacy.yaml
+                    scenarioId: legacy-beta-targeting-acquire-target
+                    name: Legacy Beta Targeting Acquire Target
+                    description: Preserves the prototype acquire-target exploration; legacy status with known prototype Action Step caveats.
+                    status: legacy
+                    tags: [legacy, targeting]
+                """);
+
+            var catalog = ScenarioCatalog.LoadManifest(manifestPath);
+
+            Assert.NotNull(catalog.Sections);
+            var sections = catalog.Sections!;
+            Assert.Equal(["delta", "legacy"], sections.Select(section => section.Id).ToArray());
+            Assert.Equal(["delta-canonical-move-outcomes", "legacy-beta-targeting-acquire-target"], catalog.Entries.Select(entry => entry.ScenarioId).ToArray());
+            var delta = catalog.Entries[0];
+            Assert.Equal(deltaPath, delta.ContentPath);
+            Assert.Equal("active-delta", delta.Status);
+            Assert.Equal(["canonical", "move"], delta.Tags);
+            Assert.Equal("Canonical action vertical slice.", delta.Source);
+            Assert.Empty(catalog.Diagnostics);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ScenarioCatalogValidationReportsCuratedManifestIssuesAndUnclassifiedCandidates()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var classifiedPath = Path.Combine(directory, "Classified.yaml");
+            var unclassifiedPath = Path.Combine(directory, "Unclassified.yaml");
+            var manifestPath = Path.Combine(directory, ScenarioCatalog.ManifestFileName);
+            File.WriteAllText(classifiedPath, CreateConsoleDocument("delta-canonical-move-outcomes", "Delta Canonical Move Outcomes", new GridCoord(0, 0)).SaveYaml());
+            File.WriteAllText(unclassifiedPath, CreateConsoleDocument("user-new-room", "User New Room", new GridCoord(1, 0)).SaveYaml());
+            File.WriteAllText(manifestPath, """
+                sections:
+                - id: legacy
+                  name: Legacy Beta
+                  entries:
+                  - contentPath: Classified.yaml
+                    scenarioId: delta-canonical-move-outcomes
+                    name: Delta Canonical Move Outcomes
+                    status: active-delta
+                - id: delta
+                  name: Delta
+                  entries:
+                  - contentPath: Classified.yaml
+                    scenarioId: delta-canonical-move-outcomes
+                    name: Duplicate Delta Canonical Move Outcomes
+                    description: Duplicate entry to prove duplicate scenario ID validation.
+                    status: active-delta
+                """);
+
+            var validation = ScenarioCatalog.ValidateManifest(manifestPath, directory);
+
+            Assert.False(validation.IsValid);
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("requires a description", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("appears more than once", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("status active-delta does not belong in section legacy", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("unclassified scenario user-new-room", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ScenarioCatalogScanServiceDiscoversFolderAndWritesManifest()
     {
         var directory = CreateTemporaryDirectory();

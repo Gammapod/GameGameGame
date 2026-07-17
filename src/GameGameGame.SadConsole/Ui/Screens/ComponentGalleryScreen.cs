@@ -20,6 +20,8 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("int-setter-overlay"),
             new FocusTarget("choice-picker-overlay"),
             new FocusTarget("confirm-overlay"),
+            new FocusTarget("candii-tileset"),
+            new FocusTarget("play-mode-components"),
             new FocusTarget("footer")
         ]);
     }
@@ -43,6 +45,8 @@ internal sealed class ComponentGalleryScreen
             IntSetterOverlayExample(),
             ChoicePickerOverlayExample(),
             ConfirmOverlayExample(),
+            CandiiTilesetExample(),
+            PlayModeComponentMapExample(),
             FooterPanel()
         ];
     }
@@ -138,6 +142,39 @@ internal sealed class ComponentGalleryScreen
             ],
             state,
             "Footer wording should always describe current focus controls.");
+    }
+
+    private PanelComponent PlayModeComponentMapExample()
+    {
+        return new PanelComponent(
+            "play-mode-components",
+            "Play mode component map",
+            new SadConsoleRect(1, 32, 76, 42),
+            [
+                "0 Play-mode screen",
+                "0.1 HUD: status/context, not action choices",
+                "0.2 Current place: spatial target/destination selection",
+                "0.2.1 Action selector: Enter selects, Esc closes/back",
+                "0.3 Inspection panel: inspected entity/player inventory selection",
+                "Select/Cancel follows a stack: submenu -> prior selection -> action selector -> play."
+            ],
+            _focusRouter.StateFor("play-mode-components"),
+            "Player action prompts consume Core choice facts; highlights are hints.");
+    }
+
+    private PanelComponent CandiiTilesetExample()
+    {
+        return new PanelComponent(
+            "candii-tileset",
+            "Candii 8x8 tileset preview",
+            new SadConsoleRect(79, 24, 38, 39),
+            [
+                "Uses Candii.tileset.json role mappings.",
+                "Inner preview is a child Console with square 8x8 cells.",
+                "Blank, text spaces, and borders come from the profile."
+            ],
+            _focusRouter.StateFor("candii-tileset"),
+            "First square-tile baseline smoke test.");
     }
 
     private TextEntryOverlayComponent TextEntryOverlayExample()

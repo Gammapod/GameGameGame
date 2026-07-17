@@ -3,7 +3,13 @@ using GameGameGame.SadConsoleApp;
 
 namespace GameGameGame.SadConsoleApp.Ui.Components;
 
-internal sealed record SelectableListItem(string Id, string Label, string? Detail = null, bool IsEnabled = true, string? SampleColorToken = null);
+internal sealed record SelectableListItem(
+    string Id,
+    string Label,
+    string? Detail = null,
+    bool IsEnabled = true,
+    string? SampleColorToken = null,
+    bool DetailOnNextLine = false);
 
 internal sealed class SelectableListComponent : IUiComponent
 {
@@ -65,8 +71,12 @@ internal sealed class SelectableListComponent : IUiComponent
                 ? State == UiComponentState.Focused ? theme.List.FocusedRowText : theme.List.SelectedRowText
                 : theme.List.RowText;
             var enabled = item.IsEnabled ? string.Empty : " disabled";
-            var detail = string.IsNullOrWhiteSpace(item.Detail) ? string.Empty : $" - {item.Detail}";
+            var detail = string.IsNullOrWhiteSpace(item.Detail) || item.DetailOnNextLine ? string.Empty : $" - {item.Detail}";
             rows.Add($"{marker} ({color}) {item.Label}{detail}{enabled}");
+            if (item.DetailOnNextLine && !string.IsNullOrWhiteSpace(item.Detail))
+            {
+                rows.Add($"  ({theme.List.RowText})     {item.Detail}");
+            }
         }
 
         if (ScrollOffset > 0 || ScrollOffset + VisibleRowCount < _items.Count)

@@ -20,6 +20,7 @@ Do not read when:
 - Action logic lane: `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome rules and actor/actee/spatial verb-affordance logic.
 - Frontend game-text lane: `docs/Source of Truth/Frontend-Game-Text.md` records draft player-facing log message ID slots for current Action Steps, including success/failure and ratio-bucket variant IDs; final wording is intentionally deferred.
 - Frontend UX lane: start with `docs/Source of Truth/Frontend-UX-Invariants.md` for frontend/shared-service boundaries and test traces, then `docs/Source of Truth/Frontend-UX-Standards.md` for concrete presentation and interaction guidance. Use `docs/Source of Truth/Frontend-UX-Decisions.md` for chronological rationale, `docs/Source of Truth/Frontend-Editor-Simulation-Flow.mmd` for the Editor/Simulation context diagram, and `docs/Source of Truth/Entity-Panel-UX-Spec.md` for the entity-panel/breadcrumb/log model.
+- Glossary lane: `docs/Source of Truth/glossary.md` records shared terminology such as spatial direction and adjacency vocabulary.
 - Planning lane: `docs/Plans/High-Level-Roadmap.md`, active plans, and the gap log record priorities, promotion triggers, and selected work.
 
 ## Required reading order for planning/content work
@@ -39,9 +40,9 @@ Do not read when:
     - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
     - Read selectively when a planned slice spans multiple layers.
 6. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
-   - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible, promoting canonical actions through vertical slices, adding runtime control-source / Action Choice support, and replacing the legacy play-mode stopgap with the componentized Gamma play surface.
-7. `docs/Plans/Delta-Point-of-View-Release-Plan.md`
-   - Recently active Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
+   - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible, promoting canonical actions through vertical slices, adding runtime control-source / Action Choice support, and replacing the legacy play-mode stopgap with the componentized Gamma play surface. The first canonical `Move` + first Action Choice slice is complete and now serves as the repeatable workflow example for follow-up actions.
+7. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
+   - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
 8. `docs/Plans/Gamma-Editor-MVP-Plan.md`
    - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
 9. `docs/Plans/SadConsole-Frontend-Roadmap.md`
@@ -51,21 +52,21 @@ Do not read when:
 11. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
    - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
 12. `docs/Plans/Sprint-Retrospective.md`
-       - Recent process observations and open retrospective questions.
+    - Recent process observations and open retrospective questions.
 13. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
    - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current strategic priority
 
-Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Delta established the point-of-view foundation needed for arbitrary observer/current-place/bulk-aperture/adjective projection. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. The active release direction is now canonical action vertical slices: freeze the current Action Step catalog as legacy/prototype-compatible, promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, and componentized play-mode consumption, then add Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
+Alpha MVP is complete and Beta produced several authored gameplay vignettes plus scenario/catalog tooling. Delta established the point-of-view foundation needed for arbitrary observer/current-place/bulk-aperture/adjective projection. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`. The active release direction is canonical action vertical slices: freeze the current Action Step catalog as legacy/prototype-compatible, promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, componentized play-mode consumption, and Core-owned runtime control-source / Action Choice support for arbitrary controlled entities. The first `Move` + Action Choice slice is complete; the next priority is non-movement player interaction such as `PickupTarget`/`DropTarget` menu and target/source selection.
 
 ## Current highest-priority backlog buckets
 
 The active release plan is `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`. Current backlog buckets remain available for reprioritization after the first canonical action and Action Choice slices clarify needs:
 
-1. Canonical action vertical slices, as described in `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
-2. Canonical runtime control-source / Action Choice model, where control source is mutable runtime state and player-controlled actors choose from their normal authored action steps.
+1. Canonical action vertical slices, as described in `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`; next focus is `PickupTarget`/`DropTarget` non-movement interaction design after completed canonical `Move`.
+2. Canonical runtime control-source / Action Choice model, where control source is mutable runtime state and player-controlled actors choose from their normal authored action steps; first `Move` slice is complete, target/source subrequests remain follow-up.
 3. Componentized Gamma play-mode replacement for the remaining legacy/internal play-mode stopgap, consuming canonical action/Action Choice/POV/log services.
 4. Delta point-of-view follow-through where needed by canonical actions: affordance adjectives, reciprocal awareness, ratio facts, and presentation polish.
 5. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.

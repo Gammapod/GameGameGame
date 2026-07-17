@@ -41,6 +41,33 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
    - Keyboard shortcuts may submit commands for the currently controlled entity.
    - The display of facing, target, logs, action state, inventory, and initiative should remain reusable for any entity.
 
+## Square-tile rendering baseline
+
+1. **SadConsole UI uses square tile cells as its baseline graphics paradigm.**
+   - The SadConsole frontend should move away from IBM 8x16 terminal assumptions and toward a square-cell tile font, initially targeting 8x8 cells.
+   - Text remains allowed and necessary for names, logs, explanations, editor fields, and debug drilldown, but text is a tile-rendered UI element rather than permission to build new features as terminal-style text dumps by default.
+   - Layout measurements should continue to be expressed in cells; accepted play/editor layouts should assume those cells are square unless a deliberate future mode says otherwise.
+
+2. **Gameplay graphics should fit the square tile model.**
+   - Entity identity glyphs, simulation-space cells, inventory-grid cells, selection cursors, action highlights, state decorators, and future sprites should fit within or layer over square tile units.
+   - Future tilesheets may use larger square multiples of the baseline tile size when UX needs justify it, but new graphical treatments should be designed so an 8x8-compatible version is possible.
+   - Rectangular UI regions such as panels, lists, logs, menus, and overlays remain valid; they are composed out of square tile cells.
+
+3. **New canonical action UX must choose a visual grammar.**
+   - For each promoted canonical Action Step, frontend planning should identify the player-facing facts exposed by the action and decide which facts need graphical presentation.
+   - Reuse an accepted visual treatment if one exists. If no accepted treatment exists, prototype the treatment in the SadConsole component gallery before applying it to the play surface.
+   - Keep textual explanation/inspection available, but do not treat text-only presentation as the default for facts that are central to player decision-making.
+
+4. **Canonical visual fact treatments should be reusable.**
+   - When a runtime fact such as Facing, current target, controlled actor, selected entity, valid action target, blocked action target, carrying/containment, or warning state is promoted to graphical presentation, record and reuse one canonical treatment across grids, panels, rows, and logs where practical.
+   - State treatments must preserve entity identity glyphs; use decorators, adjacent/layered tiles, backgrounds, borders, or labels instead of replacing identity glyphs with state glyphs.
+
+5. **Tileset glyph roles must be calibrated from actual tiles, not assumed from text encodings.**
+   - A SadConsole glyph number is a tilesheet index. Do not assume non-ASCII roles such as box borders, arrows, decorators, or UI icons match IBM/CP437 indexes unless the tilesheet has been inspected.
+   - For each tileset promoted beyond a smoke test, generate an indexed contact sheet with `tools/inspect-tileset.ps1`, inspect the actual tile shapes, choose role-specific indexes such as panel border corners/edges, and record the accepted mapping in frontend code or source-of-truth docs.
+   - Border suitability criteria: corner tiles must visually join horizontal and vertical edge tiles; edge tiles must repeat cleanly at one-cell thickness; tiles must be readable at the target scale and color treatment; and the mapping must be reusable across selected/focused/error border colors without changing the glyph role.
+   - If a tileset lacks suitable one-cell border tiles, use a tileset-specific fallback treatment such as filled panel backgrounds, two-cell frame art, or simple ASCII-like borders rather than forcing incorrect CP437 indexes.
+
 ## Glyph standards
 
 1. **Entity glyphs must identify the entity consistently.**
@@ -83,9 +110,16 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
 
 ## Action highlighting and selection standards
 
+0. **The first canonical action-selection pathway is action-step first.**
+   - On a controlled actor's turn, direct movement controls may remain available for movement.
+   - `Enter` should open the authored action-step list for the controlled actor.
+   - Selecting an action that needs more information should open a target/source list, then a destination list when needed.
+   - Pickup/Drop lists should be built from shared Core Action Choice facts; the frontend owns focus/wording only.
+   - A future target-first pathway may let the player choose an entity first and then choose valid actions for it, but it should converge on the same Core facts and submission services.
+
 1. **Valid action highlighting is valuable but should not imply authoritative resolution.**
-   - Frontend highlights are affordance hints.
-   - Shared command execution remains authoritative.
+    - Frontend highlights are affordance hints.
+    - Shared command execution remains authoritative.
 
 2. **Selection should favor valid choices.**
    - When choosing a target/cell for an action, cycling through valid choices is preferred over moving an unrestricted cursor across mostly invalid cells.
@@ -104,8 +138,16 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
    - This is a presentation/input shortcut only. Shared command execution remains authoritative if a command is submitted through another path or the world changes.
 
 6. **Inspection selection can use valid-target style affordances, but it is navigation rather than action legality.**
-   - Inspect mode may highlight and cycle visible inspectable entities/cells to reduce cursor work.
-   - Inspection targeting should be derived from visible projected/runtime facts and should not be confused with Core action-target legality.
+    - Inspect mode may highlight and cycle visible inspectable entities/cells to reduce cursor work.
+    - Inspection targeting should be derived from visible projected/runtime facts and should not be confused with Core action-target legality.
+
+7. **Current play-mode component naming.**
+   - `0` is the play-mode screen.
+   - `0.1` is the HUD/status component. It may summarize current context and controls, but action choices should not be hidden inside HUD rows when a dedicated selector is active.
+   - `0.2` is the current-place component. Spatial target/source and world-destination selection should highlight valid Core-projected choices here.
+   - `0.2.1` is the action selector opened from `0.2`; Enter/Select chooses the focused action and Esc/Cancel closes or returns according to the prompt stack.
+   - `0.3` is the inspection panel. When selecting from the controlled actor's inventory, it may inspect the controlled actor and highlight valid carried entities or inventory cells.
+   - Movement keys in selection prompts should jump among valid choices rather than move the actor; mouse selection can later be added as a convenience path over the same choice facts.
 
 ## Editor and Simulation mode model
 
@@ -199,7 +241,7 @@ New SadConsole screen architecture should represent screens as reusable componen
 1. When no component is focused, controls should move the current component selection. Every visible component should have a border.
 2. Unselected component borders use a low-emphasis highlight color, the currently selected component uses a distinct selection highlight, and the focused component uses a third focus highlight.
 3. Once a component is focused, normal controls are routed to that component until Cancel/release focus returns to screen-level component selection.
-4. Scenario selection uses a scenario list plus a Play/Edit sub-panel. Cancel/Back is the input action, normally Escape, not a separate menu option. Scenario edit uses distinct preview, player-start, entity-list, and action-plan-list components. Entity template and action plan editing should be composed from the reusable editable-field/list/grid component vocabulary rather than shell-owned row strings.
+4. Scenario selection uses a scenario list plus a Play/Edit sub-panel. When a catalog exposes curated manifest sections, component `1.1` filters the scenario list by the current section and uses Left/Right section navigation before opening the Play/Edit sub-panel. Scenario rows use a two-line treatment: the selectable title row first, then an indented description row; per-item status labels should be avoided when the active section/status is already visible in the component title. Cancel/Back is the input action, normally Escape, not a separate menu option. Scenario edit uses distinct preview, player-start, entity-list, and action-plan-list components. Entity template and action plan editing should be composed from the reusable editable-field/list/grid component vocabulary rather than shell-owned row strings.
 
 ### Editor management patterns
 

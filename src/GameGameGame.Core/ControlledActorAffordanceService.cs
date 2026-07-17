@@ -42,7 +42,7 @@ public sealed record ControlledActorDestinationAffordance(
 
 public sealed class ControlledActorAffordanceService(MovementService movement)
 {
-    private static readonly Direction[] Directions = [Direction.North, Direction.South, Direction.East, Direction.West];
+    private static readonly IReadOnlyList<Direction> Directions = DirectionMath.AllDirections;
 
     public ControlledActorAffordances Query(WorldState world, EntityId actorId)
     {

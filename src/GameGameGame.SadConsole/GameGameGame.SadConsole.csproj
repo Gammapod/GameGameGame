@@ -31,4 +31,22 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\assets\Candii.font">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>assets\Candii.font</TargetPath>
+    </Content>
+    <Content Include="..\..\assets\Candii.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>assets\Candii.png</TargetPath>
+    </Content>
+    <Content Include="..\..\assets\Candii.tileset.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>assets\Candii.tileset.json</TargetPath>
+    </Content>
+  </ItemGroup>
+
 </Project>

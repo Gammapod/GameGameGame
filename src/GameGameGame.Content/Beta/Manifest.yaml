@@ -1,56 +1,319 @@
-scenarios:
-- contentPath: src\GameGameGame.Content\Beta\Transfer\PassiveChestTransferShowcase.yaml
-  scenarioId: beta-passive-chest-transfer
-  name: Beta Passive Chest Transfer
-  description: A scene where a creature places an item in a chest.
-
-- contentPath: src\GameGameGame.Content\Beta\Transfer\StealingActorShowcase.yaml
-  scenarioId: beta-stealing-actor
-  name: Beta Stealing Actor
-  description: A scene where a creature takes an item from a chest.
-
-- contentPath: src\GameGameGame.Content\Beta\Targeting\CollectorShowcase.yaml
-  scenarioId: beta-collector
-  name: Beta Collector
-  description: A creature that picks everything up, including the player.
-
-- contentPath: src\GameGameGame.Content\Beta\Targeting\SlimeLovesPlayerShowcase.yaml
-  scenarioId: beta-slime-loves-player
-  name: Beta Slime Loves Player
-  description: A slime chases the player once close enough, then picks them up.
-
-- contentPath: src\GameGameGame.Content\Beta\Transfer\CollectorTraderHandoffShowcase.yaml
-  scenarioId: beta-collector-trader-handoff
-  name: Beta Collector Trader Handoff
-  description: This collector picks up the closest object and hands it to the next-closest. Around turn 11, the player ends up inside themselves.
-
-- contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
-  scenarioId: beta-pocket-bazaar
-  name: Beta Pocket Bazaar
-  description: A longer showcase with several nested scenes. E to enter, X to exit an inventory space.
-
-- contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
-  scenarioId: beta-kiting-orbiter
-  name: Beta Kiting Orbiter
-  description: Creatures that try to orbit the nearest object (they are easily distracted).
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PushFacingShowcase.yaml
-  scenarioId: beta-push-showcase
-  name: Beta Push Showcase
-  description: Creatures that can push things.
-
-- contentPath: src\GameGameGame.Content\Beta\CurrentTools\PlayerControlHeroActionsTest.yaml
-  scenarioId: beta-player-control-hero-actions-test
-  name: Beta Player Control Hero Actions Test
-  description: Empty room with a player-controlled Hero using Move Facing, Backstep, and Pickup Target steps.
-
-- contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
-  scenarioId: beta-success-criteria-log-room
-  name: Beta Success Criteria Log Room
-  description: A log test room with barely/easy success and failure examples for aperture-backed action success criteria.
-
-- contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\PatrolTurnShowcase.yaml
-  scenarioId: beta-patrol-turn
-  name: Beta Patrol Turn
-  description: Some simple patrolling creatures that turn when they hit a wall.
+sections:
+- id: legacy
+  name: Legacy Beta Explorations
+  description: Prototype and compatibility scenarios from the Beta exploration period. These remain useful as regression/reference content, but new content should prefer promoted canonical action slices and current authoring conventions.
+  status: legacy
+  tags:
+  - beta
+  - legacy
+  entries:
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-auto-enter-box
+    name: Auto Enter Box
+    description: Legacy Beta containment vignette demonstrating an actor automatically entering an adjacent box-like container; kept for enter/containment compatibility reference.
+    status: legacy
+    tags: [beta, legacy, containment, enter-exit]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-enter-exit-manual
+    name: Enter Exit Manual
+    description: Legacy Beta manual containment room for entering and exiting inventory spaces; reviewers should observe basic player-driven enter/exit behavior.
+    status: legacy
+    tags: [beta, legacy, containment, enter-exit, manual]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-exit-practice
+    name: Exit Practice
+    description: Legacy Beta room focused on practicing exit behavior from a containing entity; preserved as a containment regression reference.
+    status: legacy
+    tags: [beta, legacy, containment, exit]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-mouse-crack
+    name: Mouse Crack
+    description: Legacy Beta containment/aperture vignette showing a small actor interacting with a narrow opening; kept to illustrate aperture-sensitive traversal.
+    status: legacy
+    tags: [beta, legacy, containment, aperture]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-nested-aperture-blocked
+    name: Nested Aperture Blocked
+    description: Legacy Beta nested-containment case where aperture constraints block traversal; reviewers should observe the blocked nested entry/exit outcome.
+    status: legacy
+    tags: [beta, legacy, containment, aperture, blocked]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-nested-aperture-success
+    name: Nested Aperture Success
+    description: Legacy Beta nested-containment case where aperture constraints allow traversal; preserved as the success counterpart to the blocked nested aperture room.
+    status: legacy
+    tags: [beta, legacy, containment, aperture]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\EnterExitShowcases.yaml
+    scenarioId: beta-too-bulky-enter
+    name: Too Bulky Enter
+    description: Legacy Beta containment vignette showing an entity too bulky to enter a target container; reviewers should observe bulk/aperture rejection.
+    status: legacy
+    tags: [beta, legacy, containment, bulk, aperture, blocked]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
+    scenarioId: beta-pocket-bazaar
+    name: Pocket Bazaar
+    description: Legacy Beta nested-scene showcase with several inventory spaces; reviewers can enter with E and exit with X to inspect containment behavior.
+    status: legacy
+    tags: [beta, legacy, containment, nested, manual]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\AlphaSlimeRecreation.yaml
+    scenarioId: beta-alpha-slime-recreation
+    name: Alpha Slime Recreation
+    description: Legacy Beta recreation of the Alpha slime behavior using the then-current tool surface; preserved for compatibility comparison with the original Alpha scenario.
+    status: legacy
+    tags: [beta, legacy, alpha, movement]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\ApplyPrePlanShowcase.yaml
+    scenarioId: beta-apply-pre-plan-fear
+    name: Apply Pre-Plan Fear
+    description: Legacy Beta showcase for pre-plan behavior composition and fear-like behavior; kept as compatibility reference for prototype action-plan sequencing.
+    status: legacy
+    tags: [beta, legacy, action-plan, pre-plan]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\BehaviorChainCompositionShowcase.yaml
+    scenarioId: beta-behavior-chain-composition
+    name: Behavior Chain Composition
+    description: Legacy Beta behavior-chain composition room demonstrating ordered prototype-compatible action steps and fallback behavior.
+    status: legacy
+    tags: [beta, legacy, action-plan, behavior-chain]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\CreateFacingShowcase.yaml
+    scenarioId: beta-create-showcase
+    name: Create Showcase
+    description: Legacy Beta creation-facing scenario demonstrating prototype entity creation in front of an actor; retained as a legacy primitive reference.
+    status: legacy
+    tags: [beta, legacy, creation, facing]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\DestroyTargetShowcase.yaml
+    scenarioId: beta-destroy-showcase
+    name: Destroy Showcase
+    description: Legacy Beta target destruction scenario; reviewers should observe target selection followed by prototype-compatible destruction behavior.
+    status: legacy
+    tags: [beta, legacy, targeting, destroy]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\DropFacingShowcase.yaml
+    scenarioId: beta-drop-showcase
+    name: Drop Showcase
+    description: Legacy Beta drop-facing room demonstrating an actor placing carried contents into the adjacent facing cell.
+    status: legacy
+    tags: [beta, legacy, inventory, drop]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\PickupDropWeightShowcase.yaml
+    scenarioId: beta-pickup-drop-weight
+    name: Pickup Drop Weight
+    description: Legacy Beta pickup/drop room focused on carried weight, inventory capacity, and related failure/success observations.
+    status: legacy
+    tags: [beta, legacy, inventory, pickup, drop, bulk]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\PlayerControlHeroActionsTest.yaml
+    scenarioId: beta-player-control-hero-actions-test
+    name: Player Control Hero Actions Test
+    description: Legacy Beta player-control test room with a Hero using MoveFacing, Backstep, and PickupTarget compatibility steps; kept separate from canonical Action Choice rooms.
+    status: legacy
+    tags: [beta, legacy, player-control, movement, pickup]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\CurrentTools\PushFacingShowcase.yaml
+    scenarioId: beta-push-showcase
+    name: Push Showcase
+    description: Legacy Beta push-facing showcase where creatures can push blocking entities; preserved as a prototype interaction reference.
+    status: legacy
+    tags: [beta, legacy, push, facing]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\BackstepShowcase.yaml
+    scenarioId: beta-backstep-showcase
+    name: Backstep Showcase
+    description: Legacy Beta movement room demonstrating Backstep behavior; kept as compatibility reference while canonical Move is promoted separately.
+    status: legacy
+    tags: [beta, legacy, movement, backstep]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\PatrolTurnShowcase.yaml
+    scenarioId: beta-patrol-turn
+    name: Patrol Turn
+    description: Legacy Beta patrol room with creatures that turn when they hit a wall; preserved for prototype direction-transform behavior.
+    status: legacy
+    tags: [beta, legacy, movement, patrol, turning]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\TurnShowcase.yaml
+    scenarioId: beta-turn-showcase
+    name: Turn Showcase
+    description: Legacy Beta direction-transform room demonstrating turn behavior; retained as a reference for non-canonical facing mutations.
+    status: legacy
+    tags: [beta, legacy, movement, turning]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DirectionTransforms\WallBounceShowcase.yaml
+    scenarioId: beta-wall-bounce
+    name: Wall Bounce
+    description: Legacy Beta wall-bounce movement showcase; reviewers should observe direction changes caused by blocked movement.
+    status: legacy
+    tags: [beta, legacy, movement, wall-bounce]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DistanceMovement\DistanceTwoShowcase.yaml
+    scenarioId: beta-distance-two
+    name: Distance Two
+    description: Legacy Beta distance-sensitive movement room demonstrating two-cell distance behavior; kept for prototype movement comparison.
+    status: legacy
+    tags: [beta, legacy, movement, distance]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DistanceMovement\FleeTargetShowcase.yaml
+    scenarioId: beta-flee-target
+    name: Flee Target
+    description: Legacy Beta targeting/movement room where an actor flees a target; preserved as compatibility content for target-relative movement.
+    status: legacy
+    tags: [beta, legacy, movement, targeting, flee]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
+    scenarioId: beta-kiting-orbiter
+    name: Kiting Orbiter
+    description: Legacy Beta movement showcase with creatures that try to orbit the nearest object and can be distracted; retained for target-relative movement behavior.
+    status: legacy
+    tags: [beta, legacy, movement, targeting, orbit]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DistanceMovement\KitingOrbiterShowcase.yaml
+    scenarioId: beta-kiting-orbiter-fallback-lane
+    name: Kiting Orbiter Fallback Lane
+    description: Legacy Beta variant of the kiting orbiter scenario focused on fallback-lane behavior when the preferred movement is blocked.
+    status: legacy
+    tags: [beta, legacy, movement, targeting, fallback]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DistanceMovement\StrafeAnticlockwiseShowcase.yaml
+    scenarioId: beta-strafe-anticlockwise
+    name: Strafe Anticlockwise
+    description: Legacy Beta movement room demonstrating anticlockwise strafing around a target; kept as prototype-compatible movement reference.
+    status: legacy
+    tags: [beta, legacy, movement, strafe]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\DistanceMovement\StrafeClockwiseShowcase.yaml
+    scenarioId: beta-strafe-clockwise
+    name: Strafe Clockwise
+    description: Legacy Beta movement room demonstrating clockwise strafing around a target; kept as prototype-compatible movement reference.
+    status: legacy
+    tags: [beta, legacy, movement, strafe]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Targeting\AcquireTargetShowcase.yaml
+    scenarioId: beta-acquire-target-showcase
+    name: Acquire Target Showcase
+    description: Legacy Beta target-acquisition showcase using prototype-compatible target acquisition; new content should prefer authored targeting rules.
+    status: legacy
+    tags: [beta, legacy, targeting, acquire-target]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Targeting\CollectorShowcase.yaml
+    scenarioId: beta-collector
+    name: Collector
+    description: Legacy Beta collector vignette where a creature picks up nearby objects, including the player; preserved as a targeting and pickup reference.
+    status: legacy
+    tags: [beta, legacy, targeting, pickup, inventory]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Targeting\DirectChaseShowcase.yaml
+    scenarioId: beta-direct-chase
+    name: Direct Chase
+    description: Legacy Beta chase scenario demonstrating direct target pursuit; retained for target-relative movement comparison.
+    status: legacy
+    tags: [beta, legacy, targeting, movement, chase]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Targeting\SlimeLovesPlayerShowcase.yaml
+    scenarioId: beta-slime-loves-player
+    name: Slime Loves Player
+    description: Legacy Beta slime scenario where a slime chases the player once close enough, then picks them up; kept for targeting plus pickup behavior reference.
+    status: legacy
+    tags: [beta, legacy, targeting, movement, pickup]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Targeting\TargetedDestroyerShowcase.yaml
+    scenarioId: beta-targeted-destroyer
+    name: Targeted Destroyer
+    description: Legacy Beta target destroyer room demonstrating target acquisition followed by destruction; retained as prototype targeting reference.
+    status: legacy
+    tags: [beta, legacy, targeting, destroy]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Transfer\CollectorTraderHandoffShowcase.yaml
+    scenarioId: beta-collector-trader-handoff
+    name: Collector Trader Handoff
+    description: Legacy Beta transfer showcase where a collector picks up the closest object and hands it to another actor; retained with known self-containment caveat around later turns.
+    status: legacy
+    tags: [beta, legacy, transfer, inventory, caveat]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Transfer\FeedingOfferingShowcase.yaml
+    scenarioId: beta-feeding-offering
+    name: Feeding Offering
+    description: Legacy Beta transfer vignette demonstrating an offering/feeding-style handoff between actors or containers.
+    status: legacy
+    tags: [beta, legacy, transfer, inventory]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Transfer\PassiveChestTransferShowcase.yaml
+    scenarioId: beta-passive-chest-transfer
+    name: Passive Chest Transfer
+    description: Legacy Beta scene where a creature places an item in a chest; preserved as a basic GiveTarget/passive container transfer reference.
+    status: legacy
+    tags: [beta, legacy, transfer, inventory, chest]
+    source: Beta content exploration
+  - contentPath: src\GameGameGame.Content\Beta\Transfer\StealingActorShowcase.yaml
+    scenarioId: beta-stealing-actor
+    name: Stealing Actor
+    description: Legacy Beta scene where a creature takes an item from a chest; preserved as a TakeTarget-style transfer reference.
+    status: legacy
+    tags: [beta, legacy, transfer, inventory, chest]
+    source: Beta content exploration
+- id: delta
+  name: Delta and Canonical Action Vertical Slice Rooms
+  description: Recent vertical-slice scenarios and canonical action test rooms used to prove promoted actions, player interaction, and outcome/log reporting.
+  status: active-delta
+  tags:
+  - delta
+  - canonical-action
+  entries:
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalMoveShowcase.yaml
+    scenarioId: beta-canonical-move-outcomes
+    name: Canonical Move Outcomes
+    description: Delta/canonical action outcome room proving canonical Move success, blocked movement, diagonal cases, and final-state/log observations.
+    status: active-delta
+    tags: [delta, canonical-action, move, outcomes, vertical-slice]
+    source: docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalMoveShowcase.yaml
+    scenarioId: beta-canonical-move-player-interaction
+    name: Canonical Move Player Interaction
+    description: Delta/canonical action player-interaction room for canonical Move and Action Choice-style directional control; reviewers should observe player-selectable movement behavior.
+    status: active-delta
+    tags: [delta, canonical-action, move, player-interaction, vertical-slice]
+    source: docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalPickupDropShowcase.yaml
+    scenarioId: beta-canonical-pickup-drop-outcomes
+    name: Canonical Pickup Drop Outcomes
+    description: Delta/canonical action outcome room for pickup/drop behavior, inventory transfer outcomes, and related reporting expectations.
+    status: active-delta
+    tags: [delta, canonical-action, pickup, drop, outcomes, vertical-slice]
+    source: docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalPickupDropShowcase.yaml
+    scenarioId: beta-canonical-pickup-drop-player-interaction
+    name: Canonical Pickup Drop Player Interaction
+    description: Delta/canonical action player-interaction room for pickup/drop choices; reviewers should observe selectable inventory interaction behavior.
+    status: active-delta
+    tags: [delta, canonical-action, pickup, drop, player-interaction, vertical-slice]
+    source: docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
+    scenarioId: beta-success-criteria-log-room
+    name: Success Criteria Log Room
+    description: Delta-era reporting room with barely/easy success and failure examples for aperture-backed action success criteria and player-facing log projection.
+    status: active-delta
+    tags: [delta, reporting, success-criteria, logs, aperture]
+    source: Delta/Canonical action reporting groundwork
+- id: user
+  name: User-Generated Scenarios
+  description: Frontend-editor-authored scenarios should be registered here or in a user manifest rather than mixed with packaged Beta/Delta content.
+  status: user
+  tags:
+  - user-generated
+  entries: []
+- id: canonical
+  name: Canonical and Main-Game Candidates
+  description: Promoted main-game scenarios, reusable content, and canonical candidates belong here once they are no longer only vertical-slice proof rooms.
+  status: canonical
+  tags:
+  - canonical
+  entries: []
 diagnostics: []

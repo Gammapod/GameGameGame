@@ -30,6 +30,7 @@ Use this as a navigation map, not a mandatory scope checklist. A slice may inten
    - Stable headless operations and structured results over editor/content services.
 7. **Frontend/editor UI workflow, when selected**
    - Human-facing SadConsole or future frontend support only when the active plan explicitly selects UI work.
+   - For canonical action slices, identify the player-facing facts exposed by the action, decide which facts require graphical presentation, reuse accepted component-gallery visual treatments where possible, and prototype new graphical treatments in the gallery before changing the play surface.
 8. **Tests**
    - Layer-appropriate tests for Core, Content, Editor service/API, integration/scenario behavior, and frontend UI only when UI work is in scope.
 9. **Capability and authoring documentation**
@@ -58,6 +59,7 @@ Notes:
 - Prefer canonical ordered behavior-chain Action Steps for new normal authoring.
 - Do not reintroduce arbitrary variable-name authoring for canonical workflows.
 - If frontend/editor UI support is intentionally deferred, document the support tier and stopping point.
+- When frontend play-mode support is selected, do not default central player-facing facts to terminal-style text dumps. Preserve textual explanation/inspection, but decide the square-tile visual treatment or explicitly document why text-only presentation remains acceptable for that slice.
 
 ### Scenario feedback slice
 

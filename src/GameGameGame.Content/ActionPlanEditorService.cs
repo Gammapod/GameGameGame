@@ -179,6 +179,19 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
         onChanged?.Invoke();
     }
 
+    public void SetActionPlanBehaviorStepDirectionMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanMoveDirectionMode? directionMode)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.Move && directionMode is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Move steps support directionMode.");
+        }
+
+        step.DirectionMode = directionMode?.ToString();
+        onChanged?.Invoke();
+    }
+
     public void MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex)
     {
         var steps = GetActionPlanBehaviorSteps(planId);

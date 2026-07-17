@@ -64,10 +64,13 @@ public sealed partial class ActionPlanInterpreter
     {
         var primitive = step.Kind switch
         {
+            ActionPlanBehaviorStepKind.Move => null,
             ActionPlanBehaviorStepKind.MoveFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.MoveFacing),
             ActionPlanBehaviorStepKind.Backstep => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.Backstep),
             ActionPlanBehaviorStepKind.PickupTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget),
+            ActionPlanBehaviorStepKind.TransformAdjacentToInventory => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PickupTarget),
             ActionPlanBehaviorStepKind.DropFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DropFacing),
+            ActionPlanBehaviorStepKind.TransformInventoryToAdjacent => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DropFacing),
             ActionPlanBehaviorStepKind.PushFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.PushFacing),
             ActionPlanBehaviorStepKind.DestroyTarget => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.DestroyTarget),
             ActionPlanBehaviorStepKind.CreateFacing => new ActionPlanPrimitiveDescriptor(ActionPlanPrimitiveKind.CreateFacing),
@@ -92,6 +95,7 @@ public sealed partial class ActionPlanInterpreter
 
         return step.Kind switch
         {
+            ActionPlanBehaviorStepKind.Move => ApplyCanonicalMove(world, actorId, context, step),
             ActionPlanBehaviorStepKind.AcquireNearestTarget => ApplyAcquireNearestTarget(world, actorId, context),
             ActionPlanBehaviorStepKind.SeekTarget => ApplySeekTarget(world, actorId, context),
             ActionPlanBehaviorStepKind.FleeTarget => ApplyFleeTarget(world, actorId, context),

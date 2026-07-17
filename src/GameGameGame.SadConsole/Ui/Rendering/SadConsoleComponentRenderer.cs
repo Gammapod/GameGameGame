@@ -68,6 +68,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
 
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
+        FillRect(target, bounds, Color.Black);
         DrawBox(target, bounds, border, theme.Panel.BorderGlyphs);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
 
@@ -86,6 +87,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
     {
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
+        FillRect(target, bounds, Color.Black);
         DrawBox(target, bounds, border, theme.Panel.BorderGlyphs);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
 
@@ -139,6 +141,7 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
     {
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
+        FillRect(target, bounds, Color.Black);
         DrawBox(target, bounds, border, theme.Panel.BorderGlyphs);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
 
@@ -191,6 +194,19 @@ internal sealed class SadConsoleComponentRenderer(Console host, SadConsoleTheme 
         {
             SetCell(target, rect.Left, y, glyphs.Vertical, color, Color.Black);
             SetCell(target, right, y, glyphs.Vertical, color, Color.Black);
+        }
+    }
+
+    private static void FillRect(Console target, SadConsoleRect rect, Color background)
+    {
+        var right = Math.Min(target.Width, rect.Left + rect.Width);
+        var bottom = Math.Min(target.Height, rect.Bottom);
+        for (var y = Math.Max(0, rect.Top); y < bottom; y++)
+        {
+            for (var x = Math.Max(0, rect.Left); x < right; x++)
+            {
+                SetCell(target, x, y, ' ', Color.White, background);
+            }
         }
     }
 

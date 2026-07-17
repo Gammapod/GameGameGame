@@ -1,6 +1,6 @@
 # Canonical Actions Vertical Slice Plan
 
-Status: Active release plan. This supersedes Delta point-of-view as the selected next implementation direction while preserving Delta POV as completed/available foundation work and follow-up context.
+Status: Active release plan. The first canonical `Move` vertical slice and first runtime control-source / Action Choice slice are complete; use them as the reference workflow for promoting follow-up actions. This supersedes Delta point-of-view as the selected next implementation direction while preserving Delta POV as completed/available foundation work and follow-up context.
 
 Read when:
 
@@ -16,7 +16,7 @@ Related source of truth:
 - `docs/Source of Truth/Content-Authoring-Manual.md` records what authors can safely create today.
 - `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome and affordance rules.
 - `docs/Source of Truth/Frontend-Game-Text.md` records player-facing log message ID slots and argument expectations.
-- `docs/Plans/Delta-Point-of-View-Release-Plan.md` records the POV foundation this plan consumes.
+- `docs/Archived/Delta-Point-of-View-Release-Plan.md` records the POV foundation this plan consumes.
 - `docs/Plans/Gamma-Editor-MVP-Plan.md` and `docs/Plans/SadConsole-Frontend-Roadmap.md` preserve the broader componentized editor/play-mode backlog.
 
 ## Release target
@@ -89,6 +89,8 @@ These rooms are validation fixtures, not just demos. They should be runnable thr
 1. Componentized play mode can present the action through shared choice/target/log/POV services.
 2. The frontend does not own action legality, success/failure policy, or ratio semantics.
 3. Any frontend tests assert UI consumption of shared facts, not duplicated engine rules.
+4. For every newly promoted action, frontend planning explicitly decides which player-facing facts the action exposes, which of those facts need graphical presentation, and whether an existing canonical visual treatment can be reused or a new one must be prototyped in the SadConsole component gallery before changing the play surface.
+5. New player-facing graphical treatments should fit the SadConsole square-tile rendering baseline: text, entity glyphs, decorators, panels, menus, and future sprites are tile-rendered UI elements, while gameplay state should not default to terminal-style text dumps when a tile-based visual treatment is needed for player understanding.
 
 ## Runtime control source and Action Choice
 
@@ -121,7 +123,64 @@ Open design details to resolve before implementation:
 - how pending choice requests and submissions integrate with `SimulationHistorySession` frame/interval recording;
 - how direct controlled-command compatibility is bridged or retired during migration.
 
+## Repeatable canonical vertical-slice workflow
+
+Use the completed `Move` slice as the baseline workflow before promoting another action:
+
+1. **Classify and scope**: decide whether the action remains legacy/prototype-compatible, becomes promoted canonical, or needs a new canonical action instead of reusing an old step name.
+2. **Trace invariants first**: identify affected contracts in `docs/Source of Truth/invariants.md`, preserve existing compatibility tests, and add intentionally failing tests for the new canonical behavior before production changes.
+3. **Implement Core semantics narrowly**: add the smallest engine/runtime behavior, structured outcome facts, and state-contract changes needed for the promoted action.
+4. **Keep authoring parity**: update descriptor/YAML loading, validation, editor services, agent/headless tools, previews, and schemas/catalogs so authors do not need to hand-edit unsupported fields.
+5. **Add fixture rooms**: maintain one deterministic log/outcome scenario and one player-interaction scenario for every promoted action.
+6. **Connect play surfaces through shared services**: frontends consume Core/Content choice, target, history, POV, and log facts; they do not own legality or action results.
+7. **Decide the frontend visual grammar**: list the player-facing facts exposed by the action, choose the canonical graphical treatment for each promoted visual fact, reuse existing gallery patterns when possible, and prototype any new treatment in the SadConsole component gallery before applying it to the play surface. Keep textual explanation/inspection available, but do not let new action UX regress to text-only terminal presentation when the fact is central to player decision-making.
+8. **Update docs in the source-of-truth lanes**: invariants for behavior/test traces, capability matrix for layer coverage/tier, authoring manual for content-facing usage, action-logic/game-text docs for outcome/log expectations, frontend UX standards/decisions for accepted visual treatments, and this plan/roadmap for next-slice decisions.
+9. **Validate broadly enough**: run targeted tests for Core, Content/editor/tooling, and frontend consumers, then the relevant broader suites before declaring the slice complete.
+
+Agent/headless tooling rule: `ggg_*` tools should be structured, agent-accessible versions of established user-facing editor/play-mode surfaces. Prioritize tools that edit content and tools that run/inspect simulations, and keep them in parity with shared editor services and supported play-mode workflows rather than adding agent-only semantics.
+
 ## Multi-phase implementation plan
+
+## Selected first slice: canonical `Move`
+
+The first promoted canonical action is a new parameterized `Move` Action Step, not a direct promotion of legacy/prototype `MoveFacing` or `Backstep`.
+
+Phase-0 decisions:
+
+1. `Direction`/`Facing` expands to eight directions: `North`, `NorthEast`, `East`, `SouthEast`, `South`, `SouthWest`, `West`, `NorthWest`.
+2. Canonical `Move` has a required closed-enum `directionMode` for autonomous/fallback resolution. Relative modes are eighth-turn offsets from the actor's previous `Facing`: `Forward`, `ForwardRight`, `Right`, `BackRight`, `Back`, `BackLeft`, `Left`, `ForwardLeft`. Absolute modes may be supported for deterministic authored fixtures.
+3. Player-controlled/action-choice presentation does not require an authored `ChooseAbsolute` mode. If a player-controlled actor has one or more canonical `Move` steps in its effective plan, Core should expose one player-facing eight-direction absolute movement choice for the first slice, coalescing multiple authored `Move` steps into one player-facing Move option.
+4. Successful canonical movement relocates the actor one adjacent cell, consumes the turn, and sets persistent `Facing` to the actual absolute direction moved. Failed canonical movement does not relocate, does not change `Facing`, and does not opportunistically change targets.
+5. Canonical Action Steps do not select or overwrite targets as incidental side effects. Targets are refreshed before action-plan resolution from template `targetingRules`; target-consuming steps read those target facts. Legacy/prototype target-writing behavior remains compatibility behavior until migrated or retired.
+6. Diagonal movement may cut one blocked orthogonal corner but may not pass when both orthogonal corner cells forming the diagonal passage are blocked.
+
+### Phase 1 TDD trace
+
+Affected invariants from `docs/Source of Truth/invariants.md`:
+
+- `Canonical Action Steps must preserve their documented state contracts for Facing, Target, movement, target selection, inventory transfer, fallthrough, and deterministic tie-breaks.`
+- `Controlled actor commands...` and `Controlled actor affordance queries...` remain relevant compatibility surfaces because direct-player movement already exposes direction choices; the canonical Move choice model will eventually supersede/bridge this path.
+- `Entity action state such as Facing, numeric Target slots, and labeled targets is typed and persists...`
+- `The Action Step/primitive catalog describes every exposed primitive, value kind, implied state contract, and field contract.`
+- `Content editor operations...` must grow first-class editing/validation support for the required `directionMode` field.
+
+Existing traced tests to revise or preserve as compatibility:
+
+- Preserve direct movement post-action facing tests: `TurnServiceUpdatesFacingAfterSuccessfulDirectionalMovement`, `TurnServiceDoesNotUpdateFacingAfterFailedDirectionalMovement`.
+- Preserve legacy/prototype compatibility tests for existing steps unless explicitly reclassified in the implementation: `BehaviorChainRunsMoveFacingThenPickupTargetWithoutLinkedFallbackPlan`, `BackstepMovesOppositeFacingConsumesTurnAndPreservesFacing`, `BackstepBlockedByEntityWritesTargetAndFallsThrough`.
+- Add new canonical Move tests instead of rewriting those legacy tests in the first slice.
+
+New intentionally failing tests for Phase 1:
+
+- `CanonicalMoveRelativeBackSetsFacingToActualMovedDirection`.
+- `CanonicalMoveBlockedByEntityDoesNotWriteTarget`.
+- `CanonicalMoveDiagonalAllowsOneBlockedCorner`.
+- `CanonicalMoveDiagonalRejectsTwoBlockedCorners`.
+- `CanonicalMoveBehaviorStepRequiresDirectionModeForAuthoring`.
+- `CanonicalMoveDescriptorRoundTripsDirectionMode`.
+- `ControlledActorAffordanceQueryReportsEightMovementDirections`.
+
+Implementation should not begin until these tests or equivalent targeted tests are present and failing for the expected reason.
 
 ### Phase 0: Planning, classification, and test traces
 
@@ -150,13 +209,15 @@ Exit criteria:
 
 Goal: promote one simple action end-to-end.
 
+Status: Complete for the first promoted canonical action, `Move`.
+
 Scope:
 
-1. Finalize engine outcome shape for the selected action.
-2. Add or update player-facing log IDs.
-3. Add the two content rooms.
-4. Exercise the rooms through scenario/player-log tooling.
-5. Update editor/content docs to mark the action as canonical.
+1. Finalize engine outcome shape for the selected action. Complete for `Move`: 8-way absolute/relative `directionMode`, success sets `Facing` to actual movement direction, failure preserves position/`Facing` and does not write `Target`, and diagonal movement may cut one blocked orthogonal corner but not two.
+2. Add or update player-facing log IDs. Complete for `Move` with `action.move.success` and `action.move.failure` slots.
+3. Add the two content rooms. Complete for `Move` in `src/GameGameGame.Content/Beta/CanonicalActions/CanonicalMoveShowcase.yaml`.
+4. Exercise the rooms through scenario/player-log tooling. Complete through content validation/scenario run tests and manual 8-way play verification.
+5. Update editor/content docs to mark the action as canonical. Complete for Core/content/editor/API/tooling docs.
 
 Exit criteria:
 
@@ -182,6 +243,8 @@ Exit criteria:
 
 Goal: replace special direct player control with Core-owned runtime control source and authored action choice.
 
+Status: First slice complete for canonical `Move`; non-movement choices and target/destination subrequests remain follow-up.
+
 Core/shared backlog captured from frontend planning:
 
 1. Add Core-owned `ActionChoiceRequest`, submission, and result contracts.
@@ -206,6 +269,38 @@ Scope:
 Exit criteria:
 
 - Any actor whose runtime control source is player choice can request player choice through shared services, and selected canonical actions execute authoritatively through Core/shared services.
+
+### Selected first Action Choice slice
+
+Scope selected after the canonical `Move` play-surface bridge:
+
+1. Add mutable Core runtime control-source state on `EntityActionState`, starting with `Automatic` and `PlayerChoice`, and preserve it through `WorldState.Clone`/history rollback. Complete.
+2. Materialized scenario `PlayerControls` initialize controlled runtime entities to `PlayerChoice` while non-controlled actors remain `Automatic`. Complete.
+3. Add a Core `ActionChoiceService` that returns an action-choice request only for `PlayerChoice` actors. The first request shape supports the first visible canonical `Move` Action Step in the actor's effective/default behavior descriptor and coalesces multiple authored `Move` steps into one player-facing `Move` choice. Complete.
+4. The first `Move` choice exposes eight absolute direction options with destination, can-execute, failure reason/detail, and blocking entity facts from Core movement evaluation. Complete.
+5. Submitting a selected direction executes through Core/shared turn/history semantics, consumes/advances on success, logs failure without advancement on failed movement, and preserves the canonical movement contract that success faces the moved direction while failure preserves facing. Complete.
+
+First-slice status/deferrals:
+
+- Core Action Choice now has a first Pickup/Drop source/destination seam: `PickupTarget` choices expose adjacent pickup targets and inventory slots, `DropFacing` choices expose carried sources and adjacent map destinations, and submitted choices execute through controlled-command semantics;
+- history submission helpers for Pickup/Drop Action Choices are available, and the SadConsole play mock has the first action-step-first menu path: direct movement controls remain available, `Enter` opens authored action steps, then target/source and destination lists are selected from Core Action Choice facts;
+- full pre/main/post override descriptor composition in choice request projection;
+- target-first action selection remains a future pathway that should reuse the same Core facts;
+- rich choice DTO fields for previous/new facing and source/destination beyond existing command outcome facts.
+
+Next non-movement Action Choice design avenues to evaluate before promoting `PickupTarget`/`DropTarget`:
+
+1. **Action menu first**: the player opens a non-movement action menu instead of moving, chooses an action such as pickup/drop, then receives a target/source menu scoped by Core legality.
+2. **Target selection first**: the player highlights/selects an entity or carried item first, then receives the legal action menu for that selected target/source.
+3. **Bump-to-interact menu**: attempting to move into an occupied/interactive entity opens the legal action menu against the bumped entity rather than turning the bump itself into an unconditional action.
+
+These are player-control/menu models, not new engine-only semantics. The selected path must still execute through normal authored Action Steps, Core target/source requests, shared history/log projection, and editor/tooling parity.
+
+TDD trace for this slice:
+
+- Affected invariants: runtime action-plan/control-source state cloning/rollback, controlled actor command/affordance semantics as compatibility bridge, canonical Action Step movement contracts, scenario materialization player-control bindings.
+- Existing tests to preserve and extend: `WorldStateClonePreservesMutableSimulationStateWithoutSharingCollections`, `RollbackRestoresFrameSnapshotAndVisibleTraceContext`, `SubmitSuccessfulControlledCommandCreatesIntervalAndNextFrame`, `SubmitFailedControlledCommandAddsCurrentFrameLogWithoutAdvancingFrameOrTurn`, `ScenarioMaterializerResolvesAuthoredPlayerControlBindings`, `ScenarioMaterializerDefaultsLegacyPlayerControlWhenNoBindingIsAuthored`, canonical Move tests added in Phase 1.
+- New intentionally failing tests: `WorldStateClonePreservesActionControlSource`, `ScenarioMaterializerInitializesPlayerControlledEntitiesForChoice`, `ActionChoiceRequestRequiresPlayerChoiceControlSource`, `ActionChoiceRequestCoalescesCanonicalMoveStepsIntoOneEightDirectionChoice`, `SubmitMoveChoiceSuccessAdvancesAndSetsFacing`, and `SubmitMoveChoiceFailureLogsWithoutAdvancing`.
 
 ### Phase 4: Componentized Gamma play-mode replacement
 
@@ -245,11 +340,22 @@ Exit criteria:
 
 Suggested order, subject to scenario pressure:
 
-1. `MoveFacing` for the simplest end-to-end slice.
-2. `PickupTarget` or `EnterTarget` for target adjective and aperture/bulk ratio proof.
-3. `DropFacing`, `PushFacing`, or `SeekTarget` after the first target-facing slice clarifies log/ratio patterns.
+1. `Move` - complete as the first promoted canonical movement/action-choice slice.
+2. `PickupTarget` and `DropTarget` as the next non-movement player-interaction exploration pair. These should not reuse the movement-specific 8-way choice model; evaluate menu/target-selection flows before implementation.
+3. `EnterTarget`, `PushFacing`, or `SeekTarget` after the first target-facing inventory slice clarifies log/ratio/menu patterns.
 4. Transfer actions such as `GiveTarget`/`TakeTarget` after inventory selection/log wording expectations are clearer.
 5. Prototype utility/world-mutation actions such as `CreateFacing` only after template-backed spawning direction is revisited.
+
+## Transform action family naming direction
+
+For maintainability, non-actor movement actions should converge on an internal/canonical `Transform<Source>To<Destination>` naming family. `Transform` means the actor moves or relocates an entity other than itself through constrained gameplay rules. Preferred future names:
+
+- `TransformAdjacentToInventory`: current Pickup semantics, adjacent map entity to actor inventory.
+- `TransformInventoryToAdjacent`: current adjacent Drop semantics, actor inventory entity to adjacent map space.
+- `TransformInventoryToRanged`: planned Throw semantics, actor inventory entity to ranged destination.
+- `TransformAdjacentToRanged`: planned Shove semantics, adjacent map entity to ranged destination.
+
+`TransformAdjacentToInventory` and `TransformInventoryToAdjacent` are now available as preferred behavior-chain Action Step aliases over the existing semantics. Existing `PickupTarget` and `DropFacing` names remain compatibility names while current content and older tests continue to use them.
 
 ## Explicit non-goals for the first release slice
 

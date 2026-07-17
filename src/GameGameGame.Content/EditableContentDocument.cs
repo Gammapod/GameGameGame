@@ -678,16 +678,24 @@ public sealed class EditableContentDocument
 
         public string? PlanId { get; set; }
 
+        public string? DirectionMode { get; set; }
+
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
             TargetSlot = descriptor.TargetSlot,
             TargetLabel = descriptor.TargetLabel,
-            PlanId = descriptor.PlanId?.Value
+            PlanId = descriptor.PlanId?.Value,
+            DirectionMode = descriptor.DirectionMode?.ToString()
         };
 
         public ActionPlanBehaviorStepDescriptor ToDescriptor() =>
-            new(Kind, TargetSlot, TargetLabel, PlanId is null ? null : new ActionPlanId(PlanId));
+            new(
+                Kind,
+                TargetSlot,
+                TargetLabel,
+                PlanId is null ? null : new ActionPlanId(PlanId),
+                DirectionMode is { } mode ? Enum.Parse<ActionPlanMoveDirectionMode>(mode, ignoreCase: true) : null);
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

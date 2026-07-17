@@ -686,6 +686,57 @@ public sealed partial class ActionPlanInterpreter
         return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
     }
 
+    private PlanEffectResult ApplyCanonicalMove(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        ActionPlanBehaviorStepDescriptor step)
+    {
+        var trace = new TraceNode("Primitive Move", TraceStatus.Info);
+        if (step.DirectionMode is not { } mode)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = "Move requires directionMode";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!TryResolveMoveDirection(mode, context, out var direction, out var readTrace, out var failureDetail))
+        {
+            if (readTrace is not null)
+            {
+                trace.Add(readTrace);
+            }
+
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = failureDetail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (readTrace is not null)
+        {
+            trace.Add(readTrace);
+        }
+
+        trace.Add(TraceNode.Success("Resolve direction", $"mode={mode}; direction={direction}"));
+        IActionIntent action = new MoveAction(direction);
+        var resolution = action.Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+
+        if (resolution.Succeeded)
+        {
+            world.SetActionFacing(actorId, direction);
+            trace.Add(TraceNode.Success("Set Facing", direction.ToString()));
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"moved {direction}; Facing={direction}";
+            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace, direction);
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
+
     private PlanEffectResult ApplyPickupTargetPrimitive(
         WorldState world,
         EntityId actorId,
@@ -1069,54 +1120,92 @@ public sealed partial class ActionPlanInterpreter
     }
 
     private static Direction TurnLeft(Direction direction) =>
-        direction switch
-        {
-            Direction.North => Direction.West,
-            Direction.West => Direction.South,
-            Direction.South => Direction.East,
-            Direction.East => Direction.North,
-            _ => direction
-        };
+        DirectionMath.Rotate(direction, -2);
 
     private static Direction TurnRight(Direction direction) =>
-        direction switch
-        {
-            Direction.North => Direction.East,
-            Direction.East => Direction.South,
-            Direction.South => Direction.West,
-            Direction.West => Direction.North,
-            _ => direction
-        };
+        DirectionMath.Rotate(direction, 2);
 
     private static Direction Reverse(Direction direction) =>
-        direction switch
-        {
-            Direction.North => Direction.South,
-            Direction.South => Direction.North,
-            Direction.East => Direction.West,
-            Direction.West => Direction.East,
-            _ => direction
-        };
+        DirectionMath.Reverse(direction);
 
     private static Direction Clockwise(Direction direction) =>
-        direction switch
-        {
-            Direction.North => Direction.East,
-            Direction.East => Direction.South,
-            Direction.South => Direction.West,
-            Direction.West => Direction.North,
-            _ => direction
-        };
+        DirectionMath.Rotate(direction, 2);
 
     private static Direction Anticlockwise(Direction direction) =>
-        direction switch
+        DirectionMath.Rotate(direction, -2);
+
+    private static bool TryResolveMoveDirection(
+        ActionPlanMoveDirectionMode mode,
+        ActionPlanContext context,
+        out Direction direction,
+        out TraceNode? readTrace,
+        out string? failureDetail)
+    {
+        readTrace = null;
+        failureDetail = null;
+        if (TryAbsoluteMoveDirection(mode, out direction))
         {
-            Direction.North => Direction.West,
-            Direction.West => Direction.South,
-            Direction.South => Direction.East,
-            Direction.East => Direction.North,
-            _ => direction
-        };
+            return true;
+        }
+
+        if (!context.TryRead<DirectionPlanValue>(ActionPlanSlot.Facing, out var facing, out var facingReadTrace))
+        {
+            readTrace = facingReadTrace;
+            failureDetail = facingReadTrace.Detail;
+            return false;
+        }
+
+        readTrace = facingReadTrace;
+        direction = DirectionMath.Rotate(facing.Value, RelativeEighthTurns(mode));
+        return true;
+    }
+
+    private static bool TryAbsoluteMoveDirection(ActionPlanMoveDirectionMode mode, out Direction direction)
+    {
+        switch (mode)
+        {
+            case ActionPlanMoveDirectionMode.North:
+                direction = Direction.North;
+                return true;
+            case ActionPlanMoveDirectionMode.NorthEast:
+                direction = Direction.NorthEast;
+                return true;
+            case ActionPlanMoveDirectionMode.East:
+                direction = Direction.East;
+                return true;
+            case ActionPlanMoveDirectionMode.SouthEast:
+                direction = Direction.SouthEast;
+                return true;
+            case ActionPlanMoveDirectionMode.South:
+                direction = Direction.South;
+                return true;
+            case ActionPlanMoveDirectionMode.SouthWest:
+                direction = Direction.SouthWest;
+                return true;
+            case ActionPlanMoveDirectionMode.West:
+                direction = Direction.West;
+                return true;
+            case ActionPlanMoveDirectionMode.NorthWest:
+                direction = Direction.NorthWest;
+                return true;
+            default:
+                direction = default;
+                return false;
+        }
+    }
+
+    private static int RelativeEighthTurns(ActionPlanMoveDirectionMode mode) => mode switch
+    {
+        ActionPlanMoveDirectionMode.Forward => 0,
+        ActionPlanMoveDirectionMode.ForwardRight => 1,
+        ActionPlanMoveDirectionMode.Right => 2,
+        ActionPlanMoveDirectionMode.BackRight => 3,
+        ActionPlanMoveDirectionMode.Back => 4,
+        ActionPlanMoveDirectionMode.BackLeft => -3,
+        ActionPlanMoveDirectionMode.Left => -2,
+        ActionPlanMoveDirectionMode.ForwardLeft => -1,
+        _ => 0
+    };
 
     private static int ManhattanDistance(GridCoord first, GridCoord second) =>
         Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);

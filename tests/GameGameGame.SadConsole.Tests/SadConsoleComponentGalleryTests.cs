@@ -4,6 +4,7 @@ using GameGameGame.SadConsoleApp.Ui.Navigation;
 using GameGameGame.SadConsoleApp.Ui.Rendering;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
+using GameGameGame.SadConsoleApp.Ui.Tiles;
 
 namespace GameGameGame.SadConsole.Tests;
 
@@ -25,6 +26,8 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("int-setter-overlay", component.Id),
             component => Assert.Equal("choice-picker-overlay", component.Id),
             component => Assert.Equal("confirm-overlay", component.Id),
+            component => Assert.Equal("candii-tileset", component.Id),
+            component => Assert.Equal("play-mode-components", component.Id),
             component => Assert.Equal("footer", component.Id));
     }
 
@@ -57,6 +60,10 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Choice picker overlay"));
         Assert.Contains(rows, row => row.Contains("■ Yellow"));
         Assert.Contains(rows, row => row.Contains("Confirm overlay"));
+        Assert.Contains(rows, row => row.Contains("Candii 8x8 tileset preview"));
+        Assert.Contains(rows, row => row.Contains("square 8x8 cells"));
+        Assert.Contains(rows, row => row.Contains("Play mode component map"));
+        Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
         Assert.DoesNotContain(rows, row => row.Contains("Command palette overlay"));
         Assert.Contains(rows, row => row.Contains("Context footer"));
         Assert.Contains(rows, row => row.Contains("arrows select a component"));
@@ -175,5 +182,27 @@ public sealed class SadConsoleComponentGalleryTests
     public void GalleryRendererCanPreviewBorderGlyphTheme()
     {
         Assert.Equal("#=# ! #=#", ComponentGalleryConsole.BorderGlyphPreview(BorderGlyphTheme.DoubleAscii));
+    }
+
+    [Fact]
+    public void CandiiTilesetProfileDefinesSquareTileRoles()
+    {
+        var profile = TilesetProfileLoader.Load(Path.Combine("assets", "Candii.tileset.json"));
+
+        Assert.Equal("candii-8x8", profile.Id);
+        Assert.Equal("Candii", profile.FontName);
+        Assert.Equal(8, profile.TileWidth);
+        Assert.Equal(8, profile.TileHeight);
+        Assert.Equal(8, profile.BaseUnit);
+        Assert.Equal(0, profile.Blank);
+        Assert.Equal(0, profile.ResolveTextGlyph(' '));
+        Assert.Equal('&', profile.ResolveTextGlyph('&'));
+        Assert.Equal(180, profile.Roles.PanelBorder.TopLeft);
+        Assert.Equal(153, profile.Roles.PanelBorder.TopRight);
+        Assert.Equal(154, profile.Roles.PanelBorder.BottomLeft);
+        Assert.Equal(179, profile.Roles.PanelBorder.BottomRight);
+        Assert.Equal(158, profile.Roles.PanelBorder.Horizontal);
+        Assert.Equal(141, profile.Roles.PanelBorder.Vertical);
+        Assert.Empty(profile.Validate());
     }
 }

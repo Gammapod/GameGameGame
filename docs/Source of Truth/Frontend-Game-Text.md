@@ -14,7 +14,7 @@ Related documents:
 - `docs/Source of Truth/Frontend-UX-Standards.md` records log presentation standards for global and local activity surfaces.
 - `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome and affordance semantics.
 - `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md` records the active requirement that every promoted canonical action has player-facing success/failure log IDs and any needed ratio/reason variants.
-- `docs/Plans/Delta-Point-of-View-Release-Plan.md` records the current point-of-view, target adjective, and reciprocal adjective direction.
+- `docs/Archived/Delta-Point-of-View-Release-Plan.md` records the point-of-view, target adjective, and reciprocal adjective foundation.
 
 ## Purpose
 
@@ -91,6 +91,7 @@ These Action Steps currently have ordinary success/failure text slots. Some may 
 
 | Action Step | Success ID | Failure ID | Notes / future composition hooks |
 |---|---|---|---|
+| `Move` | `action.move.success` | `action.move.failure` | Promoted canonical movement. Current direct-command bridge supplies `direction`, `reason`, and `consumedTurn`; future Action Choice projection should add `directionMode`, previous/new facing, source/destination, attempted destination, and resolved direction. |
 | `MoveFacing` | `action.move_facing.success` | `action.move_facing.failure` | Future variants may use direction/blocker facts. |
 | `Backstep` | `action.backstep.success` | `action.backstep.failure` | Future args may include preserved facing/direction. |
 | `PushFacing` | `action.push_facing.success` | `action.push_facing.failure` | Future variants may use pushability adjectives or blocker facts. |

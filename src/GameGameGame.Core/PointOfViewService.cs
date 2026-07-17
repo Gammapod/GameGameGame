@@ -261,6 +261,7 @@ public sealed class PointOfViewService(EntityContainmentPathService? containment
     private static string ToAdjective(ActionPlanBehaviorStepKind capability) => capability switch
     {
         ActionPlanBehaviorStepKind.PickupTarget => "portable",
+        ActionPlanBehaviorStepKind.TransformAdjacentToInventory => "portable",
         ActionPlanBehaviorStepKind.EnterTarget => "enterable",
         ActionPlanBehaviorStepKind.PushFacing => "pushable",
         ActionPlanBehaviorStepKind.DestroyTarget => "breakable",

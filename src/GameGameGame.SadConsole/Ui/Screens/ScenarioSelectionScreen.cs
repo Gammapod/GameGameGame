@@ -7,6 +7,7 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 internal sealed class ScenarioSelectionScreen
 {
     private readonly List<ScenarioCatalogEntry> _scenarios;
+    private readonly List<ScenarioCatalogSection> _sections;
     private readonly FocusRouter _focusRouter;
     private readonly List<SelectableListItem> _commandItems =
     [
@@ -15,12 +16,17 @@ internal sealed class ScenarioSelectionScreen
     ];
 
     private int _selectedScenarioIndex;
+    private int _selectedSectionIndex;
     private int _selectedCommandIndex;
     private bool _commandPanelOpen;
 
-    private ScenarioSelectionScreen(IEnumerable<ScenarioCatalogEntry> scenarios, IReadOnlyList<string> diagnostics)
+    private ScenarioSelectionScreen(
+        IEnumerable<ScenarioCatalogEntry> scenarios,
+        IReadOnlyList<string> diagnostics,
+        IEnumerable<ScenarioCatalogSection>? sections = null)
     {
         _scenarios = scenarios.ToList();
+        _sections = (sections ?? []).ToList();
         Diagnostics = diagnostics;
         _focusRouter = new FocusRouter([
             new FocusTarget("scenario-list"),
@@ -33,12 +39,23 @@ internal sealed class ScenarioSelectionScreen
     public IReadOnlyList<string> Diagnostics { get; }
     public bool CommandPanelOpen => _commandPanelOpen;
     public int SelectedScenarioIndex => _selectedScenarioIndex;
+    public int SelectedSectionIndex => _selectedSectionIndex;
     public int SelectedCommandIndex => _selectedCommandIndex;
-    public ScenarioCatalogEntry? SelectedScenario => _scenarios.Count == 0 ? null : _scenarios[_selectedScenarioIndex];
+    public ScenarioCatalogSection? SelectedSection => _sections.Count == 0 ? null : _sections[_selectedSectionIndex];
+    public IReadOnlyList<ScenarioCatalogEntry> VisibleScenarios => ActiveScenarios();
+    public ScenarioCatalogEntry? SelectedScenario
+    {
+        get
+        {
+            var scenarios = ActiveScenarios();
+            return scenarios.Count == 0 ? null : scenarios[_selectedScenarioIndex];
+        }
+    }
 
     public static ScenarioSelectionScreen FromCatalog(ScenarioCatalogResult? catalog) => new(
         catalog?.Entries ?? [],
-        catalog?.Diagnostics ?? []);
+        catalog?.Diagnostics ?? [],
+        catalog?.Sections);
 
     public IReadOnlyList<IUiComponent> Components()
     {
@@ -76,7 +93,9 @@ internal sealed class ScenarioSelectionScreen
             return "Command panel focused: Up/Down chooses Play/Edit. Enter activates. Esc closes command panel.";
         }
 
-        return "Scenario list focused: Up/Down chooses scenario. Enter opens Play/Edit. Esc exits application.";
+        return _sections.Count > 0
+            ? "Scenario list focused: Left/Right changes curated section. Up/Down chooses scenario. Enter opens Play/Edit. Esc exits application."
+            : "Scenario list focused: Up/Down chooses scenario. Enter opens Play/Edit. Esc exits application.";
     }
 
     public ScenarioSelectionResult Handle(UiComponentCommand command)
@@ -99,6 +118,10 @@ internal sealed class ScenarioSelectionScreen
             case UiComponentCommand.Down:
                 MoveScenario(1);
                 return ScenarioSelectionResult.Stay($"Selected scenario: {SelectedScenario?.Name ?? "none"}.");
+            case UiComponentCommand.Left:
+                return MoveSection(-1);
+            case UiComponentCommand.Right:
+                return MoveSection(1);
             case UiComponentCommand.Select:
                 if (SelectedScenario is null)
                 {
@@ -113,7 +136,9 @@ internal sealed class ScenarioSelectionScreen
             case UiComponentCommand.Cancel:
                 return ScenarioSelectionResult.Exit("Scenario selection cancelled; exiting application.");
             default:
-                return ScenarioSelectionResult.Stay("Use Up/Down to choose a scenario, Enter to select, Esc to exit.");
+                return ScenarioSelectionResult.Stay(_sections.Count > 0
+                    ? "Use Left/Right to change section, Up/Down to choose a scenario, Enter to select, Esc to exit."
+                    : "Use Up/Down to choose a scenario, Enter to select, Esc to exit.");
         }
     }
 
@@ -173,27 +198,43 @@ internal sealed class ScenarioSelectionScreen
 
     private void MoveScenario(int delta)
     {
-        if (_scenarios.Count == 0)
+        var scenarios = ActiveScenarios();
+        if (scenarios.Count == 0)
         {
             return;
         }
 
-        _selectedScenarioIndex = Math.Clamp(_selectedScenarioIndex + delta, 0, _scenarios.Count - 1);
+        _selectedScenarioIndex = Math.Clamp(_selectedScenarioIndex + delta, 0, scenarios.Count - 1);
+    }
+
+    private ScenarioSelectionResult MoveSection(int delta)
+    {
+        if (_sections.Count == 0)
+        {
+            return ScenarioSelectionResult.Stay("This catalog has no curated sections; showing all scenarios.");
+        }
+
+        _selectedSectionIndex = Math.Clamp(_selectedSectionIndex + delta, 0, _sections.Count - 1);
+        _selectedScenarioIndex = 0;
+        var section = SelectedSection!;
+        return ScenarioSelectionResult.Stay($"Section: {section.Name} ({section.Entries.Count} scenario{(section.Entries.Count == 1 ? string.Empty : "s")}).");
     }
 
     private SelectableListComponent ScenarioList()
     {
-        var items = _scenarios.Select(entry => new SelectableListItem(
+        var scenarios = ActiveScenarios();
+        var items = scenarios.Select(entry => new SelectableListItem(
             entry.ScenarioId,
             entry.Name,
-            string.IsNullOrWhiteSpace(entry.Description) ? entry.ContentPath : $"{entry.Description} | {entry.ContentPath}")).ToList();
+            FormatScenarioDescription(entry),
+            DetailOnNextLine: true)).ToList();
         var list = new SelectableListComponent(
             "scenario-list",
-            "1.1 Scenarios",
+            ScenarioListTitle(),
             new SadConsoleRect(1, 4, 116, 32),
             items,
             _commandPanelOpen ? UiComponentState.Unselected : UiComponentState.Focused,
-            visibleRowCount: 24);
+            visibleRowCount: 12);
 
         for (var index = 0; index < _selectedScenarioIndex; index++)
         {
@@ -202,6 +243,30 @@ internal sealed class ScenarioSelectionScreen
 
         return list;
     }
+
+    private IReadOnlyList<ScenarioCatalogEntry> ActiveScenarios()
+    {
+        if (_sections.Count == 0)
+        {
+            return _scenarios;
+        }
+
+        return SelectedSection?.Entries ?? [];
+    }
+
+    private string ScenarioListTitle()
+    {
+        if (SelectedSection is not { } section)
+        {
+            return "1.1 Scenarios";
+        }
+
+        var metadata = string.IsNullOrWhiteSpace(section.Status) ? string.Empty : $" [{section.Status}]";
+        return $"1.1 Scenarios: {section.Name}{metadata} ({_selectedSectionIndex + 1}/{_sections.Count})";
+    }
+
+    private static string FormatScenarioDescription(ScenarioCatalogEntry entry) =>
+        string.IsNullOrWhiteSpace(entry.Description) ? entry.ContentPath : entry.Description;
 
     private SelectableListComponent CommandPanel()
     {

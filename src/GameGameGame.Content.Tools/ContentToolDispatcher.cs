@@ -41,6 +41,7 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 ContentToolNames.SetBehaviorStepTargetLabel => WithSession((ContentToolSetBehaviorStepTargetLabelRequest)request, api => FromAgentResult(api, api.SetActionPlanBehaviorStepTargetLabel(((ContentToolSetBehaviorStepTargetLabelRequest)request).ActionPlanTemplateId, ((ContentToolSetBehaviorStepTargetLabelRequest)request).StepIndex, ((ContentToolSetBehaviorStepTargetLabelRequest)request).TargetLabel))),
                 ContentToolNames.SetBehaviorStepTargetSlot => WithSession((ContentToolSetBehaviorStepTargetSlotRequest)request, api => FromAgentResult(api, api.SetActionPlanBehaviorStepTargetSlot(((ContentToolSetBehaviorStepTargetSlotRequest)request).ActionPlanTemplateId, ((ContentToolSetBehaviorStepTargetSlotRequest)request).StepIndex, ((ContentToolSetBehaviorStepTargetSlotRequest)request).TargetSlot))),
                 ContentToolNames.SetBehaviorStepPlanId => WithSession((ContentToolSetBehaviorStepPlanIdRequest)request, api => FromAgentResult(api, api.SetActionPlanBehaviorStepPlanId(((ContentToolSetBehaviorStepPlanIdRequest)request).ActionPlanTemplateId, ((ContentToolSetBehaviorStepPlanIdRequest)request).StepIndex, ((ContentToolSetBehaviorStepPlanIdRequest)request).PlanId))),
+                ContentToolNames.SetBehaviorStepDirectionMode => WithSession((ContentToolSetBehaviorStepDirectionModeRequest)request, api => FromAgentResult(api, api.SetActionPlanBehaviorStepDirectionMode(((ContentToolSetBehaviorStepDirectionModeRequest)request).ActionPlanTemplateId, ((ContentToolSetBehaviorStepDirectionModeRequest)request).StepIndex, ((ContentToolSetBehaviorStepDirectionModeRequest)request).DirectionMode))),
                 ContentToolNames.ListActionSteps => WithSession((ContentToolSessionRequest)request, api => FromAgentResult(api, api.ListActionSteps())),
                 ContentToolNames.PreviewActionPlan => WithSession((ContentToolPreviewActionPlanRequest)request, api => FromAgentResult(api, api.PreviewActionPlan(((ContentToolPreviewActionPlanRequest)request).ActionPlanTemplateId, ((ContentToolPreviewActionPlanRequest)request).EntityTemplateId))),
                 ContentToolNames.ListScenarios => WithSession((ContentToolSessionRequest)request, api => ContentToolResponse.Success(ListScenarios(api), BuildSummary(api))),
@@ -50,6 +51,9 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 ContentToolNames.RunScenarioById => WithSession((ContentToolRunScenarioByIdRequest)request, api => FromAgentResult(api, api.RunScenarioById(((ContentToolRunScenarioByIdRequest)request).ScenarioId, ((ContentToolRunScenarioByIdRequest)request).TurnCount))),
                 ContentToolNames.RunScenarioPlayerLogById => WithSession((ContentToolRunScenarioPlayerLogByIdRequest)request, api => FromAgentResult(api, api.RunScenarioPlayerLogById(((ContentToolRunScenarioPlayerLogByIdRequest)request).ScenarioId, ((ContentToolRunScenarioPlayerLogByIdRequest)request).TurnCount, ((ContentToolRunScenarioPlayerLogByIdRequest)request).ObserverEntityId))),
                 ContentToolNames.PreviewAndRunScenarioById => WithSession((ContentToolRunScenarioByIdRequest)request, api => FromAgentResult(api, api.PreviewAndRunScenarioById(((ContentToolRunScenarioByIdRequest)request).ScenarioId, ((ContentToolRunScenarioByIdRequest)request).TurnCount))),
+                ContentToolNames.OpenScenarioManifest => ContentToolResponse.Success(ScenarioCatalog.LoadManifest(((ContentToolScenarioManifestRequest)request).Path)),
+                ContentToolNames.ScanScenarioManifestCandidates => ContentToolResponse.Success(ScenarioCatalog.ScanCandidates(((ContentToolScenarioManifestScanRequest)request).FolderPath)),
+                ContentToolNames.ValidateScenarioManifest => ValidateScenarioManifest((ContentToolScenarioManifestValidateRequest)request),
                 _ => ContentToolResponse.Failure(new AgentApiError("UnknownTool", $"Unknown content tool '{toolName}'.", Recoverable: true))
             };
         }
@@ -73,6 +77,12 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
 
     private ContentToolResponse Close(ContentToolSessionRequest request) =>
         ContentToolResponse.Success(new { closed = sessions.Close(request.SessionId) });
+
+    private static ContentToolResponse ValidateScenarioManifest(ContentToolScenarioManifestValidateRequest request)
+    {
+        var validation = ScenarioCatalog.ValidateManifest(request.Path, request.FolderPath);
+        return ContentToolResponse.Success(new ContentToolScenarioManifestValidationSummary(validation.IsValid, validation.Diagnostics));
+    }
 
     private ContentToolResponse WithSession(IContentToolSessionRequest request, Func<AgentContentEditorApi, ContentToolResponse> operation) =>
         WithSession(request.SessionId, operation);
@@ -155,6 +165,9 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
     {
         ContentToolNames.CreateNew => new ContentToolCreateNewRequest(),
         ContentToolNames.OpenFile => arguments.Deserialize<ContentToolOpenFileRequest>(JsonOptions)!,
+        ContentToolNames.OpenScenarioManifest => arguments.Deserialize<ContentToolScenarioManifestRequest>(JsonOptions)!,
+        ContentToolNames.ScanScenarioManifestCandidates => arguments.Deserialize<ContentToolScenarioManifestScanRequest>(JsonOptions)!,
+        ContentToolNames.ValidateScenarioManifest => arguments.Deserialize<ContentToolScenarioManifestValidateRequest>(JsonOptions)!,
         ContentToolNames.Snapshot or ContentToolNames.Validate or ContentToolNames.ValidateCanonicalAuthoring or ContentToolNames.Save or ContentToolNames.Close or ContentToolNames.ListEntityTemplates or ContentToolNames.ListActionPlans or ContentToolNames.ListActionSteps or ContentToolNames.ListScenarios => arguments.Deserialize<ContentToolSessionRequest>(JsonOptions)!,
         ContentToolNames.SaveAs => arguments.Deserialize<ContentToolSaveAsRequest>(JsonOptions)!,
         ContentToolNames.GetEntityTemplate or ContentToolNames.ListCarriedEntities => arguments.Deserialize<ContentToolEntityTemplateRequest>(JsonOptions)!,
@@ -170,6 +183,7 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
         ContentToolNames.SetBehaviorStepTargetLabel => arguments.Deserialize<ContentToolSetBehaviorStepTargetLabelRequest>(JsonOptions)!,
         ContentToolNames.SetBehaviorStepTargetSlot => arguments.Deserialize<ContentToolSetBehaviorStepTargetSlotRequest>(JsonOptions)!,
         ContentToolNames.SetBehaviorStepPlanId => arguments.Deserialize<ContentToolSetBehaviorStepPlanIdRequest>(JsonOptions)!,
+        ContentToolNames.SetBehaviorStepDirectionMode => arguments.Deserialize<ContentToolSetBehaviorStepDirectionModeRequest>(JsonOptions)!,
         ContentToolNames.PreviewActionPlan => arguments.Deserialize<ContentToolPreviewActionPlanRequest>(JsonOptions)!,
         ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario => arguments.Deserialize<ContentToolScenarioRequest>(JsonOptions)!,
         ContentToolNames.UpsertScenario => arguments.Deserialize<ContentToolUpsertScenarioRequest>(JsonOptions)!,

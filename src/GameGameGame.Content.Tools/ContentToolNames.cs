@@ -26,6 +26,7 @@ public static class ContentToolNames
     public const string SetBehaviorStepTargetLabel = "ggg_content_set_behavior_step_target_label";
     public const string SetBehaviorStepTargetSlot = "ggg_content_set_behavior_step_target_slot";
     public const string SetBehaviorStepPlanId = "ggg_content_set_behavior_step_plan_id";
+    public const string SetBehaviorStepDirectionMode = "ggg_content_set_behavior_step_direction_mode";
     public const string ListActionSteps = "ggg_content_list_action_steps";
     public const string PreviewActionPlan = "ggg_content_preview_action_plan";
     public const string ListScenarios = "ggg_content_list_scenarios";
@@ -35,4 +36,7 @@ public static class ContentToolNames
     public const string RunScenarioById = "ggg_content_run_scenario_by_id";
     public const string RunScenarioPlayerLogById = "ggg_content_run_scenario_player_log_by_id";
     public const string PreviewAndRunScenarioById = "ggg_content_preview_and_run_scenario_by_id";
+    public const string OpenScenarioManifest = "ggg_content_open_scenario_manifest";
+    public const string ScanScenarioManifestCandidates = "ggg_content_scan_scenario_manifest_candidates";
+    public const string ValidateScenarioManifest = "ggg_content_validate_scenario_manifest";
 }

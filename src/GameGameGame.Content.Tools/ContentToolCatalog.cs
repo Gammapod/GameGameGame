@@ -30,6 +30,7 @@ public static class ContentToolCatalog
         ContentToolNames.SetBehaviorStepTargetLabel,
         ContentToolNames.SetBehaviorStepTargetSlot,
         ContentToolNames.SetBehaviorStepPlanId,
+        ContentToolNames.SetBehaviorStepDirectionMode,
         ContentToolNames.ListActionSteps,
         ContentToolNames.PreviewActionPlan,
         ContentToolNames.ListScenarios,
@@ -38,7 +39,10 @@ public static class ContentToolCatalog
         ContentToolNames.MaterializeScenario,
         ContentToolNames.RunScenarioById,
         ContentToolNames.RunScenarioPlayerLogById,
-        ContentToolNames.PreviewAndRunScenarioById
+        ContentToolNames.PreviewAndRunScenarioById,
+        ContentToolNames.OpenScenarioManifest,
+        ContentToolNames.ScanScenarioManifestCandidates,
+        ContentToolNames.ValidateScenarioManifest
     ];
 
     public static string Describe(string name) => name switch
@@ -67,6 +71,7 @@ public static class ContentToolCatalog
         ContentToolNames.SetBehaviorStepTargetLabel => "Set or clear a canonical Action Step target label.",
         ContentToolNames.SetBehaviorStepTargetSlot => "Set or clear a compatibility numeric Action Step target slot.",
         ContentToolNames.SetBehaviorStepPlanId => "Set or clear a referenced Action Plan ID on an apply-plan Action Step.",
+        ContentToolNames.SetBehaviorStepDirectionMode => "Set or clear a canonical Move Action Step directionMode.",
         ContentToolNames.ListActionSteps => "List stable canonical Action Step descriptors.",
         ContentToolNames.PreviewActionPlan => "Preview an action plan through ContentEditorService.",
         ContentToolNames.ListScenarios => "List persisted scenario definitions.",
@@ -76,6 +81,9 @@ public static class ContentToolCatalog
         ContentToolNames.RunScenarioById => "Run a persisted scenario by ID and report outcomes.",
         ContentToolNames.RunScenarioPlayerLogById => "Run a persisted scenario by ID and return compact player narrative projection message IDs/args without debug traces/final state/inventory summaries.",
         ContentToolNames.PreviewAndRunScenarioById => "Return validation, previews, materialization, and scenario run report for one scenario.",
+        ContentToolNames.OpenScenarioManifest => "Open a curated scenario manifest/catalog artifact with sections and entry metadata.",
+        ContentToolNames.ScanScenarioManifestCandidates => "Scan a content folder for scenario candidates without making the scan authoritative.",
+        ContentToolNames.ValidateScenarioManifest => "Validate a curated scenario manifest against content files and scanned unclassified candidates.",
         _ => "GameGameGame content editor tool."
     };
 
@@ -106,9 +114,13 @@ public static class ContentToolCatalog
 
         if (name is not ContentToolNames.CreateNew)
         {
-            if (name is ContentToolNames.OpenFile)
+            if (name is ContentToolNames.OpenFile or ContentToolNames.OpenScenarioManifest or ContentToolNames.ValidateScenarioManifest)
             {
                 AddString("path");
+            }
+            else if (name is ContentToolNames.ScanScenarioManifestCandidates)
+            {
+                AddString("folderPath");
             }
             else
             {
@@ -131,9 +143,11 @@ public static class ContentToolCatalog
             case ContentToolNames.SetBehaviorStepTargetLabel: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("targetLabel", isRequired: false); break;
             case ContentToolNames.SetBehaviorStepTargetSlot: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("targetSlot", isRequired: false); break;
             case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false); break;
+            case ContentToolNames.SetBehaviorStepDirectionMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("directionMode", isRequired: false); break;
             case ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario: AddString("scenarioId"); break;
             case ContentToolNames.UpsertScenario: AddObject("scenario"); break;
             case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById: AddString("scenarioId"); AddInteger("turnCount"); if (name is ContentToolNames.RunScenarioPlayerLogById) AddString("observerEntityId", isRequired: false); break;
+            case ContentToolNames.ValidateScenarioManifest: AddString("folderPath"); break;
         }
 
         return new JsonObject

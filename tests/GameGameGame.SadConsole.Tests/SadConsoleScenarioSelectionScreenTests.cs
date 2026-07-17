@@ -107,6 +107,53 @@ public sealed class SadConsoleScenarioSelectionScreenTests
     }
 
     [Fact]
+    public void ScenarioSelectionFiltersCuratedSectionsWithLeftRight()
+    {
+        var catalog = new ScenarioCatalogResult(
+            [
+                new ScenarioCatalogEntry("legacy.yaml", "legacy-one", "Legacy One", "Legacy description", "legacy", ["beta"], "Beta exploration"),
+                new ScenarioCatalogEntry("delta.yaml", "delta-one", "Delta One", "Delta description", "active-delta", ["canonical-action"], "Vertical slice")
+            ],
+            [],
+            [
+                new ScenarioCatalogSection(
+                    "legacy",
+                    "Legacy Beta",
+                    "Legacy/prototype rooms.",
+                    [new ScenarioCatalogEntry("legacy.yaml", "legacy-one", "Legacy One", "Legacy description", "legacy", ["beta"], "Beta exploration")],
+                    "legacy"),
+                new ScenarioCatalogSection(
+                    "delta",
+                    "Delta",
+                    "Current vertical slices.",
+                    [new ScenarioCatalogEntry("delta.yaml", "delta-one", "Delta One", "Delta description", "active-delta", ["canonical-action"], "Vertical slice")],
+                    "active-delta")
+            ]);
+        var screen = ScenarioSelectionScreen.FromCatalog(catalog);
+
+        var initialList = Assert.IsType<SelectableListComponent>(screen.ScenarioListComponent());
+        Assert.Equal("legacy", screen.SelectedSection?.Id);
+        Assert.Equal("legacy-one", initialList.SelectedItem?.Id);
+        Assert.Contains("Left/Right changes curated section", screen.FooterText());
+
+        var moved = screen.Handle(UiComponentCommand.Right);
+        var deltaList = Assert.IsType<SelectableListComponent>(screen.ScenarioListComponent());
+
+        Assert.Equal(ScenarioSelectionResultKind.Stay, moved.Kind);
+        Assert.Equal("delta", screen.SelectedSection?.Id);
+        Assert.Equal("delta-one", screen.SelectedScenario?.ScenarioId);
+        Assert.Contains("1.1 Scenarios: Delta", deltaList.Title);
+        Assert.Equal("Delta One", deltaList.SelectedItem?.Label);
+        Assert.Equal("Delta description", deltaList.SelectedItem?.Detail);
+        Assert.True(deltaList.SelectedItem?.DetailOnNextLine);
+        var rows = deltaList.RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default);
+        Assert.Contains(rows, row => row.Contains(">") && row.Contains("Delta One"));
+        Assert.Contains(rows, row => row.Contains("    Delta description"));
+        Assert.DoesNotContain(rows, row => row.Contains("[active-delta] Delta One"));
+        Assert.DoesNotContain(rows, row => row.Contains("tags: canonical-action"));
+    }
+
+    [Fact]
     public void StartupUsesScenarioSelectionByDefault()
     {
         var startup = SadConsoleStartup.FromArgs(["--content", "missing-file.yaml"]);

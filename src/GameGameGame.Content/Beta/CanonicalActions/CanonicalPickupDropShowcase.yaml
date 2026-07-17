@@ -1,0 +1,319 @@
+entityTemplates:
+  canonicalPickupDropOutcomeRoom:
+    name: Canonical Pickup Drop Outcome Room
+    inventoryWidth: 12
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: pickupSuccessActor
+      templateId: canonicalPickupSuccessActor
+      coord:
+        x: 1
+        y: 1
+    - entityId: pickupSuccessGem
+      templateId: canonicalPickupSuccessGem
+      coord:
+        x: 2
+        y: 1
+    - entityId: pickupFailureActor
+      templateId: canonicalPickupFailureActor
+      coord:
+        x: 1
+        y: 3
+    - entityId: pickupFailureBoulder
+      templateId: canonicalPickupFailureBoulder
+      coord:
+        x: 2
+        y: 3
+    - entityId: dropSuccessActor
+      templateId: canonicalDropSuccessActor
+      coord:
+        x: 5
+        y: 1
+    - entityId: dropFailureActor
+      templateId: canonicalDropFailureActor
+      coord:
+        x: 5
+        y: 3
+    - entityId: dropFailureBlocker
+      templateId: canonicalDropFailureBlocker
+      coord:
+        x: 6
+        y: 3
+  canonicalPickupDropInteractionRoom:
+    name: Canonical Pickup Drop Interaction Room
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: playerPickupGem
+      templateId: canonicalPlayerPickupGem
+      coord:
+        x: 4
+        y: 2
+    - entityId: playerDropBlocker
+      templateId: canonicalPlayerDropBlocker
+      coord:
+        x: 5
+        y: 3
+  canonicalPickupDropObserver:
+    name: Canonical Pickup Drop Observer
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    actionStateDefaults:
+      facing: West
+  canonicalPickupSuccessActor:
+    name: Pickup Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalPickupTargetPlan
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPickupSuccessGem
+      targetCapabilities:
+      - PickupTarget
+      range: 1
+  canonicalPickupFailureActor:
+    name: Pickup Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: canonicalPickupTargetPlan
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPickupFailureBoulder
+      targetCapabilities:
+      - PickupTarget
+      range: 1
+  canonicalDropSuccessActor:
+    name: Drop Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalDropFacingPlan
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: dropSuccessPebble
+      templateId: canonicalDropSuccessPebble
+      coord:
+        x: 0
+        y: 0
+  canonicalDropFailureActor:
+    name: Drop Failure Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalDropFacingPlan
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: dropFailurePebble
+      templateId: canonicalDropFailurePebble
+      coord:
+        x: 0
+        y: 0
+  canonicalPickupDropPlayer:
+    name: Canonical Pickup Drop Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalPickupDropPlayerChoices
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPlayerPickupGem
+      targetCapabilities:
+      - PickupTarget
+      range: 1
+    carriedEntities:
+    - entityId: playerCarriedPebble
+      templateId: canonicalPlayerCarriedPebble
+      coord:
+        x: 0
+        y: 0
+  canonicalPickupSuccessGem:
+    name: Pickup Success Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalPickupFailureBoulder:
+    name: Pickup Failure Boulder
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+    bulk: 5
+    aperture: 0
+  canonicalDropSuccessPebble:
+    name: Drop Success Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalDropFailurePebble:
+    name: Drop Failure Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalDropFailureBlocker:
+    name: Drop Failure Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalPlayerPickupGem:
+    name: Player Pickup Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalPlayerCarriedPebble:
+    name: Player Carried Pebble
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalPlayerDropBlocker:
+    name: Player Drop Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+presentations:
+  canonicalPickupDropOutcomeRoom:
+    glyph: '#'
+    color: Gray
+  canonicalPickupDropInteractionRoom:
+    glyph: '#'
+    color: Gray
+  canonicalPickupDropObserver:
+    glyph: '@'
+    color: Yellow
+  canonicalPickupSuccessActor:
+    glyph: 'p'
+    color: Green
+  canonicalPickupFailureActor:
+    glyph: 'P'
+    color: Earth
+  canonicalDropSuccessActor:
+    glyph: 'd'
+    color: Green
+  canonicalDropFailureActor:
+    glyph: 'D'
+    color: Earth
+  canonicalPickupDropPlayer:
+    glyph: '@'
+    color: Yellow
+  canonicalPickupSuccessGem:
+    glyph: '*'
+    color: Cyan
+  canonicalPickupFailureBoulder:
+    glyph: 'O'
+    color: Gray
+  canonicalDropSuccessPebble:
+    glyph: '.'
+    color: White
+  canonicalDropFailurePebble:
+    glyph: ','
+    color: White
+  canonicalDropFailureBlocker:
+    glyph: 'x'
+    color: Gray
+  canonicalPlayerPickupGem:
+    glyph: '*'
+    color: Cyan
+  canonicalPlayerCarriedPebble:
+    glyph: '.'
+    color: White
+  canonicalPlayerDropBlocker:
+    glyph: 'x'
+    color: Gray
+actionPlans:
+  canonicalPickupTargetPlan:
+    id: canonicalPickupTargetPlan
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: target
+  canonicalDropFacingPlan:
+    id: canonicalDropFacingPlan
+    behavior:
+      steps:
+      - kind: DropFacing
+  canonicalPickupDropPlayerChoices:
+    id: canonicalPickupDropPlayerChoices
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: target
+      - kind: DropFacing
+scenarios:
+  beta-canonical-pickup-drop-outcomes:
+    name: Beta Canonical Pickup Drop Outcomes
+    scenarioRootEntityTemplateId: canonicalPickupDropOutcomeRoom
+    playerEntityTemplateId: canonicalPickupDropObserver
+    playerEntityId: canonicalPickupDropOutcomeObserver
+    playerStart:
+      x: 11
+      y: 6
+    playerControls:
+      player-1:
+      - canonicalPickupDropOutcomeObserver
+  beta-canonical-pickup-drop-player-interaction:
+    name: Beta Canonical Pickup Drop Player Interaction
+    scenarioRootEntityTemplateId: canonicalPickupDropInteractionRoom
+    playerEntityTemplateId: canonicalPickupDropPlayer
+    playerEntityId: canonicalPickupDropPlayer
+    playerStart:
+      x: 4
+      y: 3
+    playerControls:
+      player-1:
+      - canonicalPickupDropPlayer

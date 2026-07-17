@@ -395,8 +395,27 @@ public sealed class CoreActionPlanTests
         Assert.Equal(ActionPlanBehaviorStepKind.PickupTarget, pickupTarget.TargetCapability);
     }
 
+    [Fact]
+    public void ActionStepCatalogDescribesPreferredTransformAliasesForPickupAndDrop()
+    {
+        var adjacentToInventory = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.TransformAdjacentToInventory);
+        var inventoryToAdjacent = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.TransformInventoryToAdjacent);
+
+        Assert.Equal("Transform Adjacent To Inventory", adjacentToInventory.DisplayName);
+        Assert.Contains("adjacent", adjacentToInventory.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("inventory", adjacentToInventory.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(adjacentToInventory.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Equal(ActionPlanBehaviorStepKind.TransformAdjacentToInventory, adjacentToInventory.TargetCapability);
+
+        Assert.Equal("Transform Inventory To Adjacent", inventoryToAdjacent.DisplayName);
+        Assert.Contains("inventory", inventoryToAdjacent.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("adjacent", inventoryToAdjacent.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(inventoryToAdjacent.RequiredState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
+    }
+
     [Theory]
     [InlineData(ActionPlanBehaviorStepKind.PickupTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.TransformAdjacentToInventory)]
     [InlineData(ActionPlanBehaviorStepKind.EnterTarget)]
     [InlineData(ActionPlanBehaviorStepKind.GiveTarget)]
     [InlineData(ActionPlanBehaviorStepKind.TakeTarget)]
@@ -833,6 +852,7 @@ public sealed class CoreActionPlanTests
     public void PrimitivePickupTargetWithoutFallbackTerminatesRootTurnWhenPickupFails()
     {
         var world = TestWorld.CreateWorld();
+        Assert.True(new MovementService().TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4))));
         world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
         var descriptor = new ActionPlanDescriptor(
             new ActionPlanId("pickup-target"),
@@ -1521,6 +1541,22 @@ public sealed class CoreActionPlanTests
     }
 
     [Fact]
+    public void TransformAdjacentToInventoryBehaviorUsesPickupSemantics()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("transform-adjacent-to-inventory", ActionPlanBehaviorStepKind.TransformAdjacentToInventory);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.True(TraceContains(result.Trace, "Action Step TransformAdjacentToInventory"));
+        Assert.True(TraceContains(result.Trace, "Primitive PickupTarget"));
+    }
+
+    [Fact]
     public void BehaviorChainTraceFormatterSummarizesFallbackStateAndTerminalOutcome()
     {
         var world = TestWorld.CreateWorld();
@@ -1654,6 +1690,106 @@ public sealed class CoreActionPlanTests
         Assert.Contains(summary, line => line == "1. Backstep: Failure; reason=MoveOutOfBounds; fallback=stopped");
         Assert.Contains(summary, line => line == "   reads: Facing=South");
         Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CanonicalMoveRelativeBackSetsFacingToActualMovedDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-back"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.Back)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,3)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.South, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void CanonicalMoveBlockedByEntityDoesNotWriteTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-blocked"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.Forward)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.North, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Equal(TestWorld.RockId, world.GetActionTarget(TestWorld.PlayerId));
+        Assert.DoesNotContain(summary, line => line.Contains("writes:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CanonicalMoveDiagonalAllowsOneBlockedCorner()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-diagonal-one-corner"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.NorthEast)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(2,1)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Equal(Direction.NorthEast, world.GetActionFacing(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void CanonicalMoveDiagonalRejectsTwoBlockedCorners()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("canonical-move-diagonal-two-corners"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Move,
+                    DirectionMode: ActionPlanMoveDirectionMode.NorthEast)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal("Player@world(1,2)", world.FormatEntityAddress(TestWorld.PlayerId));
+        Assert.Null(world.GetActionFacing(TestWorld.PlayerId));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
     }
 
     [Fact]
@@ -2189,6 +2325,24 @@ public sealed class CoreActionPlanTests
         Assert.True(result.ConsumesTurn);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.RockId));
         Assert.True(TraceContains(result.Trace, "Action Step DropFacing"));
+    }
+
+    [Fact]
+    public void TransformInventoryToAdjacentBehaviorUsesDropSemantics()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = CreateBehaviorPlan("transform-inventory-to-adjacent", ActionPlanBehaviorStepKind.TransformInventoryToAdjacent);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceContains(result.Trace, "Action Step TransformInventoryToAdjacent"));
+        Assert.True(TraceContains(result.Trace, "Primitive DropFacing"));
     }
 
     [Fact]

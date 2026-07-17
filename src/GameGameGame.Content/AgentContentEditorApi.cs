@@ -205,6 +205,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
     public AgentApiResult SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId) =>
         Try("SetActionPlanBehaviorStepPlanIdFailed", () => Session.Editor.SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId));
 
+    public AgentApiResult SetActionPlanBehaviorStepDirectionMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanMoveDirectionMode? directionMode) =>
+        Try("SetActionPlanBehaviorStepDirectionModeFailed", () => Session.Editor.SetActionPlanBehaviorStepDirectionMode(planId, stepIndex, directionMode));
+
     public AgentApiResult MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex) =>
         Try("MoveActionPlanBehaviorStepFailed", () => Session.Editor.MoveActionPlanBehaviorStep(planId, fromIndex, toIndex));
 

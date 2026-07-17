@@ -444,6 +444,7 @@ public sealed class ScenarioToolingServiceTests
 
         Assert.Empty(materialization.ValidationDiagnostics);
         Assert.Equal([new EntityId("insertedPlayer")], materialization.PlayerControls["player-1"]);
+        Assert.Equal(EntityControlSource.PlayerChoice, materialization.World.GetActionControlSource(new EntityId("insertedPlayer")));
         Assert.Contains("Control: player-1 -> insertedPlayer", materialization.SetupLines);
     }
 

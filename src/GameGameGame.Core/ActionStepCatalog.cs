@@ -29,6 +29,12 @@ public static class ActionStepCatalog
     public static IReadOnlyList<ActionStepDescriptor> Steps { get; } =
     [
         new(
+            ActionPlanBehaviorStepKind.Move,
+            "Move",
+            "Canonical adjacent movement. Resolves directionMode, attempts one 8-way adjacent move, sets Facing to the actual moved direction on success, and does not write Target on failure.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
             ActionPlanBehaviorStepKind.MoveFacing,
             "Move Facing",
             "Attempts to move the actor one tile in its persistent Facing direction; when blocked by an entity, writes that entity to Target and falls through to the next Action Step.",
@@ -38,14 +44,27 @@ public static class ActionStepCatalog
         new(
             ActionPlanBehaviorStepKind.PickupTarget,
             "Pickup Target",
-            "Attempts to pick up the persistent Target into the first available actor inventory coordinate in deterministic row-major order; when pickup fails, falls through to the next Action Step.",
+            "Compatibility name for TransformAdjacentToInventory. Attempts to pick up the persistent Target into the first available actor inventory coordinate in deterministic row-major order; when pickup fails, falls through to the next Action Step.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
             TargetCapability: ActionPlanBehaviorStepKind.PickupTarget),
         new(
+            ActionPlanBehaviorStepKind.TransformAdjacentToInventory,
+            "Transform Adjacent To Inventory",
+            "Preferred canonical name for pickup semantics: transforms an adjacent non-actor entity from the actor's current plane into the actor inventory using deterministic row-major destination selection.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.TransformAdjacentToInventory),
+        new(
             ActionPlanBehaviorStepKind.DropFacing,
             "Drop Facing",
-            "Drops the first carried entity from actor inventory onto the floor in the actor's persistent Facing direction.",
+            "Compatibility name for TransformInventoryToAdjacent. Drops the first carried entity from actor inventory onto the floor in the actor's persistent Facing direction.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.TransformInventoryToAdjacent,
+            "Transform Inventory To Adjacent",
+            "Preferred canonical name for adjacent drop semantics: transforms the first carried entity from actor inventory to the adjacent map space in the actor's persistent Facing direction.",
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
         new(
