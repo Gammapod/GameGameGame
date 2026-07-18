@@ -45,19 +45,17 @@ Do not read when:
    - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
 8. `docs/Plans/Gamma-Editor-MVP-Plan.md`
    - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
-9. `docs/Plans/SadConsole-Frontend-Refactor-Consolidation-Sprint-Plan.md`
-    - Active focused frontend technical-debt sprint for SadConsole coordinator quarantine, mutation/session consolidation, componentized play-mode extraction, and Core-reference policy. This is a frontend-owner sprint overlay and does not replace the canonical action release plan.
-10. `docs/Plans/SadConsole-Frontend-Roadmap.md`
+9. `docs/Plans/SadConsole-Frontend-Roadmap.md`
     - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not the active implementation plan while canonical action vertical slices are selected, except for the componentized play-mode replacement called out by that plan and focused frontend refactor sprints.
-11. `docs/Plans/Beta-Capability-Gap-Log.md`
+10. `docs/Plans/Beta-Capability-Gap-Log.md`
    - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-12. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+11. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
    - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-13. `docs/Plans/Sprint-Retrospective.md`
+12. `docs/Plans/Sprint-Retrospective.md`
     - Recent process observations and open retrospective questions.
-14. `docs/Archived/`
+13. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
-   - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
+   - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current strategic priority
 
@@ -70,19 +68,18 @@ The active release plan is `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
 1. Canonical action vertical slices, as described in `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`; next focus is likely `EnterTarget`/`ExitFacing` promotion after completed `Move` and first Pickup/Drop interaction seams.
 2. Canonical runtime control-source / Action Choice model, where control source is mutable runtime state and player-controlled actors choose from their normal authored action steps; Move and first Pickup/Drop choice submission are implemented, with full pre/main/post descriptor composition, target-first menus, and richer choice DTO fields remaining follow-up.
 3. Componentized Gamma play-mode follow-through, consuming canonical action/Action Choice/POV/log services; the action-step-first componentized play path is implemented, with remaining work focused on polish, broader action coverage, and demoting/removing any internal legacy stopgap paths.
-4. Focused SadConsole frontend refactor/consolidation sprint, as described in `docs/Plans/SadConsole-Frontend-Refactor-Consolidation-Sprint-Plan.md`; this quarantines legacy shell debt, centralizes editor mutation execution, separates play-mode session/prompt/frame responsibilities, and documents Core-reference policy without changing gameplay or authoring semantics.
-5. Delta point-of-view follow-through where needed by canonical actions: affordance adjectives, reciprocal awareness, ratio facts, and presentation polish.
-6. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
-7. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`.
-8. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports canonical action rooms.
-9. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
-10. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
-11. Inventory, containment, and transfer mechanics.
-12. Spawning, creation, and template materialization.
-13. Runtime architecture and simulation scale.
-14. Behavior authoring reuse and organization.
-15. Reactions and cross-entity behavior.
-16. Long-horizon diegetic/meta systems.
+4. Delta point-of-view follow-through where needed by canonical actions: affordance adjectives, reciprocal awareness, ratio facts, and presentation polish.
+5. Gamma SadConsole Editor MVP, as described in `docs/Plans/Gamma-Editor-MVP-Plan.md`.
+6. SadConsole/debug-browser contract and UX follow-through, as described in `docs/Plans/SadConsole-Frontend-Roadmap.md`; completed frontend refactor sprint follow-up candidates include optional legacy shell deletion, further `SadConsoleEditorContext` decomposition, `GameplayFrameBuilder`, and cautious mutation-executor expansion.
+7. Scenario/testing/tooling feedback loop, especially validation, preview, compact summaries, saved history/runlog direction, and remaining tooling polish that supports canonical action rooms.
+8. Scenario/content packaging beyond alpha, especially curated scenario organization and manifest/index policy needed by frontend scenario browsing/editing.
+9. Foundational movement and peer interaction primitives, with unstarted mechanics gates deferred until feedback re-promotes them.
+10. Inventory, containment, and transfer mechanics.
+11. Spawning, creation, and template materialization.
+12. Runtime architecture and simulation scale.
+13. Behavior authoring reuse and organization.
+14. Reactions and cross-entity behavior.
+15. Long-horizon diegetic/meta systems.
 
 See `docs/Plans/High-Level-Roadmap.md` for relative priority order, dependencies, defer reasons, and promotion triggers within each bucket.
 

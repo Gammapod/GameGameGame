@@ -284,6 +284,27 @@ New SadConsole screen architecture should represent screens as reusable componen
    - 4.2 describes the currently highlighted item, whether that highlight is in 4.1 or in the 4.1.1 primitive picker.
    - Tab, R, `<`, and `>` are intentionally not part of the current action-plan editor interaction model.
 
+### Frontend refactor and testing standards
+
+1. Frontend refactors should preserve shared-service ownership boundaries.
+   - Frontend-owned controllers may own focus, selected indexes, prompt stacks, picker state, formatting delegates, and presentation mapping.
+   - They must not own action legality, authoring legality, trace recording, turn advancement, materialization, or durable content mutation.
+   - If a missing Core/Content capability blocks the refactor, coordinate with the owning layer instead of embedding a SadConsole-only workaround.
+
+2. Keep extraction increments narrow and test-backed.
+   - Prefer one state machine or submode per extraction.
+   - Add focused controller/screen-model tests before or during extraction, then run the relevant screen tests and full SadConsole tests at checkpoints.
+   - Preserve façade methods while extracting internals when that reduces call-site churn.
+
+3. Treat frontend test fixtures as authored data, not string trivia.
+   - Prefer shared fixture builders or explicit document construction over brittle YAML string replacement.
+   - When YAML is needed, insert or modify it at stable structural anchors and assert the fixture contains the intended authored object before depending on it.
+   - A failing fixture setup should be diagnosed separately from a product regression.
+
+4. Lightweight architecture checks are encouraged for boundary-critical refactors.
+   - Useful examples include grep or tests ensuring SadConsole does not call direct semantic execution APIs such as `ActionPlanInterpreter`, `World.AdvanceTurn`, `World.RecordTrace`, or direct mutable content/YAML writes.
+   - These checks should protect ownership boundaries without blocking approved frontend-facing Core DTO/service usage.
+
 ### Deferred high-risk debugger ideas
 
 The following ideas are intentionally deferred and should be reassessed only after the Editor -> Preview -> Simulation loop is established:

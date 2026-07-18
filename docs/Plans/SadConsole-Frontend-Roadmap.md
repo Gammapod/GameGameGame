@@ -224,6 +224,10 @@ Promote or consider while planning SadConsole work:
 - Reaction trace causality when reactions are promoted.
 - Future runtime control-source / Action Choice model.
 - Long-horizon diegetic action-plan UI if action plans become gameplay objects.
+- Shared SadConsole frontend test fixture builders for playable sessions, editor snapshots, and common screen-model setup. Wanted by frontend-owner after the refactor sprint to avoid brittle YAML string surgery and duplicated private helpers.
+- Lightweight SadConsole architecture/boundary tests or documented grep checks for disallowed direct semantic calls, while allowing approved frontend-facing Core DTOs/services. Wanted by frontend-owner to protect the Core/Content boundary cleaned up during the refactor sprint.
+- Frontend screen-model harness for driving common directional/Select/Cancel flows in tests. Wanted by frontend-owner to simplify componentized editor/play-mode controller tests.
+- Debug-only frontend UI state panel showing current frontend controller states such as play prompt mode, selected action index, editor submode, dirty/stale status, and focused component. Wanted by frontend-owner as a pure presentation/debugging aid; it must not expose runtime mutation or authoring semantics outside shared services.
 
 ## Near-term selection recommendation
 

@@ -1,6 +1,6 @@
 # SadConsole Frontend Refactor / Consolidation Sprint Plan
 
-Status: Active frontend sprint plan. This plan is a focused technical-debt sprint for `src/GameGameGame.SadConsole`; it does not replace the canonical-action release plan or the broader SadConsole frontend roadmap.
+Status: Archived/completed sprint record. This plan records the focused technical-debt sprint for `src/GameGameGame.SadConsole`; it does not replace the canonical-action release plan or the broader SadConsole frontend roadmap.
 
 Read when:
 
@@ -348,7 +348,7 @@ Problems/friction encountered:
 - Initial Phase 2 work found that not all authored action steps had a frontend-consumable Action Choice submission path. Core-owner confirmed this is a Core concern and added a narrow `AuthoredStep` Action Choice / history submission path, which unblocked removal of SadConsole direct interpreter execution.
 - Broader action-choice design questions remain for richer typed choice DTOs, target-first menus, full pre/main/post composition, and step-specific parameter selection; those are not needed for this sprint's refactor goal.
 - The first controller movement test attempted to move East into an occupied crate and failed through the shared Core path; the test was corrected to move West to prove successful Action Choice submission without changing semantics.
-- The pre-existing full-suite `SadConsoleEditorContextTests.ActionStepEditorDisablesInvalidReplaceOnEmptyPlanWhileInsertWorks` failure still blocks a clean full SadConsole suite run.
+- A pre-existing full-suite `SadConsoleEditorContextTests.ActionStepEditorDisablesInvalidReplaceOnEmptyPlanWhileInsertWorks` failure blocked this phase's first whole-suite verification. Phase 4 later confirmed it was bad test fixture YAML and fixed it.
 
 Verification:
 
@@ -385,7 +385,7 @@ Verification:
 
 - Passed: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj --filter "FullyQualifiedName~ActionChoicePromptController|FullyQualifiedName~GameplayMockScreenTests"`
 - Passed: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj --filter "FullyQualifiedName~EditorMutationExecutorTests|FullyQualifiedName~SadConsoleActionPlanEditScreenTests|FullyQualifiedName~SadConsoleEntityTemplateEditScreenTests|FullyQualifiedName~SadConsoleScenarioEditScreenTests|FullyQualifiedName~GameplayMockScreenTests"`
-- Full suite still blocked: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj` currently reports 216 passed / 1 failed, with the same `SadConsoleEditorContextTests.ActionStepEditorDisablesInvalidReplaceOnEmptyPlanWhileInsertWorks` fixture failure noted above.
+- Full suite was blocked at this checkpoint by the `emptyPlan` fixture failure noted above; Phase 4 later restored a clean full-suite baseline.
 
 Follow-up:
 
@@ -403,8 +403,8 @@ Completed shape versus sprint plan:
 
 Current risks / friction:
 
-- The full SadConsole suite has one pre-existing `SadConsoleEditorContextTests` fixture failure unrelated to the refactor; this should be fixed before treating full-suite status as green.
-- `SadConsoleEditorContext` remains the largest coordinator and has not yet been decomposed. Phase 4 should be the next major sprint phase if we continue.
+- The full SadConsole suite had one pre-existing `SadConsoleEditorContextTests` fixture failure unrelated to the refactor; Phase 4 later fixed it.
+- `SadConsoleEditorContext` remains the largest coordinator, though Phase 4 later extracted several low-risk submodes.
 - The prompt controller's formatting delegates and test placement are acceptable for this phase but could be polished after the larger coordinator extractions settle.
 
 Recommended next step:
@@ -424,12 +424,16 @@ Changes:
 - Added `SadConsoleEditorInitialFacingPickerController` to own initial-facing picker active state, option list, selected option index, movement, confirm selection, and clear behavior.
 - Updated `SadConsoleEditorContext` to delegate initial-facing picker state/index/option behavior to the new controller while keeping service-backed mutation application in the context façade.
 - Added focused `SadConsoleEditorInitialFacingPickerControllerTests` for begin/select-current-facing, movement clamping, confirm-and-clear, and inactive confirm behavior.
+- Added `SadConsoleEditorDefaultActionPlanPickerController` to own default-action-plan picker active state, selected option index, movement, confirm selection, and clear behavior.
+- Updated `SadConsoleEditorContext` to delegate default-action-plan picker state/index behavior to the new controller while keeping option construction, service-backed mutation, and preview invalidation in the context façade.
+- Added focused `SadConsoleEditorDefaultActionPlanPickerControllerTests` for begin/select-current-plan, movement clamping, confirm-and-clear, and inactive confirm behavior.
 
 Problems/friction encountered:
 
 - Command-entry construction still depends on full editor context state (`Section`, selected scenario/template/action plan, preview availability), so it was intentionally left in `SadConsoleEditorContext` rather than forcing a larger extraction.
 - Command execution still dispatches into many existing context workflows. Moving that dispatch out now would couple the new controller to too many mutation/preview/template submodes, so the controller currently owns only menu presentation/input state and selected-entry handoff.
 - The initial-facing picker was a low-risk second extraction because it owns bounded frontend picker state; service-backed mutation and preview invalidation remain in `SadConsoleEditorContext` to avoid moving authoring semantics into the picker controller.
+- The default-action-plan picker was similarly low-risk, but its option construction still depends on the current editor snapshot's authored action plans. That option construction remains in `SadConsoleEditorContext` rather than pushing snapshot knowledge into the picker controller.
 - The `emptyPlan` fixture issue was content/test-data friction rather than a production regression. Fixing it restored a clean full SadConsole suite baseline.
 
 Verification:
@@ -437,11 +441,38 @@ Verification:
 - Passed: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj --filter "FullyQualifiedName~SadConsoleEditorCommandMenuControllerTests|FullyQualifiedName~CommandMenu"`
 - Passed: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj --filter "FullyQualifiedName~SadConsoleEditorCommandMenuControllerTests|FullyQualifiedName~CommandMenu|FullyQualifiedName~EditorMutationExecutorTests|FullyQualifiedName~SadConsoleActionPlanEditScreenTests|FullyQualifiedName~SadConsoleEntityTemplateEditScreenTests|FullyQualifiedName~SadConsoleScenarioEditScreenTests|FullyQualifiedName~GameplayMockScreenTests"`
 - Passed: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj --filter "FullyQualifiedName~SadConsoleEditorInitialFacingPickerControllerTests|FullyQualifiedName~InitialFacing"`
-- Passed full suite: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj` currently reports 225 passed / 0 failed.
+- Passed: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj --filter "FullyQualifiedName~SadConsoleEditorDefaultActionPlanPickerControllerTests|FullyQualifiedName~DefaultActionPlan"`
+- Passed full suite: `dotnet test tests/GameGameGame.SadConsole.Tests/GameGameGame.SadConsole.Tests.csproj` currently reports 229 passed / 0 failed.
 
 Follow-up:
 
-- Continue with additional `SadConsoleEditorContext` submode extraction if we want to push further. The next candidates are default-action-plan picker as another low-risk state extraction, or template presentation edit for higher payoff.
+- Continue with additional `SadConsoleEditorContext` submode extraction in a future sprint if needed. The next high-payoff candidate is template presentation edit; targeting-rule edit and inventory brush are valuable but more entangled.
+
+## Sprint wrap-up checkpoint
+
+Outcome summary:
+
+- Legacy `SadConsoleShell` is quarantined and clearly marked as reference-only.
+- Editor mutation execution is centralized through `EditorMutationExecutor` in `InventoryGridEditScreen` and `ActionPlanEditScreen`.
+- Componentized play-mode runtime submission/history/log refresh moved into `GameplaySessionController`.
+- Componentized play-mode prompt-stack state moved into `ActionChoicePromptController`.
+- Core-owner unblocked authored-step Action Choice submission; SadConsole no longer directly invokes semantic execution APIs such as `ActionPlanInterpreter`, `PostActionStateUpdater`, `World.RecordTrace`, or `World.AdvanceTurn`.
+- `SadConsoleEditorContext` now delegates command-menu state, initial-facing picker state, and default-action-plan picker state to focused controllers.
+- The previously failing `emptyPlan` editor-context test fixture was fixed.
+- Full SadConsole frontend test suite is green: 229 passed / 0 failed.
+
+Remaining deliberate debt:
+
+- `SadConsoleEditorContext` is still large; template presentation edit, targeting-rule edit, inventory brush, action-plan step edit, and preview/materialization are future extraction candidates.
+- `GameplayMockScreen` still owns frame composition, row formatting, highlight-coordinate projection, and inspection presentation; a future `GameplayFrameBuilder` remains a good consolidation candidate.
+- `EditorMutationExecutor` adoption is intentionally partial; extending it should remain incremental to avoid creating a vague god-helper.
+- `SadConsoleShell` and `LegacySimulationConsoleFactory` remain present but quarantined. Delete them in a future cleanup after confirming no manual/reference path still needs them.
+
+Documentation cleanup status:
+
+- This plan now serves as the sprint record and wrap-up checkpoint.
+- `planning-index.md` points to this plan as a focused frontend refactor sprint overlay.
+- No frontend UX standards change was needed beyond the already-recorded invariant alignment: the sprint preserved frontend-owned presentation state and shared-service ownership of semantics.
 
 ## Rollback / safety plan
 

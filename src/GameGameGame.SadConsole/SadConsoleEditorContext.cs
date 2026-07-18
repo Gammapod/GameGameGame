@@ -12,8 +12,7 @@ internal sealed class SadConsoleEditorContext
     private SadConsoleEditorTemplateEditMode _templateEditMode = SadConsoleEditorTemplateEditMode.None;
     private string _templateEditBuffer = string.Empty;
     private readonly SadConsoleEditorInitialFacingPickerController _initialFacingPicker = new();
-    private bool _isPickingTemplateDefaultActionPlan;
-    private int _templateDefaultActionPlanPickerIndex;
+    private readonly SadConsoleEditorDefaultActionPlanPickerController _defaultActionPlanPicker = new();
     private SadConsoleEditorActionStepEditState? _actionStepEdit;
     private SadConsoleEditorTargetingRuleEditState? _targetingRuleEdit;
     private SadConsoleEditorInventoryBrushState? _inventoryBrush;
@@ -44,8 +43,8 @@ internal sealed class SadConsoleEditorContext
     public bool IsEditingTemplatePresentation => _templateEditMode != SadConsoleEditorTemplateEditMode.None;
     public bool IsPickingTemplateInitialFacing => _initialFacingPicker.IsActive;
     public int TemplateInitialFacingPickerIndex => _initialFacingPicker.SelectedIndex;
-    public bool IsPickingTemplateDefaultActionPlan => _isPickingTemplateDefaultActionPlan;
-    public int TemplateDefaultActionPlanPickerIndex => _templateDefaultActionPlanPickerIndex;
+    public bool IsPickingTemplateDefaultActionPlan => _defaultActionPlanPicker.IsActive;
+    public int TemplateDefaultActionPlanPickerIndex => _defaultActionPlanPicker.SelectedIndex;
     public bool IsEditingActionPlanSteps => _actionStepEdit is not null;
     public SadConsoleEditorActionStepEditState? ActionStepEdit => _actionStepEdit;
     public bool IsEditingTemplateTargetingRule => _targetingRuleEdit is not null;
@@ -373,7 +372,7 @@ internal sealed class SadConsoleEditorContext
 
     public SadConsoleEditorMutationUiResult CancelEdit()
     {
-        if (_isPickingTemplateDefaultActionPlan)
+        if (_defaultActionPlanPicker.IsActive)
         {
             ClearTemplateDefaultActionPlanPicker();
             return SadConsoleEditorMutationUiResult.Success("Default action plan picker cancelled; authored content was not mutated.");
@@ -606,7 +605,7 @@ internal sealed class SadConsoleEditorContext
 
     public void MoveSelection(int delta)
     {
-        if (_isPickingTemplateDefaultActionPlan)
+        if (_defaultActionPlanPicker.IsActive)
         {
             MoveTemplateDefaultActionPlanPicker(delta);
             return;
@@ -1033,9 +1032,7 @@ internal sealed class SadConsoleEditorContext
         ClearTemplateInventoryBrush();
         Section = SadConsoleEditorSection.Templates;
         var options = TemplateDefaultActionPlanPickerOptions();
-        var currentIndex = options.ToList().FindIndex(option => string.Equals(option.ActionPlanId, template.DefaultActionPlanId, StringComparison.Ordinal));
-        _templateDefaultActionPlanPickerIndex = currentIndex >= 0 ? currentIndex : 0;
-        _isPickingTemplateDefaultActionPlan = true;
+        _defaultActionPlanPicker.Begin(template.DefaultActionPlanId, options);
         return SadConsoleEditorMutationUiResult.Success($"Choosing default action plan for {template.TemplateId}. Up/Down selects; Enter applies; Esc cancels.");
     }
 
@@ -1044,7 +1041,7 @@ internal sealed class SadConsoleEditorContext
 
     public SadConsoleEditorMutationUiResult ConfirmTemplateDefaultActionPlanPicker()
     {
-        if (!_isPickingTemplateDefaultActionPlan)
+        if (!_defaultActionPlanPicker.IsActive)
         {
             return SadConsoleEditorMutationUiResult.Failure("No default action plan picker is active.");
         }
@@ -1056,11 +1053,10 @@ internal sealed class SadConsoleEditorContext
         }
 
         var options = TemplateDefaultActionPlanPickerOptions();
-        var option = options[Math.Clamp(_templateDefaultActionPlanPickerIndex, 0, options.Count - 1)];
-        ClearTemplateDefaultActionPlanPicker();
-        var result = option.ActionPlanId is null
+        var selection = _defaultActionPlanPicker.Confirm(options);
+        var result = selection?.ActionPlanId is null
             ? _service.ClearTemplateDefaultActionPlan(template.TemplateId)
-            : _service.SetTemplateDefaultActionPlan(template.TemplateId, option.ActionPlanId);
+            : _service.SetTemplateDefaultActionPlan(template.TemplateId, selection.ActionPlanId);
         ReplaceSnapshotAfterMutation(
             result.Snapshot,
             template.TemplateId,
@@ -1071,7 +1067,7 @@ internal sealed class SadConsoleEditorContext
 
     private void MoveTemplateDefaultActionPlanPicker(int delta)
     {
-        _templateDefaultActionPlanPickerIndex = ClampIndex(_templateDefaultActionPlanPickerIndex + delta, TemplateDefaultActionPlanPickerOptions().Count);
+        _defaultActionPlanPicker.Move(delta, TemplateDefaultActionPlanPickerOptions().Count);
     }
 
     public SadConsoleEditorMutationUiResult BeginActionPlanStepEditor()
@@ -1727,8 +1723,7 @@ internal sealed class SadConsoleEditorContext
 
     private void ClearTemplateDefaultActionPlanPicker()
     {
-        _isPickingTemplateDefaultActionPlan = false;
-        _templateDefaultActionPlanPickerIndex = 0;
+        _defaultActionPlanPicker.Clear();
     }
 
     private void ClearActionPlanStepEditor()
