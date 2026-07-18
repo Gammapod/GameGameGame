@@ -25,6 +25,10 @@ internal sealed class ScenarioSelectionConsole : Console
     private GameplayMockConsole? _playMockConsole;
     private string _message = "New Scenario Selection. Up/Down selects scenario. Enter opens Play/Edit. Esc exits.";
 
+    internal readonly record struct ScenarioSelectionKeyboardFocus(bool UseKeyboard, bool IsFocused, FocusBehavior FocusedMode);
+
+    internal static ScenarioSelectionKeyboardFocus RestoredScenarioSelectionFocusForPlayExit() => new(true, true, FocusBehavior.Set);
+
     public ScenarioSelectionConsole(SadConsoleStartup startup, SadConsoleTheme? theme = null, SadConsoleDisplaySettings? displaySettings = null) : base(ScreenWidth, ScreenHeight)
     {
         _theme = theme ?? SadConsoleTheme.Default;
@@ -212,12 +216,22 @@ internal sealed class ScenarioSelectionConsole : Console
     {
         if (_playMockConsole is not null)
         {
+            _playMockConsole.IsFocused = false;
             Children.Remove(_playMockConsole);
             _playMockConsole = null;
         }
 
+        RestoreScenarioSelectionInputFocus();
         _message = "Returned from Play UX mock.";
         Redraw();
+    }
+
+    private void RestoreScenarioSelectionInputFocus()
+    {
+        var focus = RestoredScenarioSelectionFocusForPlayExit();
+        UseKeyboard = focus.UseKeyboard;
+        IsFocused = focus.IsFocused;
+        FocusedMode = focus.FocusedMode;
     }
 
     private void HandleScenarioEdit(UiComponentCommand command)

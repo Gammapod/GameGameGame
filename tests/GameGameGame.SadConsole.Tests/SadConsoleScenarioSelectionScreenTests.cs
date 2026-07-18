@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.SadConsoleApp;
 using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Rendering;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 
 namespace GameGameGame.SadConsole.Tests;
@@ -161,6 +162,16 @@ public sealed class SadConsoleScenarioSelectionScreenTests
         Assert.False(startup.LaunchGallery);
         Assert.NotNull(startup.Catalog);
         Assert.Contains("missing-file.yaml", startup.Catalog.Diagnostics[0]);
+    }
+
+    [Fact]
+    public void ScenarioSelectionRestoresKeyboardFocusAfterPlayModeExit()
+    {
+        var focus = ScenarioSelectionConsole.RestoredScenarioSelectionFocusForPlayExit();
+
+        Assert.True(focus.UseKeyboard);
+        Assert.True(focus.IsFocused);
+        Assert.Equal(global::SadConsole.FocusBehavior.Set, focus.FocusedMode);
     }
 
     private static ScenarioCatalogResult DemoCatalog() => new([

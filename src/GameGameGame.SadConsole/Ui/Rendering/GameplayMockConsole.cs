@@ -14,6 +14,8 @@ internal sealed class GameplayMockConsole : Console
 {
     private readonly SadConsoleTheme _theme;
     private readonly SadConsoleComponentRenderer _renderer;
+    private readonly TilesetProfile _tileset;
+    private readonly TilesetTextRenderer _textRenderer;
     private readonly Action? _onExit;
     private Console? _hudLayer;
     private readonly GameplayMockScreen? _screen;
@@ -62,6 +64,8 @@ internal sealed class GameplayMockConsole : Console
     {
         _theme = theme ?? SadConsoleTheme.Default;
         _renderer = new SadConsoleComponentRenderer(this, _theme, displaySettings);
+        _tileset = TilesetProfileLoader.Load(ResolveAssetPath("Candii.tileset.json"));
+        _textRenderer = new TilesetTextRenderer(_tileset);
         _onExit = onExit;
         _message = string.Empty;
         UseKeyboard = true;
@@ -274,9 +278,9 @@ internal sealed class GameplayMockConsole : Console
                     : validSelectionCoords.Contains(coord)
                         ? Color.DarkGreen
                         : cell?.EntityId == _screen?.PlayerEntityId ? Color.DarkBlue : Color.Black;
-                SetMainCell(x, gridTop + row, ' ', foreground, background);
+                SetMainCell(x, gridTop + row, _tileset.Blank, foreground, background);
                 SetMainCell(x + 1, gridTop + row, glyph, cell?.EntityId == _screen?.PlayerEntityId ? Color.Yellow : foreground, background);
-                SetMainCell(x + 2, gridTop + row, ' ', foreground, background);
+                SetMainCell(x + 2, gridTop + row, _tileset.Blank, foreground, background);
             }
         }
 
@@ -290,18 +294,19 @@ internal sealed class GameplayMockConsole : Console
 
     private void DrawBox(SadConsoleRect rect, Color color)
     {
+        var glyphs = _tileset.Roles.PanelBorder;
         var right = rect.Left + rect.Width - 1;
         var bottom = rect.Bottom - 1;
         for (var x = rect.Left; x <= right; x++)
         {
-            SetMainCell(x, rect.Top, x == rect.Left ? '+' : x == right ? '+' : '-', color, Color.Black);
-            SetMainCell(x, bottom, x == rect.Left ? '+' : x == right ? '+' : '-', color, Color.Black);
+            SetMainCell(x, rect.Top, x == rect.Left ? glyphs.TopLeft : x == right ? glyphs.TopRight : glyphs.Horizontal, color, Color.Black);
+            SetMainCell(x, bottom, x == rect.Left ? glyphs.BottomLeft : x == right ? glyphs.BottomRight : glyphs.Horizontal, color, Color.Black);
         }
 
         for (var y = rect.Top + 1; y < bottom; y++)
         {
-            SetMainCell(rect.Left, y, '|', color, Color.Black);
-            SetMainCell(right, y, '|', color, Color.Black);
+            SetMainCell(rect.Left, y, glyphs.Vertical, color, Color.Black);
+            SetMainCell(right, y, glyphs.Vertical, color, Color.Black);
         }
     }
 
@@ -309,10 +314,7 @@ internal sealed class GameplayMockConsole : Console
     {
         if (width <= 0) return;
         var clipped = text.Length <= width ? text : text[..Math.Max(0, width - 1)];
-        for (var index = 0; index < clipped.Length && x + index < Width; index++)
-        {
-            SetMainCell(x + index, y, clipped[index], color, Color.Black);
-        }
+        _textRenderer.Print(this, x, y, clipped, color, Color.Black);
     }
 
     private void SetMainCell(int x, int y, int glyph, Color foreground, Color background)
@@ -376,18 +378,19 @@ internal sealed class GameplayMockConsole : Console
 
     private void DrawHudBox(SadConsoleRect rect, Color color)
     {
+        var glyphs = _tileset.Roles.PanelBorder;
         var right = rect.Left + rect.Width - 1;
         var bottom = rect.Bottom - 1;
         for (var x = rect.Left; x <= right; x++)
         {
-            SetHudCell(x, rect.Top, x == rect.Left ? '+' : x == right ? '+' : '-', color, Color.Black);
-            SetHudCell(x, bottom, x == rect.Left ? '+' : x == right ? '+' : '-', color, Color.Black);
+            SetHudCell(x, rect.Top, x == rect.Left ? glyphs.TopLeft : x == right ? glyphs.TopRight : glyphs.Horizontal, color, Color.Black);
+            SetHudCell(x, bottom, x == rect.Left ? glyphs.BottomLeft : x == right ? glyphs.BottomRight : glyphs.Horizontal, color, Color.Black);
         }
 
         for (var y = rect.Top + 1; y < bottom; y++)
         {
-            SetHudCell(rect.Left, y, '|', color, Color.Black);
-            SetHudCell(right, y, '|', color, Color.Black);
+            SetHudCell(rect.Left, y, glyphs.Vertical, color, Color.Black);
+            SetHudCell(right, y, glyphs.Vertical, color, Color.Black);
         }
     }
 
@@ -395,11 +398,7 @@ internal sealed class GameplayMockConsole : Console
     {
         if (width <= 0 || _hudLayer is null) return;
         var clipped = text.Length <= width ? text : text[..Math.Max(0, width - 1)];
-        var hudLayer = _hudLayer;
-        for (var index = 0; index < clipped.Length && x + index < hudLayer.Width; index++)
-        {
-            SetHudCell(x + index, y, clipped[index], color, Color.Black);
-        }
+        _textRenderer.Print(_hudLayer, x, y, clipped, color, Color.Black);
     }
 
     private void SetHudCell(int x, int y, int glyph, Color foreground, Color background)
@@ -410,16 +409,19 @@ internal sealed class GameplayMockConsole : Console
         _hudLayer.Surface[x, y].Background = background;
     }
 
-    private static void ClearConsole(Console console)
+    private void ClearConsole(Console console)
     {
-        for (var y = 0; y < console.Height; y++)
-        {
-            for (var x = 0; x < console.Width; x++)
-            {
-                console.Surface[x, y].Glyph = ' ';
-                console.Surface[x, y].Foreground = Color.White;
-                console.Surface[x, y].Background = Color.Black;
-            }
-        }
+        _textRenderer.Clear(console, Color.White, Color.Black);
+    }
+
+    private static string ResolveAssetPath(string fileName)
+    {
+        var outputPath = Path.Combine(AppContext.BaseDirectory, "assets", fileName);
+        if (File.Exists(outputPath)) return outputPath;
+
+        var workingPath = Path.Combine(Environment.CurrentDirectory, "assets", fileName);
+        if (File.Exists(workingPath)) return workingPath;
+
+        return outputPath;
     }
 }
