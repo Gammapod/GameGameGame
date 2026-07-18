@@ -4,7 +4,8 @@ public enum ActionChoiceKind
 {
     Move,
     Pickup,
-    Drop
+    Drop,
+    AuthoredStep
 }
 
 public sealed record ActionChoiceDirectionOption(
@@ -58,6 +59,8 @@ public sealed class ActionChoiceService(MovementService movement)
                     choices.Add(new ActionChoice(ActionChoiceKind.Move, index, QueryMoveDirections(world, actorId), [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
                     hasMoveChoice = true;
                     break;
+                case ActionPlanBehaviorStepKind.Move:
+                    break;
                 case ActionPlanBehaviorStepKind.PickupTarget:
                 case ActionPlanBehaviorStepKind.TransformAdjacentToInventory:
                     choices.Add(new ActionChoice(ActionChoiceKind.Pickup, index, [], affordances.PickupSources, affordances.PickupDestinationsByTargetId));
@@ -65,6 +68,9 @@ public sealed class ActionChoiceService(MovementService movement)
                 case ActionPlanBehaviorStepKind.DropFacing:
                 case ActionPlanBehaviorStepKind.TransformInventoryToAdjacent:
                     choices.Add(new ActionChoice(ActionChoiceKind.Drop, index, [], affordances.DropSources, QueryAdjacentDropDestinations(world, actorId, affordances.DropSources)));
+                    break;
+                default:
+                    choices.Add(new ActionChoice(ActionChoiceKind.AuthoredStep, index, [], [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
                     break;
             }
         }
@@ -120,6 +126,34 @@ public sealed class ActionChoiceService(MovementService movement)
 
         var commands = new ControlledActorCommandService(movement, actionPlans, beforePlan);
         return commands.Execute(world, request.ActorId, ControlledActorCommand.Drop(targetId, destination));
+    }
+
+    public PlanExecutionResult SubmitAuthoredStepChoice(
+        WorldState world,
+        ActionChoiceRequest request,
+        int stepIndex,
+        ActionPlanBehaviorStepDescriptor step,
+        IReadOnlyDictionary<ActionPlanId, ActionPlanDefinition>? planRegistry = null)
+    {
+        if (!request.Choices.Any(choice => choice.StepIndex == stepIndex))
+        {
+            throw new InvalidOperationException($"Action choice request does not contain step {stepIndex}.");
+        }
+
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId($"choice-step-{request.ActorId.Value}-{stepIndex}-{step.Kind}"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([step]));
+        var result = new ActionPlanInterpreter(movement, planRegistry ?? new Dictionary<ActionPlanId, ActionPlanDefinition>())
+            .Execute(world, request.ActorId, plan, new ActionPlanContext());
+        PostActionStateUpdater.ApplyFacingFromMovement(world, request.ActorId, result.ActorMovementDirection);
+        world.RecordTrace(result.Trace);
+        if (result.ConsumesTurn)
+        {
+            world.AdvanceTurn();
+        }
+
+        return result;
     }
 
     private IReadOnlyList<ActionChoiceDirectionOption> QueryMoveDirections(WorldState world, EntityId actorId) =>

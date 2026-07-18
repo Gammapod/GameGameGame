@@ -94,12 +94,12 @@ Active canonical action planning document:
 
 Immediate canonical action priority:
 
-- Classify the current broad Action Step catalog as legacy/prototype-compatible while preserving load/run/editor compatibility for existing content.
-- Define the promoted canonical-action tier and vertical-slice checklist in source-of-truth docs.
+- Preserve the completed freeze/promotion model: the broad Action Step catalog remains legacy/prototype-compatible unless promoted through a vertical slice.
 - Treat the completed canonical `Move` slice as the reference promotion workflow: engine rules, structured outcomes, player-facing log IDs, two content rooms, editor/headless tool support, and Action Choice/play-mode consumption.
-- Follow with the first non-movement player-interaction pair, currently `PickupTarget` and `DropTarget`, to prove target/source menus, inventory selection, success criteria, POV adjective, and threshold-vs-actual ratio facts without reusing movement-specific 8-way prompts.
-- Design and implement the canonical runtime control-source / Action Choice model: control source is mutable runtime state, fallback-controlled actors use normal fallback resolution, player-controlled actors choose from their effective authored Action Plan through Core-owned choice/target requests, and control source can change during gameplay.
-- Replace the remaining legacy/internal play-mode stopgap with the componentized Gamma play-mode surface based on the existing mock, consuming shared scenario launch, history, POV/entity-panel, action-choice, target, and log services.
+- Treat the first Pickup/Drop interaction seam as implemented evidence: Core Action Choice exposes target/source/destination facts for `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing`, submissions execute through shared history/command services, and componentized play mode has an action-step-first menu path.
+- Use that evidence to promote the next broad action pair rather than immediately adding transform variants. The likely next immediate option is `EnterTarget`/`ExitFacing`, because Core runtime, affordances, POV adjectives, aperture ratios, log IDs, and authoring support already exist but Action Choice/player interaction and canonical fixture hardening still need a vertical slice.
+- Keep `TransformInventoryToRanged`/Throw and `TransformAdjacentToRanged`/Shove in backlog until the broader canonical action vocabulary is proven, unless a concrete scenario requires ranged transform semantics sooner.
+- Consider `Teleport` only as an advanced/stretch relocation slice: it is already supported as a generic effect, but canonical player-facing semantics, safety/authoring limits, and log/POV expectations differ from constrained inventory verbs.
 
 Canonical action target statement:
 
@@ -110,13 +110,13 @@ Canonical action target statement:
 
 Planned next sprint:
 
-- Start the next canonical non-movement slice from the completed `Move` baseline: design `PickupTarget`/`DropTarget` Action Choice/menu behavior, trace invariants/tests first, then implement the smallest Core/Content/editor/tooling/frontend bridge needed to prove one target/source interaction path.
+- Start an `EnterTarget`/`ExitFacing` canonical promotion/audit slice from the completed Move and Pickup/Drop baselines: trace invariants/tests first, verify existing Core/Content/frontend support, then add the smallest missing Action Choice/player-interaction, content-room, log/POV, and documentation work needed to make containment transitions release-canonical.
 
-Open player-control models for the next slice:
+Open player-control models after the first action-step-first path:
 
-1. player opens a non-movement action menu first, then a target/source menu;
-2. player selects/highlights a target/source first, then sees legal actions for it;
-3. bump-to-interact opens a legal action menu against the bumped entity.
+1. keep action-menu-first as the current implemented baseline: player opens authored action steps, then chooses target/source and destination from Core facts;
+2. target/source-first remains a future pathway that should reuse the same Core Action Choice facts;
+3. bump-to-interact can be evaluated later for occupied/interactive entities without making movement itself own interaction legality.
 
 ### Delta release target: arbitrary-entity point of view
 

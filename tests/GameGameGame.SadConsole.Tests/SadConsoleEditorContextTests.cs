@@ -1636,10 +1636,12 @@ public sealed class SadConsoleEditorContextTests
     [Fact]
     public void ActionStepEditorDisablesInvalidReplaceOnEmptyPlanWhileInsertWorks()
     {
-        var path = WriteTempContentFile(EditorFixtureYaml().Replace(
-            "  waitPlan:\n    id: waitPlan",
-            "  emptyPlan:\n    id: emptyPlan\n  waitPlan:\n    id: waitPlan",
-            StringComparison.Ordinal));
+        var yaml = EditorFixtureYaml();
+        var actionPlansIndex = yaml.IndexOf("actionPlans:", StringComparison.Ordinal);
+        Assert.True(actionPlansIndex >= 0, "Editor fixture must define actionPlans.");
+        var insertIndex = yaml.IndexOf('\n', actionPlansIndex) + 1;
+        var path = WriteTempContentFile(yaml.Insert(insertIndex,
+            "  emptyPlan:\n    id: emptyPlan\n    behavior:\n      steps: []\n"));
 
         try
         {

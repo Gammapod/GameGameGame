@@ -29,80 +29,41 @@ internal sealed record GameplayMockFrame(
 
 internal sealed class GameplayMockScreen
 {
-    private enum ActionMenuMode
-    {
-        Closed,
-        ActionList,
-        PickupTarget,
-        PickupDestination,
-        DropSource,
-        DropDestination
-    }
-
     private readonly PlayableScenarioSession _session;
+    private readonly GameplaySessionController _sessionController;
+    private readonly ActionChoicePromptController _prompt = new();
     private readonly EntityPanelProjectionService _panelProjection;
-    private readonly ControlledActorCommandService _commands;
-    private readonly ActionChoiceService _actionChoices;
-    private readonly SimulationHistorySession _history;
-    private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _controlledCommandActionPlans;
-    private readonly MovementService _movement = new();
-    private ActionLogProjection? _actionLog;
-    private ActionChoiceRequest? _currentActionChoiceRequest;
     private EntityId? _inspectedEntityId;
-    private int _selectedActionStepIndex;
-    private ActionMenuMode _actionMenuMode;
-    private ActionChoice? _selectedEntityActionChoice;
-    private EntityId? _selectedEntityActionTargetId;
-    private int _selectedTargetIndex;
-    private int _selectedDestinationIndex;
 
     public GameplayMockScreen(PlayableScenarioSession session)
     {
         _session = session;
+        _sessionController = new GameplaySessionController(session);
         _panelProjection = new EntityPanelProjectionService(
             entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance(),
-            GetActionPlanDescriptorForEntity);
-        // Temporary debug wait and direct/action-choice movement use controlled-command compatibility:
-        // the controlled actor's authored plan must not also resolve autonomously while it is acting as
-        // the player-controlled entity.
-        _controlledCommandActionPlans = session.ActionPlans
-            .Where(entry => entry.Key != session.PlayerEntityId)
-            .ToDictionary(entry => entry.Key, entry => entry.Value);
-        _commands = new ControlledActorCommandService(
-            _movement,
-            _controlledCommandActionPlans,
-            (world, entityId) => TargetingService.RefreshTargets(world, session.Registry, entityId));
-        _actionChoices = new ActionChoiceService(_movement);
-        _history = SimulationHistorySession.Start(
-            session.World,
-            session.PlayerEntityId,
-            session.ActivePlaneId,
-            session.ActiveContainerEntityId);
-        RefreshActionChoiceRequest();
-        _actionLog = ActionLogProjection.FromHistory(_history);
+            _sessionController.GetActionPlanDescriptorForEntity);
     }
 
     public EntityId PlayerEntityId => _session.PlayerEntityId;
     public EntityId? InspectedEntityId => _inspectedEntityId;
-    public int FrameIndex => _history.CurrentFrame.FrameIndex;
-    public int SelectedActionStepIndex => _selectedActionStepIndex;
-    public ActionChoiceRequest? CurrentActionChoiceRequest => _currentActionChoiceRequest;
-    public string ActionMenuState => _actionMenuMode.ToString();
-    public bool IsActionMenuOpen => _actionMenuMode != ActionMenuMode.Closed;
-    public bool UsesCoreActionChoiceMovement => _currentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move) == true;
-    public bool UsesCoreActionChoicePickup => _currentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Pickup) == true;
-    public bool UsesCoreActionChoiceDrop => _currentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Drop) == true;
+    public int FrameIndex => _sessionController.FrameIndex;
+    public int SelectedActionStepIndex => _prompt.SelectedActionStepIndex;
+    public ActionChoiceRequest? CurrentActionChoiceRequest => _sessionController.CurrentActionChoiceRequest;
+    public string ActionMenuState => _prompt.Mode.ToString();
+    public bool IsActionMenuOpen => _prompt.IsOpen;
+    public bool UsesCoreActionChoiceMovement => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move) == true;
+    public bool UsesCoreActionChoicePickup => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Pickup) == true;
+    public bool UsesCoreActionChoiceDrop => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Drop) == true;
     private WorldState World => _session.World;
-    private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _session.ActionPlans;
+    private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _sessionController.ProjectionActionPlans;
 
     public GameplayMockFrame BuildFrame(int width, int height)
     {
         var safeWidth = Math.Max(40, width);
         var safeHeight = Math.Max(18, height);
-        RefreshDisplayTargets();
-        RefreshActionChoiceRequest();
+        _sessionController.RefreshForFrameBuilding();
         var projectionActionPlans = ProjectionActionPlans;
-        var playerProjection = _panelProjection.Project(World, _session.PlayerEntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog);
+        var playerProjection = _panelProjection.Project(World, _session.PlayerEntityId, projectionActionPlans, _session.PlayerEntityId, _sessionController.ActionLog);
         var diagnostics = new List<string>();
         diagnostics.AddRange(_session.ValidationDiagnostics);
         diagnostics.AddRange(_session.RuntimeFailures);
@@ -118,7 +79,7 @@ internal sealed class GameplayMockScreen
         }
 
         var currentPlaceProjection = playerProjection.PointOfView?.CurrentPlace is { } currentPlace
-            ? _panelProjection.Project(World, currentPlace.EntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog)
+            ? _panelProjection.Project(World, currentPlace.EntityId, projectionActionPlans, _session.PlayerEntityId, _sessionController.ActionLog)
             : null;
 
         var hudWidth = Math.Clamp(safeWidth / 5, 20, Math.Max(20, safeWidth - 42));
@@ -139,13 +100,13 @@ internal sealed class GameplayMockScreen
         EntityPanelProjection? inspectedProjection = null;
         if (_inspectedEntityId is { } inspectedEntityId && World.Entities.ContainsKey(inspectedEntityId))
         {
-            inspectedProjection = _panelProjection.Project(World, inspectedEntityId, projectionActionPlans, _session.PlayerEntityId, _actionLog);
+            inspectedProjection = _panelProjection.Project(World, inspectedEntityId, projectionActionPlans, _session.PlayerEntityId, _sessionController.ActionLog);
             components.Add(BuildInspectionComponent(inspectedProjection, inspectionBounds));
         }
 
-        if (_actionMenuMode == ActionMenuMode.ActionList)
+        if (_prompt.Mode == ActionChoicePromptMode.ActionList)
         {
-            components.Add(BuildActionSelectorComponent(currentPlaceBounds, AvailablePlayerActionSteps(), _selectedActionStepIndex));
+            components.Add(BuildActionSelectorComponent(currentPlaceBounds, AvailablePlayerActionSteps(), _prompt.SelectedActionStepIndex));
         }
 
         if (diagnostics.Count > 0)
@@ -174,7 +135,7 @@ internal sealed class GameplayMockScreen
             hudBounds,
             inspectionBounds,
             components,
-            BuildHudRows(playerProjection, currentPlaceProjection, AvailablePlayerActionSteps(), _selectedActionStepIndex, DescribeMovementControlMode(), BuildActionChoiceRows(), BuildActionMenuRows()),
+            BuildHudRows(playerProjection, currentPlaceProjection, AvailablePlayerActionSteps(), _prompt.SelectedActionStepIndex, DescribeMovementControlMode(), BuildActionChoiceRows(), BuildActionMenuRows()),
             BuildActionChoiceRows(),
             BuildCurrentPlacePlayerLogRows(currentPlaceProjection),
             CurrentPlaceValidSelectionCoords(),
@@ -210,34 +171,19 @@ internal sealed class GameplayMockScreen
 
     public string DebugAdvanceOneControlledTurn()
     {
-        var result = _history.SubmitControlledCommand(_commands, ControlledActorCommand.Wait());
-        _actionLog = ActionLogProjection.FromHistory(_history);
-        RefreshDisplayTargets();
+        var result = _sessionController.SubmitWait();
         return result.Succeeded
             ? $"Debug wait advanced to frame {FrameIndex}; world turn {World.TurnNumber}."
-            : $"Debug wait failed: {result.FailureReason?.ToString() ?? "unknown"}.";
+            : $"Debug wait failed: {result.FailureText ?? "unknown"}.";
     }
 
     public string ExecuteControlledMove(Direction direction)
     {
-        RefreshActionChoiceRequest();
-        var usedCoreChoice = _currentActionChoiceRequest is { } request
-            && request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move);
-        var result = usedCoreChoice
-            ? _history.SubmitActionChoice(
-                _actionChoices,
-                _currentActionChoiceRequest!,
-                direction,
-                _controlledCommandActionPlans,
-                (world, entityId) => TargetingService.RefreshTargets(world, _session.Registry, entityId))
-            : _history.SubmitControlledCommand(_commands, ControlledActorCommand.Move(direction));
-        _actionLog = ActionLogProjection.FromHistory(_history);
-        RefreshDisplayTargets();
-        RefreshActionChoiceRequest();
+        var result = _sessionController.SubmitMove(direction);
 
         return result.Succeeded
-            ? $"Moved {direction} via {(usedCoreChoice ? "Core Action Choice" : "direct compatibility controls")}; frame {FrameIndex}, world turn {World.TurnNumber}."
-            : $"Move {direction} failed via {(usedCoreChoice ? "Core Action Choice" : "direct compatibility controls")}: {result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
+            ? $"Moved {direction} via {(result.UsedCoreActionChoice ? "Core Action Choice" : "direct compatibility controls")}; frame {FrameIndex}, world turn {World.TurnNumber}."
+            : $"Move {direction} failed via {(result.UsedCoreActionChoice ? "Core Action Choice" : "direct compatibility controls")}: {result.FailureText ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
     }
 
     public string SelectPreviousActionStep() => SelectMenuItem(-1);
@@ -246,128 +192,54 @@ internal sealed class GameplayMockScreen
 
     public string ExecuteSelectedActionStep()
     {
-        return _actionMenuMode switch
+        return _prompt.Mode switch
         {
-            ActionMenuMode.Closed => OpenActionStepMenu(),
-            ActionMenuMode.ActionList => ConfirmSelectedActionStep(),
-            ActionMenuMode.PickupTarget or ActionMenuMode.DropSource => ConfirmSelectedTarget(),
-            ActionMenuMode.PickupDestination or ActionMenuMode.DropDestination => ConfirmSelectedDestination(),
+            ActionChoicePromptMode.Closed => OpenActionStepMenu(),
+            ActionChoicePromptMode.ActionList => ConfirmSelectedActionStep(),
+            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource => ConfirmSelectedTarget(),
+            ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => ConfirmSelectedDestination(),
             _ => OpenActionStepMenu()
         };
     }
 
     public string CancelActionMenu()
     {
-        if (_actionMenuMode == ActionMenuMode.Closed)
+        var result = _prompt.Cancel();
+        if (result.InspectPlayer)
         {
-            return "No action menu is open.";
+            _inspectedEntityId = _session.PlayerEntityId;
         }
 
-        switch (_actionMenuMode)
-        {
-            case ActionMenuMode.PickupTarget:
-            case ActionMenuMode.DropSource:
-                _actionMenuMode = ActionMenuMode.ActionList;
-                _selectedEntityActionChoice = null;
-                _selectedEntityActionTargetId = null;
-                _selectedTargetIndex = 0;
-                _selectedDestinationIndex = 0;
-                return "Returned to action selector.";
-            case ActionMenuMode.PickupDestination:
-                _actionMenuMode = ActionMenuMode.PickupTarget;
-                _selectedEntityActionTargetId = null;
-                _selectedDestinationIndex = 0;
-                return "Returned to pickup target selection.";
-            case ActionMenuMode.DropDestination:
-                _actionMenuMode = ActionMenuMode.DropSource;
-                _selectedEntityActionTargetId = null;
-                _selectedDestinationIndex = 0;
-                _inspectedEntityId = _session.PlayerEntityId;
-                return "Returned to inventory item selection.";
-            default:
-                ResetActionMenu();
-                return "Closed action selector.";
-        }
+        return result.Message;
     }
 
     private string OpenActionStepMenu()
     {
-        RefreshActionChoiceRequest();
-        var steps = AvailablePlayerActionSteps();
-        if (steps.Count == 0)
-        {
-            return "No authored action steps are available for the controlled entity.";
-        }
-
-        _selectedActionStepIndex = Math.Clamp(_selectedActionStepIndex, 0, steps.Count - 1);
-        _actionMenuMode = ActionMenuMode.ActionList;
-        _selectedEntityActionChoice = null;
-        _selectedEntityActionTargetId = null;
-        _selectedTargetIndex = 0;
-        _selectedDestinationIndex = 0;
-        return $"Opened action selector 0.2.1. Selected action {_selectedActionStepIndex + 1}/{steps.Count}: {steps[_selectedActionStepIndex].Kind}.";
+        _sessionController.RefreshForFrameBuilding();
+        return _prompt.OpenActionStepMenu(AvailablePlayerActionSteps());
     }
 
     private string ConfirmSelectedActionStep()
     {
-        var steps = AvailablePlayerActionSteps();
-        if (steps.Count == 0)
+        var promptResult = _prompt.ConfirmSelectedActionStep(AvailablePlayerActionSteps(), CurrentActionChoiceRequest, FormatEntityName);
+        if (promptResult.Kind == ActionChoicePromptActionResultKind.Message)
         {
-            ResetActionMenu();
-            return "No authored action steps are available for the controlled entity.";
+            return promptResult.Message;
         }
 
-        _selectedActionStepIndex = Math.Clamp(_selectedActionStepIndex, 0, steps.Count - 1);
-        var step = steps[_selectedActionStepIndex];
-        if (TryFindActionChoiceForStep(step, out var selectedChoice) && selectedChoice.Kind is ActionChoiceKind.Pickup or ActionChoiceKind.Drop)
+        if (promptResult.Kind == ActionChoicePromptActionResultKind.ChoosingTarget)
         {
-            var validTargets = ValidTargets(selectedChoice).ToList();
-            if (validTargets.Count == 0)
-            {
-                return $"Selected action {step.Kind}, but Core Action Choice reports no valid targets. {DescribeActionChoice(selectedChoice)}";
-            }
-
-            _selectedEntityActionChoice = selectedChoice;
-            _selectedTargetIndex = 0;
-            _selectedDestinationIndex = 0;
-            _selectedEntityActionTargetId = null;
-            _actionMenuMode = selectedChoice.Kind == ActionChoiceKind.Pickup ? ActionMenuMode.PickupTarget : ActionMenuMode.DropSource;
-            if (selectedChoice.Kind == ActionChoiceKind.Drop)
+            if (promptResult.InspectPlayer)
             {
                 _inspectedEntityId = _session.PlayerEntityId;
             }
 
-            var noun = selectedChoice.Kind == ActionChoiceKind.Pickup ? "target" : "inventory item";
-            return $"Selected action {step.Kind}. Choose {noun} 1/{validTargets.Count}: {FormatEntityName(validTargets[0].TargetId)}.";
+            return promptResult.Message;
         }
 
-        var plan = new ActionPlanDefinition(
-            new ActionPlanId($"play-choice-{step.Kind}"),
-            [],
-            Behavior: new ActionPlanBehaviorDescriptor([step]));
-        var result = new ActionPlanInterpreter(_movement).Execute(World, _session.PlayerEntityId, plan, new ActionPlanContext());
-        PostActionStateUpdater.ApplyFacingFromMovement(World, _session.PlayerEntityId, result.ActorMovementDirection);
-        World.RecordTrace(result.Trace);
-        if (result.ConsumesTurn)
-        {
-            World.AdvanceTurn();
-        }
-
-        _history.RecordActorInterval([
-            new SimulationHistoryActorLog(
-                0,
-                _session.PlayerEntityId,
-                World.Entities[_session.PlayerEntityId].Name,
-                result.Succeeded,
-                result.ConsumesTurn,
-                result.ContinuePlan,
-                step.Kind.ToString(),
-                result.Trace)
-        ], _session.ActivePlaneId, _session.ActiveContainerEntityId);
-        _actionLog = ActionLogProjection.FromHistory(_history);
-        RefreshDisplayTargets();
-        RefreshActionChoiceRequest();
-        ResetActionMenu();
+        var step = promptResult.Step!;
+        var result = _sessionController.SubmitAuthoredActionStepChoice(promptResult.StepIndex, step);
+        _prompt.Reset();
 
         var status = result.Succeeded ? "succeeded" : "failed";
         return $"Selected action {step.Kind} {status}; frame {FrameIndex}, world turn {World.TurnNumber}.";
@@ -375,191 +247,54 @@ internal sealed class GameplayMockScreen
 
     private string ConfirmSelectedTarget()
     {
-        if (_selectedEntityActionChoice is not { } choice)
-        {
-            ResetActionMenu();
-            return "No Core Action Choice target list is active.";
-        }
-
-        var targets = ValidTargets(choice).ToList();
-        if (targets.Count == 0)
-        {
-            return $"No valid {choice.Kind} targets are available from Core ActionChoiceService.";
-        }
-
-        _selectedTargetIndex = Math.Clamp(_selectedTargetIndex, 0, targets.Count - 1);
-        var target = targets[_selectedTargetIndex];
-        var destinations = ValidDestinations(choice, target.TargetId).ToList();
-        if (destinations.Count == 0)
-        {
-            return $"Selected {FormatEntityName(target.TargetId)}, but Core Action Choice reports no valid destinations.";
-        }
-
-        _selectedEntityActionTargetId = target.TargetId;
-        _selectedDestinationIndex = 0;
-        _actionMenuMode = choice.Kind == ActionChoiceKind.Pickup ? ActionMenuMode.PickupDestination : ActionMenuMode.DropDestination;
-        if (choice.Kind == ActionChoiceKind.Pickup)
+        var result = _prompt.ConfirmSelectedTarget(FormatEntityName, FormatDestination);
+        if (result.InspectPlayer)
         {
             _inspectedEntityId = _session.PlayerEntityId;
         }
 
-        var place = choice.Kind == ActionChoiceKind.Pickup ? "inventory location" : "drop destination";
-        return $"Selected {FormatEntityName(target.TargetId)}. Choose {place} 1/{destinations.Count}: {FormatDestination(destinations[0].Destination)}.";
+        return result.Message;
     }
 
     private string ConfirmSelectedDestination()
     {
-        if (_selectedEntityActionChoice is not { } choice || _selectedEntityActionTargetId is not { } targetId || _currentActionChoiceRequest is not { } request)
+        if (CurrentActionChoiceRequest is null)
         {
-            ResetActionMenu();
+            _prompt.Reset();
             return "No Core Action Choice destination list is active.";
         }
 
-        var destinations = ValidDestinations(choice, targetId).ToList();
-        if (destinations.Count == 0)
+        var submit = _prompt.ConfirmSelectedDestination();
+        if (submit.Kind == ActionChoicePromptDestinationResultKind.Message)
         {
-            return $"No valid {choice.Kind} destinations are available for {FormatEntityName(targetId)} from Core ActionChoiceService.";
+            return submit.Message;
         }
 
-        _selectedDestinationIndex = Math.Clamp(_selectedDestinationIndex, 0, destinations.Count - 1);
-        var destination = destinations[_selectedDestinationIndex].Destination;
+        var choice = submit.Choice!;
+        var targetId = submit.TargetId!.Value;
+        var destination = submit.Destination!.Value;
         var result = choice.Kind == ActionChoiceKind.Pickup
-            ? _history.SubmitPickupActionChoice(
-                _actionChoices,
-                request,
-                targetId,
-                destination,
-                _controlledCommandActionPlans,
-                (world, entityId) => TargetingService.RefreshTargets(world, _session.Registry, entityId))
-            : _history.SubmitDropActionChoice(
-                _actionChoices,
-                request,
-                targetId,
-                destination,
-                _controlledCommandActionPlans,
-                (world, entityId) => TargetingService.RefreshTargets(world, _session.Registry, entityId));
-
-        _actionLog = ActionLogProjection.FromHistory(_history);
-        RefreshDisplayTargets();
-        RefreshActionChoiceRequest();
-        ResetActionMenu();
+            ? _sessionController.SubmitPickupActionChoice(targetId, destination)
+            : _sessionController.SubmitDropActionChoice(targetId, destination);
+        _prompt.Reset();
 
         var verb = choice.Kind.ToString();
         return result.Succeeded
             ? $"{verb} {FormatEntityName(targetId)} via Core Action Choice; frame {FrameIndex}, world turn {World.TurnNumber}."
-            : $"{verb} {FormatEntityName(targetId)} failed via Core Action Choice: {result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
-    }
-
-    private string SelectActionStep(int delta)
-    {
-        var steps = AvailablePlayerActionSteps();
-        if (steps.Count == 0)
-        {
-            _selectedActionStepIndex = 0;
-            return "No authored action steps are available for the controlled entity.";
-        }
-
-        _selectedActionStepIndex = (_selectedActionStepIndex + delta + steps.Count) % steps.Count;
-        return $"Selected action step {_selectedActionStepIndex + 1}/{steps.Count}: {steps[_selectedActionStepIndex].Kind}.";
+            : $"{verb} {FormatEntityName(targetId)} failed via Core Action Choice: {result.FailureText ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
     }
 
     private string SelectMenuItem(int delta)
     {
-        return _actionMenuMode switch
-        {
-            ActionMenuMode.ActionList => SelectActionStep(delta),
-            ActionMenuMode.PickupTarget or ActionMenuMode.DropSource => SelectTarget(delta),
-            ActionMenuMode.PickupDestination or ActionMenuMode.DropDestination => SelectDestination(delta),
-            _ => SelectActionStep(delta)
-        };
-    }
-
-    private string SelectTarget(int delta)
-    {
-        if (_selectedEntityActionChoice is not { } choice)
-        {
-            return "No target list is open.";
-        }
-
-        var targets = ValidTargets(choice).ToList();
-        if (targets.Count == 0)
-        {
-            _selectedTargetIndex = 0;
-            return $"No valid {choice.Kind} targets are available.";
-        }
-
-        _selectedTargetIndex = (_selectedTargetIndex + delta + targets.Count) % targets.Count;
-        return $"Selected target {_selectedTargetIndex + 1}/{targets.Count}: {FormatEntityName(targets[_selectedTargetIndex].TargetId)}.";
-    }
-
-    private string SelectDestination(int delta)
-    {
-        if (_selectedEntityActionChoice is not { } choice || _selectedEntityActionTargetId is not { } targetId)
-        {
-            return "No destination list is open.";
-        }
-
-        var destinations = ValidDestinations(choice, targetId).ToList();
-        if (destinations.Count == 0)
-        {
-            _selectedDestinationIndex = 0;
-            return $"No valid {choice.Kind} destinations are available for {FormatEntityName(targetId)}.";
-        }
-
-        _selectedDestinationIndex = (_selectedDestinationIndex + delta + destinations.Count) % destinations.Count;
-        return $"Selected destination {_selectedDestinationIndex + 1}/{destinations.Count}: {FormatDestination(destinations[_selectedDestinationIndex].Destination)}.";
-    }
-
-    private IEnumerable<ControlledActorEntityAffordance> ValidTargets(ActionChoice choice) =>
-        choice.EntityOptions.Where(option => option.CanExecute);
-
-    private IEnumerable<ControlledActorDestinationAffordance> ValidDestinations(ActionChoice choice, EntityId targetId) =>
-        choice.Destinations(targetId).Where(destination => destination.CanExecute);
-
-    private void ResetActionMenu()
-    {
-        _actionMenuMode = ActionMenuMode.Closed;
-        _selectedEntityActionChoice = null;
-        _selectedEntityActionTargetId = null;
-        _selectedTargetIndex = 0;
-        _selectedDestinationIndex = 0;
+        return _prompt.SelectMenuItem(delta, AvailablePlayerActionSteps(), FormatEntityName, FormatDestination);
     }
 
     private IReadOnlyList<ActionPlanBehaviorStepDescriptor> AvailablePlayerActionSteps() =>
-        GetActionPlanDescriptorForEntity(_session.PlayerEntityId)?.Behavior?.Steps ?? [];
-
-    private void RefreshActionChoiceRequest()
-    {
-        _currentActionChoiceRequest = GetActionPlanDescriptorForEntity(_session.PlayerEntityId) is { } descriptor
-            ? _actionChoices.CreateRequest(World, _session.PlayerEntityId, descriptor)
-            : null;
-    }
-
-    private bool TryFindActionChoiceForStep(ActionPlanBehaviorStepDescriptor step, out ActionChoice choice)
-    {
-        var kind = step.Kind switch
-        {
-            ActionPlanBehaviorStepKind.Move => ActionChoiceKind.Move,
-            ActionPlanBehaviorStepKind.PickupTarget => ActionChoiceKind.Pickup,
-            ActionPlanBehaviorStepKind.TransformAdjacentToInventory => ActionChoiceKind.Pickup,
-            ActionPlanBehaviorStepKind.DropFacing => ActionChoiceKind.Drop,
-            ActionPlanBehaviorStepKind.TransformInventoryToAdjacent => ActionChoiceKind.Drop,
-            _ => (ActionChoiceKind?)null
-        };
-
-        if (kind is { } actionChoiceKind && _currentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == actionChoiceKind) is { } match)
-        {
-            choice = match;
-            return true;
-        }
-
-        choice = null!;
-        return false;
-    }
+        _sessionController.AvailablePlayerActionSteps();
 
     private string DescribeMovementControlMode()
     {
-        var moveChoice = _currentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Move);
+        var moveChoice = CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Move);
         return moveChoice is null
             ? "Move: direct compatibility controls"
             : $"Move: Core Action Choice ({moveChoice.DirectionOptions.Count}-way)";
@@ -567,12 +302,12 @@ internal sealed class GameplayMockScreen
 
     private IReadOnlyList<string> BuildActionChoiceRows()
     {
-        if (_currentActionChoiceRequest is null)
+        if (CurrentActionChoiceRequest is null)
         {
             return ["Choices: none from Core ActionChoiceService"];
         }
 
-        return _currentActionChoiceRequest.Choices
+        return CurrentActionChoiceRequest.Choices
             .OrderBy(choice => choice.StepIndex)
             .Select(choice => $"Choice: step {choice.StepIndex + 1} {DescribeActionChoice(choice)}")
             .ToList();
@@ -599,13 +334,13 @@ internal sealed class GameplayMockScreen
         _ => "select authored action"
     };
 
-    private IReadOnlySet<GridCoord> CurrentPlaceValidSelectionCoords() => _actionMenuMode switch
+    private IReadOnlySet<GridCoord> CurrentPlaceValidSelectionCoords() => _prompt.Mode switch
     {
-        ActionMenuMode.PickupTarget when _selectedEntityActionChoice is { } choice => ValidTargets(choice)
+        ActionChoicePromptMode.PickupTarget => _prompt.ValidSelectedTargets()
             .Where(target => target.Source?.PlaneId == _session.ActivePlaneId)
             .Select(target => target.Source!.Value.Coord)
             .ToHashSet(),
-        ActionMenuMode.DropDestination when _selectedEntityActionChoice is { } choice && _selectedEntityActionTargetId is { } targetId => ValidDestinations(choice, targetId)
+        ActionChoicePromptMode.DropDestination => _prompt.ValidSelectedDestinations()
             .Where(destination => destination.Destination.PlaneId == _session.ActivePlaneId)
             .Select(destination => destination.Destination.Coord)
             .ToHashSet(),
@@ -614,16 +349,16 @@ internal sealed class GameplayMockScreen
 
     private GridCoord? CurrentPlaceSelectedCoord()
     {
-        if (_actionMenuMode == ActionMenuMode.PickupTarget && _selectedEntityActionChoice is { } pickupChoice)
+        if (_prompt.Mode == ActionChoicePromptMode.PickupTarget)
         {
-            var targets = ValidTargets(pickupChoice).ToList();
-            return targets.Count == 0 ? null : targets[Math.Clamp(_selectedTargetIndex, 0, targets.Count - 1)].Source?.Coord;
+            var targets = _prompt.ValidSelectedTargets();
+            return targets.Count == 0 ? null : targets[Math.Clamp(_prompt.SelectedTargetIndex, 0, targets.Count - 1)].Source?.Coord;
         }
 
-        if (_actionMenuMode == ActionMenuMode.DropDestination && _selectedEntityActionChoice is { } dropChoice && _selectedEntityActionTargetId is { } targetId)
+        if (_prompt.Mode == ActionChoicePromptMode.DropDestination)
         {
-            var destinations = ValidDestinations(dropChoice, targetId).ToList();
-            return destinations.Count == 0 ? null : destinations[Math.Clamp(_selectedDestinationIndex, 0, destinations.Count - 1)].Destination.Coord;
+            var destinations = _prompt.ValidSelectedDestinations();
+            return destinations.Count == 0 ? null : destinations[Math.Clamp(_prompt.SelectedDestinationIndex, 0, destinations.Count - 1)].Destination.Coord;
         }
 
         return null;
@@ -636,13 +371,13 @@ internal sealed class GameplayMockScreen
             return new HashSet<GridCoord>();
         }
 
-        return _actionMenuMode switch
+        return _prompt.Mode switch
         {
-            ActionMenuMode.DropSource when _selectedEntityActionChoice is { } choice => ValidTargets(choice)
+            ActionChoicePromptMode.DropSource => _prompt.ValidSelectedTargets()
                 .Where(target => target.Source?.PlaneId == inventoryPlaneId)
                 .Select(target => target.Source!.Value.Coord)
                 .ToHashSet(),
-            ActionMenuMode.PickupDestination when _selectedEntityActionChoice is { } choice && _selectedEntityActionTargetId is { } targetId => ValidDestinations(choice, targetId)
+            ActionChoicePromptMode.PickupDestination => _prompt.ValidSelectedDestinations()
                 .Where(destination => destination.Destination.PlaneId == inventoryPlaneId)
                 .Select(destination => destination.Destination.Coord)
                 .ToHashSet(),
@@ -657,19 +392,19 @@ internal sealed class GameplayMockScreen
             return null;
         }
 
-        if (_actionMenuMode == ActionMenuMode.DropSource && _selectedEntityActionChoice is { } dropChoice)
+        if (_prompt.Mode == ActionChoicePromptMode.DropSource)
         {
-            var targets = ValidTargets(dropChoice).ToList();
+            var targets = _prompt.ValidSelectedTargets();
             if (targets.Count == 0) return null;
-            var source = targets[Math.Clamp(_selectedTargetIndex, 0, targets.Count - 1)].Source;
+            var source = targets[Math.Clamp(_prompt.SelectedTargetIndex, 0, targets.Count - 1)].Source;
             return source?.PlaneId == inventoryPlaneId ? source.Value.Coord : null;
         }
 
-        if (_actionMenuMode == ActionMenuMode.PickupDestination && _selectedEntityActionChoice is { } pickupChoice && _selectedEntityActionTargetId is { } targetId)
+        if (_prompt.Mode == ActionChoicePromptMode.PickupDestination)
         {
-            var destinations = ValidDestinations(pickupChoice, targetId).ToList();
+            var destinations = _prompt.ValidSelectedDestinations();
             if (destinations.Count == 0) return null;
-            var destination = destinations[Math.Clamp(_selectedDestinationIndex, 0, destinations.Count - 1)].Destination;
+            var destination = destinations[Math.Clamp(_prompt.SelectedDestinationIndex, 0, destinations.Count - 1)].Destination;
             return destination.PlaneId == inventoryPlaneId ? destination.Coord : null;
         }
 
@@ -678,12 +413,12 @@ internal sealed class GameplayMockScreen
 
     private IReadOnlyList<string> BuildActionMenuRows()
     {
-        return _actionMenuMode switch
+        return _prompt.Mode switch
         {
-            ActionMenuMode.Closed => ["Menu: Enter opens authored action steps"],
-            ActionMenuMode.ActionList => ["Menu: action selector shown in component 0.2.1"],
-            ActionMenuMode.PickupTarget or ActionMenuMode.DropSource => BuildTargetListRows(),
-            ActionMenuMode.PickupDestination or ActionMenuMode.DropDestination => BuildDestinationListRows(),
+            ActionChoicePromptMode.Closed => ["Menu: Enter opens authored action steps"],
+            ActionChoicePromptMode.ActionList => ["Menu: action selector shown in component 0.2.1"],
+            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource => BuildTargetListRows(),
+            ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => BuildDestinationListRows(),
             _ => []
         };
     }
@@ -691,31 +426,31 @@ internal sealed class GameplayMockScreen
     private IReadOnlyList<string> BuildActionListRows()
     {
         var steps = AvailablePlayerActionSteps();
-        return ["Menu: choose authored action step", .. steps.Select((step, index) => $"{(index == _selectedActionStepIndex ? ">" : " ")} {index + 1}. {step.Kind}")];
+        return ["Menu: choose authored action step", .. steps.Select((step, index) => $"{(index == _prompt.SelectedActionStepIndex ? ">" : " ")} {index + 1}. {step.Kind}")];
     }
 
     private IReadOnlyList<string> BuildTargetListRows()
     {
-        if (_selectedEntityActionChoice is not { } choice)
+        if (_prompt.SelectedEntityActionChoice is not { } choice)
         {
             return ["Menu: target list unavailable"];
         }
 
-        var targets = ValidTargets(choice).ToList();
+        var targets = _prompt.ValidSelectedTargets();
         var label = choice.Kind == ActionChoiceKind.Drop ? "inventory item" : "target";
-        return [$"Menu: choose {choice.Kind} {label}", .. targets.Select((target, index) => $"{(index == _selectedTargetIndex ? ">" : " ")} {FormatEntityName(target.TargetId)} from {FormatNullableSource(target.Source)}")];
+        return [$"Menu: choose {choice.Kind} {label}", .. targets.Select((target, index) => $"{(index == _prompt.SelectedTargetIndex ? ">" : " ")} {FormatEntityName(target.TargetId)} from {FormatNullableSource(target.Source)}")];
     }
 
     private IReadOnlyList<string> BuildDestinationListRows()
     {
-        if (_selectedEntityActionChoice is not { } choice || _selectedEntityActionTargetId is not { } targetId)
+        if (_prompt.SelectedEntityActionChoice is not { } choice || _prompt.SelectedEntityActionTargetId is not { } targetId)
         {
             return ["Menu: destination list unavailable"];
         }
 
-        var destinations = ValidDestinations(choice, targetId).ToList();
+        var destinations = _prompt.ValidSelectedDestinations();
         var label = choice.Kind == ActionChoiceKind.Pickup ? "inventory location" : "drop destination";
-        return [$"Menu: choose {choice.Kind} {label} for {FormatEntityName(targetId)}", .. destinations.Select((destination, index) => $"{(index == _selectedDestinationIndex ? ">" : " ")} {FormatDestination(destination.Destination)}")];
+        return [$"Menu: choose {choice.Kind} {label} for {FormatEntityName(targetId)}", .. destinations.Select((destination, index) => $"{(index == _prompt.SelectedDestinationIndex ? ">" : " ")} {FormatDestination(destination.Destination)}")];
     }
 
     private string DescribeActionChoice(ActionChoice choice)
@@ -740,28 +475,6 @@ internal sealed class GameplayMockScreen
             ? $"; first {FormatEntityName(targetId)}"
             : string.Empty;
         return $"{label} {executableTargets}/{choice.EntityOptions.Count} targets, {executableDestinations} executable destinations{targetLabel}";
-    }
-
-    private void RefreshDisplayTargets()
-    {
-        foreach (var entityId in _session.ActionPlans.Keys)
-        {
-            TargetingService.RefreshTargets(World, _session.Registry, entityId);
-        }
-    }
-
-    private ActionPlanDescriptor? GetActionPlanDescriptorForEntity(EntityId entityId)
-    {
-        if (!_session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
-        {
-            return null;
-        }
-
-        var template = _session.Registry.GetEntityTemplate(templateId);
-        return template.DefaultActionPlanId is { } planId
-            && _session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
-                ? descriptor
-                : null;
     }
 
     private IReadOnlyList<string> BuildCurrentPlaceEntityRows(

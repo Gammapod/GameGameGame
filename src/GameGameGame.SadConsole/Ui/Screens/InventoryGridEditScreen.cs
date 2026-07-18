@@ -9,6 +9,7 @@ internal sealed class InventoryGridEditScreen
 {
     private readonly FrontendEditorService? _service;
     private readonly Action<FrontendEditorSnapshot>? _snapshotMutated;
+    private readonly EditorMutationExecutor _mutations;
     private FrontendEditorEntityTemplateSummary _template;
     private readonly List<FrontendEditorEntityTemplateSummary> _entityTemplates;
     private GridCoord _cursor = new(0, 0);
@@ -27,6 +28,7 @@ internal sealed class InventoryGridEditScreen
         _entityTemplates = entityTemplates.ToList();
         _service = service;
         _snapshotMutated = snapshotMutated;
+        _mutations = new EditorMutationExecutor(service, ReplaceAfterMutation);
         _brushTemplateId = BrushOptions().FirstOrDefault()?.TemplateId;
     }
 
@@ -115,21 +117,21 @@ internal sealed class InventoryGridEditScreen
 
     private InventoryGridEditResult PlaceBrushAtCursor()
     {
-        if (_service is null) return InventoryGridEditResult.Stay("Inventory placement requires a service-backed editor screen.");
         if (string.IsNullOrWhiteSpace(_brushTemplateId)) return InventoryGridEditResult.Stay("Choose an inventory brush before placing.");
 
-        var result = _service.OverwriteTemplateInInventory(_template.TemplateId, _brushTemplateId, _cursor);
-        ReplaceAfterMutation(result.Snapshot);
+        var result = _mutations.Execute(
+            "Inventory placement requires a service-backed editor screen.",
+            service => service.OverwriteTemplateInInventory(_template.TemplateId, _brushTemplateId, _cursor));
         return InventoryGridEditResult.Stay(result.StatusMessage);
     }
 
     private InventoryGridEditResult DeleteAtCursor()
     {
-        if (_service is null) return InventoryGridEditResult.Stay("Inventory deletion requires a service-backed editor screen.");
         if (CarriedAtCursor() is not { } carried) return InventoryGridEditResult.Stay($"No carried entity at {_cursor.X},{_cursor.Y} to delete.");
 
-        var result = _service.RemoveCarriedEntity(_template.TemplateId, carried.EntityId);
-        ReplaceAfterMutation(result.Snapshot);
+        var result = _mutations.Execute(
+            "Inventory deletion requires a service-backed editor screen.",
+            service => service.RemoveCarriedEntity(_template.TemplateId, carried.EntityId));
         return InventoryGridEditResult.Stay(result.StatusMessage);
     }
 
@@ -144,19 +146,20 @@ internal sealed class InventoryGridEditScreen
 
     private InventoryGridEditResult PlaceMovingEntityAtCursor()
     {
-        if (_service is null) return InventoryGridEditResult.Stay("Inventory move requires a service-backed editor screen.");
         if (_movingEntityId is null) return InventoryGridEditResult.Stay("No carried entity is being moved.");
 
         if (CarriedAtCursor() is { } occupant && occupant.EntityId != _movingEntityId)
         {
-            var remove = _service.RemoveCarriedEntity(_template.TemplateId, occupant.EntityId);
-            ReplaceAfterMutation(remove.Snapshot);
+            var remove = _mutations.Execute(
+                "Inventory move requires a service-backed editor screen.",
+                service => service.RemoveCarriedEntity(_template.TemplateId, occupant.EntityId));
             if (!remove.IsSuccess) return InventoryGridEditResult.Stay(remove.StatusMessage);
         }
 
         var movingEntityId = _movingEntityId;
-        var result = _service.MoveCarriedEntity(_template.TemplateId, movingEntityId, _cursor);
-        ReplaceAfterMutation(result.Snapshot);
+        var result = _mutations.Execute(
+            "Inventory move requires a service-backed editor screen.",
+            service => service.MoveCarriedEntity(_template.TemplateId, movingEntityId, _cursor));
         if (result.IsSuccess)
         {
             _movingEntityId = null;

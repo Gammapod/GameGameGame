@@ -9,10 +9,15 @@ using GggColor = GameGameGame.Content.PresentationColor;
 
 namespace GameGameGame.SadConsoleApp;
 
+[Obsolete("Legacy/reference-only shell. New SadConsole editor and play work must use componentized screens instead.", error: false)]
 // Legacy/deprecated SadConsole shell. Keep as reference only while the new
-// componentized exploration architecture is built.
+// componentized exploration architecture is built. This shell is quarantined:
+// do not add new editor, Simulation, input, rendering, or mutation behavior here.
 internal sealed class SadConsoleShell : Console
 {
+    public const bool IsLegacyQuarantined = true;
+    public const string QuarantineReason = "Replaced by componentized ScenarioSelectionConsole/editor screens and GameplayMockConsole play surface.";
+
     public const int ScreenWidth = SadConsoleScreenMetrics.ScreenWidth;
     public const int ScreenHeight = SadConsoleScreenMetrics.ScreenHeight;
     private readonly MovementService _movement = new();

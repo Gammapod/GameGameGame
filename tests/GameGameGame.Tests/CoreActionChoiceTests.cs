@@ -107,6 +107,23 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void ActionChoiceRequestExposesNonParameterizedAuthoredStepsForCoreSubmission()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep));
+        var service = new ActionChoiceService(new MovementService());
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        Assert.Equal(ActionChoiceKind.AuthoredStep, choice.Kind);
+        Assert.Equal(0, choice.StepIndex);
+        Assert.Empty(choice.DirectionOptions);
+        Assert.Empty(choice.EntityOptions);
+    }
+
+    [Fact]
     public void SubmitMoveChoiceSuccessAdvancesAndSetsFacing()
     {
         var world = TestWorld.CreateWorld();
@@ -187,6 +204,50 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(ControlledActorCommandKind.Drop, result.Kind);
         Assert.Equal(TestWorld.RockId, result.TargetId);
         Assert.Equal(destination, result.Destination);
+    }
+
+    [Fact]
+    public void SubmitAuthoredStepChoiceExecutesThroughCoreServiceAndAdvancesWhenConsuming()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var step = new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep);
+        var plan = MovePlan(step);
+        var service = new ActionChoiceService(new MovementService());
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = service.SubmitAuthoredStepChoice(world, request, 0, step);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(1, world.TurnNumber);
+        Assert.Equal(new GridCoord(0, 2), world.GetEntityLocation(TestWorld.PlayerId).Coord);
+        Assert.Equal(Direction.West, world.GetActionFacing(TestWorld.PlayerId));
+        Assert.NotNull(world.LastTrace);
+    }
+
+    [Fact]
+    public void SubmitAuthoredStepChoiceThroughHistoryRecordsActorInterval()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var history = SimulationHistorySession.Start(world, TestWorld.PlayerId, TestWorld.WorldPlaneId);
+        var step = new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep);
+        var plan = MovePlan(step);
+        var service = new ActionChoiceService(new MovementService());
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = history.SubmitAuthoredActionStepChoice(service, request, 0, step);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, history.CurrentFrameIndex);
+        Assert.Equal(1, world.TurnNumber);
+        var interval = Assert.Single(history.Intervals);
+        var log = Assert.Single(interval.ActorLogs);
+        Assert.Equal(TestWorld.PlayerId, log.ActorId);
+        Assert.Equal(nameof(ActionPlanBehaviorStepKind.Backstep), log.Summary);
     }
 
     [Fact]

@@ -1,13 +1,13 @@
 # Canonical Actions Vertical Slice Plan
 
-Status: Active release plan. The first canonical `Move` vertical slice and first runtime control-source / Action Choice slice are complete; use them as the reference workflow for promoting follow-up actions. This supersedes Delta point-of-view as the selected next implementation direction while preserving Delta POV as completed/available foundation work and follow-up context.
+Status: Active release plan. The canonical `Move` vertical slice, first Pickup/Drop Action Choice interaction seam, and componentized play-mode refactor are complete enough to use as reference workflow evidence for promoting follow-up actions. This supersedes Delta point-of-view as the selected implementation direction while preserving Delta POV as completed/available foundation work and follow-up context.
 
 Read when:
 
 - selecting canonical action promotion work;
 - deciding whether an Action Step is legacy/prototype or promoted canonical behavior;
 - planning player-facing logs, POV adjectives, success criteria, or scenario rooms for an action;
-- designing the runtime control-source / Action Choice model and replacement componentized play-mode surface.
+- designing remaining runtime control-source / Action Choice follow-up work and componentized play-mode consumption.
 
 Related source of truth:
 
@@ -30,7 +30,7 @@ Target statement:
 - Player-facing logs exist for every canonical action before the action is treated as release-ready.
 - Content maintains two test rooms per canonical action: one deterministic log-outcome room and one player-interaction room.
 - A Core-owned runtime control-source / Action Choice model lets any actor currently controlled by the player choose from that actor's normal authored action steps instead of being resolved by fallback policy.
-- The componentized Gamma play-mode surface replaces the remaining legacy play-mode stopgap by consuming canonical Action Choice, POV, entity-panel, history, and log services.
+- The componentized Gamma play-mode surface consumes canonical Action Choice, POV, entity-panel, history, and log services; remaining work should be framed as polish, broader action coverage, or cleanup of any internal legacy stopgap paths rather than initial replacement.
 
 ## Current Action Step freeze policy
 
@@ -193,13 +193,11 @@ Scope:
 3. Trace existing tests for candidate first actions and record missing coverage.
 4. Pick the first promoted action.
 
-Recommended first action:
+Phase outcome:
 
-- `MoveFacing`, because it proves the end-to-end canonical slice with simpler spatial semantics before target/adjective/ratio complexity.
-
-Recommended first target-facing follow-up:
-
-- `PickupTarget` or `EnterTarget`, because `portable`/`enterable` adjectives and aperture/bulk success criteria naturally exercise POV adjectives and ratios.
+- The first promoted action became canonical `Move`, not `MoveFacing`, so the release-facing movement contract could use explicit 8-way absolute/relative `directionMode` while preserving `MoveFacing` compatibility.
+- The first target/source interaction seam was implemented for `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing`, proving action-step-first menus, target/source lists, destination lists, and shared history submission.
+- The next likely target-facing follow-up is `EnterTarget`/`ExitFacing`, because `enterable` adjectives, containment transitions, and aperture/bulk success criteria naturally exercise the same vertical-slice pattern without immediately adding ranged transform variants.
 
 Exit criteria:
 
@@ -243,7 +241,7 @@ Exit criteria:
 
 Goal: replace special direct player control with Core-owned runtime control source and authored action choice.
 
-Status: First slice complete for canonical `Move`; non-movement choices and target/destination subrequests remain follow-up.
+Status: First slice complete for canonical `Move`; first Pickup/Drop target/source/destination choices and submissions are implemented. Remaining Action Choice follow-up includes full pre/main/post descriptor composition, target-first menus, richer choice DTO fields, and additional action families such as Enter/Exit.
 
 Core/shared backlog captured from frontend planning:
 
@@ -280,21 +278,15 @@ Scope selected after the canonical `Move` play-surface bridge:
 4. The first `Move` choice exposes eight absolute direction options with destination, can-execute, failure reason/detail, and blocking entity facts from Core movement evaluation. Complete.
 5. Submitting a selected direction executes through Core/shared turn/history semantics, consumes/advances on success, logs failure without advancement on failed movement, and preserves the canonical movement contract that success faces the moved direction while failure preserves facing. Complete.
 
-First-slice status/deferrals:
+Implemented first-slice evidence and deferrals:
 
-- Core Action Choice now has a first Pickup/Drop source/destination seam: `PickupTarget` choices expose adjacent pickup targets and inventory slots, `DropFacing` choices expose carried sources and adjacent map destinations, and submitted choices execute through controlled-command semantics;
-- history submission helpers for Pickup/Drop Action Choices are available, and the SadConsole play mock has the first action-step-first menu path: direct movement controls remain available, `Enter` opens authored action steps, then target/source and destination lists are selected from Core Action Choice facts;
-- full pre/main/post override descriptor composition in choice request projection;
-- target-first action selection remains a future pathway that should reuse the same Core facts;
-- rich choice DTO fields for previous/new facing and source/destination beyond existing command outcome facts.
+- Core Action Choice has a first Pickup/Drop source/destination seam: `TransformAdjacentToInventory`/`PickupTarget` choices expose adjacent pickup targets and inventory slots, `TransformInventoryToAdjacent`/`DropFacing` choices expose carried sources and adjacent map destinations, and submitted choices execute through controlled-command/history semantics.
+- History submission helpers for Pickup/Drop Action Choices are available, and the SadConsole componentized play path has the first action-step-first menu model: direct movement controls may remain available, `Enter` opens authored action steps, then target/source and destination lists are selected from Core Action Choice facts.
+- Full pre/main/post override descriptor composition in choice request projection remains follow-up.
+- Target-first action selection remains a future pathway that should reuse the same Core facts.
+- Rich choice DTO fields for previous/new facing and source/destination beyond existing command outcome facts remain follow-up.
 
-Next non-movement Action Choice design avenues to evaluate before promoting `PickupTarget`/`DropTarget`:
-
-1. **Action menu first**: the player opens a non-movement action menu instead of moving, chooses an action such as pickup/drop, then receives a target/source menu scoped by Core legality.
-2. **Target selection first**: the player highlights/selects an entity or carried item first, then receives the legal action menu for that selected target/source.
-3. **Bump-to-interact menu**: attempting to move into an occupied/interactive entity opens the legal action menu against the bumped entity rather than turning the bump itself into an unconditional action.
-
-These are player-control/menu models, not new engine-only semantics. The selected path must still execute through normal authored Action Steps, Core target/source requests, shared history/log projection, and editor/tooling parity.
+Action menu first is now the implemented baseline for non-movement Action Choice prompts. Target/source-first and bump-to-interact menus remain future player-control models, not new engine-only semantics. Any selected path must still execute through normal authored Action Steps, Core target/source requests, shared history/log projection, and editor/tooling parity.
 
 TDD trace for this slice:
 
@@ -302,9 +294,9 @@ TDD trace for this slice:
 - Existing tests to preserve and extend: `WorldStateClonePreservesMutableSimulationStateWithoutSharingCollections`, `RollbackRestoresFrameSnapshotAndVisibleTraceContext`, `SubmitSuccessfulControlledCommandCreatesIntervalAndNextFrame`, `SubmitFailedControlledCommandAddsCurrentFrameLogWithoutAdvancingFrameOrTurn`, `ScenarioMaterializerResolvesAuthoredPlayerControlBindings`, `ScenarioMaterializerDefaultsLegacyPlayerControlWhenNoBindingIsAuthored`, canonical Move tests added in Phase 1.
 - New intentionally failing tests: `WorldStateClonePreservesActionControlSource`, `ScenarioMaterializerInitializesPlayerControlledEntitiesForChoice`, `ActionChoiceRequestRequiresPlayerChoiceControlSource`, `ActionChoiceRequestCoalescesCanonicalMoveStepsIntoOneEightDirectionChoice`, `SubmitMoveChoiceSuccessAdvancesAndSetsFacing`, and `SubmitMoveChoiceFailureLogsWithoutAdvancing`.
 
-### Phase 4: Componentized Gamma play-mode replacement
+### Phase 4: Componentized Gamma play-mode follow-through
 
-Goal: replace the remaining legacy/internal play-mode stopgap with the componentized Gamma surface based on the existing mock.
+Goal: continue the componentized Gamma play surface over shared services and remove/demote any remaining internal legacy stopgap paths when they no longer provide unique coverage.
 
 Shared log/POV backlog captured from frontend play-mode planning:
 
@@ -312,14 +304,14 @@ Shared log/POV backlog captured from frontend play-mode planning:
 
 Scope:
 
-1. Implement componentized play mode over shared scenario launch, history/session, entity-panel, POV, choice, target, and log projection services.
-2. Consume canonical Action Choice requests instead of hardcoded direct player commands where possible.
+1. Preserve and harden componentized play mode over shared scenario launch, history/session, entity-panel, POV, choice, target, and log projection services.
+2. Continue moving player action prompts toward canonical Action Choice requests while keeping direct movement controls only as a compatibility/convenience bridge.
 3. Preserve debug/inspection affordances without duplicating engine legality.
 4. Keep return-to-editor/preview concerns aligned with the on-hold Gamma plan, but do not expand editor scope unless selected.
 
 Exit criteria:
 
-- The componentized play-mode surface is the supported path for playing canonical-action/Action Choice scenarios, and the legacy play-mode stopgap can be removed or clearly demoted.
+- The componentized play-mode surface remains the supported path for playing canonical-action/Action Choice scenarios, and any legacy play-mode stopgap is removed or clearly demoted once it has no unique coverage.
 
 ### Phase 5: Release decision and next canonical actions
 
@@ -341,10 +333,12 @@ Exit criteria:
 Suggested order, subject to scenario pressure:
 
 1. `Move` - complete as the first promoted canonical movement/action-choice slice.
-2. `PickupTarget` and `DropTarget` as the next non-movement player-interaction exploration pair. These should not reuse the movement-specific 8-way choice model; evaluate menu/target-selection flows before implementation.
-3. `EnterTarget`, `PushFacing`, or `SeekTarget` after the first target-facing inventory slice clarifies log/ratio/menu patterns.
-4. Transfer actions such as `GiveTarget`/`TakeTarget` after inventory selection/log wording expectations are clearer.
-5. Prototype utility/world-mutation actions such as `CreateFacing` only after template-backed spawning direction is revisited.
+2. `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing` - first non-movement player-interaction seam implemented; promote/harden only where the Definition of Done still lacks canonical rooms, wording, or documentation.
+3. `EnterTarget`/`ExitFacing` - likely next immediate promotion pair because containment transitions already have Core runtime, controlled affordances, POV adjectives, aperture ratios, log ID slots, and authoring support, but still need Action Choice/player-interaction and canonical-room hardening.
+4. `PushFacing`, `SeekTarget`, or transfer actions such as `GiveTarget`/`TakeTarget` after Enter/Exit clarifies additional target/menu/log patterns.
+5. `TransformInventoryToRanged`/Throw and `TransformAdjacentToRanged`/Shove remain backlog variations until the broader action set is proven or a concrete scenario requires ranged transform semantics.
+6. `Teleport` may be considered as an advanced/stretch relocation slice, but it should not be treated like constrained inventory transforms because it intentionally bypasses Bulk/Aperture transition rules.
+7. Prototype utility/world-mutation actions such as `CreateFacing` only after template-backed spawning direction is revisited.
 
 ## Transform action family naming direction
 

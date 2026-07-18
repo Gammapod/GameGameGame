@@ -178,6 +178,39 @@ public sealed class SimulationHistorySession
             request,
             () => choices.SubmitDropChoice(World, request, targetId, destination, actionPlans, beforePlan));
 
+    public PlanExecutionResult SubmitAuthoredActionStepChoice(
+        ActionChoiceService choices,
+        ActionChoiceRequest request,
+        int stepIndex,
+        ActionPlanBehaviorStepDescriptor step,
+        IReadOnlyDictionary<ActionPlanId, ActionPlanDefinition>? planRegistry = null)
+    {
+        if (request.ActorId != CurrentFrame.ControlledEntityId)
+        {
+            throw new InvalidOperationException($"Action choice actor {request.ActorId} does not match current controlled entity {CurrentFrame.ControlledEntityId}.");
+        }
+
+        var result = choices.SubmitAuthoredStepChoice(World, request, stepIndex, step, planRegistry);
+        var activePlaneId = World.Entities.ContainsKey(request.ActorId)
+            ? World.GetEntityLocation(request.ActorId).PlaneId
+            : CurrentFrame.ActivePlaneId;
+
+        var actorName = World.Entities.TryGetValue(request.ActorId, out var actor) ? actor.Name : request.ActorId.ToString();
+        RecordActorInterval([
+            new SimulationHistoryActorLog(
+                0,
+                request.ActorId,
+                actorName,
+                result.Succeeded,
+                result.ConsumesTurn,
+                result.ContinuePlan,
+                step.Kind.ToString(),
+                result.Trace)
+        ], activePlaneId, FindContainerForPlane(activePlaneId));
+
+        return result;
+    }
+
     private ControlledActorCommandResult SubmitActionChoiceResult(ActionChoiceRequest request, Func<ControlledActorCommandResult> submit)
     {
         if (request.ActorId != CurrentFrame.ControlledEntityId)

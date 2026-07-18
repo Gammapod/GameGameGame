@@ -11,15 +11,13 @@ internal sealed class SadConsoleEditorContext
     private string _previewInvalidationReason = "Preview has not been materialized in this editor context.";
     private SadConsoleEditorTemplateEditMode _templateEditMode = SadConsoleEditorTemplateEditMode.None;
     private string _templateEditBuffer = string.Empty;
-    private bool _isPickingTemplateInitialFacing;
-    private int _templateInitialFacingPickerIndex;
+    private readonly SadConsoleEditorInitialFacingPickerController _initialFacingPicker = new();
     private bool _isPickingTemplateDefaultActionPlan;
     private int _templateDefaultActionPlanPickerIndex;
     private SadConsoleEditorActionStepEditState? _actionStepEdit;
     private SadConsoleEditorTargetingRuleEditState? _targetingRuleEdit;
     private SadConsoleEditorInventoryBrushState? _inventoryBrush;
-    private bool _isCommandMenuOpen;
-    private int _commandMenuSelectedIndex;
+    private readonly SadConsoleEditorCommandMenuController _commandMenu = new();
 
     private SadConsoleEditorContext(FrontendEditorService service, string contentPath, FrontendEditorSnapshot snapshot, int selectedScenarioIndex)
     {
@@ -44,8 +42,8 @@ internal sealed class SadConsoleEditorContext
     public SadConsoleEditorTemplateEditMode TemplateEditMode => _templateEditMode;
     public string TemplateEditBuffer => _templateEditBuffer;
     public bool IsEditingTemplatePresentation => _templateEditMode != SadConsoleEditorTemplateEditMode.None;
-    public bool IsPickingTemplateInitialFacing => _isPickingTemplateInitialFacing;
-    public int TemplateInitialFacingPickerIndex => _templateInitialFacingPickerIndex;
+    public bool IsPickingTemplateInitialFacing => _initialFacingPicker.IsActive;
+    public int TemplateInitialFacingPickerIndex => _initialFacingPicker.SelectedIndex;
     public bool IsPickingTemplateDefaultActionPlan => _isPickingTemplateDefaultActionPlan;
     public int TemplateDefaultActionPlanPickerIndex => _templateDefaultActionPlanPickerIndex;
     public bool IsEditingActionPlanSteps => _actionStepEdit is not null;
@@ -56,8 +54,8 @@ internal sealed class SadConsoleEditorContext
     public bool IsTemplateInventoryBrushActive => _inventoryBrush is not null;
     public SadConsoleEditorInventoryBrushState? InventoryBrush => _inventoryBrush;
     public bool IsTemplateEditInputActive => IsEditingTemplatePresentation || IsPickingTemplateInitialFacing || IsPickingTemplateDefaultActionPlan || IsEditingActionPlanSteps || IsEditingTemplateTargetingRule || IsTemplateInventoryBrushActive;
-    public bool IsCommandMenuOpen => _isCommandMenuOpen;
-    public int CommandMenuSelectedIndex => _commandMenuSelectedIndex;
+    public bool IsCommandMenuOpen => _commandMenu.IsOpen;
+    public int CommandMenuSelectedIndex => _commandMenu.SelectedIndex;
 
     public static SadConsoleEditorOpenResult Open(string contentPath, string? selectedScenarioId = null)
     {
@@ -80,55 +78,27 @@ internal sealed class SadConsoleEditorContext
 
     public SadConsoleEditorMutationUiResult OpenCommandMenu()
     {
-        if (IsTemplateEditInputActive)
-        {
-            return SadConsoleEditorMutationUiResult.Failure("Finish or cancel the active editor submode before opening the command menu.");
-        }
-
-        _isCommandMenuOpen = true;
-        _commandMenuSelectedIndex = ClampIndex(_commandMenuSelectedIndex, CommandMenuEntries().Count);
-        return SadConsoleEditorMutationUiResult.Success("Editor command menu opened. Up/Down chooses a command; Enter/Select activates; Esc cancels.");
+        return _commandMenu.Open(IsTemplateEditInputActive, CommandMenuEntries().Count);
     }
 
     public SadConsoleEditorMutationUiResult CancelCommandMenu()
     {
-        if (!_isCommandMenuOpen)
-        {
-            return SadConsoleEditorMutationUiResult.Success("Editor command menu is not open.");
-        }
-
-        _isCommandMenuOpen = false;
-        return SadConsoleEditorMutationUiResult.Success("Editor command menu cancelled; no command was invoked.");
+        return _commandMenu.Cancel();
     }
 
     public void MoveCommandMenuSelection(int delta)
     {
-        if (!_isCommandMenuOpen)
-        {
-            return;
-        }
-
-        _commandMenuSelectedIndex = ClampIndex(_commandMenuSelectedIndex + delta, CommandMenuEntries().Count);
+        _commandMenu.MoveSelection(delta, CommandMenuEntries().Count);
     }
 
     public SadConsoleEditorCommandMenuActivationResult ActivateSelectedCommand()
     {
-        if (!_isCommandMenuOpen)
-        {
-            return SadConsoleEditorCommandMenuActivationResult.None("Editor command menu is not open.");
-        }
-
         var entries = CommandMenuEntries();
-        if (entries.Count == 0)
+        var selection = _commandMenu.Select(entries);
+        if (selection.Entry is not { } selected)
         {
-            _isCommandMenuOpen = false;
-            _commandMenuSelectedIndex = 0;
-            return SadConsoleEditorCommandMenuActivationResult.None("No editor commands are available for the current context.");
+            return SadConsoleEditorCommandMenuActivationResult.None(selection.Message ?? "Editor command menu is not open.");
         }
-
-        var selected = entries[Math.Clamp(_commandMenuSelectedIndex, 0, entries.Count - 1)];
-        _isCommandMenuOpen = false;
-        _commandMenuSelectedIndex = 0;
 
         switch (selected.CommandId)
         {
@@ -409,7 +379,7 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Success("Default action plan picker cancelled; authored content was not mutated.");
         }
 
-        if (_isPickingTemplateInitialFacing)
+        if (_initialFacingPicker.IsActive)
         {
             ClearTemplateInitialFacingPicker();
             return SadConsoleEditorMutationUiResult.Success("Initial facing picker cancelled; authored content was not mutated.");
@@ -503,13 +473,7 @@ internal sealed class SadConsoleEditorContext
     }
 
     public IReadOnlyList<SadConsoleEditorInitialFacingPickerOption> TemplateInitialFacingPickerOptions() =>
-        [
-            new SadConsoleEditorInitialFacingPickerOption(null, "none"),
-            new SadConsoleEditorInitialFacingPickerOption(Direction.North, "North"),
-            new SadConsoleEditorInitialFacingPickerOption(Direction.South, "South"),
-            new SadConsoleEditorInitialFacingPickerOption(Direction.West, "West"),
-            new SadConsoleEditorInitialFacingPickerOption(Direction.East, "East")
-        ];
+        _initialFacingPicker.Options;
 
     public SadConsoleEditorMutationUiResult BeginTemplateInitialFacingPicker()
     {
@@ -525,16 +489,13 @@ internal sealed class SadConsoleEditorContext
         ClearActionPlanStepEditor();
         ClearTemplateTargetingRuleEditor();
         ClearTemplateInventoryBrush();
-        var options = TemplateInitialFacingPickerOptions();
-        var currentIndex = options.ToList().FindIndex(option => option.Facing == template.ActionStateDefaults.Facing);
-        _templateInitialFacingPickerIndex = currentIndex >= 0 ? currentIndex : 0;
-        _isPickingTemplateInitialFacing = true;
+        _initialFacingPicker.Begin(template.ActionStateDefaults.Facing);
         return SadConsoleEditorMutationUiResult.Success($"Choosing initial facing for {template.TemplateId}. Up/Down selects; Enter applies; Esc cancels.");
     }
 
     public SadConsoleEditorMutationUiResult ConfirmTemplateInitialFacingPicker()
     {
-        if (!_isPickingTemplateInitialFacing)
+        if (!_initialFacingPicker.IsActive)
         {
             return SadConsoleEditorMutationUiResult.Failure("No initial facing picker is active.");
         }
@@ -545,10 +506,8 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Failure("No authored template is selected; initial facing edit cancelled.");
         }
 
-        var options = TemplateInitialFacingPickerOptions();
-        var option = options[Math.Clamp(_templateInitialFacingPickerIndex, 0, options.Count - 1)];
-        ClearTemplateInitialFacingPicker();
-        var result = option.Facing is { } facing
+        var selection = _initialFacingPicker.Confirm();
+        var result = selection?.Facing is { } facing
             ? _service.SetTemplateInitialFacing(template.TemplateId, facing)
             : _service.ClearTemplateInitialFacing(template.TemplateId);
         ReplaceSnapshotAfterMutation(
@@ -561,7 +520,7 @@ internal sealed class SadConsoleEditorContext
 
     private void MoveTemplateInitialFacingPicker(int delta)
     {
-        _templateInitialFacingPickerIndex = ClampIndex(_templateInitialFacingPickerIndex + delta, TemplateInitialFacingPickerOptions().Count);
+        _initialFacingPicker.Move(delta);
     }
 
     public SadConsoleEditorMutationUiResult Save()
@@ -653,7 +612,7 @@ internal sealed class SadConsoleEditorContext
             return;
         }
 
-        if (_isPickingTemplateInitialFacing)
+        if (_initialFacingPicker.IsActive)
         {
             MoveTemplateInitialFacingPicker(delta);
             return;
@@ -1763,8 +1722,7 @@ internal sealed class SadConsoleEditorContext
 
     private void ClearTemplateInitialFacingPicker()
     {
-        _isPickingTemplateInitialFacing = false;
-        _templateInitialFacingPickerIndex = 0;
+        _initialFacingPicker.Clear();
     }
 
     private void ClearTemplateDefaultActionPlanPicker()

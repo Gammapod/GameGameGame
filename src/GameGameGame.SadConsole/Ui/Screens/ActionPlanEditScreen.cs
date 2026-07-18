@@ -9,6 +9,7 @@ internal sealed class ActionPlanEditScreen
 {
     private readonly FrontendEditorService? _service;
     private readonly Action<FrontendEditorSnapshot>? _snapshotMutated;
+    private readonly EditorMutationExecutor _mutations;
     private readonly FocusRouter _focusRouter;
     private FrontendEditorActionPlanSummary _actionPlan;
     private readonly List<FrontendEditorAvailableActionStepSummary> _availableSteps;
@@ -32,6 +33,7 @@ internal sealed class ActionPlanEditScreen
         ReturnDestination = returnDestination;
         _service = service;
         _snapshotMutated = snapshotMutated;
+        _mutations = new EditorMutationExecutor(service, _ => { });
         _focusRouter = new FocusRouter([new FocusTarget("action-plan-steps")], focusFirstEnabled: true);
     }
 
@@ -374,47 +376,51 @@ internal sealed class ActionPlanEditScreen
 
     private ActionPlanEditResult ReplaceSelectedStep(string kindId)
     {
-        if (_service is null) return CloseOverlayWith("Action-plan edits require a service-backed editor screen.");
         if (_actionPlan.ActionSteps.Count == 0) return CloseOverlayWith("No action step is available to replace.");
         if (!TryParseKind(kindId, out var kind)) return CloseOverlayWith($"Unknown action step kind {kindId}.");
 
-        var result = _service.ReplaceActionPlanStep(_actionPlan.ActionPlanId, _selectedStepIndex, kind);
-        ReplaceAfterMutation(result.Snapshot, _selectedStepIndex);
+        var result = ExecuteMutation(
+            "Action-plan edits require a service-backed editor screen.",
+            service => service.ReplaceActionPlanStep(_actionPlan.ActionPlanId, _selectedStepIndex, kind),
+            _selectedStepIndex);
         ClearOverlay();
-        return ActionPlanEditResult.Stay(result.StatusMessage);
+        return ActionPlanEditResult.Stay(result.Message);
     }
 
     private ActionPlanEditResult InsertSelectedStep(string kindId)
     {
-        if (_service is null) return CloseOverlayWith("Action-plan edits require a service-backed editor screen.");
         if (!TryParseKind(kindId, out var kind)) return CloseOverlayWith($"Unknown action step kind {kindId}.");
 
         var insertIndex = _actionPlan.ActionSteps.Count == 0 ? 0 : _selectedStepIndex + (_insertBelow ? 1 : 0);
-        var result = _service.InsertActionPlanStep(_actionPlan.ActionPlanId, insertIndex, kind);
-        ReplaceAfterMutation(result.Snapshot, insertIndex);
+        var result = ExecuteMutation(
+            "Action-plan edits require a service-backed editor screen.",
+            service => service.InsertActionPlanStep(_actionPlan.ActionPlanId, insertIndex, kind),
+            insertIndex);
         ClearOverlay();
-        return ActionPlanEditResult.Stay(result.StatusMessage);
+        return ActionPlanEditResult.Stay(result.Message);
     }
 
     private ActionPlanEditResult DeleteSelectedStep()
     {
-        if (_service is null) return ActionPlanEditResult.Stay("Action-plan edits require a service-backed editor screen.");
         if (_actionPlan.ActionSteps.Count == 0) return ActionPlanEditResult.Stay("No action step is available to delete.");
 
-        var result = _service.RemoveActionPlanStep(_actionPlan.ActionPlanId, _selectedStepIndex);
-        ReplaceAfterMutation(result.Snapshot, Math.Max(0, _selectedStepIndex - 1));
-        return ActionPlanEditResult.Stay(result.StatusMessage);
+        var result = ExecuteMutation(
+            "Action-plan edits require a service-backed editor screen.",
+            service => service.RemoveActionPlanStep(_actionPlan.ActionPlanId, _selectedStepIndex),
+            Math.Max(0, _selectedStepIndex - 1));
+        return ActionPlanEditResult.Stay(result.Message);
     }
 
     private ActionPlanEditResult SetSelectedStepLabel(string? label)
     {
-        if (_service is null) return CloseOverlayWith("Action-plan label edits require a service-backed editor screen.");
         if (_actionPlan.ActionSteps.Count == 0) return CloseOverlayWith("No action step is available for label editing.");
 
-        var result = _service.SetActionPlanStepTargetLabel(_actionPlan.ActionPlanId, _selectedStepIndex, label);
-        ReplaceAfterMutation(result.Snapshot, _selectedStepIndex);
+        var result = ExecuteMutation(
+            "Action-plan label edits require a service-backed editor screen.",
+            service => service.SetActionPlanStepTargetLabel(_actionPlan.ActionPlanId, _selectedStepIndex, label),
+            _selectedStepIndex);
         ClearOverlay();
-        return ActionPlanEditResult.Stay(result.StatusMessage);
+        return ActionPlanEditResult.Stay(result.Message);
     }
 
     private ActionPlanEditResult ToggleMoveMode()
@@ -436,16 +442,38 @@ internal sealed class ActionPlanEditScreen
 
     private ActionPlanEditResult SwapSelectedStep(int delta)
     {
-        if (_service is null) return ActionPlanEditResult.Stay("Action-plan edits require a service-backed editor screen.");
         var toIndex = _selectedStepIndex + delta;
         if (toIndex < 0 || toIndex >= _actionPlan.ActionSteps.Count)
         {
             return ActionPlanEditResult.Stay("Selected step cannot move farther in that direction.");
         }
 
-        var result = _service.MoveActionPlanStep(_actionPlan.ActionPlanId, _selectedStepIndex, toIndex);
-        ReplaceAfterMutation(result.Snapshot, toIndex);
-        return ActionPlanEditResult.Stay(result.StatusMessage);
+        var result = ExecuteMutation(
+            "Action-plan edits require a service-backed editor screen.",
+            service => service.MoveActionPlanStep(_actionPlan.ActionPlanId, _selectedStepIndex, toIndex),
+            toIndex);
+        return ActionPlanEditResult.Stay(result.Message);
+    }
+
+    private (bool IsSuccess, string Message) ExecuteMutation(
+        string serviceRequiredMessage,
+        Func<FrontendEditorService, FrontendEditorMutationResult> mutation,
+        int preferredIndex)
+    {
+        FrontendEditorSnapshot? snapshot = null;
+        var result = _mutations.Execute(serviceRequiredMessage, service =>
+        {
+            var mutationResult = mutation(service);
+            snapshot = mutationResult.Snapshot;
+            return mutationResult;
+        });
+
+        if (snapshot is not null)
+        {
+            ReplaceAfterMutation(snapshot, preferredIndex);
+        }
+
+        return (result.IsSuccess, result.StatusMessage);
     }
 
     private void ReplaceAfterMutation(FrontendEditorSnapshot snapshot, int preferredIndex)

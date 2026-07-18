@@ -75,6 +75,108 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
+    public void GameplaySessionControllerSubmitsWaitAndRefreshesStructuredLog()
+    {
+        var session = CreateGameplayMockSession();
+        var controller = new GameplaySessionController(session);
+
+        var result = controller.SubmitWait();
+
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Equal(1, controller.FrameIndex);
+        Assert.Equal(1, controller.World.TurnNumber);
+        Assert.NotNull(controller.ActionLog);
+        Assert.NotEmpty(controller.ActionLog!.Chronological);
+    }
+
+    [Fact]
+    public void GameplaySessionControllerSubmitsMoveThroughCoreActionChoiceWhenAvailable()
+    {
+        var session = CreateGameplayMockSession(includeCanonicalMove: true, bindPlayerChoiceControl: true);
+        var controller = new GameplaySessionController(session);
+
+        var result = controller.SubmitMove(Direction.West);
+
+        Assert.True(result.UsedCoreActionChoice);
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Equal(1, controller.FrameIndex);
+        Assert.Equal(1, controller.World.TurnNumber);
+    }
+
+    [Fact]
+    public void ActionChoicePromptControllerEnterOpensActionList()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var runtime = new GameplaySessionController(session);
+        var prompt = new ActionChoicePromptController();
+
+        var message = prompt.OpenActionStepMenu(runtime.AvailablePlayerActionSteps());
+
+        Assert.Equal(ActionChoicePromptMode.ActionList, prompt.Mode);
+        Assert.Equal(0, prompt.SelectedActionStepIndex);
+        Assert.Contains("Opened action selector", message);
+    }
+
+    [Fact]
+    public void ActionChoicePromptControllerPickupAdvancesTargetThenDestinationAndCancelUnwinds()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var runtime = new GameplaySessionController(session);
+        var prompt = new ActionChoicePromptController();
+        prompt.OpenActionStepMenu(runtime.AvailablePlayerActionSteps());
+
+        var target = prompt.ConfirmSelectedActionStep(runtime.AvailablePlayerActionSteps(), runtime.CurrentActionChoiceRequest, FormatEntityId);
+        var destination = prompt.ConfirmSelectedTarget(FormatEntityId, FormatPlaneCoord);
+        var destinationMode = prompt.Mode;
+        var cancelDestination = prompt.Cancel();
+        var cancelTarget = prompt.Cancel();
+
+        Assert.Equal(ActionChoicePromptActionResultKind.ChoosingTarget, target.Kind);
+        Assert.Equal(ActionChoicePromptTargetResultKind.ChoosingDestination, destination.Kind);
+        Assert.Equal(ActionChoicePromptMode.PickupDestination, destinationMode);
+        Assert.Equal("Returned to pickup target selection.", cancelDestination.Message);
+        Assert.Equal(ActionChoicePromptMode.ActionList, prompt.Mode);
+        Assert.Equal("Returned to action selector.", cancelTarget.Message);
+    }
+
+    [Fact]
+    public void ActionChoicePromptControllerDropAdvancesSourceThenDestinationAndRequestsInventoryInspection()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, includeDropStep: true, startWithCarriedItem: true);
+        var runtime = new GameplaySessionController(session);
+        var prompt = new ActionChoicePromptController();
+        var steps = runtime.AvailablePlayerActionSteps();
+        prompt.OpenActionStepMenu(steps);
+        prompt.SelectMenuItem(1, steps, FormatEntityId, FormatPlaneCoord);
+
+        var source = prompt.ConfirmSelectedActionStep(steps, runtime.CurrentActionChoiceRequest, FormatEntityId);
+        var destination = prompt.ConfirmSelectedTarget(FormatEntityId, FormatPlaneCoord);
+
+        Assert.Equal(ActionChoicePromptActionResultKind.ChoosingTarget, source.Kind);
+        Assert.True(source.InspectPlayer);
+        Assert.Equal(ActionChoicePromptMode.DropDestination, prompt.Mode);
+        Assert.Equal(ActionChoicePromptTargetResultKind.ChoosingDestination, destination.Kind);
+        Assert.False(destination.InspectPlayer);
+    }
+
+    [Fact]
+    public void ActionChoicePromptControllerEmptyTargetListExplainsWithoutEnteringDeadEndMode()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var runtime = new GameplaySessionController(session);
+        var prompt = new ActionChoicePromptController();
+        var steps = runtime.AvailablePlayerActionSteps();
+        prompt.OpenActionStepMenu(steps);
+        runtime.SubmitPickupActionChoice(new EntityId("mockCrate"), new PlaneCoord(session.World.GetInventoryPlaneId(session.PlayerEntityId)!.Value, new GridCoord(0, 0)));
+
+        var result = prompt.ConfirmSelectedActionStep(steps, runtime.CurrentActionChoiceRequest, FormatEntityId);
+
+        Assert.Equal(ActionChoicePromptActionResultKind.Message, result.Kind);
+        Assert.Equal(ActionChoicePromptMode.ActionList, prompt.Mode);
+        Assert.Contains("no valid targets", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void DebugAdvanceExposesCurrentPlacePlayerFacingLogIds()
     {
         var session = CreateGameplayMockSession();
@@ -533,4 +635,8 @@ public sealed class GameplayMockScreenTests
 
         return PlayableScenarioLauncher.CreateFromDocument(document, "play-mock-scenario");
     }
+
+    private static string FormatEntityId(EntityId entityId) => entityId.Value;
+
+    private static string FormatPlaneCoord(PlaneCoord coord) => $"{coord.PlaneId.Value}:{coord.Coord.X},{coord.Coord.Y}";
 }
