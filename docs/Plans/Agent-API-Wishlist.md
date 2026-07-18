@@ -248,7 +248,7 @@ Some reference helpers already exist internally; the agent API should expose the
 - Compare two content documents semantically.
 - Generate starter templates from presets such as item, creature, container, terrain, AI actor.
 - Explain an action plan in human-readable form.
-- Simulate or trace an action plan against a small test world, once engine-facing support exists.
+- Simulate or trace an action plan against a small test world, once engine-facing support exists. Wanted by core-owner after the Core refactor/consolidation sprint as an agent-friendly "why did this actor do that?" view over attempted Action Steps, reads/writes, target/facing state, fallback continued/stopped, and final turn result.
 
 ## Updated minimum viable agent API
 

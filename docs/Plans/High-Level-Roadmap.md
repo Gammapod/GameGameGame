@@ -104,7 +104,7 @@ Immediate canonical action priority:
 Canonical action target statement:
 
 - Existing Action Steps remain compatible but are no longer all implicitly release-canonical.
-- A canonical action is release-ready only when its engine semantics, success/failure outcome projection, POV/affordance facts where applicable, frontend log IDs, and content test rooms are complete.
+- A canonical action is release-ready only when its engine semantics, success/failure outcome projection, POV/affordance facts where applicable, frontend log IDs, and content test rooms are complete. Wanted by core-owner after the Core refactor/consolidation sprint: keep the two-room fixture pattern explicit for every promoted action so each action proves success, common failure, editor authoring, player/action-choice, and trace/log projection paths without bespoke setup.
 - Player control becomes runtime decision-source state over normal authored action steps rather than a permanently special player entity command path or a meta-control Action Step.
 - Componentized play mode consumes canonical action/Action Choice/POV/log contracts without inventing frontend-only simulation semantics.
 
@@ -283,7 +283,7 @@ Priority order:
 4. Compact world/state summary formatter for entity positions, facing, target, inventories/containment, created/destroyed entities, and changed state per turn.
 5. Capability-gap log/report section for unsupported authoring/simulation requests and intentionally blocked negative vignettes.
 6. Plan preview + simulation in one API command.
-7. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output.
+7. Primitive showcase report support for demonstrating one Action Step's setup, success, failure/fallback, state reads/writes, and trace output. Wanted by core-owner after the Core refactor/consolidation sprint as the lightweight "why did this actor do that?" debug view: attempted Action Steps, state reads/writes, target/facing state, fallback continued/stopped, and final turn result in one inspectable report.
 8. Curated actor-zoo report template for one-room behavior demonstrations.
 9. Automated actor isolation preview: generate a small room around an arbitrary entity template, run a fixed number of turns, and report behavior.
 10. Cleanup/replacement path for the older test-local `MinimalScenarioRunner` now that `AgentContentEditorApi.RunScenario` exists.
@@ -312,6 +312,7 @@ Future generalized scenario runner wishlist:
 - Add stable report sections suitable for saved runlogs and eventual golden comparisons once the format stops changing.
 - Allow scenario reports to include plan preview, validation diagnostics, simulation trace, state diff, inventory/containment summary, and capability gaps in one result.
 - Support primitive showcase and actor-zoo workflows once explicit authored scenarios reveal which setup variants are broadly useful.
+- Core-owner convenience note from the Core refactor/consolidation sprint: prioritize trace/debug report shapes that make Action Step execution explainable without custom test assertions, especially attempted steps, reads/writes, target/facing state, fallback outcome, and final turn result.
 - Keep Console/frontend playability as a later promotion step, after headless reports prove which scenario fields are useful.
 
 Dependencies:
@@ -605,6 +606,26 @@ Dependencies:
 Promotion trigger:
 
 - Promote only after core behavior authoring and inventory/containment systems are stable enough that action plans can be treated as gameplay objects without destabilizing foundational semantics.
+
+### Bucket 12: Core/editor developer ergonomics and refactor support
+
+Status: Low-priority internal quality-of-life bucket; promote when maintenance friction blocks active roadmap work.
+
+Priority order:
+
+1. Core system ownership/refactor maps for large split systems, starting with `ActionPlanInterpreter`, `EditableContentDocument`, and major scenario/play-mode services. Each map should identify the facade file, executor files, dispatchers, handler clusters, helpers, and representative test suites.
+2. Duplicate xUnit test-name detector or review script for future test-fixture migration/refactor sprints, so coverage moves can distinguish preserved tests from accidental duplicate fixtures.
+3. Further internal handler-category organization for canonical action verbs, so movement, targeting, containment/inventory, and plan-override behavior can be navigated as a durable catalog without creating editor-only concepts or changing public engine APIs.
+
+Dependencies:
+
+- Ownership maps should follow the current code shape instead of prescribing architecture ahead of need.
+- Duplicate-test detection should be lightweight enough to run during sprint wrap-up and should not become a required build step until it proves useful.
+- Handler-category cleanup must preserve existing action semantics, trace shape, turn consumption, and editor/content parity.
+
+Promotion trigger:
+
+- Promote when another large Core/Content refactor begins, when duplicate test fixtures are found again during cleanup, or when canonical-action promotion repeatedly requires navigating the same private handler clusters.
 
 ## Recently completed / archived context
 

@@ -71,7 +71,7 @@ An Action Step is canonical only when all of the following are complete.
 
 ### Content rooms
 
-Content-editor maintains two test rooms for every canonical action:
+Content-editor maintains two test rooms for every canonical action. Core-owner convenience note from the Core refactor/consolidation sprint: this fixture pattern is wanted not only for release readiness, but also for maintenance/debugging convenience, because it keeps success paths, common failure paths, editor authoring, player/action-choice execution, and trace/log projection evidence easy to find for each promoted action:
 
 1. **Log-outcome room**: a deterministic scenario/room that can emit every supported log outcome for that action. `SuccessCriteriaLogShowcase` is the prototype example.
 2. **Player-interaction room**: a scenario/room with a player-controlled entity that has the action and can interact with different entities/targets to produce every supported log outcome for that action.

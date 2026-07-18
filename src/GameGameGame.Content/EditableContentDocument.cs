@@ -1,11 +1,8 @@
 using GameGameGame.Core;
-using System.Text;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace GameGameGame.Content;
 
-public sealed class EditableContentDocument
+public sealed partial class EditableContentDocument
 {
     public Dictionary<string, EntityTemplateDto> EntityTemplates { get; set; } = [];
 
@@ -14,468 +11,6 @@ public sealed class EditableContentDocument
     public Dictionary<string, ActionPlanDescriptorDto> ActionPlans { get; set; } = [];
 
     public Dictionary<string, ScenarioDefinitionDto> Scenarios { get; set; } = [];
-
-    public static EditableContentDocument LoadYaml(string yaml)
-    {
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .IgnoreUnmatchedProperties()
-            .Build();
-
-        return deserializer.Deserialize<EditableContentDocument>(yaml) ?? new EditableContentDocument();
-    }
-
-    public string SaveYaml()
-    {
-        var canonical = LoadYaml(SerializeYaml());
-        canonical.CanonicalizeLegacyActionPlanVariableFields();
-
-        return canonical.SerializeYaml();
-    }
-
-    private string SerializeYaml()
-    {
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
-            .Build();
-
-        return serializer.Serialize(this);
-    }
-
-    private void CanonicalizeLegacyActionPlanVariableFields()
-    {
-        CanonicalizeLegacyActionStateDefaults();
-
-        foreach (var plan in ActionPlans.Values)
-        {
-            foreach (var step in plan.Steps ?? [])
-            {
-                foreach (var check in step.Checks ?? [])
-                {
-                    CanonicalizeLegacyCheckVariableFields(check);
-                }
-
-                if (step.OnSuccess is not null)
-                {
-                    CanonicalizeLegacyEffectVariableFields(step.OnSuccess);
-                }
-
-                if (step.OnFailure is not null)
-                {
-                    CanonicalizeLegacyEffectVariableFields(step.OnFailure);
-                }
-            }
-        }
-    }
-
-    private void CanonicalizeLegacyActionStateDefaults()
-    {
-        foreach (var template in EntityTemplates.Values)
-        {
-            if (template.DefaultPlanVariables is null)
-            {
-                continue;
-            }
-
-            if (template.DefaultPlanVariables.TryGetValue("facing", out var facing)
-                && facing.Kind == PlanValueKind.Direction
-                && facing.DirectionValue is { } direction)
-            {
-                template.ActionStateDefaults ??= new ActorActionStateDefaultsDto();
-                template.ActionStateDefaults.Facing ??= direction;
-                template.DefaultPlanVariables.Remove("facing");
-            }
-
-            if (template.DefaultPlanVariables.Count == 0)
-            {
-                template.DefaultPlanVariables = null;
-            }
-        }
-    }
-
-    private static void CanonicalizeLegacyCheckVariableFields(PlanCheckDescriptorDto check)
-    {
-        switch (check.Kind)
-        {
-            case PlanCheckKind.CanMove:
-                check.DirectionVariable = ClearIfCanonicalFacing(check.DirectionVariable);
-                break;
-            case PlanCheckKind.BlockingEntity:
-                if (IsCanonicalFacing(check.DirectionVariable) && IsCanonicalTarget(check.TargetVariable))
-                {
-                    check.DirectionVariable = null;
-                    check.TargetVariable = null;
-                }
-                break;
-            case PlanCheckKind.CanPickup:
-                check.TargetVariable = ClearIfCanonicalTarget(check.TargetVariable);
-                break;
-        }
-    }
-
-    private static void CanonicalizeLegacyEffectVariableFields(PlanEffectDescriptorDto effect)
-    {
-        switch (effect.Kind)
-        {
-            case PlanEffectKind.Move:
-                effect.DirectionVariable = ClearIfCanonicalFacing(effect.DirectionVariable);
-                break;
-            case PlanEffectKind.Pickup:
-                effect.TargetVariable = ClearIfCanonicalTarget(effect.TargetVariable);
-                break;
-            case PlanEffectKind.ReverseDirection:
-                effect.DirectionVariable = ClearIfCanonicalFacing(effect.DirectionVariable);
-                break;
-        }
-    }
-
-    private static string? ClearIfCanonicalFacing(string? value) =>
-        IsCanonicalFacing(value) ? null : value;
-
-    private static string? ClearIfCanonicalTarget(string? value) =>
-        IsCanonicalTarget(value) ? null : value;
-
-    private static bool IsCanonicalFacing(string? value) =>
-        string.Equals(value, "facing", StringComparison.Ordinal);
-
-    private static bool IsCanonicalTarget(string? value) =>
-        string.Equals(value, "target", StringComparison.Ordinal);
-
-    public PrototypeContentRegistry ToRegistry() => YamlContentLoader.LoadRegistry(SerializeYaml());
-
-    public ContentValidationResult ValidateCanonicalAuthoring()
-    {
-        var diagnostics = new List<ContentDiagnostic>();
-
-        foreach (var (templateId, template) in EntityTemplates)
-        {
-            if (template.DefaultPlanVariables is null)
-            {
-                continue;
-            }
-
-            foreach (var variableName in template.DefaultPlanVariables.Keys)
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.ArbitraryPlanVariableField,
-                    $"Entity template {templateId} declares arbitrary default plan variable {variableName}.",
-                    entityTemplateId: new EntityTemplateId(templateId),
-                    variableName: variableName));
-            }
-        }
-
-        foreach (var (planId, plan) in ActionPlans)
-        {
-            AddActionPlanShapeDiagnostics(diagnostics, planId, plan);
-            var steps = plan.Steps ?? [];
-            for (var stepIndex = 0; stepIndex < steps.Count; stepIndex++)
-            {
-                var step = steps[stepIndex];
-                foreach (var check in step.Checks ?? [])
-                {
-                    AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, check.DirectionVariable, "directionVariable");
-                    AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, check.TargetVariable, "targetVariable");
-                }
-
-                if (step.OnSuccess is not null)
-                {
-                    AddEffectVariableFieldDiagnostics(diagnostics, planId, stepIndex, step.OnSuccess);
-                }
-
-                if (step.OnFailure is not null)
-                {
-                    AddEffectVariableFieldDiagnostics(diagnostics, planId, stepIndex, step.OnFailure);
-                }
-            }
-        }
-
-        foreach (var (scenarioId, scenario) in Scenarios)
-        {
-            AddScenarioDiagnostics(diagnostics, scenarioId, scenario);
-        }
-
-        return new ContentValidationResult(diagnostics);
-    }
-
-    private void AddScenarioDiagnostics(
-        List<ContentDiagnostic> diagnostics,
-        string scenarioId,
-        ScenarioDefinitionDto scenario)
-    {
-        if (string.IsNullOrWhiteSpace(scenario.ScenarioRootEntityTemplateId) || !EntityTemplates.ContainsKey(scenario.ScenarioRootEntityTemplateId))
-        {
-            diagnostics.Add(ContentDiagnostic.Error(
-                ContentDiagnosticCode.InvalidScenarioDefinition,
-                $"Scenario {scenarioId} references missing scenario root template {scenario.ScenarioRootEntityTemplateId}.",
-                entityTemplateId: string.IsNullOrWhiteSpace(scenario.ScenarioRootEntityTemplateId) ? null : new EntityTemplateId(scenario.ScenarioRootEntityTemplateId)));
-        }
-
-        if (string.IsNullOrWhiteSpace(scenario.PlayerEntityTemplateId) || !EntityTemplates.ContainsKey(scenario.PlayerEntityTemplateId))
-        {
-            diagnostics.Add(ContentDiagnostic.Error(
-                ContentDiagnosticCode.InvalidScenarioDefinition,
-                $"Scenario {scenarioId} references missing player template {scenario.PlayerEntityTemplateId}.",
-                entityTemplateId: string.IsNullOrWhiteSpace(scenario.PlayerEntityTemplateId) ? null : new EntityTemplateId(scenario.PlayerEntityTemplateId)));
-        }
-
-        if (scenario.ScenarioRootEntityTemplateId is not null && EntityTemplates.TryGetValue(scenario.ScenarioRootEntityTemplateId, out var root))
-        {
-            var start = ToCoord(scenario.PlayerStart);
-            if (root.InventoryWidth <= 0 || root.InventoryHeight <= 0)
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} root template {scenario.ScenarioRootEntityTemplateId} has no usable inventory/play plane.",
-                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId)));
-            }
-            else if (start.X < 0 || start.Y < 0 || start.X >= root.InventoryWidth || start.Y >= root.InventoryHeight)
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} player start {start.X},{start.Y} is outside scenario root bounds {root.InventoryWidth}x{root.InventoryHeight}.",
-                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
-                    coord: start));
-            }
-            else if ((root.CarriedEntities ?? []).FirstOrDefault(carried => carried.Coord?.X == start.X && carried.Coord.Y == start.Y) is { } occupant)
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} player start {start.X},{start.Y} is occupied by carried entity {occupant.EntityId}.",
-                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
-                    carriedEntityId: string.IsNullOrWhiteSpace(occupant.EntityId) ? null : new EntityId(occupant.EntityId),
-                    coord: start));
-            }
-
-            if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityId)
-                && (root.CarriedEntities ?? []).Any(carried => carried.EntityId == scenario.PlayerEntityId))
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} player entity ID {scenario.PlayerEntityId} conflicts with an entity already carried by scenario root {scenario.ScenarioRootEntityTemplateId}.",
-                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
-                    relatedEntityId: new EntityId(scenario.PlayerEntityId)));
-            }
-
-            AddPlayerControlDiagnostics(diagnostics, scenarioId, scenario, root);
-        }
-    }
-
-    private void AddPlayerControlDiagnostics(
-        List<ContentDiagnostic> diagnostics,
-        string scenarioId,
-        ScenarioDefinitionDto scenario,
-        EntityTemplateDto root)
-    {
-        if (scenario.PlayerControls is null || scenario.PlayerControls.Count == 0)
-        {
-            return;
-        }
-
-        var materializedEntityIds = new HashSet<string>(StringComparer.Ordinal);
-        if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityId))
-        {
-            materializedEntityIds.Add(scenario.PlayerEntityId);
-        }
-
-        AddCarriedEntityIds(root, materializedEntityIds, new HashSet<string>(StringComparer.Ordinal));
-        var assignedEntities = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var (playerId, controlledEntityIds) in scenario.PlayerControls)
-        {
-            if (string.IsNullOrWhiteSpace(playerId))
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} declares a player control binding with an empty player ID."));
-                continue;
-            }
-
-            if (controlledEntityIds is null || controlledEntityIds.Count == 0)
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} player control {playerId} has no controlled entities."));
-                continue;
-            }
-
-            var seenForPlayer = new HashSet<string>(StringComparer.Ordinal);
-
-            foreach (var controlledEntityId in controlledEntityIds ?? [])
-            {
-                if (string.IsNullOrWhiteSpace(controlledEntityId))
-                {
-                    diagnostics.Add(ContentDiagnostic.Error(
-                        ContentDiagnosticCode.InvalidScenarioDefinition,
-                        $"Scenario {scenarioId} player control {playerId} references an empty entity ID."));
-                    continue;
-                }
-
-                if (!seenForPlayer.Add(controlledEntityId))
-                {
-                    diagnostics.Add(ContentDiagnostic.Error(
-                        ContentDiagnosticCode.InvalidScenarioDefinition,
-                        $"Scenario {scenarioId} player control {playerId} lists entity {controlledEntityId} more than once.",
-                        relatedEntityId: new EntityId(controlledEntityId)));
-                    continue;
-                }
-
-                if (!materializedEntityIds.Contains(controlledEntityId))
-                {
-                    diagnostics.Add(ContentDiagnostic.Error(
-                        ContentDiagnosticCode.InvalidScenarioDefinition,
-                        $"Scenario {scenarioId} player control {playerId} references missing entity {controlledEntityId}.",
-                        relatedEntityId: new EntityId(controlledEntityId)));
-                    continue;
-                }
-
-                if (assignedEntities.TryGetValue(controlledEntityId, out var previousPlayerId) && previousPlayerId != playerId)
-                {
-                    diagnostics.Add(ContentDiagnostic.Error(
-                        ContentDiagnosticCode.InvalidScenarioDefinition,
-                        $"Scenario {scenarioId} controlled entity {controlledEntityId} is assigned to both {previousPlayerId} and {playerId}.",
-                        relatedEntityId: new EntityId(controlledEntityId)));
-                    continue;
-                }
-
-                assignedEntities[controlledEntityId] = playerId;
-            }
-        }
-    }
-
-    private void AddCarriedEntityIds(EntityTemplateDto template, HashSet<string> entityIds, HashSet<string> visitedTemplateIds)
-    {
-        foreach (var carried in template.CarriedEntities ?? [])
-        {
-            if (!string.IsNullOrWhiteSpace(carried.EntityId))
-            {
-                entityIds.Add(carried.EntityId);
-            }
-
-            if (!string.IsNullOrWhiteSpace(carried.TemplateId)
-                && EntityTemplates.TryGetValue(carried.TemplateId, out var carriedTemplate)
-                && visitedTemplateIds.Add(carried.TemplateId))
-            {
-                AddCarriedEntityIds(carriedTemplate, entityIds, visitedTemplateIds);
-            }
-        }
-    }
-
-    private static void AddActionPlanShapeDiagnostics(
-        List<ContentDiagnostic> diagnostics,
-        string planId,
-        ActionPlanDescriptorDto plan)
-    {
-        var descriptor = plan.ToDescriptor(planId);
-        var shape = ActionPlanShapeClassifier.Classify(descriptor);
-        if (shape == ActionPlanShape.InvalidMixedShape)
-        {
-            diagnostics.Add(ContentDiagnostic.Error(
-                ContentDiagnosticCode.InvalidActionPlanShape,
-                $"Action plan {planId} declares multiple behavior shapes. Use only one of behavior, primitive, or low-level steps.",
-                actionPlanTemplateId: new ActionPlanTemplateId(planId),
-                actionPlanId: new ActionPlanId(planId)));
-        }
-
-        if (shape == ActionPlanShape.InvalidEmptyBehaviorChain)
-        {
-            diagnostics.Add(ContentDiagnostic.Error(
-                ContentDiagnosticCode.InvalidActionPlanShape,
-                $"Action plan {planId} declares an empty behavior chain. Omit behavior or add at least one Action Step.",
-                actionPlanTemplateId: new ActionPlanTemplateId(planId),
-                actionPlanId: new ActionPlanId(planId)));
-        }
-    }
-
-    private static void AddEffectVariableFieldDiagnostics(
-        List<ContentDiagnostic> diagnostics,
-        string planId,
-        int stepIndex,
-        PlanEffectDescriptorDto effect)
-    {
-        AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, effect.DirectionVariable, "directionVariable");
-        AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, effect.TargetVariable, "targetVariable");
-        AddVariableFieldDiagnostics(diagnostics, planId, stepIndex, effect.VariableName, "variableName");
-    }
-
-    private static void AddVariableFieldDiagnostics(
-        List<ContentDiagnostic> diagnostics,
-        string planId,
-        int stepIndex,
-        string? variableName,
-        string fieldName)
-    {
-        if (string.IsNullOrWhiteSpace(variableName))
-        {
-            return;
-        }
-
-        diagnostics.Add(ContentDiagnostic.Error(
-            ContentDiagnosticCode.ArbitraryPlanVariableField,
-            $"Action plan {planId} step {stepIndex} declares arbitrary {fieldName} {variableName}.",
-            actionPlanTemplateId: new ActionPlanTemplateId(planId),
-            actionPlanId: new ActionPlanId(planId),
-            stepIndex: stepIndex,
-            variableName: variableName));
-    }
-
-    public EntityTemplateId AddEntityTemplate(string name, EntityTemplate template, EntityPresentation presentation)
-    {
-        var id = GenerateEntityTemplateId(name);
-        EntityTemplates[id.Value] = EntityTemplateDto.From(template);
-        Presentations[id.Value] = EntityPresentationDto.From(presentation);
-
-        return id;
-    }
-
-    public void UpsertScenario(ScenarioDefinition scenario) =>
-        Scenarios[scenario.ScenarioId] = ScenarioDefinitionDto.From(scenario);
-
-    public ScenarioDefinition GetScenario(string scenarioId) =>
-        Scenarios.TryGetValue(scenarioId, out var scenario)
-            ? scenario.ToDefinition(scenarioId)
-            : throw new KeyNotFoundException($"Scenario {scenarioId} does not exist.");
-
-    private EntityTemplateId GenerateEntityTemplateId(string name)
-    {
-        var baseId = ToCamelCaseId(name);
-        var candidate = baseId;
-        var suffix = 2;
-
-        while (EntityTemplates.ContainsKey(candidate) || Presentations.ContainsKey(candidate))
-        {
-            candidate = $"{baseId}{suffix}";
-            suffix++;
-        }
-
-        return new EntityTemplateId(candidate);
-    }
-
-    private static string ToCamelCaseId(string name)
-    {
-        var builder = new StringBuilder();
-        var capitalizeNext = false;
-
-        foreach (var character in name)
-        {
-            if (!char.IsLetterOrDigit(character))
-            {
-                capitalizeNext = builder.Length > 0;
-                continue;
-            }
-
-            if (builder.Length == 0)
-            {
-                builder.Append(char.ToLowerInvariant(character));
-                continue;
-            }
-
-            builder.Append(capitalizeNext ? char.ToUpperInvariant(character) : character);
-            capitalizeNext = false;
-        }
-
-        return builder.Length == 0 ? "entity" : builder.ToString();
-    }
 
     public sealed class EntityTemplateDto
     {
@@ -703,7 +238,6 @@ public sealed class EditableContentDocument
         public ActionPlanPrimitiveKind Kind { get; set; }
 
         public string? FallbackPlanId { get; set; }
-
         public static ActionPlanPrimitiveDescriptorDto From(ActionPlanPrimitiveDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
@@ -723,7 +257,6 @@ public sealed class EditableContentDocument
         public PlanEffectDescriptorDto? OnSuccess { get; set; }
 
         public PlanEffectDescriptorDto? OnFailure { get; set; }
-
         public static ActionPlanStepDescriptorDto From(ActionPlanStepDescriptor descriptor) => new()
         {
             Label = descriptor.Label,
@@ -749,7 +282,6 @@ public sealed class EditableContentDocument
         public string? TargetVariable { get; set; }
 
         public GridCoordDto? InventoryCoord { get; set; }
-
         public static PlanCheckDescriptorDto From(PlanCheckDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
@@ -797,7 +329,6 @@ public sealed class EditableContentDocument
         public bool ConsumesTurn { get; set; }
 
         public bool ContinuePlan { get; set; }
-
         public static PlanEffectDescriptorDto From(PlanEffectDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
@@ -845,7 +376,6 @@ public sealed class EditableContentDocument
         public string? EntityId { get; set; }
 
         public GridCoordDto? InventoryCoord { get; set; }
-
         public static MovementTargetDescriptorDto From(MovementTargetDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
@@ -877,7 +407,6 @@ public sealed class EditableContentDocument
         public string? AnchorEntityId { get; set; }
 
         public Direction? Direction { get; set; }
-
         public static MovementDestinationDescriptorDto From(MovementDestinationDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
@@ -924,7 +453,6 @@ public sealed class EditableContentDocument
         public GridCoordDto? CoordValue { get; set; }
 
         public int? IntValue { get; set; }
-
         public static PlanValueDescriptorDto From(PlanValueDescriptor value) => new()
         {
             Kind = value.Kind,
