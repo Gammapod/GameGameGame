@@ -66,21 +66,23 @@ Do not read when:
      - Read selectively when a planned slice spans multiple layers.
 7. `docs/Plans/Instance-Controller-Playable-Starts-Sprint-Plan.md`
     - Active sprint plan for content-authored initial control source / nested playable starts. It records the selected minimum slice: nullable instance-level `Controller` metadata on authored inventory placements, legacy player insertion as fallback, truly nullable player coordinates, and valid playerless scenarios.
-8. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
+8. `docs/Plans/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
+    - Draft follow-up plan for replacing the remaining special first-player play loop with an initiative-aware scheduler that advances automatic actors and pauses at each `PlayerChoice` actor.
+9. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
     - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible and promoting canonical actions through vertical slices. The canonical `Move` slice, first Pickup/Drop Action Choice interaction seam, componentized play-mode refactor, and Enter/Exit policy slice are complete enough to serve as reference workflow evidence; the next canonical action target is selected from the roadmap backlog.
-9. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
+10. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
     - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
-10. `docs/Plans/Gamma-Editor-MVP-Plan.md`
+11. `docs/Plans/Gamma-Editor-MVP-Plan.md`
     - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
-11. `docs/Plans/SadConsole-Frontend-Roadmap.md`
+12. `docs/Plans/SadConsole-Frontend-Roadmap.md`
       - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not the active implementation plan while canonical action vertical slices are selected, except for the componentized play-mode replacement called out by that plan and focused frontend refactor sprints.
-12. `docs/Plans/Beta-Capability-Gap-Log.md`
+13. `docs/Plans/Beta-Capability-Gap-Log.md`
     - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-13. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+14. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
     - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-14. `docs/Plans/Sprint-Retrospective.md`
+15. `docs/Plans/Sprint-Retrospective.md`
       - Recent process observations and open retrospective questions.
-15. `docs/Archived/`
+16. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
    - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, the completed Enter/Exit policy vertical slice sprint, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the completed Core refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
@@ -97,7 +99,7 @@ Use `docs/Source of Truth/Current-Goals.md` for the mostly stable current projec
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Mostly stable current project direction and active planning bridge belongs in `Current-Goals.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently those plans are `Instance-Controller-Playable-Starts-Sprint-Plan.md` for the active focused sprint and `Canonical-Actions-Vertical-Slice-Plan.md` for the broader release direction.
+- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently those plans are `Instance-Controller-Playable-Starts-Sprint-Plan.md` for the completed focused controller-starts sprint record, `Initiative-Aware-PlayerChoice-Scheduler-Plan.md` for the next draft scheduler refactor, and `Canonical-Actions-Vertical-Slice-Plan.md` for the broader release direction.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.

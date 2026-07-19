@@ -110,11 +110,6 @@ entityTemplates:
       coord:
         x: 4
         y: 3
-    - entityId: canonicalExitInteractionRoomCanonicalExitPlayer
-      templateId: canonicalExitPlayer
-      coord:
-        x: 0
-        y: 5
   canonicalEnterExitObserver:
     name: Canonical Enter Exit Observer
     inventoryWidth: 1
@@ -351,7 +346,7 @@ entityTemplates:
     aperture: 10
     exitPolicy: EdgeAlignedWithExitDirection
     carriedEntities:
-    - entityId: canonicalExitPlayer
+    - entityId: exitPlayerChoiceBoxCanonicalExitPlayer
       templateId: canonicalExitPlayer
       coord:
         x: 1
