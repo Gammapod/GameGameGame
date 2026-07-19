@@ -5,6 +5,7 @@ public sealed class ConstrainedInventoryRelocationService(
     InventoryTransitionService? transitions = null)
 {
     private readonly InventoryTransitionService _transitions = transitions ?? new InventoryTransitionService();
+    private readonly InventoryBoundaryPolicyService _policies = new();
 
     public ConstrainedRelocationEvaluation Evaluate(WorldState world, EntityId movingEntityId, MovementDestination destination)
     {
@@ -28,6 +29,16 @@ public sealed class ConstrainedInventoryRelocationService(
             trace.Status = TraceStatus.Failure;
             trace.Reason = transition.Trace.Reason;
             trace.Detail = transition.Trace.Detail;
+            return new ConstrainedRelocationEvaluation(false, resolvedDestination, trace);
+        }
+
+        var exitPolicy = _policies.EvaluateExitPolicy(world, movingEntityId, resolvedDestination);
+        trace.Add(exitPolicy.Trace);
+        if (!exitPolicy.CanPass)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = exitPolicy.Trace.Reason;
+            trace.Detail = exitPolicy.Trace.Detail;
             return new ConstrainedRelocationEvaluation(false, resolvedDestination, trace);
         }
 

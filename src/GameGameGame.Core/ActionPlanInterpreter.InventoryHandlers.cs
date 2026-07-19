@@ -56,33 +56,42 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
         }
 
-        ActionResolution? lastFailure = null;
-        for (var y = 0; y < inventoryPlane.Height; y++)
+        var adjacency = _movement.EvaluateAdjacency(world, actorId, target.Value);
+        if (!adjacency.AreAdjacent)
         {
-            for (var x = 0; x < inventoryPlane.Width; x++)
-            {
-                var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
-                IActionIntent action = new PickupAction(target.Value, destination);
-                var result = action.Resolve(world, actorId, _movement);
-                trace.Add(result.Trace);
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetNotAdjacent;
+            trace.Detail = adjacency.FailureDetail is { Length: > 0 }
+                ? $"{world.FormatEntityAddress(target.Value)} is not adjacent to {world.FormatEntityAddress(actorId)}: {adjacency.FailureDetail}"
+                : $"{world.FormatEntityAddress(target.Value)} is not adjacent to {world.FormatEntityAddress(actorId)}";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
 
-                if (result.Succeeded)
-                {
-                    trace.Status = TraceStatus.Success;
-                    trace.Detail = $"picked up {target.Value} into first available inventory coordinate {destination.Coord}";
-                    return new PlanEffectResult(true, result.ConsumesTurn, result.ContinuePlan, trace);
-                }
+        trace.Add(TraceNode.Success("Target is adjacent"));
 
-                lastFailure = result;
-            }
+        var policyService = new InventoryBoundaryPolicyService();
+        foreach (var candidate in policyService.OrderedEnterPolicyDestinations(world, actorId))
+        {
+            trace.Add(TraceNode.Info($"Pickup {target.Value} -> {candidate}"));
+        }
+
+        var placement = policyService
+            .EvaluatePolicyAwarePlacement(world, target.Value, actorId, new ConstrainedInventoryRelocationService(_movement));
+        trace.Add(placement.Trace);
+        if (placement is { CanRelocate: true, Destination: { } resolvedPickupDestination })
+        {
+            _movement.TryPlace(world, target.Value, resolvedPickupDestination);
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"picked up {target.Value} into first available inventory coordinate {resolvedPickupDestination.Coord}";
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
         }
 
         trace.Status = TraceStatus.Failure;
-        trace.Reason = lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement;
+        trace.Reason = placement.Trace.Reason == FailureReason.None ? FailureReason.InvalidPlacement : placement.Trace.Reason;
         trace.Detail = $"no inventory coordinate can accept {target.Value}";
-        if (!string.IsNullOrWhiteSpace(lastFailure?.Trace.Detail))
+        if (!string.IsNullOrWhiteSpace(placement.Trace.Detail))
         {
-            trace.Detail += $"; last failure: {lastFailure.Trace.Detail}";
+            trace.Detail += $"; last failure: {placement.Trace.Detail}";
         }
 
         return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);

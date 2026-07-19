@@ -178,6 +178,26 @@ public sealed class SimulationHistorySession
             request,
             () => choices.SubmitDropChoice(World, request, targetId, destination, actionPlans, beforePlan));
 
+    public ControlledActorCommandResult SubmitEnterActionChoice(
+        ActionChoiceService choices,
+        ActionChoiceRequest request,
+        EntityId targetId,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null) =>
+        SubmitActionChoiceResult(
+            request,
+            () => choices.SubmitEnterChoice(World, request, targetId, actionPlans, beforePlan));
+
+    public ControlledActorCommandResult SubmitExitActionChoice(
+        ActionChoiceService choices,
+        ActionChoiceRequest request,
+        Direction direction,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null) =>
+        SubmitActionChoiceResult(
+            request,
+            () => choices.SubmitExitChoice(World, request, direction, actionPlans, beforePlan));
+
     public PlanExecutionResult SubmitAuthoredActionStepChoice(
         ActionChoiceService choices,
         ActionChoiceRequest request,

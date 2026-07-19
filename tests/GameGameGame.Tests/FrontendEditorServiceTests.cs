@@ -1018,6 +1018,43 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void SetAndClearTemplateInventoryBoundaryPoliciesMutatesTemplatePolicies()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var setEnter = service.SetTemplateEnterPolicy("wall", EntityEnterPolicy.FarthestFromOccupied);
+            var setExit = service.SetTemplateExitPolicy("wall", EntityExitPolicy.EdgeAlignedWithExitDirection);
+
+            Assert.True(setEnter.IsSuccess, setEnter.StatusMessage);
+            Assert.True(setExit.IsSuccess, setExit.StatusMessage);
+            var wall = Assert.Single(setExit.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, wall.EnterPolicy);
+            Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, wall.EffectiveEnterPolicy);
+            Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, wall.ExitPolicy);
+            Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, wall.EffectiveExitPolicy);
+
+            var clearEnter = service.ClearTemplateEnterPolicy("wall");
+            var clearExit = service.ClearTemplateExitPolicy("wall");
+
+            Assert.True(clearEnter.IsSuccess, clearEnter.StatusMessage);
+            Assert.True(clearExit.IsSuccess, clearExit.StatusMessage);
+            wall = Assert.Single(clearExit.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Null(wall.EnterPolicy);
+            Assert.Equal(EntityEnterPolicy.FirstUnoccupiedRowMajor, wall.EffectiveEnterPolicy);
+            Assert.Null(wall.ExitPolicy);
+            Assert.Equal(EntityExitPolicy.AnyCell, wall.EffectiveExitPolicy);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void RemoveCarriedEntityRemovesAuthoredInventoryEntry()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());

@@ -82,6 +82,34 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentRoundTripsEnterAndExitPolicies()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+                enterPolicy: FarthestFromOccupied
+                exitPolicy: EdgeAlignedWithExitDirection
+            presentations:
+              room:
+                glyph: R
+                color: Cyan
+            actionPlans: {}
+            """);
+
+        var reloaded = EditableContentDocument.LoadYaml(document.SaveYaml()).ToRegistry();
+        var template = reloaded.EntityTemplates[new EntityTemplateId("room")];
+
+        Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, template.EnterPolicy);
+        Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, template.ExitPolicy);
+    }
+
+    [Fact]
     public void EditableContentDocumentCanonicalizesLegacyActionPlanVariableFieldsOnSave()
     {
         var document = EditableContentDocument.LoadYaml(

@@ -95,7 +95,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
                 InventoryWidth = update.InventoryWidth ?? preset.Template.InventoryWidth,
                 InventoryHeight = update.InventoryHeight ?? preset.Template.InventoryHeight,
                 Bulk = update.Bulk ?? preset.Template.Bulk,
-                Aperture = update.Aperture ?? preset.Template.Aperture
+                Aperture = update.Aperture ?? preset.Template.Aperture,
+                EnterPolicy = update.ClearEnterPolicy ? null : update.EnterPolicy ?? preset.Template.EnterPolicy,
+                ExitPolicy = update.ClearExitPolicy ? null : update.ExitPolicy ?? preset.Template.ExitPolicy
             };
             var presentation = preset.Presentation with
             {
@@ -345,6 +347,10 @@ public sealed record AgentEntityTemplateUpdate(
     int? InventoryHeight = null,
     int? Bulk = null,
     int? Aperture = null,
+    EntityEnterPolicy? EnterPolicy = null,
+    EntityExitPolicy? ExitPolicy = null,
+    bool ClearEnterPolicy = false,
+    bool ClearExitPolicy = false,
     char? Glyph = null,
     PresentationColor? Color = null);
 

@@ -129,6 +129,42 @@ internal sealed class GameplaySessionController
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
+    public GameplayRuntimeSubmission SubmitEnterActionChoice(EntityId targetId)
+    {
+        if (CurrentActionChoiceRequest is not { } request)
+        {
+            return new GameplayRuntimeSubmission(false, "No Core Action Choice request is active.", UsedCoreActionChoice: true);
+        }
+
+        var result = _history.SubmitEnterActionChoice(
+            _actionChoices,
+            request,
+            targetId,
+            _controlledCommandActionPlans,
+            RefreshTargets);
+
+        RefreshAfterRuntimeSubmission();
+        return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
+    }
+
+    public GameplayRuntimeSubmission SubmitExitActionChoice(Direction direction)
+    {
+        if (CurrentActionChoiceRequest is not { } request)
+        {
+            return new GameplayRuntimeSubmission(false, "No Core Action Choice request is active.", UsedCoreActionChoice: true);
+        }
+
+        var result = _history.SubmitExitActionChoice(
+            _actionChoices,
+            request,
+            direction,
+            _controlledCommandActionPlans,
+            RefreshTargets);
+
+        RefreshAfterRuntimeSubmission();
+        return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
+    }
+
     public GameplayRuntimeSubmission SubmitAuthoredActionStepChoice(int stepIndex, ActionPlanBehaviorStepDescriptor step)
     {
         if (CurrentActionChoiceRequest is not { } request)

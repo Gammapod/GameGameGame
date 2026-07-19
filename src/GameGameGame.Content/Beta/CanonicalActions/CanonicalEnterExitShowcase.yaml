@@ -1,0 +1,518 @@
+entityTemplates:
+  canonicalEnterOutcomeRoom:
+    name: Canonical Enter Outcome Room
+    inventoryWidth: 12
+    inventoryHeight: 8
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: enterRowMajorActor_enters_1_0
+      templateId: canonicalEnterRowMajorActor
+      coord:
+        x: 1
+        y: 1
+    - entityId: enterRowMajorBox
+      templateId: canonicalEnterRowMajorBox
+      coord:
+        x: 2
+        y: 1
+    - entityId: enterFarthestActor_enters_2_2
+      templateId: canonicalEnterFarthestActor
+      coord:
+        x: 5
+        y: 1
+    - entityId: enterFarthestBox
+      templateId: canonicalEnterFarthestBox
+      coord:
+        x: 6
+        y: 1
+    - entityId: enterFullActor_staysAt_1_5
+      templateId: canonicalEnterFullActor
+      coord:
+        x: 1
+        y: 5
+    - entityId: enterFullBox
+      templateId: canonicalEnterFullBox
+      coord:
+        x: 2
+        y: 5
+    - entityId: enterTooLargeActor_staysAt_5_5
+      templateId: canonicalEnterTooLargeActor
+      coord:
+        x: 5
+        y: 5
+    - entityId: enterNarrowBox
+      templateId: canonicalEnterNarrowBox
+      coord:
+        x: 6
+        y: 5
+  canonicalEnterInteractionRoom:
+    name: Canonical Enter Interaction Room
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: playerEnterBox
+      templateId: canonicalEnterPlayerChoiceBox
+      coord:
+        x: 5
+        y: 3
+  canonicalExitOutcomeRoom:
+    name: Canonical Exit Outcome Room
+    inventoryWidth: 10
+    inventoryHeight: 8
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: exitAnyCellBox
+      templateId: canonicalExitAnyCellBox
+      coord:
+        x: 2
+        y: 2
+    - entityId: exitEdgeAllowedBox
+      templateId: canonicalExitEdgeAllowedBox
+      coord:
+        x: 6
+        y: 2
+    - entityId: exitEdgeBlockedByPolicyBox
+      templateId: canonicalExitEdgeBlockedByPolicyBox
+      coord:
+        x: 2
+        y: 5
+    - entityId: exitDestinationBlockedBox
+      templateId: canonicalExitDestinationBlockedBox
+      coord:
+        x: 6
+        y: 5
+    - entityId: exitDestinationBlocker_keepsActorContained
+      templateId: canonicalEnterExitBlocker
+      coord:
+        x: 7
+        y: 5
+  canonicalExitInteractionRoom:
+    name: Canonical Exit Interaction Room
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: playerExitBox
+      templateId: canonicalExitPlayerChoiceBox
+      coord:
+        x: 4
+        y: 3
+    - entityId: canonicalExitInteractionRoomCanonicalExitPlayer
+      templateId: canonicalExitPlayer
+      coord:
+        x: 0
+        y: 5
+  canonicalEnterExitObserver:
+    name: Canonical Enter Exit Observer
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    actionStateDefaults:
+      facing: West
+  canonicalEnterPlayer:
+    name: Canonical Enter Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalEnterTargetPlan
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalEnterPlayerChoiceBox
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+  canonicalExitPlayer:
+    name: Canonical Exit Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalExitFacingPlan
+    actionStateDefaults:
+      facing: East
+  canonicalEnterRowMajorActor:
+    name: Enter Row Major Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalEnterTargetPlan
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalEnterRowMajorBox
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+  canonicalEnterFarthestActor:
+    name: Enter Farthest Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalEnterTargetPlan
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalEnterFarthestBox
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+  canonicalEnterFullActor:
+    name: Enter Full Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalEnterTargetPlan
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalEnterFullBox
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+  canonicalEnterTooLargeActor:
+    name: Enter Too Large Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 5
+    aperture: 10
+    defaultActionPlanId: canonicalEnterTargetPlan
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalEnterNarrowBox
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+  canonicalEnterRowMajorBox:
+    name: Enter Row Major Box
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    enterPolicy: FirstUnoccupiedRowMajor
+    carriedEntities:
+    - entityId: rowMajorBoxOccupant
+      templateId: canonicalEnterExitBlocker
+      coord:
+        x: 0
+        y: 0
+  canonicalEnterFarthestBox:
+    name: Enter Farthest Box
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    enterPolicy: FarthestFromOccupied
+    carriedEntities:
+    - entityId: farthestBoxOccupant
+      templateId: canonicalEnterExitBlocker
+      coord:
+        x: 0
+        y: 0
+  canonicalEnterFullBox:
+    name: Enter Full Box
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    enterPolicy: FirstUnoccupiedRowMajor
+    carriedEntities:
+    - entityId: fullBoxOccupant
+      templateId: canonicalEnterExitBlocker
+      coord:
+        x: 0
+        y: 0
+  canonicalEnterNarrowBox:
+    name: Enter Narrow Box
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 2
+    enterPolicy: FarthestFromOccupied
+  canonicalEnterPlayerChoiceBox:
+    name: Enter Player Choice Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    enterPolicy: FarthestFromOccupied
+  canonicalExitAnyCellBox:
+    name: Exit Any Cell Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: exitAnyCellActor_exitsTo_3_2
+      templateId: canonicalExitAnyCellActor
+      coord:
+        x: 0
+        y: 0
+  canonicalExitEdgeAllowedBox:
+    name: Exit Edge Allowed Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: EdgeAlignedWithExitDirection
+    carriedEntities:
+    - entityId: exitEdgeAllowedActor_exitsTo_7_2
+      templateId: canonicalExitEdgeActor
+      coord:
+        x: 1
+        y: 0
+  canonicalExitEdgeBlockedByPolicyBox:
+    name: Exit Edge Blocked By Policy Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: EdgeAlignedWithExitDirection
+    carriedEntities:
+    - entityId: exitEdgePolicyBlockedActor_staysInside
+      templateId: canonicalExitEdgeActor
+      coord:
+        x: 0
+        y: 0
+  canonicalExitDestinationBlockedBox:
+    name: Exit Destination Blocked Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: exitDestinationBlockedActor_staysInside
+      templateId: canonicalExitAnyCellActor
+      coord:
+        x: 0
+        y: 0
+  canonicalExitPlayerChoiceBox:
+    name: Exit Player Choice Box
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: EdgeAlignedWithExitDirection
+    carriedEntities:
+    - entityId: canonicalExitPlayer
+      templateId: canonicalExitPlayer
+      coord:
+        x: 1
+        y: 0
+  canonicalExitAnyCellActor:
+    name: Exit Any Cell Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalExitFacingPlan
+    actionStateDefaults:
+      facing: East
+  canonicalExitEdgeActor:
+    name: Exit Edge Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalExitFacingPlan
+    actionStateDefaults:
+      facing: East
+  canonicalEnterExitBlocker:
+    name: Canonical Enter Exit Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+presentations:
+  canonicalEnterOutcomeRoom:
+    glyph: '#'
+    color: Gray
+  canonicalEnterInteractionRoom:
+    glyph: '#'
+    color: Gray
+  canonicalExitOutcomeRoom:
+    glyph: '#'
+    color: Gray
+  canonicalExitInteractionRoom:
+    glyph: '#'
+    color: Gray
+  canonicalEnterExitObserver:
+    glyph: '@'
+    color: Yellow
+  canonicalEnterPlayer:
+    glyph: '@'
+    color: Yellow
+  canonicalExitPlayer:
+    glyph: '@'
+    color: Yellow
+  canonicalEnterRowMajorActor:
+    glyph: r
+    color: Green
+  canonicalEnterFarthestActor:
+    glyph: f
+    color: Green
+  canonicalEnterFullActor:
+    glyph: F
+    color: Earth
+  canonicalEnterTooLargeActor:
+    glyph: L
+    color: Earth
+  canonicalEnterRowMajorBox:
+    glyph: R
+    color: Cyan
+  canonicalEnterFarthestBox:
+    glyph: C
+    color: Cyan
+  canonicalEnterFullBox:
+    glyph: B
+    color: Gray
+  canonicalEnterNarrowBox:
+    glyph: N
+    color: Gray
+  canonicalEnterPlayerChoiceBox:
+    glyph: C
+    color: Cyan
+  canonicalExitAnyCellBox:
+    glyph: A
+    color: Cyan
+  canonicalExitEdgeAllowedBox:
+    glyph: E
+    color: Green
+  canonicalExitEdgeBlockedByPolicyBox:
+    glyph: P
+    color: Earth
+  canonicalExitDestinationBlockedBox:
+    glyph: D
+    color: Earth
+  canonicalExitPlayerChoiceBox:
+    glyph: C
+    color: Cyan
+  canonicalExitAnyCellActor:
+    glyph: a
+    color: Green
+  canonicalExitEdgeActor:
+    glyph: e
+    color: Green
+  canonicalEnterExitBlocker:
+    glyph: x
+    color: Gray
+actionPlans:
+  canonicalEnterTargetPlan:
+    id: canonicalEnterTargetPlan
+    behavior:
+      steps:
+      - kind: EnterTarget
+        targetLabel: target
+  canonicalExitFacingPlan:
+    id: canonicalExitFacingPlan
+    behavior:
+      steps:
+      - kind: ExitFacing
+scenarios:
+  beta-canonical-enter-outcomes:
+    name: Beta Canonical Enter Outcomes
+    scenarioRootEntityTemplateId: canonicalEnterOutcomeRoom
+    playerEntityTemplateId: canonicalEnterExitObserver
+    playerEntityId: canonicalEnterOutcomeObserver
+    playerStart:
+      x: 11
+      y: 7
+    playerControls:
+      player-1:
+      - canonicalEnterOutcomeObserver
+  beta-canonical-enter-player-interaction:
+    name: Beta Canonical Enter Player Interaction
+    scenarioRootEntityTemplateId: canonicalEnterInteractionRoom
+    playerEntityTemplateId: canonicalEnterPlayer
+    playerEntityId: canonicalEnterPlayer
+    playerStart:
+      x: 4
+      y: 3
+    playerControls:
+      player-1:
+      - canonicalEnterPlayer
+  beta-canonical-exit-outcomes:
+    name: Beta Canonical Exit Outcomes
+    scenarioRootEntityTemplateId: canonicalExitOutcomeRoom
+    playerEntityTemplateId: canonicalEnterExitObserver
+    playerEntityId: canonicalExitOutcomeObserver
+    playerStart:
+      x: 9
+      y: 7
+    playerControls:
+      player-1:
+      - canonicalExitOutcomeObserver
+  beta-canonical-exit-player-interaction:
+    name: Beta Canonical Exit Player Interaction
+    scenarioRootEntityTemplateId: canonicalExitInteractionRoom
+    playerEntityTemplateId: canonicalEnterExitObserver
+    playerEntityId: canonicalExitInteractionObserver
+    playerStart:
+      x: 0
+      y: 0
+    playerControls:
+      player-1:
+      - canonicalExitPlayer

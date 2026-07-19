@@ -179,6 +179,99 @@ public sealed class InventoryTransferActionStepTests
     }
 
     [Fact]
+    public void FarthestFromOccupiedEnterPolicyChoosesFarthestEmptyCellWithRowMajorTieBreak()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with
+        {
+            InventoryWidth = 3,
+            InventoryHeight = 3,
+            Aperture = 20,
+            EnterPolicy = EntityEnterPolicy.FarthestFromOccupied
+        };
+        var roomPlaneId = new PlaneId("roomInventory");
+        AddPlane(world, roomPlaneId, 3, 3);
+        world.RegisterInventoryPlane(TestWorld.SlimeId, roomPlaneId);
+        AddEntity(world, "blocker-a", "Blocker A", new PlaneCoord(roomPlaneId, new GridCoord(0, 0)));
+        AddEntity(world, "blocker-b", "Blocker B", new PlaneCoord(roomPlaneId, new GridCoord(2, 2)));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("enter-farthest", ActionPlanBehaviorStepKind.EnterTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new PlaneCoord(roomPlaneId, new GridCoord(2, 0)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.True(TraceDetailContains(result.Trace, "at (2,0)"));
+    }
+
+    [Fact]
+    public void EdgeAlignedExitPolicyRejectsNonMatchingInventoryCoordinate()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with
+        {
+            InventoryWidth = 3,
+            InventoryHeight = 3,
+            Aperture = 20,
+            ExitPolicy = EntityExitPolicy.EdgeAlignedWithExitDirection
+        };
+        var roomPlaneId = new PlaneId("roomInventory");
+        AddPlane(world, roomPlaneId, 3, 3);
+        world.RegisterInventoryPlane(TestWorld.SlimeId, roomPlaneId);
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(roomPlaneId, new GridCoord(1, 1))));
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        var plan = CreateBehaviorPlan("exit-edge", ActionPlanBehaviorStepKind.ExitFacing);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(new PlaneCoord(roomPlaneId, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.True(TraceHasReason(result.Trace, FailureReason.InventoryPolicyBlocked));
+    }
+
+    [Fact]
+    public void EdgeAlignedExitPolicyAllowsMatchingCardinalEdgeExit()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with
+        {
+            InventoryWidth = 3,
+            InventoryHeight = 3,
+            Aperture = 20,
+            ExitPolicy = EntityExitPolicy.EdgeAlignedWithExitDirection
+        };
+        var roomPlaneId = new PlaneId("roomInventory");
+        AddPlane(world, roomPlaneId, 3, 3);
+        world.RegisterInventoryPlane(TestWorld.SlimeId, roomPlaneId);
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(roomPlaneId, new GridCoord(1, 2))));
+        world.SetActionFacing(TestWorld.PlayerId, Direction.South);
+        var plan = CreateBehaviorPlan("exit-edge", ActionPlanBehaviorStepKind.ExitFacing);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void EnterRejectsTargetContainedWithinActor()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = CreateBehaviorPlan("enter-descendant", ActionPlanBehaviorStepKind.EnterTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.InventoryPolicyBlocked));
+    }
+
+    [Fact]
     public void GiveTargetFailureFallsThroughWithoutConsumingStepTurn()
     {
         var world = TestWorld.CreateWorld();

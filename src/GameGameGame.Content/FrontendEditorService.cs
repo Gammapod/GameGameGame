@@ -64,6 +64,22 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
             .ClearTemplateInitialFacing(templateId);
 
+    public FrontendEditorMutationResult SetTemplateEnterPolicy(string templateId, EntityEnterPolicy enterPolicy)
+        => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
+            .SetTemplateEnterPolicy(templateId, enterPolicy);
+
+    public FrontendEditorMutationResult ClearTemplateEnterPolicy(string templateId)
+        => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
+            .ClearTemplateEnterPolicy(templateId);
+
+    public FrontendEditorMutationResult SetTemplateExitPolicy(string templateId, EntityExitPolicy exitPolicy)
+        => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
+            .SetTemplateExitPolicy(templateId, exitPolicy);
+
+    public FrontendEditorMutationResult ClearTemplateExitPolicy(string templateId)
+        => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
+            .ClearTemplateExitPolicy(templateId);
+
     public FrontendEditorMutationResult Save()
     {
         if (Session.FilePath is null)
@@ -252,6 +268,14 @@ public sealed record FrontendEditorEntityTemplateSummary(
     IReadOnlyList<FrontendEditorCarriedEntitySummary> CarriedEntities,
     IReadOnlyList<FrontendEditorDiagnostic> Diagnostics)
 {
+    public EntityEnterPolicy? EnterPolicy { get; init; }
+
+    public EntityEnterPolicy EffectiveEnterPolicy { get; init; } = EntityEnterPolicy.FirstUnoccupiedRowMajor;
+
+    public EntityExitPolicy? ExitPolicy { get; init; }
+
+    public EntityExitPolicy EffectiveExitPolicy { get; init; } = EntityExitPolicy.AnyCell;
+
     public IReadOnlyList<FrontendEditorTargetingRequirementSummary> TargetingRequirements { get; init; } = [];
 
     public IReadOnlyList<FrontendEditorTargetingRuleSummary> OrphanedTargetingRules { get; init; } = [];

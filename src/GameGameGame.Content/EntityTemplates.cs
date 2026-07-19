@@ -22,7 +22,14 @@ public sealed record EntityTemplate(
     ActionPlanTemplateId? DefaultActionPlanId = null,
     IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null,
     ActorActionStateDefaults? ActionStateDefaults = null,
-    IReadOnlyList<EntityTargetingRule>? TargetingRules = null);
+    IReadOnlyList<EntityTargetingRule>? TargetingRules = null,
+    EntityEnterPolicy? EnterPolicy = null,
+    EntityExitPolicy? ExitPolicy = null)
+{
+    public EntityEnterPolicy EffectiveEnterPolicy => EnterPolicy ?? EntityEnterPolicy.FirstUnoccupiedRowMajor;
+
+    public EntityExitPolicy EffectiveExitPolicy => ExitPolicy ?? EntityExitPolicy.AnyCell;
+}
 
 public sealed record EntityTargetingRule(
     int Slot,

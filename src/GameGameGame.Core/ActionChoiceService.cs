@@ -5,6 +5,8 @@ public enum ActionChoiceKind
     Move,
     Pickup,
     Drop,
+    Enter,
+    Exit,
     AuthoredStep
 }
 
@@ -69,6 +71,12 @@ public sealed class ActionChoiceService(MovementService movement)
                 case ActionPlanBehaviorStepKind.TransformInventoryToAdjacent:
                     choices.Add(new ActionChoice(ActionChoiceKind.Drop, index, [], affordances.DropSources, QueryAdjacentDropDestinations(world, actorId, affordances.DropSources)));
                     break;
+                case ActionPlanBehaviorStepKind.EnterTarget:
+                    choices.Add(new ActionChoice(ActionChoiceKind.Enter, index, [], affordances.EnterTargets, new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
+                    break;
+                case ActionPlanBehaviorStepKind.ExitFacing:
+                    choices.Add(new ActionChoice(ActionChoiceKind.Exit, index, affordances.ExitDirections.Select(ToDirectionOption).ToList(), [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
+                    break;
                 default:
                     choices.Add(new ActionChoice(ActionChoiceKind.AuthoredStep, index, [], [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
                     break;
@@ -128,6 +136,38 @@ public sealed class ActionChoiceService(MovementService movement)
         return commands.Execute(world, request.ActorId, ControlledActorCommand.Drop(targetId, destination));
     }
 
+    public ControlledActorCommandResult SubmitEnterChoice(
+        WorldState world,
+        ActionChoiceRequest request,
+        EntityId targetId,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null)
+    {
+        if (!request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Enter))
+        {
+            throw new InvalidOperationException("Action choice request does not contain an Enter choice.");
+        }
+
+        var commands = new ControlledActorCommandService(movement, actionPlans, beforePlan);
+        return commands.Execute(world, request.ActorId, ControlledActorCommand.Enter(targetId));
+    }
+
+    public ControlledActorCommandResult SubmitExitChoice(
+        WorldState world,
+        ActionChoiceRequest request,
+        Direction direction,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null)
+    {
+        if (!request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Exit))
+        {
+            throw new InvalidOperationException("Action choice request does not contain an Exit choice.");
+        }
+
+        var commands = new ControlledActorCommandService(movement, actionPlans, beforePlan);
+        return commands.Execute(world, request.ActorId, ControlledActorCommand.Exit(direction));
+    }
+
     public PlanExecutionResult SubmitAuthoredStepChoice(
         WorldState world,
         ActionChoiceRequest request,
@@ -173,6 +213,15 @@ public sealed class ActionChoiceService(MovementService movement)
                 failure?.Detail,
                 blockingEntity);
         }).ToList();
+
+    private static ActionChoiceDirectionOption ToDirectionOption(ControlledActorDirectionAffordance affordance) =>
+        new(
+            affordance.Direction,
+            affordance.Destination,
+            affordance.CanExecute,
+            affordance.FailureReason,
+            affordance.FailureDetail,
+            affordance.BlockingEntityId);
 
     private IReadOnlyDictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>> QueryAdjacentDropDestinations(
         WorldState world,

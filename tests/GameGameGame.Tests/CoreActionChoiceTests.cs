@@ -107,6 +107,42 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void ActionChoiceRequestExposesEnterTargetsFromAuthoredEnterStep()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 20 };
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget));
+        var service = new ActionChoiceService(new MovementService());
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        Assert.Equal(ActionChoiceKind.Enter, choice.Kind);
+        var target = Assert.Single(choice.EntityOptions, option => option.TargetId == TestWorld.SlimeId);
+        Assert.True(target.CanExecute);
+    }
+
+    [Fact]
+    public void ActionChoiceRequestExposesExitDirectionsFromAuthoredExitStep()
+    {
+        var movement = new MovementService();
+        var world = TestWorld.CreateWorld();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.ExitFacing));
+        var service = new ActionChoiceService(movement);
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        Assert.Equal(ActionChoiceKind.Exit, choice.Kind);
+        var south = Assert.Single(choice.DirectionOptions, option => option.Direction == Direction.South);
+        Assert.True(south.CanExecute);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), south.Destination);
+    }
+
+    [Fact]
     public void ActionChoiceRequestExposesNonParameterizedAuthoredStepsForCoreSubmission()
     {
         var world = TestWorld.CreateWorld();
@@ -204,6 +240,45 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(ControlledActorCommandKind.Drop, result.Kind);
         Assert.Equal(TestWorld.RockId, result.TargetId);
         Assert.Equal(destination, result.Destination);
+    }
+
+    [Fact]
+    public void SubmitEnterChoiceUsesSelectedTarget()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 20 };
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget));
+        var service = new ActionChoiceService(new MovementService());
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = service.SubmitEnterChoice(world, request, TestWorld.SlimeId, new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.AdvancedTurn);
+        Assert.Equal(ControlledActorCommandKind.Enter, result.Kind);
+        Assert.Equal(TestWorld.SlimeId, result.TargetId);
+        Assert.Equal(TestWorld.SlimeInventoryPlaneId, world.GetEntityLocation(TestWorld.PlayerId).PlaneId);
+    }
+
+    [Fact]
+    public void SubmitExitChoiceUsesSelectedDirection()
+    {
+        var movement = new MovementService();
+        var world = TestWorld.CreateWorld();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.ExitFacing));
+        var service = new ActionChoiceService(movement);
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = service.SubmitExitChoice(world, request, Direction.South, new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.AdvancedTurn);
+        Assert.Equal(ControlledActorCommandKind.Exit, result.Kind);
+        Assert.Equal(Direction.South, result.Direction);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
     }
 
     [Fact]

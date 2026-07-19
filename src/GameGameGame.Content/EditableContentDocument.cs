@@ -28,6 +28,10 @@ public sealed partial class EditableContentDocument
 
         public int? Aperture { get; set; }
 
+        public EntityEnterPolicy? EnterPolicy { get; set; }
+
+        public EntityExitPolicy? ExitPolicy { get; set; }
+
         public string? DefaultActionPlanId { get; set; }
 
         public Dictionary<string, PlanValueDescriptorDto>? DefaultPlanVariables { get; set; }
@@ -45,6 +49,8 @@ public sealed partial class EditableContentDocument
             InventoryHeight = template.InventoryHeight,
             Bulk = template.Bulk,
             Aperture = template.Aperture,
+            EnterPolicy = template.EnterPolicy,
+            ExitPolicy = template.ExitPolicy,
             DefaultActionPlanId = template.DefaultActionPlanId?.Value,
             DefaultPlanVariables = template.DefaultPlanVariables?.ToDictionary(entry => entry.Key, entry => PlanValueDescriptorDto.From(entry.Value)),
             ActionStateDefaults = template.ActionStateDefaults is null ? null : ActorActionStateDefaultsDto.From(template.ActionStateDefaults),

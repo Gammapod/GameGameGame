@@ -95,6 +95,60 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsEntityEnterAndExitPolicies()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+                enterPolicy: FarthestFromOccupied
+                exitPolicy: EdgeAlignedWithExitDirection
+            presentations:
+              room:
+                glyph: R
+                color: Cyan
+            actionPlans: {}
+            """);
+
+        var template = registry.GetEntityTemplate(new EntityTemplateId("room"));
+
+        Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, template.EnterPolicy);
+        Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, template.ExitPolicy);
+    }
+
+    [Fact]
+    public void YamlContentLoaderDefaultsMissingEntityPoliciesToNullWithEffectiveSimplePolicies()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+            presentations:
+              room:
+                glyph: R
+                color: Cyan
+            actionPlans: {}
+            """);
+
+        var template = registry.GetEntityTemplate(new EntityTemplateId("room"));
+
+        Assert.Null(template.EnterPolicy);
+        Assert.Null(template.ExitPolicy);
+        Assert.Equal(EntityEnterPolicy.FirstUnoccupiedRowMajor, template.EffectiveEnterPolicy);
+        Assert.Equal(EntityExitPolicy.AnyCell, template.EffectiveExitPolicy);
+    }
+
+    [Fact]
     public void YamlContentLoaderMaterializesBulkAndApertureMetadata()
     {
         var registry = YamlContentLoader.LoadRegistry(

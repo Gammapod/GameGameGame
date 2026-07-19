@@ -187,7 +187,7 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        if (!world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        if (!world.Planes.TryGetValue(inventoryPlaneId, out _))
         {
             trace.Status = TraceStatus.Failure;
             trace.Reason = FailureReason.InvalidInventoryDestination;
@@ -195,34 +195,23 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        ActionResolution? lastFailure = null;
         var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement);
-        for (var y = 0; y < inventoryPlane.Height; y++)
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, carriedId, destinationOwnerId, constrainedRelocation);
+        trace.Add(placement.Trace);
+        if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
         {
-            for (var x = 0; x < inventoryPlane.Width; x++)
-            {
-                var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
-                var evaluation = constrainedRelocation.Evaluate(world, carriedId, MovementDestination.Plane(destination));
-                trace.Add(evaluation.Trace);
-
-                if (evaluation is { CanRelocate: true, Destination: { } resolvedDestination })
-                {
-                    _movement.TryPlace(world, carriedId, resolvedDestination);
-                    trace.Status = TraceStatus.Success;
-                    trace.Detail = $"{verb} {carriedId} ({carried.Name}) from {carriedLocation.Coord} to {resolvedDestination.Coord}";
-                    return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
-                }
-
-                lastFailure = new ActionResolution(false, ConsumesTurn: false, ContinuePlan: false, evaluation.Trace);
-            }
+            _movement.TryPlace(world, carriedId, resolvedDestination);
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"{verb} {carriedId} ({carried.Name}) from {carriedLocation.Coord} to {resolvedDestination.Coord}";
+            return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
         }
 
         trace.Status = TraceStatus.Failure;
-        trace.Reason = lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement;
+        trace.Reason = placement.Trace.Reason == FailureReason.None ? FailureReason.InvalidPlacement : placement.Trace.Reason;
         trace.Detail = $"no inventory coordinate in {inventoryPlaneId} can accept {carriedId}";
-        if (!string.IsNullOrWhiteSpace(lastFailure?.Trace.Detail))
+        if (!string.IsNullOrWhiteSpace(placement.Trace.Detail))
         {
-            trace.Detail += $"; last failure: {lastFailure.Trace.Detail}";
+            trace.Detail += $"; last failure: {placement.Trace.Detail}";
         }
 
         return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);

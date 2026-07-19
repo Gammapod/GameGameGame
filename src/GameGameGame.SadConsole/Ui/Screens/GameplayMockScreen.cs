@@ -54,6 +54,8 @@ internal sealed class GameplayMockScreen
     public bool UsesCoreActionChoiceMovement => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move) == true;
     public bool UsesCoreActionChoicePickup => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Pickup) == true;
     public bool UsesCoreActionChoiceDrop => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Drop) == true;
+    public bool UsesCoreActionChoiceEnter => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Enter) == true;
+    public bool UsesCoreActionChoiceExit => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Exit) == true;
     private WorldState World => _session.World;
     private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _sessionController.ProjectionActionPlans;
 
@@ -196,8 +198,9 @@ internal sealed class GameplayMockScreen
         {
             ActionChoicePromptMode.Closed => OpenActionStepMenu(),
             ActionChoicePromptMode.ActionList => ConfirmSelectedActionStep(),
-            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource => ConfirmSelectedTarget(),
+            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource or ActionChoicePromptMode.EnterTarget => ConfirmSelectedTarget(),
             ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => ConfirmSelectedDestination(),
+            ActionChoicePromptMode.ExitFacing => ConfirmSelectedDirection(),
             _ => OpenActionStepMenu()
         };
     }
@@ -248,12 +251,38 @@ internal sealed class GameplayMockScreen
     private string ConfirmSelectedTarget()
     {
         var result = _prompt.ConfirmSelectedTarget(FormatEntityName, FormatDestination);
+        if (result.Kind == ActionChoicePromptTargetResultKind.SubmitEnter)
+        {
+            var targetId = result.TargetId!.Value;
+            var submission = _sessionController.SubmitEnterActionChoice(targetId);
+            _prompt.Reset();
+            return submission.Succeeded
+                ? $"Enter {FormatEntityName(targetId)} via Core Action Choice; frame {FrameIndex}, world turn {World.TurnNumber}."
+                : $"Enter {FormatEntityName(targetId)} failed via Core Action Choice: {submission.FailureText ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
+        }
+
         if (result.InspectPlayer)
         {
             _inspectedEntityId = _session.PlayerEntityId;
         }
 
         return result.Message;
+    }
+
+    private string ConfirmSelectedDirection()
+    {
+        var submit = _prompt.ConfirmSelectedDirection();
+        if (submit.Kind == ActionChoicePromptDirectionResultKind.Message)
+        {
+            return submit.Message;
+        }
+
+        var direction = submit.Direction!.Value;
+        var result = _sessionController.SubmitExitActionChoice(direction);
+        _prompt.Reset();
+        return result.Succeeded
+            ? $"Exit {direction} via Core Action Choice; frame {FrameIndex}, world turn {World.TurnNumber}."
+            : $"Exit {direction} failed via Core Action Choice: {result.FailureText ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
     }
 
     private string ConfirmSelectedDestination()
@@ -330,13 +359,15 @@ internal sealed class GameplayMockScreen
     {
         ActionPlanBehaviorStepKind.PickupTarget or ActionPlanBehaviorStepKind.TransformAdjacentToInventory => "choose target, then inventory location",
         ActionPlanBehaviorStepKind.DropFacing or ActionPlanBehaviorStepKind.TransformInventoryToAdjacent => "choose carried item, then drop destination",
+        ActionPlanBehaviorStepKind.EnterTarget => "choose enter target",
+        ActionPlanBehaviorStepKind.ExitFacing => "choose exit direction",
         ActionPlanBehaviorStepKind.Move => "movement also has direct controls",
         _ => "select authored action"
     };
 
     private IReadOnlySet<GridCoord> CurrentPlaceValidSelectionCoords() => _prompt.Mode switch
     {
-        ActionChoicePromptMode.PickupTarget => _prompt.ValidSelectedTargets()
+        ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.EnterTarget => _prompt.ValidSelectedTargets()
             .Where(target => target.Source?.PlaneId == _session.ActivePlaneId)
             .Select(target => target.Source!.Value.Coord)
             .ToHashSet(),
@@ -349,7 +380,7 @@ internal sealed class GameplayMockScreen
 
     private GridCoord? CurrentPlaceSelectedCoord()
     {
-        if (_prompt.Mode == ActionChoicePromptMode.PickupTarget)
+        if (_prompt.Mode is ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.EnterTarget)
         {
             var targets = _prompt.ValidSelectedTargets();
             return targets.Count == 0 ? null : targets[Math.Clamp(_prompt.SelectedTargetIndex, 0, targets.Count - 1)].Source?.Coord;
@@ -417,8 +448,9 @@ internal sealed class GameplayMockScreen
         {
             ActionChoicePromptMode.Closed => ["Menu: Enter opens authored action steps"],
             ActionChoicePromptMode.ActionList => ["Menu: action selector shown in component 0.2.1"],
-            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource => BuildTargetListRows(),
+            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource or ActionChoicePromptMode.EnterTarget => BuildTargetListRows(),
             ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => BuildDestinationListRows(),
+            ActionChoicePromptMode.ExitFacing => BuildDirectionListRows(),
             _ => []
         };
     }
@@ -441,6 +473,17 @@ internal sealed class GameplayMockScreen
         return [$"Menu: choose {choice.Kind} {label}", .. targets.Select((target, index) => $"{(index == _prompt.SelectedTargetIndex ? ">" : " ")} {FormatEntityName(target.TargetId)} from {FormatNullableSource(target.Source)}")];
     }
 
+    private IReadOnlyList<string> BuildDirectionListRows()
+    {
+        if (_prompt.SelectedEntityActionChoice is not { } choice)
+        {
+            return ["Menu: direction list unavailable"];
+        }
+
+        var directions = choice.DirectionOptions.Where(option => option.CanExecute).ToList();
+        return [$"Menu: choose {choice.Kind} direction", .. directions.Select((direction, index) => $"{(index == _prompt.SelectedDirectionIndex ? ">" : " ")} {direction.Direction} to {FormatNullableSource(direction.Destination)}")];
+    }
+
     private IReadOnlyList<string> BuildDestinationListRows()
     {
         if (_prompt.SelectedEntityActionChoice is not { } choice || _prompt.SelectedEntityActionTargetId is not { } targetId)
@@ -460,8 +503,20 @@ internal sealed class GameplayMockScreen
             ActionChoiceKind.Move => $"Move {choice.DirectionOptions.Count(option => option.CanExecute)}/{choice.DirectionOptions.Count} executable directions",
             ActionChoiceKind.Pickup => DescribeEntityDestinationChoice("Pickup", choice),
             ActionChoiceKind.Drop => DescribeEntityDestinationChoice("Drop", choice),
+            ActionChoiceKind.Enter => DescribeEntityChoice("Enter", choice),
+            ActionChoiceKind.Exit => $"Exit {choice.DirectionOptions.Count(option => option.CanExecute)}/{choice.DirectionOptions.Count} executable directions",
             _ => choice.Kind.ToString()
         };
+    }
+
+    private string DescribeEntityChoice(string label, ActionChoice choice)
+    {
+        var executableTargets = choice.EntityOptions.Count(option => option.CanExecute);
+        var firstExecutableTarget = choice.EntityOptions.FirstOrDefault(option => option.CanExecute)?.TargetId;
+        var targetLabel = firstExecutableTarget is { } targetId
+            ? $"; first {FormatEntityName(targetId)}"
+            : string.Empty;
+        return $"{label} {executableTargets}/{choice.EntityOptions.Count} targets{targetLabel}";
     }
 
     private string DescribeEntityDestinationChoice(string label, ActionChoice choice)

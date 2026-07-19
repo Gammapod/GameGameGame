@@ -217,7 +217,7 @@ Phase outcome:
 
 - The first promoted action became canonical `Move`, not `MoveFacing`, so the release-facing movement contract could use explicit 8-way absolute/relative `directionMode` while preserving `MoveFacing` compatibility.
 - The first target/source interaction seam was implemented for `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing`, proving action-step-first menus, target/source lists, destination lists, and shared history submission.
-- The next likely target-facing follow-up is `EnterTarget`/`ExitFacing`, because `enterable` adjectives, containment transitions, and aperture/bulk success criteria naturally exercise the same vertical-slice pattern without immediately adding ranged transform variants.
+- The next likely target-facing follow-up is `EnterTarget`/`ExitFacing`, because `enterable` adjectives, containment transitions, and aperture/bulk success criteria naturally exercise the same vertical-slice pattern without immediately adding ranged transform variants. The active phased sprint plan for this work is `docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md`, which records shared `EnterPolicy`/`ExitPolicy` support for every constrained inventory-boundary transformation before canonical Enter/Exit promotion.
 
 Exit criteria:
 

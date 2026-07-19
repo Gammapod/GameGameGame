@@ -252,6 +252,11 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
             return ActionTrace.Fail(trace, FailureReason.TargetIsActor, "actor cannot enter itself");
         }
 
+        if (InventoryBoundaryPolicyService.WouldCreateContainmentCycle(world, actorId, TargetId))
+        {
+            return ActionTrace.Fail(trace, FailureReason.InventoryPolicyBlocked, $"actor {actorId} cannot enter contained descendant {TargetId}");
+        }
+
         var adjacency = movement.EvaluateAdjacency(world, actorId, TargetId);
         if (!adjacency.AreAdjacent)
         {
@@ -273,38 +278,27 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
             return ActionTrace.Fail(trace, FailureReason.TargetInventoryUnusable, $"target {TargetId} ({target.Name}) inventory dimensions are {target.InventoryWidth}x{target.InventoryHeight}");
         }
 
-        if (!world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
+        if (!world.Planes.TryGetValue(inventoryPlaneId, out _))
         {
             return ActionTrace.Fail(trace, FailureReason.InvalidInventoryDestination, $"inventory plane {inventoryPlaneId} does not exist");
         }
 
         var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
-        ActionResolution? lastFailure = null;
-        for (var y = 0; y < inventoryPlane.Height; y++)
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, actorId, TargetId, constrainedRelocation);
+        trace.Add(placement.Trace);
+        if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
         {
-            for (var x = 0; x < inventoryPlane.Width; x++)
-            {
-                var destination = new PlaneCoord(inventoryPlaneId, new GridCoord(x, y));
-                var evaluation = constrainedRelocation.Evaluate(world, actorId, MovementDestination.Plane(destination));
-                trace.Add(evaluation.Trace);
-
-                if (evaluation.CanRelocate)
-                {
-                    trace.Status = TraceStatus.Success;
-                    trace.Detail = $"entered {actorId} ({actor.Name}) into {TargetId} ({target.Name}) at {destination.Coord}";
-                    return new ActionEvaluation(true, trace);
-                }
-
-                lastFailure = new ActionResolution(false, false, true, evaluation.Trace);
-            }
+            trace.Status = TraceStatus.Success;
+            trace.Detail = $"entered {actorId} ({actor.Name}) into {TargetId} ({target.Name}) at {resolvedDestination.Coord}";
+            return new ActionEvaluation(true, trace);
         }
 
         trace.Status = TraceStatus.Failure;
-        trace.Reason = lastFailure?.Trace.Reason ?? FailureReason.InvalidPlacement;
+        trace.Reason = placement.Trace.Reason == FailureReason.None ? FailureReason.InvalidPlacement : placement.Trace.Reason;
         trace.Detail = $"no inventory coordinate can accept entering {actorId}";
-        if (!string.IsNullOrWhiteSpace(lastFailure?.Trace.Detail))
+        if (!string.IsNullOrWhiteSpace(placement.Trace.Detail))
         {
-            trace.Detail += $"; last failure: {lastFailure.Trace.Detail}";
+            trace.Detail += $"; last failure: {placement.Trace.Detail}";
         }
 
         return new ActionEvaluation(false, trace);
@@ -319,15 +313,10 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
         }
 
         var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
-        for (var y = 0; y < inventoryPlane.Height; y++)
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, actorId, TargetId, constrainedRelocation);
+        if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
         {
-            for (var x = 0; x < inventoryPlane.Width; x++)
-            {
-                if (constrainedRelocation.TryRelocate(world, actorId, MovementDestination.Plane(new PlaneCoord(inventoryPlaneId, new GridCoord(x, y)))))
-                {
-                    return;
-                }
-            }
+            movement.TryPlace(world, actorId, resolvedDestination);
         }
     }
 }

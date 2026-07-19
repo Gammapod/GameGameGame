@@ -56,6 +56,18 @@ public enum EntityControlSource
     PlayerChoice
 }
 
+public enum EntityEnterPolicy
+{
+    FirstUnoccupiedRowMajor,
+    FarthestFromOccupied
+}
+
+public enum EntityExitPolicy
+{
+    AnyCell,
+    EdgeAlignedWithExitDirection
+}
+
 public static class DirectionMath
 {
     public static Direction[] AllDirections { get; } =
@@ -101,9 +113,15 @@ public sealed record Entity(
     int InventoryWidth,
     int InventoryHeight,
     int Bulk,
-    int Aperture)
+    int Aperture,
+    EntityEnterPolicy? EnterPolicy = null,
+    EntityExitPolicy? ExitPolicy = null)
 {
     public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
+
+    public EntityEnterPolicy EffectiveEnterPolicy => EnterPolicy ?? EntityEnterPolicy.FirstUnoccupiedRowMajor;
+
+    public EntityExitPolicy EffectiveExitPolicy => ExitPolicy ?? EntityExitPolicy.AnyCell;
 }
 
 public sealed class EntityActionState

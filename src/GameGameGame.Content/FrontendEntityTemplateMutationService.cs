@@ -227,6 +227,58 @@ internal sealed class FrontendEntityTemplateMutationService(
         }
     }
 
+    public FrontendEditorMutationResult SetTemplateEnterPolicy(string templateId, EntityEnterPolicy enterPolicy) =>
+        UpdateTemplatePolicy(
+            templateId,
+            template => template with { EnterPolicy = enterPolicy },
+            $"Set enter policy for template {templateId} to {enterPolicy}. Preview stale until P rematerializes.",
+            $"Could not set enter policy for template {templateId}");
+
+    public FrontendEditorMutationResult ClearTemplateEnterPolicy(string templateId) =>
+        UpdateTemplatePolicy(
+            templateId,
+            template => template with { EnterPolicy = null },
+            $"Cleared enter policy for template {templateId}. Preview stale until P rematerializes.",
+            $"Could not clear enter policy for template {templateId}");
+
+    public FrontendEditorMutationResult SetTemplateExitPolicy(string templateId, EntityExitPolicy exitPolicy) =>
+        UpdateTemplatePolicy(
+            templateId,
+            template => template with { ExitPolicy = exitPolicy },
+            $"Set exit policy for template {templateId} to {exitPolicy}. Preview stale until P rematerializes.",
+            $"Could not set exit policy for template {templateId}");
+
+    public FrontendEditorMutationResult ClearTemplateExitPolicy(string templateId) =>
+        UpdateTemplatePolicy(
+            templateId,
+            template => template with { ExitPolicy = null },
+            $"Cleared exit policy for template {templateId}. Preview stale until P rematerializes.",
+            $"Could not clear exit policy for template {templateId}");
+
+    private FrontendEditorMutationResult UpdateTemplatePolicy(
+        string templateId,
+        Func<EntityTemplate, EntityTemplate> update,
+        string successMessage,
+        string failurePrefix)
+    {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            return FrontendEditorMutationResult.Failure("Template id is required.", getSnapshot());
+        }
+
+        var id = new EntityTemplateId(templateId);
+        try
+        {
+            var current = session.Editor.GetEntityPreset(id);
+            session.Editor.UpdateEntityPreset(id, update(current.Template), current.Presentation);
+            return FrontendEditorMutationResult.Success(successMessage, getSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure($"{failurePrefix}: {ex.Message}", getSnapshot());
+        }
+    }
+
     public FrontendEditorMutationResult SetTemplateDefaultActionPlan(string templateId, string actionPlanId)
     {
         if (string.IsNullOrWhiteSpace(templateId))

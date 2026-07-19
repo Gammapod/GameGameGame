@@ -119,6 +119,7 @@ Current inventory authoring supports:
 - inventory dimensions;
 - entity bulk;
 - aperture;
+- nullable `enterPolicy` and `exitPolicy` on entity templates, with missing values defaulting to `FirstUnoccupiedRowMajor` and `AnyCell` respectively;
 - authored carried-entity layout, including placement, removal, movement, template replacement, and coordinate overwrite through supported editor/API workflows;
 - pickup/drop-oriented content using supported Action Steps.
 
@@ -131,9 +132,11 @@ Use constrained inventory behavior where possible:
 - `EnterTarget` moves the actor into the adjacent current `Target` inventory.
 - `ExitFacing` moves the actor out of its current containing entity toward `Facing`.
 
-Bulk/Aperture checks apply to every inventory boundary crossed by these constrained behaviors. For nested interiors, entering from inside one entity into another crosses both the source containing entity's aperture and the destination entity's aperture; exiting crosses the current containing entity's aperture. This is intentional: use larger apertures for interiors meant to allow passage, or use `Teleport` for exceptional movement that should bypass aperture rules.
+Bulk/Aperture checks and inventory-boundary policies apply to every inventory boundary crossed by these constrained behaviors. `EnterPolicy` controls placement into the destination inventory for Pickup, Give, Take, Enter, and future constrained transforms. `ExitPolicy` controls egress out of a source inventory for Drop, Exit, and peer transfers that leave an inventory. For nested interiors, entering from inside one entity into another crosses both the source containing entity's aperture and the destination entity's aperture; exiting crosses the current containing entity's aperture. This is intentional: use larger apertures for interiors meant to allow passage, or use `Teleport` for exceptional movement that should bypass aperture and policy rules.
 
-For player-controlled actors, the shared Core Action Choice seam can expose authored `TransformAdjacentToInventory`/`PickupTarget` as selectable adjacent pickup targets plus inventory-slot destinations, and authored `TransformInventoryToAdjacent`/`DropFacing` as selectable carried sources plus adjacent map destinations. Player-facing menu vocabulary may present them as Pickup and Drop.
+Supported `enterPolicy` values are `FirstUnoccupiedRowMajor` and `FarthestFromOccupied`; the latter breaks ties row-major, left-to-right/top-to-bottom. Supported `exitPolicy` values are `AnyCell` and `EdgeAlignedWithExitDirection`; the latter requires the carried/source coordinate to be on the edge or corner matching the selected exit direction.
+
+For player-controlled actors, the shared Core Action Choice seam can expose authored `TransformAdjacentToInventory`/`PickupTarget` as selectable adjacent pickup targets plus inventory-slot destinations, authored `TransformInventoryToAdjacent`/`DropFacing` as selectable carried sources plus adjacent map destinations, authored `EnterTarget` as Enter target choices, and authored `ExitFacing` as Exit direction choices. Player-facing menu vocabulary may present them as Pickup, Drop, Enter, and Exit.
 
 Use report `InventorySummaryLines`, direct validation output, or recorded scenarios to confirm containment behavior. Scenario reports summarize carried contents with inventory coordinates and guard against recursive containment cycles.
 

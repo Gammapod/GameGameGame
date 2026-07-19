@@ -295,6 +295,34 @@ sections:
     status: active-delta
     tags: [delta, canonical-action, pickup, drop, player-interaction, vertical-slice]
     source: docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalEnterExitShowcase.yaml
+    scenarioId: beta-canonical-enter-outcomes
+    name: Canonical Enter Outcomes
+    description: Delta/canonical action outcome room proving EnterTarget success, blocked outcomes, aperture limits, and FirstUnoccupiedRowMajor/FarthestFromOccupied enter policies.
+    status: active-delta
+    tags: [delta, canonical-action, enter, containment, outcomes, vertical-slice]
+    source: docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalEnterExitShowcase.yaml
+    scenarioId: beta-canonical-enter-player-interaction
+    name: Canonical Enter Player Interaction
+    description: Delta/canonical action player-interaction room for EnterTarget choices against an adjacent enterable container with authored enterPolicy.
+    status: active-delta
+    tags: [delta, canonical-action, enter, containment, player-interaction, vertical-slice]
+    source: docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalEnterExitShowcase.yaml
+    scenarioId: beta-canonical-exit-outcomes
+    name: Canonical Exit Outcomes
+    description: Delta/canonical action outcome room proving ExitFacing success, blocked outcomes, and AnyCell/EdgeAlignedWithExitDirection exit policies.
+    status: active-delta
+    tags: [delta, canonical-action, exit, containment, outcomes, vertical-slice]
+    source: docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalEnterExitShowcase.yaml
+    scenarioId: beta-canonical-exit-player-interaction
+    name: Canonical Exit Player Interaction
+    description: Delta/canonical action player-interaction room for ExitFacing choices from inside an EdgeAlignedWithExitDirection container.
+    status: active-delta
+    tags: [delta, canonical-action, exit, containment, player-interaction, vertical-slice]
+    source: docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md
   - contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
     scenarioId: beta-success-criteria-log-room
     name: Success Criteria Log Room

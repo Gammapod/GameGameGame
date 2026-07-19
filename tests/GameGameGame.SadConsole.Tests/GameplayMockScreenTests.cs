@@ -415,10 +415,53 @@ public sealed class GameplayMockScreenTests
         var message = screen.ExecuteSelectedActionStep();
         var frame = screen.BuildFrame(120, 42);
 
-        Assert.Contains("EnterTarget", message);
+        Assert.Contains("Choose target", message);
+        Assert.Contains("Mock Crate", message);
+        Assert.Equal(0, screen.FrameIndex);
+        Assert.Contains("frame 0", frame.Title);
+        Assert.Equal("EnterTarget", screen.ActionMenuState);
+    }
+
+    [Fact]
+    public void EnterChoiceUsesTypedTargetPromptAndHistorySubmission()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
+        var screen = new GameplayMockScreen(session);
+
+        screen.ExecuteSelectedActionStep();
+        screen.SelectNextActionStep();
+        var targetPrompt = screen.ExecuteSelectedActionStep();
+        var message = screen.ExecuteSelectedActionStep();
+
+        Assert.True(screen.UsesCoreActionChoiceEnter);
+        Assert.Contains("EnterTarget", targetPrompt);
+        Assert.Contains("Mock Crate", targetPrompt);
+        Assert.Contains("Enter Mock Crate via Core Action Choice", message);
         Assert.Equal(1, screen.FrameIndex);
-        Assert.Contains("frame 1", frame.Title);
-        Assert.Contains(frame.CurrentPlacePlayerLogRows, row => row.Contains("player-log: action.enter_target.failure"));
+        Assert.Contains("mockCrate", session.World.GetEntityLocation(session.PlayerEntityId).PlaneId.Value, StringComparison.Ordinal);
+        Assert.Equal("Closed", screen.ActionMenuState);
+    }
+
+    [Fact]
+    public void ExitChoiceUsesTypedDirectionPromptAndHistorySubmission()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, includeExitStep: true, startPlayerInsideCrate: true);
+        var screen = new GameplayMockScreen(session);
+
+        screen.ExecuteSelectedActionStep();
+        screen.SelectNextActionStep();
+        screen.SelectNextActionStep();
+        var directionPrompt = screen.ExecuteSelectedActionStep();
+        var message = screen.ExecuteSelectedActionStep();
+
+        Assert.True(screen.UsesCoreActionChoiceExit);
+        Assert.Contains("ExitFacing", directionPrompt);
+        Assert.Contains("Choose exit direction", directionPrompt);
+        Assert.Contains("Exit", message);
+        Assert.Contains("via Core Action Choice", message);
+        Assert.Equal(1, screen.FrameIndex);
+        Assert.Equal(session.ActivePlaneId, session.World.GetEntityLocation(session.PlayerEntityId).PlaneId);
+        Assert.Equal("Closed", screen.ActionMenuState);
     }
 
     [Fact]
@@ -544,7 +587,9 @@ public sealed class GameplayMockScreenTests
         bool includeCanonicalMove = false,
         bool bindPlayerChoiceControl = false,
         bool includeDropStep = false,
-        bool startWithCarriedItem = false)
+        bool startWithCarriedItem = false,
+        bool includeExitStep = false,
+        bool startPlayerInsideCrate = false)
     {
         var document = new EditableContentDocument();
         var playerInteractionPlanId = new ActionPlanTemplateId("mockPlayerInteractionPlan");
@@ -561,6 +606,10 @@ public sealed class GameplayMockScreenTests
         }
 
         playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget));
+        if (includeExitStep)
+        {
+            playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.ExitFacing));
+        }
         document.ActionPlans[playerInteractionPlanId.Value] = EditableContentDocument.ActionPlanDescriptorDto.From(new ActionPlanDescriptor(
             new ActionPlanId(playerInteractionPlanId.Value),
             [],
@@ -633,7 +682,15 @@ public sealed class GameplayMockScreenTests
                 ? new Dictionary<string, IReadOnlyList<EntityId>> { ["local-player"] = [new EntityId("mockPlayer")] }
                 : null));
 
-        return PlayableScenarioLauncher.CreateFromDocument(document, "play-mock-scenario");
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "play-mock-scenario");
+        if (startPlayerInsideCrate)
+        {
+            var movement = new MovementService();
+            var crateInventoryPlane = session.World.GetInventoryPlaneId(new EntityId("mockCrate"))!.Value;
+            Assert.True(movement.TryPlace(session.World, session.PlayerEntityId, new PlaneCoord(crateInventoryPlane, new GridCoord(0, 0))));
+        }
+
+        return session;
     }
 
     private static string FormatEntityId(EntityId entityId) => entityId.Value;

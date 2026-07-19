@@ -406,9 +406,70 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         screen.Handle(UiComponentCommand.Down);
         screen.Handle(UiComponentCommand.Down);
         screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
         var result = screen.Handle(UiComponentCommand.Select);
 
         Assert.Equal(EntityTemplateEditResultKind.OpenInventoryGrid, result.Kind);
+    }
+
+    [Fact]
+    public void EntityTemplateEditInventoryPanelDisplaysAuthoredAndEffectiveEnterExitPolicies()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var create = service.CreateEntityTemplate("Doorway");
+        var templateId = create.Snapshot.EntityTemplates.Single().TemplateId;
+        service.SetTemplateEnterPolicy(templateId, EntityEnterPolicy.FarthestFromOccupied);
+
+        var screen = EntityTemplateEditScreen.FromSnapshot(service.GetSnapshot(), templateId, service);
+        var rows = screen.Components().SelectMany(component => component.RenderRows(SadConsoleTheme.Default)).ToList();
+
+        Assert.Contains(rows, row => row.Contains("enter policy: FarthestFromOccupied (authored)"));
+        Assert.Contains(rows, row => row.Contains("exit policy: default AnyCell"));
+    }
+
+    [Fact]
+    public void EntityTemplateEditPolicyPickersSetAndClearThroughEditorService()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var create = service.CreateEntityTemplate("Doorway");
+        var templateId = create.Snapshot.EntityTemplates.Single().TemplateId;
+        var screen = EntityTemplateEditScreen.FromSnapshot(service.GetSnapshot(), templateId, service);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        for (var index = 0; index < 4; index++) screen.Handle(UiComponentCommand.Down);
+        var openEnter = screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var setEnter = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Opened editor for inventory enter policy", openEnter.Message);
+        Assert.Contains("Set enter policy", setEnter.Message);
+        Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, service.GetSnapshot().EntityTemplates.Single().EnterPolicy);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        var openEnterAgain = screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Up);
+        screen.Handle(UiComponentCommand.Up);
+        var clearEnter = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Opened editor for inventory enter policy", openEnterAgain.Message);
+        Assert.Contains("Cleared enter policy", clearEnter.Message);
+        Assert.Null(service.GetSnapshot().EntityTemplates.Single().EnterPolicy);
+
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        var openExit = screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        screen.Handle(UiComponentCommand.Down);
+        var setExit = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Contains("Opened editor for inventory exit policy", openExit.Message);
+        Assert.Contains("Set exit policy", setExit.Message);
+        Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, service.GetSnapshot().EntityTemplates.Single().ExitPolicy);
     }
 
     [Fact]

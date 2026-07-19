@@ -9,7 +9,9 @@ internal enum ActionChoicePromptMode
     PickupTarget,
     PickupDestination,
     DropSource,
-    DropDestination
+    DropDestination,
+    EnterTarget,
+    ExitFacing
 }
 
 internal sealed class ActionChoicePromptController
@@ -20,6 +22,7 @@ internal sealed class ActionChoicePromptController
     public EntityId? SelectedEntityActionTargetId { get; private set; }
     public int SelectedTargetIndex { get; private set; }
     public int SelectedDestinationIndex { get; private set; }
+    public int SelectedDirectionIndex { get; private set; }
 
     public bool IsOpen => Mode != ActionChoicePromptMode.Closed;
 
@@ -50,11 +53,14 @@ internal sealed class ActionChoicePromptController
         {
             case ActionChoicePromptMode.PickupTarget:
             case ActionChoicePromptMode.DropSource:
+            case ActionChoicePromptMode.EnterTarget:
+            case ActionChoicePromptMode.ExitFacing:
                 Mode = ActionChoicePromptMode.ActionList;
                 SelectedEntityActionChoice = null;
                 SelectedEntityActionTargetId = null;
                 SelectedTargetIndex = 0;
                 SelectedDestinationIndex = 0;
+                SelectedDirectionIndex = 0;
                 return new ActionChoicePromptCancelResult("Returned to action selector.");
             case ActionChoicePromptMode.PickupDestination:
                 Mode = ActionChoicePromptMode.PickupTarget;
@@ -85,7 +91,7 @@ internal sealed class ActionChoicePromptController
 
         SelectedActionStepIndex = Math.Clamp(SelectedActionStepIndex, 0, steps.Count - 1);
         var step = steps[SelectedActionStepIndex];
-        if (TryFindActionChoiceForStep(step, request, out var selectedChoice) && selectedChoice.Kind is ActionChoiceKind.Pickup or ActionChoiceKind.Drop)
+        if (TryFindActionChoiceForStep(step, request, out var selectedChoice) && selectedChoice.Kind is ActionChoiceKind.Pickup or ActionChoiceKind.Drop or ActionChoiceKind.Enter)
         {
             var validTargets = ValidTargets(selectedChoice).ToList();
             if (validTargets.Count == 0)
@@ -96,13 +102,38 @@ internal sealed class ActionChoicePromptController
             SelectedEntityActionChoice = selectedChoice;
             SelectedTargetIndex = 0;
             SelectedDestinationIndex = 0;
+            SelectedDirectionIndex = 0;
             SelectedEntityActionTargetId = null;
-            Mode = selectedChoice.Kind == ActionChoiceKind.Pickup ? ActionChoicePromptMode.PickupTarget : ActionChoicePromptMode.DropSource;
+            Mode = selectedChoice.Kind switch
+            {
+                ActionChoiceKind.Pickup => ActionChoicePromptMode.PickupTarget,
+                ActionChoiceKind.Drop => ActionChoicePromptMode.DropSource,
+                _ => ActionChoicePromptMode.EnterTarget
+            };
 
-            var noun = selectedChoice.Kind == ActionChoiceKind.Pickup ? "target" : "inventory item";
+            var noun = selectedChoice.Kind == ActionChoiceKind.Drop ? "inventory item" : "target";
             return ActionChoicePromptActionResult.ChoosingTarget(
                 $"Selected action {step.Kind}. Choose {noun} 1/{validTargets.Count}: {formatEntityName(validTargets[0].TargetId)}.",
                 selectedChoice.Kind == ActionChoiceKind.Drop);
+        }
+
+        if (TryFindActionChoiceForStep(step, request, out selectedChoice) && selectedChoice.Kind == ActionChoiceKind.Exit)
+        {
+            var validDirections = ValidDirections(selectedChoice).ToList();
+            if (validDirections.Count == 0)
+            {
+                return ActionChoicePromptActionResult.Info($"Selected action {step.Kind}, but Core Action Choice reports no valid exit directions.");
+            }
+
+            SelectedEntityActionChoice = selectedChoice;
+            SelectedTargetIndex = 0;
+            SelectedDestinationIndex = 0;
+            SelectedDirectionIndex = 0;
+            SelectedEntityActionTargetId = null;
+            Mode = ActionChoicePromptMode.ExitFacing;
+            return ActionChoicePromptActionResult.ChoosingTarget(
+                $"Selected action {step.Kind}. Choose exit direction 1/{validDirections.Count}: {validDirections[0].Direction}.",
+                inspectPlayer: false);
         }
 
         return ActionChoicePromptActionResult.SubmitAuthoredStep(SelectedActionStepIndex, step);
@@ -126,6 +157,11 @@ internal sealed class ActionChoicePromptController
 
         SelectedTargetIndex = Math.Clamp(SelectedTargetIndex, 0, targets.Count - 1);
         var target = targets[SelectedTargetIndex];
+        if (choice.Kind == ActionChoiceKind.Enter)
+        {
+            return ActionChoicePromptTargetResult.SubmitEnter(target.TargetId);
+        }
+
         var destinations = ValidDestinations(choice, target.TargetId).ToList();
         if (destinations.Count == 0)
         {
@@ -139,6 +175,24 @@ internal sealed class ActionChoicePromptController
         return ActionChoicePromptTargetResult.ChoosingDestination(
             $"Selected {formatEntityName(target.TargetId)}. Choose {place} 1/{destinations.Count}: {formatDestination(destinations[0].Destination)}.",
             choice.Kind == ActionChoiceKind.Pickup);
+    }
+
+    public ActionChoicePromptDirectionResult ConfirmSelectedDirection()
+    {
+        if (SelectedEntityActionChoice is not { } choice)
+        {
+            Reset();
+            return ActionChoicePromptDirectionResult.Info("No Core Action Choice direction list is active.");
+        }
+
+        var directions = ValidDirections(choice).ToList();
+        if (directions.Count == 0)
+        {
+            return ActionChoicePromptDirectionResult.Info($"No valid {choice.Kind} directions are available from Core ActionChoiceService.");
+        }
+
+        SelectedDirectionIndex = Math.Clamp(SelectedDirectionIndex, 0, directions.Count - 1);
+        return ActionChoicePromptDirectionResult.Submit(choice, directions[SelectedDirectionIndex].Direction);
     }
 
     public ActionChoicePromptDestinationResult ConfirmSelectedDestination()
@@ -168,8 +222,9 @@ internal sealed class ActionChoicePromptController
         return Mode switch
         {
             ActionChoicePromptMode.ActionList => SelectActionStep(delta, steps),
-            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource => SelectTarget(delta, formatEntityName),
+            ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource or ActionChoicePromptMode.EnterTarget => SelectTarget(delta, formatEntityName),
             ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => SelectDestination(delta, formatDestination),
+            ActionChoicePromptMode.ExitFacing => SelectDirection(delta),
             _ => SelectActionStep(delta, steps)
         };
     }
@@ -189,6 +244,7 @@ internal sealed class ActionChoicePromptController
         SelectedEntityActionTargetId = null;
         SelectedTargetIndex = 0;
         SelectedDestinationIndex = 0;
+        SelectedDirectionIndex = 0;
     }
 
     private string SelectActionStep(int delta, IReadOnlyList<ActionPlanBehaviorStepDescriptor> steps)
@@ -239,6 +295,24 @@ internal sealed class ActionChoicePromptController
         return $"Selected destination {SelectedDestinationIndex + 1}/{destinations.Count}: {formatDestination(destinations[SelectedDestinationIndex].Destination)}.";
     }
 
+    private string SelectDirection(int delta)
+    {
+        if (SelectedEntityActionChoice is not { } choice)
+        {
+            return "No Core Action Choice direction list is active.";
+        }
+
+        var directions = ValidDirections(choice).ToList();
+        if (directions.Count == 0)
+        {
+            SelectedDirectionIndex = 0;
+            return $"No valid {choice.Kind} directions are available.";
+        }
+
+        SelectedDirectionIndex = (SelectedDirectionIndex + delta + directions.Count) % directions.Count;
+        return $"Selected direction {SelectedDirectionIndex + 1}/{directions.Count}: {directions[SelectedDirectionIndex].Direction}.";
+    }
+
     private static bool TryFindActionChoiceForStep(ActionPlanBehaviorStepDescriptor step, ActionChoiceRequest? request, out ActionChoice choice)
     {
         var kind = step.Kind switch
@@ -248,6 +322,8 @@ internal sealed class ActionChoicePromptController
             ActionPlanBehaviorStepKind.TransformAdjacentToInventory => ActionChoiceKind.Pickup,
             ActionPlanBehaviorStepKind.DropFacing => ActionChoiceKind.Drop,
             ActionPlanBehaviorStepKind.TransformInventoryToAdjacent => ActionChoiceKind.Drop,
+            ActionPlanBehaviorStepKind.EnterTarget => ActionChoiceKind.Enter,
+            ActionPlanBehaviorStepKind.ExitFacing => ActionChoiceKind.Exit,
             _ => (ActionChoiceKind?)null
         };
 
@@ -266,6 +342,9 @@ internal sealed class ActionChoicePromptController
 
     private static IEnumerable<ControlledActorDestinationAffordance> ValidDestinations(ActionChoice choice, EntityId targetId) =>
         choice.Destinations(targetId).Where(destination => destination.CanExecute);
+
+    private static IEnumerable<ActionChoiceDirectionOption> ValidDirections(ActionChoice choice) =>
+        choice.DirectionOptions.Where(direction => direction.CanExecute);
 }
 
 internal sealed record ActionChoicePromptCancelResult(string Message, bool InspectPlayer = false);
@@ -293,18 +372,22 @@ internal enum ActionChoicePromptActionResultKind
     SubmitAuthoredStep
 }
 
-internal sealed record ActionChoicePromptTargetResult(ActionChoicePromptTargetResultKind Kind, string Message, bool InspectPlayer = false)
+internal sealed record ActionChoicePromptTargetResult(ActionChoicePromptTargetResultKind Kind, string Message, bool InspectPlayer = false, EntityId? TargetId = null)
 {
     public static ActionChoicePromptTargetResult Info(string message) => new(ActionChoicePromptTargetResultKind.Message, message);
 
     public static ActionChoicePromptTargetResult ChoosingDestination(string message, bool inspectPlayer) =>
         new(ActionChoicePromptTargetResultKind.ChoosingDestination, message, inspectPlayer);
+
+    public static ActionChoicePromptTargetResult SubmitEnter(EntityId targetId) =>
+        new(ActionChoicePromptTargetResultKind.SubmitEnter, string.Empty, TargetId: targetId);
 }
 
 internal enum ActionChoicePromptTargetResultKind
 {
     Message,
-    ChoosingDestination
+    ChoosingDestination,
+    SubmitEnter
 }
 
 internal sealed record ActionChoicePromptDestinationResult(
@@ -321,6 +404,20 @@ internal sealed record ActionChoicePromptDestinationResult(
 }
 
 internal enum ActionChoicePromptDestinationResultKind
+{
+    Message,
+    Submit
+}
+
+internal sealed record ActionChoicePromptDirectionResult(ActionChoicePromptDirectionResultKind Kind, string Message, ActionChoice? Choice = null, Direction? Direction = null)
+{
+    public static ActionChoicePromptDirectionResult Info(string message) => new(ActionChoicePromptDirectionResultKind.Message, message);
+
+    public static ActionChoicePromptDirectionResult Submit(ActionChoice choice, Direction direction) =>
+        new(ActionChoicePromptDirectionResultKind.Submit, string.Empty, choice, direction);
+}
+
+internal enum ActionChoicePromptDirectionResultKind
 {
     Message,
     Submit

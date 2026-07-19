@@ -1,0 +1,271 @@
+classDiagram
+  class plan_beta_capability_gap_log {
+    id plan.beta-capability-gap-log
+    title Beta Capability Gap Log
+    kind gap-log
+    status reference
+    owners content-editor
+    audience content-editor, core-owner, frontend-owner
+    truth_rank 55
+    domains gap-workflow, planning-priority
+  }
+  class plan_canonical_actions_vertical_slice {
+    id plan.canonical-actions-vertical-slice
+    title Canonical Actions Vertical Slice Plan
+    kind plan
+    status active
+    owners core-owner
+    audience core-owner, frontend-owner, content-editor
+    truth_rank 45
+    domains planning-priority, implementation-navigation
+  }
+  class plan_documentation_compiler_spike {
+    id plan.documentation-compiler-spike
+    title Documentation Compiler Spike Plan
+    kind plan
+    status active
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 45
+    domains implementation-navigation, process
+  }
+  class plan_enter_exit_policy_vertical_slice_sprint {
+    id plan.enter-exit-policy-vertical-slice-sprint
+    title Enter/Exit Policy Vertical Slice Sprint Plan
+    kind plan
+    status active
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 45
+    domains planning-priority, implementation-navigation
+  }
+  class plan_high_level_roadmap {
+    id plan.high-level-roadmap
+    title High-Level Roadmap
+    kind roadmap
+    status active
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 50
+    domains planning-priority
+  }
+  class plan_sadconsole_frontend_roadmap {
+    id plan.sadconsole-frontend-roadmap
+    title SadConsole Frontend Roadmap
+    kind backlog-reference
+    status reference
+    owners frontend-owner
+    audience frontend-owner, core-owner
+    truth_rank 55
+    domains planning-priority, frontend-presentation
+  }
+  class plan_sprint_retrospective {
+    id plan.sprint-retrospective
+    title Sprint Retrospective
+    kind retrospective
+    status reference
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 70
+    domains process
+  }
+  class source_action_step_outcome_and_affordance_logic {
+    id source.action-step-outcome-and-affordance-logic
+    title Action Step Outcome And Affordance Logic
+    kind source-of-truth
+    status active
+    lane action-logic
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 25
+    domains action-logic, runtime-behavior
+  }
+  class source_content_authoring_manual {
+    id source.content-authoring-manual
+    title Content Authoring Manual
+    kind source-of-truth
+    status active
+    lane content-authoring
+    owners content-editor
+    audience content-editor, core-owner, frontend-owner
+    truth_rank 30
+    domains authorability, content-workflow, gap-workflow
+  }
+  class source_current_goals {
+    id source.current-goals
+    title Current Goals
+    kind source-of-truth
+    status active
+    lane current-goals
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 25
+    domains planning-priority
+  }
+  class source_engine_editor_capabilities {
+    id source.engine-editor-capabilities
+    title Engine-Editor Capability Matrix
+    kind source-of-truth
+    status active
+    lane capability-matrix
+    owners core-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 20
+    domains capability-support, parity-tier
+  }
+  class source_entity_panel_ux_spec {
+    id source.entity-panel-ux-spec
+    title Entity Panel UX Spec
+    kind source-of-truth
+    status active
+    lane ux-spec
+    owners frontend-owner
+    audience frontend-owner, core-owner
+    truth_rank 25
+    domains frontend-boundary, frontend-presentation
+  }
+  class source_frontend_game_text {
+    id source.frontend-game-text
+    title Frontend Game Text
+    kind source-of-truth
+    status active
+    lane frontend-game-text
+    owners frontend-owner
+    audience frontend-owner, core-owner, content-editor
+    truth_rank 30
+    domains frontend-presentation
+  }
+  class source_frontend_ux_decisions {
+    id source.frontend-ux-decisions
+    title Frontend UX Decision Log
+    kind source-of-truth
+    status active
+    lane frontend-ux-decisions
+    owners frontend-owner
+    audience frontend-owner, core-owner
+    truth_rank 40
+    domains frontend-rationale, frontend-presentation
+  }
+  class source_frontend_ux_invariants {
+    id source.frontend-ux-invariants
+    title Frontend UX Invariants
+    kind source-of-truth
+    status active
+    lane frontend-ux-invariants
+    owners frontend-owner
+    audience frontend-owner, core-owner
+    truth_rank 20
+    domains frontend-boundary, test-trace
+  }
+  class source_frontend_ux_standards {
+    id source.frontend-ux-standards
+    title Frontend UX Standards
+    kind source-of-truth
+    status active
+    lane frontend-ux-standards
+    owners frontend-owner
+    audience frontend-owner, core-owner
+    truth_rank 30
+    domains frontend-presentation
+  }
+  class source_invariants {
+    id source.invariants
+    title GameGameGame Invariants
+    kind source-of-truth
+    status active
+    lane invariant-trace
+    owners core-owner
+    audience core-owner, frontend-owner
+    truth_rank 10
+    domains runtime-behavior, stable-contract, test-trace
+  }
+  class source_planning_index {
+    id source.planning-index
+    title Planning Index
+    kind source-of-truth
+    status active
+    lane navigation
+    owners core-owner, content-editor, frontend-owner
+    audience core-owner, content-editor, frontend-owner
+    truth_rank 20
+    domains navigation
+  }
+  class source_testing_charter {
+    id source.testing-charter
+    title Testing Charter
+    kind source-of-truth
+    status active
+    lane testing
+    owners core-owner, frontend-owner
+    audience core-owner, frontend-owner, content-editor
+    truth_rank 15
+    domains testing-policy, test-trace
+  }
+  class source_vertical_slice_map {
+    id source.vertical-slice-map
+    title Vertical Slice Map
+    kind source-of-truth
+    status active
+    lane vertical-slice
+    owners core-owner
+    audience core-owner, frontend-owner, content-editor
+    truth_rank 35
+    domains implementation-navigation
+  }
+  source_content_authoring_manual --> plan_beta_capability_gap_log : gap workflow
+  source_engine_editor_capabilities --> plan_beta_capability_gap_log : gap workflow
+  source_invariants --> plan_beta_capability_gap_log : gap workflow
+  source_invariants --> plan_canonical_actions_vertical_slice : implementation path
+  source_engine_editor_capabilities --> plan_canonical_actions_vertical_slice : implementation path
+  source_content_authoring_manual --> plan_canonical_actions_vertical_slice : implementation path
+  source_action_step_outcome_and_affordance_logic --> plan_canonical_actions_vertical_slice : implementation path
+  source_frontend_game_text --> plan_canonical_actions_vertical_slice : implementation path
+  source_vertical_slice_map --> plan_canonical_actions_vertical_slice : implementation path
+  source_planning_index --> plan_documentation_compiler_spike : implementation path
+  source_testing_charter --> plan_documentation_compiler_spike : implementation path
+  source_invariants --> plan_documentation_compiler_spike : implementation path
+  source_invariants --> plan_enter_exit_policy_vertical_slice_sprint : implementation path
+  source_engine_editor_capabilities --> plan_enter_exit_policy_vertical_slice_sprint : implementation path
+  source_content_authoring_manual --> plan_enter_exit_policy_vertical_slice_sprint : implementation path
+  source_action_step_outcome_and_affordance_logic --> plan_enter_exit_policy_vertical_slice_sprint : implementation path
+  plan_enter_exit_policy_vertical_slice_sprint --> plan_canonical_actions_vertical_slice : implementation path
+  source_invariants --> plan_high_level_roadmap : planning context
+  source_engine_editor_capabilities --> plan_high_level_roadmap : planning context
+  source_content_authoring_manual --> plan_high_level_roadmap : planning context
+  source_planning_index --> plan_high_level_roadmap : planning context
+  source_frontend_ux_invariants --> plan_sadconsole_frontend_roadmap : frontend presentation
+  source_frontend_ux_standards --> plan_sadconsole_frontend_roadmap : frontend presentation
+  source_engine_editor_capabilities --> plan_sadconsole_frontend_roadmap : frontend presentation
+  source_invariants --> plan_sadconsole_frontend_roadmap : frontend presentation
+  source_planning_index --> plan_sprint_retrospective : related
+  source_engine_editor_capabilities --> source_action_step_outcome_and_affordance_logic : behavior/test trace
+  source_action_step_outcome_and_affordance_logic --> source_content_authoring_manual : authoring guidance
+  source_invariants --> source_action_step_outcome_and_affordance_logic : behavior/test trace
+  source_planning_index --> source_content_authoring_manual : authoring guidance
+  source_engine_editor_capabilities --> source_content_authoring_manual : authoring guidance
+  source_planning_index --> source_current_goals : planning context
+  source_current_goals --> plan_high_level_roadmap : planning context
+  source_current_goals --> plan_canonical_actions_vertical_slice : implementation path
+  source_current_goals --> plan_sadconsole_frontend_roadmap : frontend presentation
+  source_current_goals --> plan_beta_capability_gap_log : gap workflow
+  source_current_goals --> plan_sprint_retrospective : related
+  source_invariants --> source_engine_editor_capabilities : capability support
+  source_frontend_ux_invariants --> source_entity_panel_ux_spec : frontend boundary
+  source_entity_panel_ux_spec --> source_frontend_ux_standards : frontend presentation
+  source_engine_editor_capabilities --> source_entity_panel_ux_spec : frontend boundary
+  source_frontend_ux_invariants --> source_frontend_game_text : frontend presentation
+  source_frontend_game_text --> source_frontend_ux_standards : frontend presentation
+  source_action_step_outcome_and_affordance_logic --> source_frontend_game_text : frontend presentation
+  source_frontend_ux_standards --> source_frontend_ux_decisions : frontend presentation
+  source_frontend_ux_decisions --> plan_sadconsole_frontend_roadmap : frontend presentation
+  source_frontend_ux_invariants --> source_frontend_ux_standards : frontend presentation
+  source_testing_charter --> source_frontend_ux_invariants : behavior/test trace
+  source_invariants --> source_frontend_ux_invariants : behavior/test trace
+  source_frontend_ux_invariants --> source_engine_editor_capabilities : capability support
+  source_frontend_ux_standards --> source_frontend_game_text : frontend presentation
+  source_invariants --> source_planning_index : related
+  source_invariants --> source_testing_charter : behavior/test trace
+  source_planning_index --> source_engine_editor_capabilities : capability support
+  source_engine_editor_capabilities --> source_vertical_slice_map : implementation path
+  source_content_authoring_manual --> source_vertical_slice_map : implementation path
+  source_testing_charter --> source_vertical_slice_map : implementation path

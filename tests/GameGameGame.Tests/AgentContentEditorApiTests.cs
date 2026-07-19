@@ -102,6 +102,35 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsInventoryBoundaryPolicies()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("Policy Room"));
+
+        AssertSuccess(api.UpdateEntityTemplate(
+            roomId,
+            new AgentEntityTemplateUpdate(
+                InventoryWidth: 3,
+                InventoryHeight: 3,
+                Bulk: 1,
+                Aperture: 10,
+                EnterPolicy: EntityEnterPolicy.FarthestFromOccupied,
+                ExitPolicy: EntityExitPolicy.EdgeAlignedWithExitDirection)));
+
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Contains("enterPolicy: FarthestFromOccupied", snapshot.YamlPreview);
+        Assert.Contains("exitPolicy: EdgeAlignedWithExitDirection", snapshot.YamlPreview);
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+
+        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(ClearEnterPolicy: true, ClearExitPolicy: true)));
+        snapshot = api.GetDocumentSnapshot();
+
+        Assert.DoesNotContain("enterPolicy:", snapshot.YamlPreview);
+        Assert.DoesNotContain("exitPolicy:", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiRejectsLegacySetVariableAuthoring()
     {
         var api = AgentContentEditorApi.CreateNew();

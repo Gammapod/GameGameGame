@@ -13,9 +13,10 @@ internal sealed class EntityTemplateEditScreen
     private const string ClearActionPlanChoiceId = "__clear_action_plan__";
     private const string EditActionPlanChoiceId = "__edit_action_plan__";
     private const string ClearTargetCapabilitiesChoiceId = "__clear_target_capabilities__";
-    private static readonly string[] InventoryMetadataFieldIds = ["inventory-width", "inventory-height", "aperture", "bulk"];
-    private static readonly string[] InventoryMetadataFieldLabels = ["inventory width", "inventory height", "aperture", "bulk"];
-    private const int InventoryGridEditFieldIndex = 4;
+    private static readonly string[] InventoryMetadataFieldIds = ["inventory-width", "inventory-height", "aperture", "bulk", "enter-policy", "exit-policy"];
+    private static readonly string[] InventoryMetadataFieldLabels = ["inventory width", "inventory height", "aperture", "bulk", "enter policy", "exit policy"];
+    private const int InventoryGridEditFieldIndex = 6;
+    private const string ClearPolicyChoiceId = "__clear_policy__";
 
     private readonly FrontendEditorService? _service;
     private readonly Action<FrontendEditorSnapshot>? _snapshotMutated;
@@ -343,6 +344,8 @@ internal sealed class EntityTemplateEditScreen
                     ? ConfirmTargetingTemplateEdit(choice.Id)
                     : _activeTargetingFieldId == "target-adjectives"
                         ? ConfirmTargetingAdjectiveToggle(choice.Id)
+                    : _activeInventoryMetadataFieldId is "enter-policy" or "exit-policy"
+                        ? ConfirmInventoryPolicyChoice(choice.Id)
                     : _activePresentationFieldId == "action-plan"
                         ? ConfirmActionPlanChoice(choice.Id)
                     : ConfirmPresentationEdit(choice.Id);
@@ -381,6 +384,30 @@ internal sealed class EntityTemplateEditScreen
     {
         var fieldId = InventoryMetadataFieldIds[_selectedInventoryMetadataFieldIndex];
         _activeInventoryMetadataFieldId = fieldId;
+        if (fieldId == "enter-policy")
+        {
+            _activeFieldOverlay = new ChoicePickerOverlayComponent(
+                "enter-policy-editor",
+                "Choose enter policy",
+                "enter policy",
+                EnterPolicyChoices(),
+                SadConsoleRect.FromSize(34, 20, 62, 8),
+                SelectedEnterPolicyChoiceIndex());
+            return EntityTemplateEditResult.Stay("Opened editor for inventory enter policy.");
+        }
+
+        if (fieldId == "exit-policy")
+        {
+            _activeFieldOverlay = new ChoicePickerOverlayComponent(
+                "exit-policy-editor",
+                "Choose exit policy",
+                "exit policy",
+                ExitPolicyChoices(),
+                SadConsoleRect.FromSize(34, 20, 62, 8),
+                SelectedExitPolicyChoiceIndex());
+            return EntityTemplateEditResult.Stay("Opened editor for inventory exit policy.");
+        }
+
         _activeFieldOverlay = new IntSetterOverlayComponent(
             $"{fieldId}-editor",
             $"Edit {InventoryMetadataFieldLabels[_selectedInventoryMetadataFieldIndex]}",
@@ -392,6 +419,48 @@ internal sealed class EntityTemplateEditScreen
             bounds: SadConsoleRect.FromSize(34, 20, 52, 7));
 
         return EntityTemplateEditResult.Stay($"Opened editor for inventory {InventoryMetadataFieldLabels[_selectedInventoryMetadataFieldIndex]}.");
+    }
+
+    private EntityTemplateEditResult ConfirmInventoryPolicyChoice(string choiceId)
+    {
+        if (_activeInventoryMetadataFieldId is null)
+        {
+            ClearFieldOverlay();
+            return EntityTemplateEditResult.Stay("No inventory policy field is active.");
+        }
+
+        if (_service is null)
+        {
+            ClearFieldOverlay();
+            return EntityTemplateEditResult.Stay("Inventory policy edits require a service-backed editor screen.");
+        }
+
+        FrontendEditorMutationResult result;
+        if (_activeInventoryMetadataFieldId == "enter-policy")
+        {
+            result = choiceId == ClearPolicyChoiceId
+                ? _service.ClearTemplateEnterPolicy(_template.TemplateId)
+                : Enum.TryParse<EntityEnterPolicy>(choiceId, out var enterPolicy)
+                    ? _service.SetTemplateEnterPolicy(_template.TemplateId, enterPolicy)
+                    : FrontendEditorMutationResult.Failure($"Unknown enter policy {choiceId}.", _service.GetSnapshot());
+        }
+        else if (_activeInventoryMetadataFieldId == "exit-policy")
+        {
+            result = choiceId == ClearPolicyChoiceId
+                ? _service.ClearTemplateExitPolicy(_template.TemplateId)
+                : Enum.TryParse<EntityExitPolicy>(choiceId, out var exitPolicy)
+                    ? _service.SetTemplateExitPolicy(_template.TemplateId, exitPolicy)
+                    : FrontendEditorMutationResult.Failure($"Unknown exit policy {choiceId}.", _service.GetSnapshot());
+        }
+        else
+        {
+            ClearFieldOverlay();
+            return EntityTemplateEditResult.Stay("Unsupported inventory policy field edit.");
+        }
+
+        ReplaceAfterMutation(result.Snapshot);
+        ClearFieldOverlay();
+        return EntityTemplateEditResult.Stay(result.StatusMessage);
     }
 
     private EntityTemplateEditResult ConfirmInventoryMetadataEdit(int value)
@@ -437,6 +506,32 @@ internal sealed class EntityTemplateEditScreen
         "bulk" => _template.Bulk,
         _ => 0
     };
+
+    private IEnumerable<SelectableListItem> EnterPolicyChoices()
+    {
+        yield return new SelectableListItem(ClearPolicyChoiceId, $"(default {EntityEnterPolicy.FirstUnoccupiedRowMajor})", "clear authored enter policy");
+        foreach (var policy in Enum.GetValues<EntityEnterPolicy>())
+        {
+            yield return new SelectableListItem(policy.ToString(), policy.ToString(), "authored enter policy");
+        }
+    }
+
+    private IEnumerable<SelectableListItem> ExitPolicyChoices()
+    {
+        yield return new SelectableListItem(ClearPolicyChoiceId, $"(default {EntityExitPolicy.AnyCell})", "clear authored exit policy");
+        foreach (var policy in Enum.GetValues<EntityExitPolicy>())
+        {
+            yield return new SelectableListItem(policy.ToString(), policy.ToString(), "authored exit policy");
+        }
+    }
+
+    private int SelectedEnterPolicyChoiceIndex() => _template.EnterPolicy is { } policy
+        ? Array.IndexOf(Enum.GetValues<EntityEnterPolicy>(), policy) + 1
+        : 0;
+
+    private int SelectedExitPolicyChoiceIndex() => _template.ExitPolicy is { } policy
+        ? Array.IndexOf(Enum.GetValues<EntityExitPolicy>(), policy) + 1
+        : 0;
 
     private EntityTemplateEditResult ActivateSelectedTargetingDetailField()
     {
@@ -814,6 +909,8 @@ internal sealed class EntityTemplateEditScreen
             InventoryMetadataRow(1, $"inventory height: {_template.InventoryHeight}"),
             InventoryMetadataRow(2, $"aperture: {_template.Aperture}"),
             InventoryMetadataRow(3, $"bulk: {_template.Bulk}"),
+            InventoryMetadataRow(4, $"enter policy: {FormatPolicy(_template.EnterPolicy, _template.EffectiveEnterPolicy)}"),
+            InventoryMetadataRow(5, $"exit policy: {FormatPolicy(_template.ExitPolicy, _template.EffectiveExitPolicy)}"),
             InventoryMetadataRow(InventoryGridEditFieldIndex, "3.3.2 inventory grid editor")
         };
 
@@ -833,6 +930,9 @@ internal sealed class EntityTemplateEditScreen
         var marker = FocusedComponentId == "inventory" && index == _selectedInventoryMetadataFieldIndex ? ">" : " ";
         return $"{marker} {text}";
     }
+
+    private static string FormatPolicy<TPolicy>(TPolicy? authored, TPolicy effective) where TPolicy : struct, Enum =>
+        authored is { } value ? $"{value} (authored)" : $"default {effective}";
 }
 
 internal sealed class InventorySummaryComponent : IUiComponent

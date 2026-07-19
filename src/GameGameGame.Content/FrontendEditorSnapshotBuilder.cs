@@ -105,6 +105,10 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                         .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value)
                         .ToList())
                 {
+                    EnterPolicy = model.Template.EnterPolicy,
+                    EffectiveEnterPolicy = model.Template.EffectiveEnterPolicy,
+                    ExitPolicy = model.Template.ExitPolicy,
+                    EffectiveExitPolicy = model.Template.EffectiveExitPolicy,
                     TargetingRequirements = targetRequirements,
                     OrphanedTargetingRules = orphanedRules
                 };

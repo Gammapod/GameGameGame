@@ -50,7 +50,9 @@ public static class YamlContentLoader
                 DefaultActionPlanId: template.DefaultActionPlanId is null ? null : new ActionPlanTemplateId(template.DefaultActionPlanId),
                 DefaultPlanVariables: MaterializePlanVariables(template.DefaultPlanVariables),
                 ActionStateDefaults: MaterializeActionStateDefaults(template.ActionStateDefaults),
-                TargetingRules: MaterializeTargetingRules(template.TargetingRules));
+                TargetingRules: MaterializeTargetingRules(template.TargetingRules),
+                EnterPolicy: template.EnterPolicy,
+                ExitPolicy: template.ExitPolicy);
         }
 
         return result;
@@ -306,6 +308,10 @@ public static class YamlContentLoader
         public int? Bulk { get; set; }
 
         public int? Aperture { get; set; }
+
+        public EntityEnterPolicy? EnterPolicy { get; set; }
+
+        public EntityExitPolicy? ExitPolicy { get; set; }
 
         public string? DefaultActionPlanId { get; set; }
 
