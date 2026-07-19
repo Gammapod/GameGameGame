@@ -44,7 +44,7 @@ Alpha MVP is complete and Beta produced authored gameplay vignettes plus scenari
 
 The active release direction is canonical action vertical slices: freeze the current broad Action Step catalog as legacy/prototype-compatible, then promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, componentized play-mode consumption, and Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
 
-The canonical `Move` slice is complete; the first Pickup/Drop interaction seam and componentized play-mode refactor are implemented. The next likely promotion target is `EnterTarget`/`ExitFacing`, while Throw/Shove-style ranged transform variants should remain backlog until the broader action vocabulary is proven.
+The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, componentized play-mode refactor, and Enter/Exit policy/action-choice slice are implemented. The next canonical action promotion target should be selected from the roadmap backlog, while Throw/Shove-style ranged transform variants should remain backlog until the broader action vocabulary is proven.
 
 ## Active planning bridge
 
@@ -59,7 +59,7 @@ The canonical `Move` slice is complete; the first Pickup/Drop interaction seam a
 
 Trust `docs/Plans/High-Level-Roadmap.md` for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Canonical action vertical slices, next likely `EnterTarget`/`ExitFacing` promotion.
+1. Canonical action vertical slices, next target to be selected from the action backlog.
 2. Canonical runtime control-source / Action Choice model follow-through.
 3. Componentized Gamma play-mode follow-through over canonical action/Action Choice/POV/log services.
 4. Delta point-of-view follow-through where needed by canonical actions.

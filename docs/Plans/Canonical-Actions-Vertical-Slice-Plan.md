@@ -217,7 +217,7 @@ Phase outcome:
 
 - The first promoted action became canonical `Move`, not `MoveFacing`, so the release-facing movement contract could use explicit 8-way absolute/relative `directionMode` while preserving `MoveFacing` compatibility.
 - The first target/source interaction seam was implemented for `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing`, proving action-step-first menus, target/source lists, destination lists, and shared history submission.
-- The next likely target-facing follow-up is `EnterTarget`/`ExitFacing`, because `enterable` adjectives, containment transitions, and aperture/bulk success criteria naturally exercise the same vertical-slice pattern without immediately adding ranged transform variants. The active phased sprint plan for this work is `docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md`, which records shared `EnterPolicy`/`ExitPolicy` support for every constrained inventory-boundary transformation before canonical Enter/Exit promotion.
+- The `EnterTarget`/`ExitFacing` policy/action-choice slice is complete and archived at `docs/Archived/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md`. It added shared `EnterPolicy`/`ExitPolicy` support for constrained inventory-boundary transformations, typed Enter/Exit Action Choice prompts, frontend editor policy editing, and canonical Enter/Exit rooms.
 
 Exit criteria:
 
@@ -245,6 +245,8 @@ Exit criteria:
 
 Goal: prove the full target-facing canonical action model.
 
+Status: Complete for the Enter/Exit policy slice. `EnterTarget`/`ExitFacing` now have policy-aware Core semantics, typed player-choice seams, content rooms, editor/frontend policy authoring, and `enterable` adjective support inherited through policy-aware affordance facts. Richer selected Enter destination-cell prompts remain follow-up.
+
 Scope:
 
 1. Promote the selected target-facing action.
@@ -261,7 +263,7 @@ Exit criteria:
 
 Goal: replace special direct player control with Core-owned runtime control source and authored action choice.
 
-Status: First slice complete for canonical `Move`; first Pickup/Drop target/source/destination choices and submissions are implemented. Remaining Action Choice follow-up includes full pre/main/post descriptor composition, target-first menus, richer choice DTO fields, and additional action families such as Enter/Exit.
+Status: First slice complete for canonical `Move`; Pickup/Drop target/source/destination choices and typed Enter/Exit choices/submissions are implemented. Remaining Action Choice follow-up includes full pre/main/post descriptor composition, target-first menus, richer choice DTO fields, selected Enter destination-cell prompts, and future action families such as Give/Take.
 
 Core/shared backlog captured from frontend planning:
 
@@ -301,6 +303,7 @@ Scope selected after the canonical `Move` play-surface bridge:
 Implemented first-slice evidence and deferrals:
 
 - Core Action Choice has a first Pickup/Drop source/destination seam: `TransformAdjacentToInventory`/`PickupTarget` choices expose adjacent pickup targets and inventory slots, `TransformInventoryToAdjacent`/`DropFacing` choices expose carried sources and adjacent map destinations, and submitted choices execute through controlled-command/history semantics.
+- Core Action Choice has typed Enter/Exit seams: `EnterTarget` choices expose enter targets, `ExitFacing` choices expose exit directions, and submitted choices execute through controlled-command/history semantics.
 - History submission helpers for Pickup/Drop Action Choices are available, and the SadConsole componentized play path has the first action-step-first menu model: direct movement controls may remain available, `Enter` opens authored action steps, then target/source and destination lists are selected from Core Action Choice facts.
 - Full pre/main/post override descriptor composition in choice request projection remains follow-up.
 - Target-first action selection remains a future pathway that should reuse the same Core facts.
@@ -354,8 +357,8 @@ Suggested order, subject to scenario pressure:
 
 1. `Move` - complete as the first promoted canonical movement/action-choice slice.
 2. `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing` - first non-movement player-interaction seam implemented; promote/harden only where the Definition of Done still lacks canonical rooms, wording, or documentation.
-3. `EnterTarget`/`ExitFacing` - likely next immediate promotion pair because containment transitions already have Core runtime, controlled affordances, POV adjectives, aperture ratios, log ID slots, and authoring support, but still need Action Choice/player-interaction and canonical-room hardening.
-4. `PushFacing`, `SeekTarget`, or transfer actions such as `GiveTarget`/`TakeTarget` after Enter/Exit clarifies additional target/menu/log patterns.
+3. `EnterTarget`/`ExitFacing` - completed as the first policy-backed target/containment promotion pair, including canonical rooms and typed Action Choice prompts. Follow-up: selected destination-cell prompts for mutually player-controlled Enter scenarios and content-authored control-source starts.
+4. `PushFacing`, `SeekTarget`, or transfer actions such as `GiveTarget`/`TakeTarget` after a separate planning decision selects the next canonical action. Give/Take must decide how `ExitPolicy` applies to non-directional inventory-to-inventory transfers before promotion.
 5. `TransformInventoryToRanged`/Throw and `TransformAdjacentToRanged`/Shove remain backlog variations until the broader action set is proven or a concrete scenario requires ranged transform semantics.
 6. `Teleport` may be considered as an advanced/stretch relocation slice, but it should not be treated like constrained inventory transforms because it intentionally bypasses Bulk/Aperture transition rules.
 7. Prototype utility/world-mutation actions such as `CreateFacing` only after template-backed spawning direction is revisited.

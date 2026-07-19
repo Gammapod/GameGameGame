@@ -65,7 +65,7 @@ Do not read when:
      - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
      - Read selectively when a planned slice spans multiple layers.
 7. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
-   - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible and promoting canonical actions through vertical slices. The canonical `Move` slice, first Pickup/Drop Action Choice interaction seam, and componentized play-mode refactor are complete enough to serve as reference workflow evidence; the next likely promotion target is `EnterTarget`/`ExitFacing`, with `Teleport` as an advanced/stretch relocation candidate.
+   - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible and promoting canonical actions through vertical slices. The canonical `Move` slice, first Pickup/Drop Action Choice interaction seam, componentized play-mode refactor, and Enter/Exit policy slice are complete enough to serve as reference workflow evidence; the next canonical action target is selected from the roadmap backlog.
 8. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
    - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
 9. `docs/Plans/Gamma-Editor-MVP-Plan.md`
@@ -80,7 +80,7 @@ Do not read when:
      - Recent process observations and open retrospective questions.
 14. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
-   - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the completed Core refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
+   - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, the completed Enter/Exit policy vertical slice sprint, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the completed Core refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current goals bridge
 

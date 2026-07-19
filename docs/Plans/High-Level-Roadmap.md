@@ -116,7 +116,8 @@ Immediate canonical action priority:
 - Preserve the completed freeze/promotion model: the broad Action Step catalog remains legacy/prototype-compatible unless promoted through a vertical slice.
 - Treat the completed canonical `Move` slice as the reference promotion workflow: engine rules, structured outcomes, player-facing log IDs, two content rooms, editor/headless tool support, and Action Choice/play-mode consumption.
 - Treat the first Pickup/Drop interaction seam as implemented evidence: Core Action Choice exposes target/source/destination facts for `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing`, submissions execute through shared history/command services, and componentized play mode has an action-step-first menu path.
-- Use that evidence to promote the next broad action pair rather than immediately adding transform variants. The likely next immediate option is `EnterTarget`/`ExitFacing`, because Core runtime, affordances, POV adjectives, aperture ratios, log IDs, and authoring support already exist but Action Choice/player interaction and canonical fixture hardening still need a vertical slice.
+- Treat the completed Enter/Exit policy slice as implemented evidence: Core/content/editor/frontend layers support nullable `EnterPolicy`/`ExitPolicy`, typed Enter/Exit Action Choice prompts, frontend policy editing, and canonical Enter/Exit rooms.
+- Use that evidence to select the next broad action pair rather than immediately adding transform variants. Candidate next options include `PushFacing`, target-relative actions such as `SeekTarget`, or transfer actions such as `GiveTarget`/`TakeTarget` after their policy interpretation is planned.
 - Keep `TransformInventoryToRanged`/Throw and `TransformAdjacentToRanged`/Shove in backlog until the broader canonical action vocabulary is proven, unless a concrete scenario requires ranged transform semantics sooner.
 - Consider `Teleport` only as an advanced/stretch relocation slice: it is already supported as a generic effect, but canonical player-facing semantics, safety/authoring limits, and log/POV expectations differ from constrained inventory verbs.
 
@@ -129,7 +130,12 @@ Canonical action target statement:
 
 Planned next sprint:
 
-- Start an `EnterTarget`/`ExitFacing` canonical promotion/audit slice from the completed Move and Pickup/Drop baselines: trace invariants/tests first, verify existing Core/Content/frontend support, then add the smallest missing Action Choice/player-interaction, content-room, log/POV, and documentation work needed to make containment transitions release-canonical.
+- Select the next canonical action slice from the action backlog. Before selecting `GiveTarget`/`TakeTarget`, decide how `ExitPolicy` should apply to non-directional inventory-to-inventory transfers.
+
+New backlog items from Enter/Exit wrap-up:
+
+- **Content-authored initial control source / nested playable starts**: allow content or scenario definitions to decide which materialized entities start `PlayerChoice` versus `Automatic`, including nested entities, multiple controlled entities, or no controlled entity. This should supersede relying solely on scenario-root `playerStart` coordinates for player-interaction fixtures.
+- **Give/Take policy interpretation**: when promoting canonical `GiveTarget`/`TakeTarget`, decide whether non-directional inventory-to-inventory transfers can satisfy `EdgeAlignedWithExitDirection`, require a future direction/source-destination model, or use a different explicit policy interpretation.
 
 Open player-control models after the first action-step-first path:
 

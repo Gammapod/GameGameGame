@@ -1,8 +1,8 @@
 ---
-id: plan.enter-exit-policy-vertical-slice-sprint
+id: archived.enter-exit-policy-vertical-slice-sprint
 title: Enter/Exit Policy Vertical Slice Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 45
 truth_domains: [planning-priority, implementation-navigation]
 owners: [core-owner]
@@ -20,7 +20,18 @@ related:
 ---
 # Enter/Exit Policy Vertical Slice Sprint Plan
 
-Status: Active sprint plan for the next pair of canonical action vertical slices. This plan records the phased approach for promoting Enter and Exit while adding shared inventory-boundary placement/egress policies. It should be executed using the TDD workflow in `docs/Source of Truth/testing-charter.md`: add or revise intentionally failing tests before production code changes in each phase.
+Status: Archived completed sprint plan. The Enter/Exit policy slice added nullable `EnterPolicy`/`ExitPolicy`, shared constrained inventory-boundary policy resolution, typed Enter/Exit Action Choice support, YAML/editor/frontend authoring support, and canonical Enter/Exit content rooms. Follow-up backlog items are tracked in `docs/Plans/High-Level-Roadmap.md` rather than this archived plan.
+
+## Completion summary
+
+- Core now supports nullable entity/template `EnterPolicy` and `ExitPolicy` with compatibility defaults.
+- `FarthestFromOccupied` placement and `EdgeAlignedWithExitDirection` egress are deterministic and tested.
+- Constrained inventory-boundary transforms route through the policy-aware path, while `Teleport` remains exempt.
+- Enter rejects self-entry and containment-cycle creation.
+- Action Choice has typed Enter target and Exit direction choices with shared history submission helpers.
+- YAML, materialization, editor snapshots, frontend editor policy editing, and agent update support can define/set/clear policies.
+- Content-editor added canonical Enter/Exit outcome and player-interaction rooms.
+- Deferred follow-up: content-authored initial control source / nested playable starts, and final policy interpretation for canonical Give/Take.
 
 ## Decisions and scope
 
