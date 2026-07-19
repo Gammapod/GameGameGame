@@ -479,6 +479,180 @@ public sealed class ScenarioToolingServiceTests
     }
 
     [Fact]
+    public void CarriedEntityControllerRoundTripsThroughEditableDocument()
+    {
+        var document = EditableContentDocument.LoadYaml("""
+entityTemplates:
+  room:
+    name: Room
+    inventoryWidth: 2
+    inventoryHeight: 1
+    bulk: 100
+    aperture: 100
+    carriedEntities:
+      - entityId: playerActor
+        templateId: actor
+        coord: { x: 0, y: 0 }
+        controller: Player
+      - entityId: automaticActor
+        templateId: actor
+        coord: { x: 1, y: 0 }
+        controller: Computer
+  actor:
+    name: Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    bulk: 1
+    aperture: 1
+presentations:
+  room: { glyph: '#', color: Gray }
+  actor: { glyph: '@', color: Yellow }
+""");
+
+        var yaml = document.SaveYaml();
+        var roundTripped = EditableContentDocument.LoadYaml(yaml);
+        var carried = roundTripped.EntityTemplates["room"].CarriedEntities!;
+
+        Assert.Equal(EntityController.Player, carried.Single(entity => entity.EntityId == "playerActor").Controller);
+        Assert.Equal(EntityController.Computer, carried.Single(entity => entity.EntityId == "automaticActor").Controller);
+        Assert.Contains("controller: Player", yaml);
+        Assert.Contains("controller: Computer", yaml);
+    }
+
+    [Fact]
+    public void ScenarioMaterializerInitializesPlacedPlayerControllerEntityForChoice()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Placed Control Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Placed Control Room", InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorTemplateId = editor.CreateEntityPreset("Placed Control Actor");
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("placedPlayer"), actorTemplateId, new GridCoord(1, 0));
+        editor.SetCarriedEntityController(scenarioRootId, new EntityId("placedPlayer"), EntityController.Player);
+        var legacyPlayerTemplateId = editor.CreateEntityPreset("Legacy Player");
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "placed-controller",
+            "Placed Controller",
+            scenarioRootId,
+            legacyPlayerTemplateId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(2, 1)));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "placed-controller");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.True(materialization.World.Entities.ContainsKey(new EntityId("placedPlayer")));
+        Assert.False(materialization.World.Entities.ContainsKey(new EntityId("legacyPlayer")));
+        Assert.Equal(EntityControlSource.PlayerChoice, materialization.World.GetActionControlSource(new EntityId("placedPlayer")));
+        Assert.Equal([new EntityId("placedPlayer")], materialization.PlayerControls["player-1"]);
+    }
+
+    [Fact]
+    public void ScenarioMaterializerInitializesNestedPlayerControllerEntityForChoice()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Nested Control Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Nested Control Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var containerTemplateId = editor.CreateEntityPreset("Controller Container");
+        editor.UpdateEntityPreset(
+            containerTemplateId,
+            new EntityTemplate("Controller Container", InventoryWidth: 1, InventoryHeight: 1, Bulk: 5, Aperture: 5),
+            new EntityPresentation('C', PresentationColor.Cyan));
+        var actorTemplateId = editor.CreateEntityPreset("Nested Control Actor");
+        editor.PlaceCarriedEntity(containerTemplateId, new EntityId("nestedPlayer"), actorTemplateId, new GridCoord(0, 0));
+        editor.SetCarriedEntityController(containerTemplateId, new EntityId("nestedPlayer"), EntityController.Player);
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("container"), containerTemplateId, new GridCoord(0, 0));
+        var legacyPlayerTemplateId = editor.CreateEntityPreset("Legacy Player");
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "nested-controller",
+            "Nested Controller",
+            scenarioRootId,
+            legacyPlayerTemplateId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(1, 0)));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "nested-controller");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal(EntityControlSource.PlayerChoice, materialization.World.GetActionControlSource(new EntityId("nestedPlayer")));
+        Assert.Equal([new EntityId("nestedPlayer")], materialization.PlayerControls["player-1"]);
+    }
+
+    [Fact]
+    public void ScenarioMaterializerAllowsMultiplePlacedPlayerControllerEntities()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Team Control Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Team Control Room", InventoryWidth: 3, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorTemplateId = editor.CreateEntityPreset("Team Actor");
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("firstPlayer"), actorTemplateId, new GridCoord(0, 0));
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("secondPlayer"), actorTemplateId, new GridCoord(1, 0));
+        editor.SetCarriedEntityController(scenarioRootId, new EntityId("firstPlayer"), EntityController.Player);
+        editor.SetCarriedEntityController(scenarioRootId, new EntityId("secondPlayer"), EntityController.Player);
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "team-controller",
+            "Team Controller",
+            scenarioRootId,
+            PlayerEntityTemplateId: null,
+            PlayerEntityId: null,
+            PlayerStart: null));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "team-controller");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal(EntityControlSource.PlayerChoice, materialization.World.GetActionControlSource(new EntityId("firstPlayer")));
+        Assert.Equal(EntityControlSource.PlayerChoice, materialization.World.GetActionControlSource(new EntityId("secondPlayer")));
+        Assert.Equal([new EntityId("firstPlayer"), new EntityId("secondPlayer")], materialization.PlayerControls["player-1"]);
+    }
+
+    [Fact]
+    public void ScenarioMaterializerAllowsPlayerlessScenarioWhenNoControllerAndNoPlayerStart()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Playerless Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Playerless Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorTemplateId = editor.CreateEntityPreset("Automatic Actor");
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("automaticActor"), actorTemplateId, new GridCoord(0, 0));
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "playerless",
+            "Playerless",
+            scenarioRootId,
+            PlayerEntityTemplateId: null,
+            PlayerEntityId: null,
+            PlayerStart: null));
+
+        var validation = document.ValidateCanonicalAuthoring();
+        var materialization = ScenarioMaterializer.Materialize(document, "playerless");
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.PlayerControls);
+        Assert.Null(materialization.PlayerEntityId);
+        Assert.Null(materialization.PlayerLocation);
+        Assert.True(materialization.CanPlay);
+        Assert.Equal(EntityControlSource.Automatic, materialization.World.GetActionControlSource(new EntityId("automaticActor")));
+    }
+
+    [Fact]
     public void ScenarioValidationReportsMissingControlledEntityReferences()
     {
         var document = new EditableContentDocument();

@@ -128,6 +128,36 @@ internal sealed class FrontendCarriedLayoutMutationService(
         }
     }
 
+    public FrontendEditorMutationResult SetCarriedEntityController(
+        string parentTemplateId,
+        string entityId,
+        EntityController? controller)
+    {
+        var validationError = ValidateCarriedEntityMutation(parentTemplateId, entityId);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, getSnapshot());
+        }
+
+        try
+        {
+            session.Editor.SetCarriedEntityController(
+                new EntityTemplateId(parentTemplateId),
+                new EntityId(entityId),
+                controller);
+            var label = controller?.ToString() ?? "default Computer";
+            return FrontendEditorMutationResult.Success(
+                $"Set carried entity {entityId} in template {parentTemplateId} controller to {label}. Preview stale until P rematerializes.",
+                getSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not set carried entity {entityId} controller in template {parentTemplateId}: {ex.Message}",
+                getSnapshot());
+        }
+    }
+
     public FrontendEditorMutationResult OverwriteTemplateInInventory(
         string parentTemplateId,
         string brushTemplateId,

@@ -56,7 +56,7 @@ internal sealed class InventoryGridEditScreen
         ? "Brush picker: Up/Down chooses. Enter confirms. Esc cancels."
         : _movingEntityId is not null
             ? "Move mode: arrows move cursor. Enter/Space places carried entity. Esc cancels move."
-            : "Inventory grid: arrows move cursor. Enter places brush. Delete removes. Space moves. C copies. Tab chooses brush. Esc backs out.";
+            : "Inventory grid: arrows move cursor. Enter places brush. Delete removes. Space moves. C copies. P toggles Player. Tab chooses brush. Esc backs out.";
 
     public InventoryGridEditResult Handle(UiComponentCommand command)
     {
@@ -97,6 +97,7 @@ internal sealed class InventoryGridEditScreen
         InventoryGridEditCommand.Delete => DeleteAtCursor(),
         InventoryGridEditCommand.Move => _movingEntityId is null ? BeginMoveAtCursor() : PlaceMovingEntityAtCursor(),
         InventoryGridEditCommand.Copy => CopyBrushFromCursor(),
+        InventoryGridEditCommand.TogglePlayerController => TogglePlayerControllerAtCursor(),
         InventoryGridEditCommand.OpenBrushPicker => OpenBrushPicker(),
         _ => InventoryGridEditResult.Stay("Use inventory-grid controls.")
     };
@@ -206,6 +207,17 @@ internal sealed class InventoryGridEditScreen
         return InventoryGridEditResult.Stay("Opened inventory brush picker.");
     }
 
+    private InventoryGridEditResult TogglePlayerControllerAtCursor()
+    {
+        if (CarriedAtCursor() is not { } carried) return InventoryGridEditResult.Stay($"No carried entity at {_cursor.X},{_cursor.Y} to assign player controller.");
+
+        EntityController? nextController = carried.Controller == EntityController.Player ? null : EntityController.Player;
+        var result = _mutations.Execute(
+            "Inventory controller toggle requires a service-backed editor screen.",
+            service => service.SetCarriedEntityController(_template.TemplateId, carried.EntityId, nextController));
+        return InventoryGridEditResult.Stay(result.StatusMessage);
+    }
+
     private FrontendEditorCarriedEntitySummary? CarriedAtCursor() =>
         _template.CarriedEntities.FirstOrDefault(carried => carried.Coord == _cursor);
 
@@ -254,6 +266,7 @@ internal sealed class InventoryGridEditScreen
             "Delete removes the carried entity under cursor.",
             "Space picks up/places a carried entity.",
             "C copies cursor entity template into brush.",
+            "P toggles cursor entity controller Player/default Computer.",
             "Current cell is inspected below."
         };
 
@@ -279,7 +292,8 @@ internal sealed class InventoryGridEditScreen
                 $"entity: {carried.EntityId}",
                 $"template: {carried.TemplateName ?? carried.TemplateId ?? "unbound"}",
                 $"template id: {carried.TemplateId ?? "(none)"}",
-                $"glyph/color: {carried.Glyph?.ToString() ?? "?"} / {carried.Color?.ToString() ?? "?"}"
+                $"glyph/color: {carried.Glyph?.ToString() ?? "?"} / {carried.Color?.ToString() ?? "?"}",
+                $"controller: {ControllerLabel(carried.Controller)}"
             }
             :
             [
@@ -301,6 +315,8 @@ internal sealed class InventoryGridEditScreen
         var template = _entityTemplates.FirstOrDefault(template => template.TemplateId == _brushTemplateId);
         return template is null ? _brushTemplateId : $"{template.Name} ({template.TemplateId})";
     }
+
+    private static string ControllerLabel(EntityController? controller) => controller?.ToString() ?? "default Computer";
 }
 
 internal sealed class InventoryGridComponent : IUiComponent
@@ -353,6 +369,7 @@ internal enum InventoryGridEditCommand
     Delete,
     Move,
     Copy,
+    TogglePlayerController,
     OpenBrushPicker
 }
 

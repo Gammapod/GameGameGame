@@ -160,6 +160,16 @@ internal sealed class CarriedEntityLayoutEditor(EditableContentDocument document
         onChanged?.Invoke();
     }
 
+    public void SetCarriedEntityController(EntityTemplateId parentTemplateId, EntityId entityId, EntityController? controller)
+    {
+        var template = GetTemplateDto(parentTemplateId);
+        var carried = template.CarriedEntities?.SingleOrDefault(carried => carried.EntityId == entityId.Value)
+            ?? throw new InvalidOperationException($"Entity template {parentTemplateId} does not carry entity {entityId}.");
+
+        carried.Controller = controller;
+        onChanged?.Invoke();
+    }
+
     private EditableContentDocument.EntityTemplateDto GetTemplateDto(EntityTemplateId id) =>
         document.EntityTemplates.TryGetValue(id.Value, out var template)
             ? template

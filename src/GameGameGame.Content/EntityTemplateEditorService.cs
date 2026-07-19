@@ -243,7 +243,8 @@ internal sealed class EntityTemplateEditorService(EditableContentDocument docume
             .Select(carried => new CarriedEntityTemplate(
                 new EntityId($"{idPrefix}{ContentEditorIdHelpers.UppercaseFirst(carried.EntityId.Value)}"),
                 carried.TemplateId ?? throw new InvalidOperationException($"Carried entity {carried.EntityId} has no template ID."),
-                carried.Coord))
+                carried.Coord,
+                carried.Controller))
             .ToList();
     }
 }

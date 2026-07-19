@@ -79,9 +79,9 @@ public sealed record ContentToolScenarioSummary(
     string ScenarioId,
     string Name,
     EntityTemplateId ScenarioRootEntityTemplateId,
-    EntityTemplateId PlayerEntityTemplateId,
-    EntityId PlayerEntityId,
-    GridCoord PlayerStart,
+    EntityTemplateId? PlayerEntityTemplateId,
+    EntityId? PlayerEntityId,
+    GridCoord? PlayerStart,
     IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null);
 
 public sealed record ContentToolScenarioManifestValidationSummary(bool IsValid, IReadOnlyList<string> Diagnostics);

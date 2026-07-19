@@ -87,7 +87,8 @@ public static class YamlContentLoader
             .Select(carried => new CarriedEntityTemplate(
                 new EntityId(Required(carried.EntityId, nameof(carried.EntityId))),
                 new EntityTemplateId(Required(carried.TemplateId, nameof(carried.TemplateId))),
-                MaterializeCoord(carried.Coord)))
+                MaterializeCoord(carried.Coord),
+                carried.Controller))
             .ToList();
     }
 
@@ -353,6 +354,8 @@ public static class YamlContentLoader
         public string? TemplateId { get; set; }
 
         public GridCoordDto? Coord { get; set; }
+
+        public EntityController? Controller { get; set; }
     }
 
     private sealed class EntityPresentationDto

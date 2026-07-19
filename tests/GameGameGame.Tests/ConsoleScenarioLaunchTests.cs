@@ -281,6 +281,73 @@ public sealed class ConsoleScenarioLaunchTests
         }
     }
 
+    [Fact]
+    public void PlayableScenarioLauncherFocusesAuthoredPlayerControllerWhenNoLegacyPlayerIsInserted()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var roomId = editor.CreateEntityPreset("Controller Launch Room");
+        editor.UpdateEntityPreset(
+            roomId,
+            new EntityTemplate("Controller Launch Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorId = editor.CreateEntityPreset("Controller Launch Actor");
+        editor.UpdateEntityPreset(
+            actorId,
+            new EntityTemplate("Controller Launch Actor", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        editor.PlaceCarriedEntity(roomId, new EntityId("authoredPlayer"), actorId, new GridCoord(0, 0));
+        editor.SetCarriedEntityController(roomId, new EntityId("authoredPlayer"), EntityController.Player);
+        editor.UpsertScenario(new ScenarioDefinition(
+            "controller-launch",
+            "Controller Launch",
+            roomId,
+            PlayerEntityTemplateId: null,
+            PlayerEntityId: null,
+            PlayerStart: null));
+
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "controller-launch");
+
+        Assert.Equal(new EntityId("authoredPlayer"), session.PlayerEntityId);
+        Assert.Equal([new EntityId("authoredPlayer")], session.PlayerControls["player-1"]);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(0, 0)), session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.Empty(session.ValidationDiagnostics);
+        Assert.True(session.CanPlay);
+    }
+
+    [Fact]
+    public void PlayableScenarioLauncherIgnoresSkippedLegacyPlayerIdWhenAuthoredControllerExists()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var roomId = editor.CreateEntityPreset("Skipped Legacy Room");
+        editor.UpdateEntityPreset(
+            roomId,
+            new EntityTemplate("Skipped Legacy Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorId = editor.CreateEntityPreset("Authored Controlled Actor");
+        editor.UpdateEntityPreset(
+            actorId,
+            new EntityTemplate("Authored Controlled Actor", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        var legacyPlayerId = editor.CreateEntityPreset("Skipped Legacy Player");
+        editor.PlaceCarriedEntity(roomId, new EntityId("authoredPlayer"), actorId, new GridCoord(0, 0));
+        editor.SetCarriedEntityController(roomId, new EntityId("authoredPlayer"), EntityController.Player);
+        editor.UpsertScenario(new ScenarioDefinition(
+            "skipped-legacy-controller-launch",
+            "Skipped Legacy Controller Launch",
+            roomId,
+            legacyPlayerId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(1, 0)));
+
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "skipped-legacy-controller-launch");
+
+        Assert.False(session.World.Entities.ContainsKey(new EntityId("legacyPlayer")));
+        Assert.Equal(new EntityId("authoredPlayer"), session.PlayerEntityId);
+        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(0, 0)), session.World.GetEntityLocation(session.PlayerEntityId));
+    }
+
     private static EditableContentDocument CreateConsoleDocument(string scenarioId, string scenarioName, GridCoord playerStart)
     {
         var document = new EditableContentDocument();

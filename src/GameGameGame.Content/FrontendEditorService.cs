@@ -135,6 +135,13 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         => new FrontendCarriedLayoutMutationService(Session, GetSnapshot)
             .ReplaceCarriedEntityTemplate(parentTemplateId, entityId, brushTemplateId);
 
+    public FrontendEditorMutationResult SetCarriedEntityController(
+        string parentTemplateId,
+        string entityId,
+        EntityController? controller)
+        => new FrontendCarriedLayoutMutationService(Session, GetSnapshot)
+            .SetCarriedEntityController(parentTemplateId, entityId, controller);
+
     public FrontendEditorMutationResult OverwriteTemplateInInventory(
         string parentTemplateId,
         string brushTemplateId,
@@ -248,10 +255,13 @@ public sealed record FrontendEditorScenarioSummary(
     string ScenarioId,
     string Name,
     string ScenarioRootEntityTemplateId,
-    string PlayerEntityTemplateId,
-    string PlayerEntityId,
+    string? PlayerEntityTemplateId,
+    string? PlayerEntityId,
     GridCoord PlayerStart,
-    IReadOnlyDictionary<string, IReadOnlyList<string>>? PlayerControls = null);
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? PlayerControls = null)
+{
+    public GridCoord? AuthoredPlayerStart { get; init; }
+}
 
 public sealed record FrontendEditorEntityTemplateSummary(
     string TemplateId,
@@ -311,7 +321,8 @@ public sealed record FrontendEditorCarriedEntitySummary(
     char? Glyph,
     PresentationColor? Color,
     GridCoord Coord,
-    IReadOnlyList<FrontendEditorDiagnostic> Diagnostics);
+    IReadOnlyList<FrontendEditorDiagnostic> Diagnostics,
+    EntityController? Controller = null);
 
 public sealed record FrontendEditorActionPlanSummary(
     string ActionPlanId,

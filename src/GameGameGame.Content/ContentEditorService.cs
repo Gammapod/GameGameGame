@@ -96,6 +96,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void ReplaceCarriedEntityTemplate(EntityTemplateId parentTemplateId, EntityId entityId, EntityTemplateId templateId)
         => new CarriedEntityLayoutEditor(Document, onChanged).ReplaceCarriedEntityTemplate(parentTemplateId, entityId, templateId);
 
+    public void SetCarriedEntityController(EntityTemplateId parentTemplateId, EntityId entityId, EntityController? controller)
+        => new CarriedEntityLayoutEditor(Document, onChanged).SetCarriedEntityController(parentTemplateId, entityId, controller);
+
     public IReadOnlyList<ActionPlanEditorModel> ListActionPlans()
     {
         var registry = Document.ToRegistry();

@@ -105,11 +105,14 @@ public sealed partial class EditableContentDocument
 
         public GridCoordDto? Coord { get; set; }
 
+        public EntityController? Controller { get; set; }
+
         public static CarriedEntityTemplateDto From(CarriedEntityTemplate carried) => new()
         {
             EntityId = carried.EntityId.Value,
             TemplateId = carried.TemplateId?.Value,
-            Coord = GridCoordDto.From(carried.Coord)
+            Coord = GridCoordDto.From(carried.Coord),
+            Controller = carried.Controller
         };
     }
 
@@ -170,9 +173,9 @@ public sealed partial class EditableContentDocument
         {
             Name = scenario.Name,
             ScenarioRootEntityTemplateId = scenario.ScenarioRootEntityTemplateId.Value,
-            PlayerEntityTemplateId = scenario.PlayerEntityTemplateId.Value,
-            PlayerEntityId = scenario.PlayerEntityId.Value,
-            PlayerStart = GridCoordDto.From(scenario.PlayerStart),
+            PlayerEntityTemplateId = scenario.PlayerEntityTemplateId?.Value,
+            PlayerEntityId = scenario.PlayerEntityId?.Value,
+            PlayerStart = scenario.PlayerStart is { } start ? GridCoordDto.From(start) : null,
             PlayerControls = scenario.PlayerControls.Count == 0
                 ? null
                 : scenario.PlayerControls.ToDictionary(
@@ -186,9 +189,9 @@ public sealed partial class EditableContentDocument
                 scenarioId,
                 Name ?? scenarioId,
                 new EntityTemplateId(ScenarioRootEntityTemplateId ?? string.Empty),
-                new EntityTemplateId(PlayerEntityTemplateId ?? string.Empty),
-                new EntityId(PlayerEntityId ?? string.Empty),
-                ToCoord(PlayerStart),
+                string.IsNullOrWhiteSpace(PlayerEntityTemplateId) ? null : new EntityTemplateId(PlayerEntityTemplateId),
+                string.IsNullOrWhiteSpace(PlayerEntityId) ? null : new EntityId(PlayerEntityId),
+                ToNullableCoord(PlayerStart),
                 (PlayerControls ?? new Dictionary<string, List<string>>())
                     .ToDictionary(
                         entry => entry.Key,
@@ -500,6 +503,9 @@ public sealed partial class EditableContentDocument
 
     private static GridCoord ToCoord(GridCoordDto? coord) =>
         coord is null ? new GridCoord(0, 0) : new GridCoord(coord.X, coord.Y);
+
+    private static GridCoord? ToNullableCoord(GridCoordDto? coord) =>
+        coord is null ? null : new GridCoord(coord.X, coord.Y);
 
     private static PlaneCoord ToPlaneCoord(PlaneCoordDto? coord) =>
         coord is null ? new PlaneCoord(new PlaneId(string.Empty), new GridCoord(0, 0)) : new PlaneCoord(new PlaneId(coord.PlaneId ?? string.Empty), ToCoord(coord.Coord));

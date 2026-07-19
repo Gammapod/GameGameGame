@@ -12,6 +12,12 @@ public readonly record struct ActionPlanTemplateId(string Value)
     public override string ToString() => Value;
 }
 
+public enum EntityController
+{
+    Computer,
+    Player
+}
+
 public sealed record EntityTemplate(
     string Name,
     int InventoryWidth,
@@ -55,9 +61,9 @@ public sealed record ScenarioDefinition(
     string ScenarioId,
     string Name,
     EntityTemplateId ScenarioRootEntityTemplateId,
-    EntityTemplateId PlayerEntityTemplateId,
-    EntityId PlayerEntityId,
-    GridCoord PlayerStart,
+    EntityTemplateId? PlayerEntityTemplateId,
+    EntityId? PlayerEntityId,
+    GridCoord? PlayerStart,
     IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
 {
     public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
@@ -68,21 +74,25 @@ public sealed record CarriedEntityTemplate
     public CarriedEntityTemplate(
         EntityId EntityId,
         EntityTemplate Template,
-        GridCoord Coord)
+        GridCoord Coord,
+        EntityController? Controller = null)
     {
         this.EntityId = EntityId;
         this.Template = Template;
         this.Coord = Coord;
+        this.Controller = Controller;
     }
 
     public CarriedEntityTemplate(
         EntityId EntityId,
         EntityTemplateId TemplateId,
-        GridCoord Coord)
+        GridCoord Coord,
+        EntityController? Controller = null)
     {
         this.EntityId = EntityId;
         this.TemplateId = TemplateId;
         this.Coord = Coord;
+        this.Controller = Controller;
     }
 
     public EntityId EntityId { get; }
@@ -92,6 +102,8 @@ public sealed record CarriedEntityTemplate
     public EntityTemplateId? TemplateId { get; }
 
     public GridCoord Coord { get; }
+
+    public EntityController? Controller { get; }
 }
 
 public sealed record EntitySpawnOptions(

@@ -272,10 +272,11 @@ Current persisted scenario fields:
 |---|---|
 | Scenario name/ID | Stable scenario selection. |
 | Scenario root template | Template whose inventory/play plane becomes the scenario space. |
-| Player template | Template inserted as the runtime player. |
-| Player entity ID | Deterministic runtime ID for the inserted player. |
-| Player start coordinate | Requested placement in the scenario-root inventory/play plane. |
-| Player controls | Optional authored binding from a player/input ID such as `player-1` to one or more materialized entity IDs. Each authored binding must name at least one existing materialized entity; duplicate entity IDs within one binding and conflicting assignment of one entity to multiple players are invalid. Materialization resolves valid bindings for launch/session consumers; existing player-insertion scenarios default to `player-1` controlling the inserted player when no binding is authored. |
+| Placed entity controller | Preferred playable-start authoring model. Any entity instance placed in an authored inventory layout may declare nullable `controller: Player` or `controller: Computer`; missing/null defaults to `Computer`. During scenario materialization, placed instances with `controller: Player` initialize to runtime `PlayerChoice`, including nested instances and multiple entities. Current SadConsole play mode can directly prompt one focused controlled entity; additional player-controlled starts are initialized correctly and excluded from automatic control, but initiative-aware multi-prompt play is a planned follow-up. |
+| Player template | Legacy fallback template inserted as the runtime player only when no placed instance declares `controller: Player` and the legacy player template/entity/start tuple is complete. |
+| Player entity ID | Legacy deterministic runtime ID for the inserted player, and observer/default focus metadata where applicable; not the source of control authority when placed controllers exist. |
+| Player start coordinate | Nullable legacy fallback placement in the scenario-root inventory/play plane. Missing start plus no placed `controller: Player` produces a playerless scenario rather than implicit `(0,0)` insertion. |
+| Player controls | Compatibility binding from a player/input ID such as `player-1` to one or more materialized entity IDs. Prefer placed-instance `controller` for new content. Materialization still resolves valid legacy bindings for launch/session consumers; existing player-insertion scenarios default to `player-1` controlling the inserted player when no placed controller or explicit binding is authored. |
 
 Curated scenario manifests are now first-class content artifacts for scenario browsing and packaging. A manifest may use curated `sections` instead of only a flat `scenarios` cache. Supported section IDs are `legacy`, `delta`, `user`, and `canonical`. Supported entry statuses are `legacy`, `active-delta`, `user`, `canonical-candidate`, and `canonical`. Each entry should include `contentPath`, `scenarioId`, `name`, a required reviewer-facing `description`, `status`, optional `tags`, and optional `source`/provenance. Folder scanning remains useful for reconciliation and candidate discovery, but it is not the authority for curated section membership, ordering, lifecycle, or descriptions.
 
@@ -286,7 +287,7 @@ Preferred scenario workflow:
 1. Define the vignette goal in terms of observable content behavior.
 2. Create or reuse entity templates, presentations, inventories, and action plans.
 3. Assign default action plans and initial `Facing` as needed.
-4. Create a persisted scenario using scenario root, player template, player entity ID, start coordinate, and player-control bindings when the controlled actor should be explicit.
+4. Mark controlled placed entity instances with `controller: Player` when the controlled actor should be explicit. Use legacy player template/entity/start only for compatibility scenarios that still insert a player into the root plane.
 5. Validate the content document.
 6. Materialize and run the scenario.
 7. Use SadConsole/manual play when spatial behavior needs visual review; use legacy frames/GIF recording only when an artifact is specifically needed.

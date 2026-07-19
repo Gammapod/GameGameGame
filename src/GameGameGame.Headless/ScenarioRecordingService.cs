@@ -111,11 +111,12 @@ public static class ScenarioRecordingService
 
         var renderer = new DebugScenarioFrameRenderer();
 
+        var renderFocusEntityId = definition.PlayerEntityId ?? materialization.ScenarioRootEntityId;
         AddFrame(frames, outputDirectory, baseName, frameIndex: 0, turnNumber: 0, path =>
-            renderer.RenderPng(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, definition.PlayerEntityId, frameIndex: 0, turnNumber: 0, definition.ScenarioId, definition.Name, path));
+            renderer.RenderPng(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, renderFocusEntityId, frameIndex: 0, turnNumber: 0, definition.ScenarioId, definition.Name, path));
         RunFullScenarioTurns(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, request.TurnCount, runtimeObservations, turnNumber =>
             AddFrame(frames, outputDirectory, baseName, frameIndex: turnNumber, turnNumber, path =>
-                renderer.RenderPng(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, definition.PlayerEntityId, turnNumber, turnNumber, definition.ScenarioId, definition.Name, path)));
+                renderer.RenderPng(materialization.World, materialization.Registry, materialization.ActionPlans, scenarioPlaneId, renderFocusEntityId, turnNumber, turnNumber, definition.ScenarioId, definition.Name, path)));
 
         var gifPath = Path.Combine(outputDirectory, $"{baseName}.gif");
         WriteGif(frames, gifPath);

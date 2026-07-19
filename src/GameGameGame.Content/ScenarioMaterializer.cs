@@ -18,11 +18,15 @@ public sealed record ScenarioMaterializationResult(
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeFailures,
     IReadOnlyList<string> CapabilityGaps,
-    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null,
+    bool AllowPlayerlessPlay = false)
 {
     public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
 
-    public bool CanPlay => ValidationDiagnostics.Count == 0 && RuntimeFailures.Count == 0 && ScenarioPlaneId is not null && PlayerLocation is not null;
+    public bool CanPlay => ValidationDiagnostics.Count == 0
+        && RuntimeFailures.Count == 0
+        && ScenarioPlaneId is not null
+        && (PlayerLocation is not null || PlayerControls.Count > 0 || AllowPlayerlessPlay);
 }
 
 public static class ScenarioMaterializer
@@ -45,7 +49,8 @@ public static class ScenarioMaterializer
             scenario.PlayerEntityTemplateId,
             scenario.PlayerEntityId,
             scenario.PlayerStart,
-            scenario.PlayerControls);
+            scenario.PlayerControls,
+            allowPlayerlessPlay: true);
 
     public static ScenarioMaterializationResult MaterializeRootOnly(
         EditableContentDocument document,
@@ -64,7 +69,8 @@ public static class ScenarioMaterializer
             playerEntityTemplateId: null,
             playerEntityId: null,
             playerStart: null,
-            playerControls: null);
+            playerControls: null,
+            allowPlayerlessPlay: false);
 
     private static ScenarioMaterializationResult Materialize(
         EditableContentDocument document,
@@ -76,7 +82,8 @@ public static class ScenarioMaterializer
         EntityTemplateId? playerEntityTemplateId,
         EntityId? playerEntityId,
         GridCoord? playerStart,
-        IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? playerControls)
+        IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? playerControls,
+        bool allowPlayerlessPlay)
     {
         var validationDiagnostics = document.ValidateCanonicalAuthoring().Errors.ToList();
         var runtimeFailures = new List<string>();
@@ -143,7 +150,11 @@ public static class ScenarioMaterializer
         }
 
         PlaneCoord? insertedPlayerLocation = null;
-        if (playerEntityTemplateId is { } concretePlayerTemplateId && playerEntityId is { } concretePlayerEntityId && playerStart is { } concretePlayerStart)
+        var authoredPlayerControllerEntityIds = CollectAuthoredPlayerControllerEntityIds(registry, scenarioRootEntityTemplateId).ToList();
+        if (authoredPlayerControllerEntityIds.Count == 0
+            && playerEntityTemplateId is { } concretePlayerTemplateId
+            && playerEntityId is { } concretePlayerEntityId
+            && playerStart is { } concretePlayerStart)
         {
             var requestedPlayerLocation = new PlaneCoord(activeScenarioPlaneId, concretePlayerStart);
             if (!world.Planes.TryGetValue(activeScenarioPlaneId, out var activePlane) || !activePlane.Contains(concretePlayerStart) || !world.TryGetNodeId(requestedPlayerLocation, out _))
@@ -190,8 +201,15 @@ public static class ScenarioMaterializer
             setupLines.Add($"Player: {playerName} {insertedPlayerEntityId} at {playerLocation}, {FormatActionState(world, insertedPlayerEntityId)}");
         }
 
+        var controlBindings = authoredPlayerControllerEntityIds.Count > 0
+            ? new Dictionary<string, IReadOnlyList<EntityId>>(StringComparer.Ordinal)
+            {
+                ["player-1"] = authoredPlayerControllerEntityIds
+            }
+            : ResolvePlayerControls(playerControls, insertedPlayerLocation is null ? null : playerEntityId);
+
         var alreadyAssigned = new Dictionary<EntityId, string>();
-        foreach (var (playerId, controlledEntityIds) in ResolvePlayerControls(playerControls, playerEntityId))
+        foreach (var (playerId, controlledEntityIds) in controlBindings)
         {
             if (string.IsNullOrWhiteSpace(playerId))
             {
@@ -265,7 +283,45 @@ public static class ScenarioMaterializer
                 validationDiagnostics,
                 runtimeFailures,
                 capabilityGaps,
-                resolvedPlayerControls);
+                resolvedPlayerControls,
+                allowPlayerlessPlay);
+    }
+
+    private static IEnumerable<EntityId> CollectAuthoredPlayerControllerEntityIds(
+        PrototypeContentRegistry registry,
+        EntityTemplateId scenarioRootEntityTemplateId)
+    {
+        var visitedTemplateIds = new HashSet<EntityTemplateId>();
+        return Collect(scenarioRootEntityTemplateId, visitedTemplateIds);
+
+        IEnumerable<EntityId> Collect(EntityTemplateId templateId, HashSet<EntityTemplateId> ancestry)
+        {
+            if (!registry.EntityTemplates.TryGetValue(templateId, out var template)
+                || template.CarriedEntities is null
+                || template.CarriedEntities.Count == 0
+                || !ancestry.Add(templateId))
+            {
+                yield break;
+            }
+
+            foreach (var carried in template.CarriedEntities)
+            {
+                if (carried.Controller == EntityController.Player)
+                {
+                    yield return carried.EntityId;
+                }
+
+                if (carried.TemplateId is { } carriedTemplateId)
+                {
+                    foreach (var nested in Collect(carriedTemplateId, ancestry))
+                    {
+                        yield return nested;
+                    }
+                }
+            }
+
+            ancestry.Remove(templateId);
+        }
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<EntityId>> ResolvePlayerControls(

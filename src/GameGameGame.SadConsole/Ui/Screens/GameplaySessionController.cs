@@ -17,8 +17,12 @@ internal sealed class GameplaySessionController
         // Temporary debug wait and direct/action-choice movement use controlled-command compatibility:
         // the controlled actor's authored plan must not also resolve autonomously while it is acting as
         // the player-controlled entity.
+        var playerControlledEntityIds = session.PlayerControls.Values
+            .SelectMany(entityIds => entityIds)
+            .Append(session.PlayerEntityId)
+            .ToHashSet();
         _controlledCommandActionPlans = session.ActionPlans
-            .Where(entry => entry.Key != session.PlayerEntityId)
+            .Where(entry => !playerControlledEntityIds.Contains(entry.Key))
             .ToDictionary(entry => entry.Key, entry => entry.Value);
         _commands = new ControlledActorCommandService(
             _movement,

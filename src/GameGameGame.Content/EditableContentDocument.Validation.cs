@@ -68,7 +68,7 @@ public sealed partial class EditableContentDocument
                 entityTemplateId: string.IsNullOrWhiteSpace(scenario.ScenarioRootEntityTemplateId) ? null : new EntityTemplateId(scenario.ScenarioRootEntityTemplateId)));
         }
 
-        if (string.IsNullOrWhiteSpace(scenario.PlayerEntityTemplateId) || !EntityTemplates.ContainsKey(scenario.PlayerEntityTemplateId))
+        if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityTemplateId) && !EntityTemplates.ContainsKey(scenario.PlayerEntityTemplateId))
         {
             diagnostics.Add(ContentDiagnostic.Error(
                 ContentDiagnosticCode.InvalidScenarioDefinition,
@@ -78,7 +78,6 @@ public sealed partial class EditableContentDocument
 
         if (scenario.ScenarioRootEntityTemplateId is not null && EntityTemplates.TryGetValue(scenario.ScenarioRootEntityTemplateId, out var root))
         {
-            var start = ToCoord(scenario.PlayerStart);
             if (root.InventoryWidth <= 0 || root.InventoryHeight <= 0)
             {
                 diagnostics.Add(ContentDiagnostic.Error(
@@ -86,22 +85,26 @@ public sealed partial class EditableContentDocument
                     $"Scenario {scenarioId} root template {scenario.ScenarioRootEntityTemplateId} has no usable inventory/play plane.",
                     entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId)));
             }
-            else if (start.X < 0 || start.Y < 0 || start.X >= root.InventoryWidth || start.Y >= root.InventoryHeight)
+            else if (scenario.PlayerStart is { } playerStart)
             {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} player start {start.X},{start.Y} is outside scenario root bounds {root.InventoryWidth}x{root.InventoryHeight}.",
-                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
-                    coord: start));
-            }
-            else if ((root.CarriedEntities ?? []).FirstOrDefault(carried => carried.Coord?.X == start.X && carried.Coord.Y == start.Y) is { } occupant)
-            {
-                diagnostics.Add(ContentDiagnostic.Error(
-                    ContentDiagnosticCode.InvalidScenarioDefinition,
-                    $"Scenario {scenarioId} player start {start.X},{start.Y} is occupied by carried entity {occupant.EntityId}.",
-                    entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
-                    carriedEntityId: string.IsNullOrWhiteSpace(occupant.EntityId) ? null : new EntityId(occupant.EntityId),
-                    coord: start));
+                var start = ToCoord(playerStart);
+                if (start.X < 0 || start.Y < 0 || start.X >= root.InventoryWidth || start.Y >= root.InventoryHeight)
+                {
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidScenarioDefinition,
+                        $"Scenario {scenarioId} player start {start.X},{start.Y} is outside scenario root bounds {root.InventoryWidth}x{root.InventoryHeight}.",
+                        entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
+                        coord: start));
+                }
+                else if ((root.CarriedEntities ?? []).FirstOrDefault(carried => carried.Coord?.X == start.X && carried.Coord.Y == start.Y) is { } occupant)
+                {
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidScenarioDefinition,
+                        $"Scenario {scenarioId} player start {start.X},{start.Y} is occupied by carried entity {occupant.EntityId}.",
+                        entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
+                        carriedEntityId: string.IsNullOrWhiteSpace(occupant.EntityId) ? null : new EntityId(occupant.EntityId),
+                        coord: start));
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityId)

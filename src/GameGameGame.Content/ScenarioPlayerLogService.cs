@@ -27,9 +27,9 @@ public static class ScenarioPlayerLogService
             session.Document,
             new PersistedScenarioRunRequest(request.ScenarioId, request.TurnCount));
 
-        var rows = run.History is null
+        var rows = run.History is null || observerEntityId is null
             ? []
-            : ProjectRows(run.History, observerEntityId);
+            : ProjectRows(run.History, observerEntityId.Value);
         var turns = rows
             .GroupBy(row => row.TurnNumber)
             .OrderBy(group => group.Key)

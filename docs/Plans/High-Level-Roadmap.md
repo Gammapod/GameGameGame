@@ -134,7 +134,7 @@ Planned next sprint:
 
 New backlog items from Enter/Exit wrap-up:
 
-- **Content-authored initial control source / nested playable starts**: allow content or scenario definitions to decide which materialized entities start `PlayerChoice` versus `Automatic`, including nested entities, multiple controlled entities, or no controlled entity. This should supersede relying solely on scenario-root `playerStart` coordinates for player-interaction fixtures.
+- **Content-authored initial control source / nested playable starts**: implemented through instance-level placed-entity `controller` metadata. Authored `controller: Player` instances initialize to `PlayerChoice`, missing/`Computer` defaults to automatic control, nested/multiple/playerless starts are supported at materialization, and legacy scenario-root `playerStart` insertion remains fallback only when no placed player controller exists. Follow-up: SadConsole still has a single-focused controlled actor prompt loop; multiple initialized `PlayerChoice` actors need the initiative-aware PlayerChoice scheduler refactor.
 - **Give/Take policy interpretation**: when promoting canonical `GiveTarget`/`TakeTarget`, decide whether non-directional inventory-to-inventory transfers can satisfy `EdgeAlignedWithExitDirection`, require a future direction/source-destination model, or use a different explicit policy interpretation.
 
 Open player-control models after the first action-step-first path:

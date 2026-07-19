@@ -83,6 +83,24 @@ entityTemplates:
       coord:
         x: 3
         y: 3
+    - entityId: canonicalMoveInteractionRoomCanonicalMovePlayer
+      templateId: canonicalMovePlayer
+      coord:
+        x: 0
+        y: 2
+      controller: Player
+    - entityId: canonicalMoveInteractionRoomCanonicalMovePlayer2
+      templateId: canonicalMovePlayer
+      coord:
+        x: 0
+        y: 4
+      controller: Player
+    - entityId: canonicalMoveInteractionRoomCanonicalMovePlayer3
+      templateId: canonicalMovePlayer
+      coord:
+        x: 2
+        y: 5
+      controller: Player
   canonicalMovePlayer:
     name: Canonical Move Player
     inventoryWidth: 1
@@ -184,10 +202,10 @@ presentations:
     glyph: L
     color: Green
   canonicalMoveDiagonalOneCornerAllowedProbe:
-    glyph: '1'
+    glyph: 1
     color: Cyan
   canonicalMoveDiagonalTwoCornerBlockedProbe:
-    glyph: '2'
+    glyph: 2
     color: Earth
   canonicalMoveEntityBlockedProbe:
     glyph: E

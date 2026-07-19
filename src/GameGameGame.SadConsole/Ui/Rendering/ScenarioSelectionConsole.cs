@@ -127,6 +127,7 @@ internal sealed class ScenarioSelectionConsole : Console
             if (keyboard.IsKeyReleased(Keys.Delete) || keyboard.IsKeyReleased(Keys.Back)) HandleInventoryGridEdit(InventoryGridEditCommand.Delete);
             else if (keyboard.IsKeyReleased(Keys.Space)) HandleInventoryGridEdit(InventoryGridEditCommand.Move);
             else if (keyboard.IsKeyReleased(Keys.C)) HandleInventoryGridEdit(InventoryGridEditCommand.Copy);
+            else if (keyboard.IsKeyReleased(Keys.P)) HandleInventoryGridEdit(InventoryGridEditCommand.TogglePlayerController);
             else if (keyboard.IsKeyReleased(Keys.Tab)) HandleInventoryGridEdit(InventoryGridEditCommand.OpenBrushPicker);
             else if (keyboard.IsKeyReleased(Keys.Up)) HandleInventoryGridEdit(UiComponentCommand.Up);
             else if (keyboard.IsKeyReleased(Keys.Down)) HandleInventoryGridEdit(UiComponentCommand.Down);

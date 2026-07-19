@@ -563,6 +563,26 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         Assert.Contains(rows, row => row.Contains("template: Coin"));
     }
 
+    [Fact]
+    public void InventoryGridEditTogglePlayerControllerMutatesCursorEntityAndInspectionPanel()
+    {
+        var service = InventoryGridService();
+        var screen = InventoryGridEditScreen.FromSnapshot(service.GetSnapshot(), "box", service);
+
+        var setPlayer = screen.Handle(InventoryGridEditCommand.TogglePlayerController);
+
+        Assert.Contains("controller to Player", setPlayer.Message);
+        var carried = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == "box").CarriedEntities.Single(entity => entity.Coord == new GridCoord(0, 0));
+        Assert.Equal(EntityController.Player, carried.Controller);
+        Assert.Contains(screen.Components().Single(component => component.Id == "inventory-grid-inspection").RenderRows(SadConsoleTheme.Default), row => row.Contains("controller: Player"));
+
+        var clearPlayer = screen.Handle(InventoryGridEditCommand.TogglePlayerController);
+
+        Assert.Contains("controller to default Computer", clearPlayer.Message);
+        carried = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == "box").CarriedEntities.Single(entity => entity.Coord == new GridCoord(0, 0));
+        Assert.Null(carried.Controller);
+    }
+
     private static FrontendEditorSnapshot DemoSnapshot() => new(
         "demo.yaml",
         false,

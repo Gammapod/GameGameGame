@@ -35,13 +35,16 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     scenario.ScenarioId,
                     scenario.Name,
                     scenario.ScenarioRootEntityTemplateId.Value,
-                    scenario.PlayerEntityTemplateId.Value,
-                    scenario.PlayerEntityId.Value,
-                    scenario.PlayerStart,
+                    scenario.PlayerEntityTemplateId?.Value,
+                    scenario.PlayerEntityId?.Value,
+                    scenario.PlayerStart ?? new GridCoord(0, 0),
                     scenario.PlayerControls.ToDictionary(
                         entry => entry.Key,
                         entry => (IReadOnlyList<string>)entry.Value.Select(entityId => entityId.Value).ToList(),
-                        StringComparer.Ordinal));
+                        StringComparer.Ordinal))
+                {
+                    AuthoredPlayerStart = scenario.PlayerStart
+                };
             })
             .ToList();
 
@@ -99,7 +102,8 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                             diagnostics
                                 .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value
                                     && diagnostic.CarriedEntityId == carried.EntityId.Value)
-                                .ToList()))
+                                .ToList(),
+                            carried.Controller))
                         .ToList(),
                     diagnostics
                         .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value)

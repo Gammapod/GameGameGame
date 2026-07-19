@@ -104,6 +104,21 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
+    public void GameplaySessionControllerExcludesSecondaryPlayerControlsFromAutonomousPlans()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, includeCratePlayerControl: true);
+        var controller = new GameplaySessionController(session);
+        var controlledCrateId = new EntityId("mockCrate");
+        var initialCrateLocation = session.World.GetEntityLocation(controlledCrateId);
+
+        var result = controller.SubmitWait();
+
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Equal(1, controller.FrameIndex);
+        Assert.Equal(initialCrateLocation, session.World.GetEntityLocation(controlledCrateId));
+    }
+
+    [Fact]
     public void ActionChoicePromptControllerEnterOpensActionList()
     {
         var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
@@ -589,7 +604,8 @@ public sealed class GameplayMockScreenTests
         bool includeDropStep = false,
         bool startWithCarriedItem = false,
         bool includeExitStep = false,
-        bool startPlayerInsideCrate = false)
+        bool startPlayerInsideCrate = false,
+        bool includeCratePlayerControl = false)
     {
         var document = new EditableContentDocument();
         var playerInteractionPlanId = new ActionPlanTemplateId("mockPlayerInteractionPlan");
@@ -678,8 +694,13 @@ public sealed class GameplayMockScreenTests
             playerTemplateId,
             new EntityId("mockPlayer"),
             new GridCoord(1, 1),
-            bindPlayerChoiceControl
-                ? new Dictionary<string, IReadOnlyList<EntityId>> { ["local-player"] = [new EntityId("mockPlayer")] }
+            bindPlayerChoiceControl || includeCratePlayerControl
+                ? new Dictionary<string, IReadOnlyList<EntityId>>
+                {
+                    ["local-player"] = includeCratePlayerControl
+                        ? [new EntityId("mockPlayer"), new EntityId("mockCrate")]
+                        : [new EntityId("mockPlayer")]
+                }
                 : null));
 
         var session = PlayableScenarioLauncher.CreateFromDocument(document, "play-mock-scenario");

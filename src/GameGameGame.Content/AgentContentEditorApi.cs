@@ -139,6 +139,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             return entityId;
         });
 
+    public AgentApiResult SetCarriedEntityController(EntityTemplateId parentTemplateId, EntityId entityId, EntityController? controller) =>
+        Try("SetCarriedEntityControllerFailed", () => Session.Editor.SetCarriedEntityController(parentTemplateId, entityId, controller));
+
     public AgentApiResult<ActionPlanTemplateId> CreateActionPlan(string name) =>
         Try("CreateActionPlanFailed", () => Session.Editor.CreateActionPlan(name));
 
@@ -394,9 +397,9 @@ public sealed record AgentAlphaScenarioDefinition(
     string ScenarioId,
     string Name,
     EntityTemplateId ScenarioRootEntityTemplateId,
-    EntityTemplateId PlayerEntityTemplateId,
-    EntityId PlayerEntityId,
-    GridCoord PlayerStart,
+    EntityTemplateId? PlayerEntityTemplateId,
+    EntityId? PlayerEntityId,
+    GridCoord? PlayerStart,
     IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
 {
     public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
@@ -566,7 +569,8 @@ public static class AlphaScenarioMaterializer
                 definition.ScenarioRootEntityTemplateId,
                 definition.PlayerEntityTemplateId,
                 definition.PlayerEntityId,
-                definition.PlayerStart)));
+                definition.PlayerStart,
+                definition.PlayerControls)));
 
     internal static AlphaScenarioMaterializationResult MaterializeRootOnly(
         ContentEditorSession session,

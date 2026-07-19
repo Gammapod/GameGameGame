@@ -1122,6 +1122,31 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void SetCarriedEntityControllerUpdatesAuthoredInventoryEntry()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var set = service.SetCarriedEntityController("editorRoom", "northWall", EntityController.Player);
+            var clear = service.SetCarriedEntityController("editorRoom", "northWall", null);
+
+            Assert.True(set.IsSuccess, set.StatusMessage);
+            var setRoom = Assert.Single(set.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            Assert.Equal(EntityController.Player, Assert.Single(setRoom.CarriedEntities, carried => carried.EntityId == "northWall").Controller);
+            Assert.True(clear.IsSuccess, clear.StatusMessage);
+            var clearedRoom = Assert.Single(clear.Snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
+            Assert.Null(Assert.Single(clearedRoom.CarriedEntities, carried => carried.EntityId == "northWall").Controller);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void OverwriteCarriedEntityAtCoordinateRemovesOccupantAndPlacesBrush()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());

@@ -55,7 +55,16 @@ public static class PlayableScenarioLauncher
     public static PlayableScenarioSession CreateFromMaterialization(ScenarioMaterializationResult result)
     {
         var activePlaneId = result.ScenarioPlaneId ?? ScenarioMaterializer.DefaultScenarioPlaneId;
-        var playerEntityId = result.PlayerEntityId ?? new EntityId("player");
+        var firstControlledEntityId = result.PlayerControls.Values
+            .SelectMany(entityIds => entityIds)
+            .Select(entityId => (EntityId?)entityId)
+            .FirstOrDefault();
+        var materializedScenarioPlayerId = result.PlayerEntityId is { } scenarioPlayerId
+            && result.World.Entities.ContainsKey(scenarioPlayerId)
+            ? scenarioPlayerId
+            : (EntityId?)null;
+        var fallbackFocusEntityId = FindFirstEntityOnPlane(result.World, activePlaneId) ?? result.ScenarioRootEntityId;
+        var playerEntityId = materializedScenarioPlayerId ?? firstControlledEntityId ?? fallbackFocusEntityId;
 
         return new PlayableScenarioSession(
             result.ScenarioId,
@@ -71,5 +80,26 @@ public static class PlayableScenarioLauncher
             result.RuntimeFailures,
             result.CapabilityGaps,
             result.PlayerControls);
+    }
+
+    private static EntityId? FindFirstEntityOnPlane(WorldState world, PlaneId planeId)
+    {
+        if (!world.Planes.TryGetValue(planeId, out var plane))
+        {
+            return null;
+        }
+
+        for (var y = 0; y < plane.Height; y++)
+        {
+            for (var x = 0; x < plane.Width; x++)
+            {
+                if (world.GetOccupant(new PlaneCoord(planeId, new GridCoord(x, y))) is { } occupant)
+                {
+                    return occupant;
+                }
+            }
+        }
+
+        return null;
     }
 }
