@@ -1,3 +1,19 @@
+---
+id: plan.sprint-retrospective
+title: Sprint Retrospective
+kind: retrospective
+status: reference
+truth_rank: 70
+truth_domains: [process]
+owners: [core-owner]
+audience: [core-owner, content-editor, frontend-owner]
+read_when:
+  - reviewing recent process observations
+  - discussing open retrospective questions
+  - performing sprint wrap-up
+related:
+  - source.planning-index
+---
 # Sprint Retrospective
 
 Status: Retrospective reference. Canonical action vertical slices are now the active release direction; these notes remain process context only.

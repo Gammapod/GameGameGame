@@ -1,3 +1,21 @@
+---
+id: source.testing-charter
+title: Testing Charter
+kind: source-of-truth
+subkind: testing-charter
+status: active
+owners: [core-owner, frontend-owner]
+audience: [core-owner, frontend-owner, content-editor]
+lane: testing
+truth_rank: 15
+truth_domains: [testing-policy, test-trace]
+read_when:
+  - planning semantic Core Content or Editor code changes
+  - planning stable frontend behavior tests
+related:
+  - source.invariants
+  - source.frontend-ux-invariants
+---
 # Testing Charter
 
 Tests follow the same architectural split as `src`.

@@ -1,3 +1,23 @@
+---
+id: plan.canonical-actions-vertical-slice
+title: Canonical Actions Vertical Slice Plan
+kind: plan
+status: active
+truth_rank: 45
+truth_domains: [planning-priority, implementation-navigation]
+owners: [core-owner]
+audience: [core-owner, frontend-owner, content-editor]
+read_when:
+  - working on canonical action vertical slices
+  - promoting Action Steps through engine content editor frontend and documentation layers
+related:
+  - source.invariants
+  - source.engine-editor-capabilities
+  - source.content-authoring-manual
+  - source.action-step-outcome-and-affordance-logic
+  - source.frontend-game-text
+  - source.vertical-slice-map
+---
 # Canonical Actions Vertical Slice Plan
 
 Status: Active release plan. The canonical `Move` vertical slice, first Pickup/Drop Action Choice interaction seam, and componentized play-mode refactor are complete enough to use as reference workflow evidence for promoting follow-up actions. This supersedes Delta point-of-view as the selected implementation direction while preserving Delta POV as completed/available foundation work and follow-up context.

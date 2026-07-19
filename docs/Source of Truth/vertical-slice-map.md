@@ -1,3 +1,25 @@
+---
+id: source.vertical-slice-map
+title: Vertical Slice Map
+kind: source-of-truth
+subkind: implementation-navigation
+status: active
+owners: [core-owner]
+audience: [core-owner, frontend-owner, content-editor]
+lane: vertical-slice
+truth_rank: 35
+truth_domains: [implementation-navigation]
+read_when:
+  - implementing a feature that touches more than one engine/editor layer
+  - adding or changing an Action Step primitive descriptor validation rule editor/API operation or frontend/editor UI workflow
+  - planning tests/docs for a vertical slice
+do_not_read_when:
+  - making a narrow one-layer fix whose owning file and tests are already known
+related:
+  - source.engine-editor-capabilities
+  - source.content-authoring-manual
+  - source.testing-charter
+---
 # Vertical Slice Map
 
 Status: Source of truth for cross-layer implementation navigation.

@@ -1,3 +1,22 @@
+---
+id: source.invariants
+title: GameGameGame Invariants
+kind: source-of-truth
+subkind: invariant-trace
+status: active
+owners: [core-owner]
+audience: [core-owner, frontend-owner]
+lane: invariant-trace
+truth_rank: 10
+truth_domains: [runtime-behavior, stable-contract, test-trace]
+read_when:
+  - planning changes to stable Core behavior
+  - tracing behavior contracts to tests
+related:
+  - source.planning-index
+  - source.testing-charter
+  - source.engine-editor-capabilities
+---
 # GameGameGame Invariants
 
 This document records minimal functional requirements that should influence tests. Keep this list small and stable.

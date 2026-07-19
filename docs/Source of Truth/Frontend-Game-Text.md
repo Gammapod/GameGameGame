@@ -1,3 +1,24 @@
+---
+id: source.frontend-game-text
+title: Frontend Game Text
+kind: source-of-truth
+subkind: frontend-game-text
+status: active
+owners: [frontend-owner]
+audience: [frontend-owner, core-owner, content-editor]
+lane: frontend-game-text
+truth_rank: 30
+truth_domains: [frontend-presentation]
+read_when:
+  - translating structured action outcomes point-of-view facts target labels or affordance adjectives into user-facing sentences
+  - adding or reviewing SadConsole/global/local log wording
+  - deciding whether a wording decision is frontend presentation or a missing shared semantic fact
+related:
+  - source.frontend-ux-invariants
+  - source.frontend-ux-standards
+  - source.action-step-outcome-and-affordance-logic
+  - plan.canonical-actions-vertical-slice
+---
 # Frontend Game Text
 
 Status: Draft source of truth for frontend-owned player-facing game-text message IDs; final wording is intentionally deferred.

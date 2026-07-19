@@ -1,3 +1,27 @@
+---
+id: source.content-authoring-manual
+title: Content Authoring Manual
+kind: source-of-truth
+subkind: authoring-manual
+status: active
+owners: [content-editor]
+audience: [content-editor, core-owner, frontend-owner]
+lane: content-authoring
+truth_rank: 30
+truth_domains: [authorability, content-workflow, gap-workflow]
+read_when:
+  - starting any content-authoring or content-review session
+  - deciding what can be expressed with current content tools
+  - writing beta scenarios primitive showcases or capability-gap notes
+do_not_read_when:
+  - changing Core behavior or tests
+  - checking implementation-layer support tiers
+  - researching future/planned capability priority
+related:
+  - source.planning-index
+  - source.engine-editor-capabilities
+  - plan.beta-capability-gap-log
+---
 # Content Authoring Manual
 
 Status: Source of truth for content-editor-facing authoring capabilities and workflows.

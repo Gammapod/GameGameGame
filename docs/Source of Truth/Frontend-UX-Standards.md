@@ -1,3 +1,25 @@
+---
+id: source.frontend-ux-standards
+title: Frontend UX Standards
+kind: source-of-truth
+subkind: frontend-ux-standards
+status: active
+owners: [frontend-owner]
+audience: [frontend-owner, core-owner]
+lane: frontend-ux-standards
+truth_rank: 30
+truth_domains: [frontend-presentation]
+read_when:
+  - designing SadConsole or future frontend presentation
+  - deciding whether a UI treatment is consistent with the entity-panel/debug-browser model
+  - evaluating information-density log glyph cursor highlighting or panel changes
+  - converting playtest/frontend feedback into UI standards or backlog items
+related:
+  - source.frontend-ux-invariants
+  - source.frontend-ux-decisions
+  - source.entity-panel-ux-spec
+  - source.frontend-game-text
+---
 # Frontend UX Standards
 
 Status: Source of truth for frontend-facing presentation standards, design principles, and UI-bible guidance.

@@ -1,3 +1,26 @@
+---
+id: source.engine-editor-capabilities
+title: Engine-Editor Capability Matrix
+kind: source-of-truth
+subkind: capability-matrix
+status: active
+owners: [core-owner]
+audience: [core-owner, content-editor, frontend-owner]
+lane: capability-matrix
+truth_rank: 20
+truth_domains: [capability-support, parity-tier]
+read_when:
+  - adding removing renaming or re-tiering an engine/editor capability
+  - deciding which layers must participate in a vertical slice
+  - checking capability support status and layer coverage
+do_not_read_when:
+  - looking for TDD invariant/test traces
+  - looking for content-authoring instructions without implementation detail
+related:
+  - source.invariants
+  - source.content-authoring-manual
+  - source.action-step-outcome-and-affordance-logic
+---
 # Engine-Editor Capability Matrix
 
 Status: Source of truth for maintainer-facing engine/editor capability support, parity tiers, and layer coverage.

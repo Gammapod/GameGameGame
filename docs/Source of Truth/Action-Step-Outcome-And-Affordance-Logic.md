@@ -1,3 +1,27 @@
+---
+id: source.action-step-outcome-and-affordance-logic
+title: Action Step Outcome And Affordance Logic
+kind: source-of-truth
+subkind: action-logic
+status: active
+owners: [core-owner]
+audience: [core-owner, content-editor, frontend-owner]
+lane: action-logic
+truth_rank: 25
+truth_domains: [action-logic, runtime-behavior]
+read_when:
+  - answering what an Action Step does on success failure and fallthrough
+  - translating actor actee and spatial relationship into available verbs
+  - designing editor affordance displays action-plan previews or content-facing interaction summaries
+do_not_read_when:
+  - checking layer support tiers
+  - checking content-authoring workflows and common chains
+  - changing stable Core behavior or tests
+related:
+  - source.engine-editor-capabilities
+  - source.content-authoring-manual
+  - source.invariants
+---
 # Action Step Outcome And Affordance Logic
 
 Status: Source-of-truth companion for reasoning about canonical Action Step outcomes and current actor/actee verb affordances.

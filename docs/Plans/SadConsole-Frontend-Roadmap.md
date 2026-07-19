@@ -1,3 +1,21 @@
+---
+id: plan.sadconsole-frontend-roadmap
+title: SadConsole Frontend Roadmap
+kind: backlog-reference
+status: reference
+truth_rank: 55
+truth_domains: [planning-priority, frontend-presentation]
+owners: [frontend-owner]
+audience: [frontend-owner, core-owner]
+read_when:
+  - selecting or refining SadConsole/frontend work
+  - deciding whether a requested workflow belongs in SadConsole or shared frontend-neutral tooling
+related:
+  - source.frontend-ux-invariants
+  - source.frontend-ux-standards
+  - source.engine-editor-capabilities
+  - source.invariants
+---
 # SadConsole Frontend Roadmap
 
 Status: Backlog/reference. Not an active implementation plan unless a future roadmap selection promotes SadConsole/frontend work again.

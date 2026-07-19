@@ -1,3 +1,22 @@
+---
+id: source.frontend-ux-decisions
+title: Frontend UX Decision Log
+kind: source-of-truth
+subkind: frontend-ux-decisions
+status: active
+owners: [frontend-owner]
+audience: [frontend-owner, core-owner]
+lane: frontend-ux-decisions
+truth_rank: 40
+truth_domains: [frontend-rationale, frontend-presentation]
+read_when:
+  - reviewing why a frontend UX standard exists
+  - planning a SadConsole Simulation or Editor slice
+  - deciding whether a new UI affordance conflicts with a prior decision
+related:
+  - source.frontend-ux-standards
+  - plan.sadconsole-frontend-roadmap
+---
 # Frontend UX Decision Log
 
 Status: Living decision log for frontend UX and mode-model decisions.

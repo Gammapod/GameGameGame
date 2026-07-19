@@ -1,3 +1,22 @@
+---
+id: plan.high-level-roadmap
+title: High-Level Roadmap
+kind: roadmap
+status: active
+truth_rank: 50
+truth_domains: [planning-priority]
+owners: [core-owner]
+audience: [core-owner, content-editor, frontend-owner]
+read_when:
+  - selecting or refining sprint work
+  - sorting conceptual ideas into priority buckets
+  - deciding whether a design gap should become planned work or remain deferred
+related:
+  - source.invariants
+  - source.engine-editor-capabilities
+  - source.content-authoring-manual
+  - source.planning-index
+---
 # High-Level Roadmap
 
 Status: Active roadmap. Canonical action vertical slices are the selected release direction.

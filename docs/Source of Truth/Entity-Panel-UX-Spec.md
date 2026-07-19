@@ -1,3 +1,23 @@
+---
+id: source.entity-panel-ux-spec
+title: Entity Panel UX Spec
+kind: source-of-truth
+subkind: ux-spec
+status: active
+owners: [frontend-owner]
+audience: [frontend-owner, core-owner]
+lane: ux-spec
+truth_rank: 25
+truth_domains: [frontend-boundary, frontend-presentation]
+read_when:
+  - designing SadConsole or future frontend inspection surfaces
+  - defining frontend-neutral entity panel projection data
+  - deciding which panel state is frontend-owned versus shared service data
+related:
+  - source.frontend-ux-invariants
+  - source.frontend-ux-standards
+  - source.engine-editor-capabilities
+---
 # Entity Panel UX Spec
 
 Status: Source of truth for the entity-panel, breadcrumb, and turn-log UX model.

@@ -1,3 +1,25 @@
+---
+id: source.frontend-ux-invariants
+title: Frontend UX Invariants
+kind: source-of-truth
+subkind: frontend-ux-invariants
+status: active
+owners: [frontend-owner]
+audience: [frontend-owner, core-owner]
+lane: frontend-ux-invariants
+truth_rank: 20
+truth_domains: [frontend-boundary, test-trace]
+read_when:
+  - planning SadConsole or future frontend work
+  - deciding whether behavior belongs in Core Content Headless Editor services or in a frontend
+  - shaping shared session action target log or panel contracts for frontend consumption
+related:
+  - source.entity-panel-ux-spec
+  - source.frontend-ux-standards
+  - source.testing-charter
+  - source.invariants
+  - source.engine-editor-capabilities
+---
 # Frontend UX Invariants
 
 Status: Source of truth for frontend-facing UX constraints and layer boundaries.

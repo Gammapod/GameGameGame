@@ -1,3 +1,21 @@
+---
+id: plan.beta-capability-gap-log
+title: Beta Capability Gap Log
+kind: gap-log
+status: reference
+truth_rank: 55
+truth_domains: [gap-workflow, planning-priority]
+owners: [content-editor]
+audience: [content-editor, core-owner, frontend-owner]
+read_when:
+  - deciding whether a beta vignette should request engine editor/API reporting or frontend work
+  - reviewing why a showcase is headless-only partially playable or intentionally blocked
+  - promoting repeated scenario pressure into an implementation plan
+related:
+  - source.content-authoring-manual
+  - source.engine-editor-capabilities
+  - source.invariants
+---
 # Beta Capability Gap Log
 
 Status: Reference log for beta-discovered gaps, not an active implementation plan. New work should only be promoted from this log through `docs/Plans/High-Level-Roadmap.md` after the active roadmap re-prioritizes it.
