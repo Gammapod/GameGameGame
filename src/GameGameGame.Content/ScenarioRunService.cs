@@ -127,7 +127,7 @@ public static class ScenarioRunService
         }
 
         var scenarioPlaneId = materialization.ScenarioPlaneId ?? ScenarioPlaneId;
-        var actorOrder = GetScenarioActorsInInitiativeOrder(world, materialization.ActionPlans, scenarioPlaneId);
+        var actorOrder = ScenarioInitiativeOrderService.GetScenarioActorsInInitiativeOrder(world, materialization.ActionPlans, materialization.ScenarioRootEntityId, scenarioPlaneId);
         var setupLines = CreateSetupLines(materialization, scenarioPlaneId, actorOrder, runMode);
         if (validationDiagnostics.Count > 0 || materialization.RuntimeFailures.Count > 0)
         {
@@ -149,47 +149,42 @@ public static class ScenarioRunService
         var runtimeFailures = new List<string>();
         var movement = new MovementService();
         var history = SimulationHistorySession.Start(world, ScenarioRootEntityId, scenarioPlaneId, ScenarioRootEntityId);
+        var stepper = new InitiativePlayerChoiceStepper(movement, new ActionChoiceService(movement));
+        var actorOrderIds = actorOrder.Select(actor => actor.EntityId).ToList();
 
         for (var turn = 1; turn <= turnCount; turn++)
         {
-            var actorLogs = new List<SimulationHistoryActorLog>();
-            for (var initiative = 0; initiative < actorOrder.Count; initiative++)
+            var step = stepper.AdvanceUntilPlayerChoice(
+                world,
+                actorOrderIds,
+                materialization.ActionPlans,
+                actorId => GetActionPlanDescriptor(materialization.Registry, actorId),
+                startIndex: 0,
+                (stepWorld, entityId) => TargetingService.RefreshTargets(stepWorld, materialization.Registry, entityId));
+
+            if (step.ActorLogs.Count > 0)
             {
-                var actor = actorOrder[initiative];
-                if (!world.Entities.TryGetValue(actor.EntityId, out var entity) || !materialization.ActionPlans.TryGetValue(actor.EntityId, out var actionPlan))
+                history.RecordActorInterval(step.ActorLogs, scenarioPlaneId, ScenarioRootEntityId);
+
+                foreach (var log in step.ActorLogs.Where(log => !log.Succeeded))
                 {
-                    continue;
-                }
-
-                TargetingService.RefreshTargets(world, materialization.Registry, actor.EntityId);
-                var resolution = ActorTurnResolver.ResolvePlan(world, actor.EntityId, actionPlan.PlanTurn(world, actor.EntityId, movement), movement);
-                PostActionStateUpdater.ApplyFacingFromMovement(world, actor.EntityId, resolution.ActorMovementDirection);
-                world.RecordTrace(resolution.Trace);
-
-                if (resolution.ConsumesTurn)
-                {
-                    world.AdvanceTurn();
-                }
-
-                actorLogs.Add(new SimulationHistoryActorLog(
-                    initiative,
-                    actor.EntityId,
-                    entity.Name,
-                    resolution.Succeeded,
-                    resolution.ConsumesTurn,
-                    resolution.ContinuePlan,
-                    TurnActionSummaryFormatter.FormatTrace(resolution.Trace, resolution.Succeeded),
-                    resolution.Trace));
-
-                if (!resolution.Succeeded)
-                {
-                    runtimeObservations.Add($"Turn {turn}, initiative {initiative + 1}: {entity.Name} could not act ({FindFailureDetail(resolution.Trace)}).");
+                    runtimeObservations.Add($"Turn {turn}, initiative {log.Order + 1}: {log.ActorName} could not act ({FindFailureDetail(log.Trace)}).");
                 }
             }
 
-            if (actorLogs.Count > 0)
+            if (step.Request is { } request)
             {
-                history.RecordActorInterval(actorLogs, scenarioPlaneId, ScenarioRootEntityId);
+                var actorName = world.Entities.TryGetValue(request.ActorId, out var entity)
+                    ? entity.Name
+                    : request.ActorId.ToString();
+                runtimeObservations.Add($"Turn {turn}, initiative {step.NextActorIndex + 1}: {actorName} is awaiting PlayerChoice input; headless run stopped before resolving player input.");
+                break;
+            }
+
+            if (step.Diagnostics.Count > 0)
+            {
+                runtimeObservations.AddRange(step.Diagnostics.Select(diagnostic => $"Turn {turn}: {diagnostic}"));
+                break;
             }
         }
 
@@ -205,6 +200,20 @@ public static class ScenarioRunService
             runtimeFailures,
             materialization.CapabilityGaps);
         return new ScenarioRunHistoryResult(completedReport, materialization, history);
+    }
+
+    private static ActionPlanDescriptor? GetActionPlanDescriptor(PrototypeContentRegistry registry, EntityId entityId)
+    {
+        if (!registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        {
+            return null;
+        }
+
+        var template = registry.GetEntityTemplate(templateId);
+        return template.DefaultActionPlanId is { } planId
+            && registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
+                ? descriptor
+                : null;
     }
 
     private static IReadOnlyList<ScenarioTurnReport> CreateTurnReports(SimulationHistorySession history) =>
@@ -255,47 +264,6 @@ public static class ScenarioRunService
             runtimeObservations,
             runtimeFailures,
             capabilityGaps);
-
-    private static IReadOnlyList<ScenarioActorSummary> GetScenarioActorsInInitiativeOrder(
-        WorldState world,
-        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
-        PlaneId scenarioPlaneId)
-    {
-        var containmentPaths = new EntityContainmentPathService();
-
-        return actionPlans.Keys
-            .Where(world.Entities.ContainsKey)
-            .Where(entityId => entityId != ScenarioRootEntityId)
-            .Select(entityId => (
-                EntityId: entityId,
-                Location: world.GetEntityLocation(entityId),
-                Path: containmentPaths.GetPathFromRoot(world, ScenarioRootEntityId, entityId)))
-            .Where(entry => IsScheduledScenarioActor(entry.Path, scenarioPlaneId))
-            .OrderBy(entry => FormatScenarioInitiativePath(entry.Path), StringComparer.Ordinal)
-            .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
-            .Select(entry => new ScenarioActorSummary(
-                entry.EntityId,
-                world.Entities[entry.EntityId].Name,
-                entry.Location))
-            .ToList();
-    }
-
-    private static bool IsScheduledScenarioActor(EntityContainmentPath path, PlaneId scenarioPlaneId) =>
-        path.Status == EntityContainmentPathStatus.Complete
-        && path.Segments.Count > 1
-        && path.Segments[0].EntityId == ScenarioRootEntityId
-        && path.Segments[1].ContainingPlaneId == scenarioPlaneId;
-
-    private static string FormatScenarioInitiativePath(EntityContainmentPath path) =>
-        string.Join(
-            "/",
-            path.Segments
-                .Skip(1)
-                .Select(segment =>
-                {
-                    var coord = segment.CoordinateInContainingPlane ?? new GridCoord(0, 0);
-                    return $"{coord.Y:D6},{coord.X:D6},{segment.EntityId.Value}";
-                }));
 
     private static IReadOnlyList<string> CreateSetupLines(
         ScenarioMaterializationResult materialization,

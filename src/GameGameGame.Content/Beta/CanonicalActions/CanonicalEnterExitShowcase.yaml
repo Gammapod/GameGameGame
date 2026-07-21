@@ -110,6 +110,12 @@ entityTemplates:
       coord:
         x: 4
         y: 3
+    - entityId: canonicalExitInteractionRoomCanonicalExitPlayer
+      templateId: canonicalExitPlayer
+      coord:
+        x: 2
+        y: 3
+      controller: Player
   canonicalEnterExitObserver:
     name: Canonical Enter Exit Observer
     inventoryWidth: 1
@@ -351,6 +357,7 @@ entityTemplates:
       coord:
         x: 1
         y: 0
+      controller: Player
   canonicalExitAnyCellActor:
     name: Exit Any Cell Actor
     inventoryWidth: 1

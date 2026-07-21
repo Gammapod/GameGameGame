@@ -143,8 +143,61 @@ public sealed class ScenarioToolingServiceTests
         Assert.Contains("Scenario: persisted-runner (Persisted Runner Scenario)", report.SetupLines);
         Assert.Contains("Player: Persisted Runner insertedPlayer at scenarioRoot(1,1), facing East, target none", report.SetupLines);
         Assert.Equal([new EntityId("insertedPlayer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
-        Assert.Contains("Persisted Runner: scenarioRoot(2,1), facing East, target none", report.FinalStateLines);
+        Assert.Empty(report.Turns);
+        Assert.Contains("Persisted Runner: scenarioRoot(1,1), facing East, target none", report.FinalStateLines);
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Persisted Runner is awaiting PlayerChoice input", StringComparison.Ordinal));
         Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+    }
+
+    [Fact]
+    public void ScenarioRunServiceStopsAtPlayerChoiceActorsAndReportsPromptObservation()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Prompt Run Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Prompt Run Room", InventoryWidth: 4, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+
+        var automaticId = editor.CreateEntityPreset("Prompt Automatic");
+        editor.UpdateEntityPreset(
+            automaticId,
+            new EntityTemplate("Prompt Automatic", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
+            new EntityPresentation('a', PresentationColor.Green));
+        editor.SetInitialFacing(automaticId, Direction.East);
+        var automaticPlanId = editor.CreateActionPlan("Prompt Automatic Move");
+        editor.SetActionPlanBehavior(automaticPlanId, [ActionPlanBehaviorStepKind.MoveFacing]);
+        editor.SetDefaultActionPlan(automaticId, automaticPlanId);
+
+        var playerId = editor.CreateEntityPreset("Prompt Player");
+        editor.UpdateEntityPreset(
+            playerId,
+            new EntityTemplate("Prompt Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        editor.SetInitialFacing(playerId, Direction.East);
+        var playerPlanId = editor.CreateActionPlan("Prompt Player Move");
+        editor.SetActionPlanBehavior(playerPlanId, [ActionPlanBehaviorStepKind.MoveFacing]);
+        editor.SetDefaultActionPlan(playerId, playerPlanId);
+
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("promptAutomatic"), automaticId, new GridCoord(0, 0));
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("promptPlayer"), playerId, new GridCoord(2, 0));
+        editor.SetCarriedEntityController(scenarioRootId, new EntityId("promptPlayer"), EntityController.Player);
+        editor.UpsertScenario(new ScenarioDefinition(
+            "prompt-run",
+            "Prompt Run",
+            scenarioRootId,
+            PlayerEntityTemplateId: null,
+            PlayerEntityId: null,
+            PlayerStart: null));
+
+        var report = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("prompt-run", TurnCount: 1));
+
+        Assert.Equal(["Prompt Automatic"], report.Turns.Select(turn => turn.ActorName).ToArray());
+        Assert.Contains("Prompt Automatic: scenarioRoot(1,0), facing East, target none", report.FinalStateLines);
+        Assert.Contains("Prompt Player: scenarioRoot(2,0), facing East, target none", report.FinalStateLines);
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("Prompt Player is awaiting PlayerChoice input", StringComparison.Ordinal));
         Assert.Empty(report.RuntimeFailures);
     }
 
@@ -583,6 +636,7 @@ presentations:
         var materialization = ScenarioMaterializer.Materialize(document, "nested-controller");
 
         Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Equal('#', materialization.Registry.GetPresentationForEntity(materialization.ScenarioRootEntityId).Glyph);
         Assert.Equal(EntityControlSource.PlayerChoice, materialization.World.GetActionControlSource(new EntityId("nestedPlayer")));
         Assert.Equal([new EntityId("nestedPlayer")], materialization.PlayerControls["player-1"]);
     }
@@ -680,6 +734,41 @@ presentations:
 
         Assert.False(validation.IsValid);
         Assert.Contains(validation.Errors, error => error.Contains("Scenario bad-control player control player-1 references missing entity missingActor", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ScenarioValidationIgnoresLegacyPlayerControlsWhenPlacedControllerIsAuthored()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Controller Supersedes Legacy Room");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Controller Supersedes Legacy Room", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var actorTemplateId = editor.CreateEntityPreset("Controller Supersedes Legacy Actor");
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("authoredPlayer"), actorTemplateId, new GridCoord(0, 0));
+        editor.SetCarriedEntityController(scenarioRootId, new EntityId("authoredPlayer"), EntityController.Player);
+        var legacyPlayerTemplateId = editor.CreateEntityPreset("Legacy Player");
+
+        editor.UpsertScenario(new ScenarioDefinition(
+            "controller-supersedes-legacy",
+            "Controller Supersedes Legacy",
+            scenarioRootId,
+            legacyPlayerTemplateId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(1, 0),
+            new Dictionary<string, IReadOnlyList<EntityId>>
+            {
+                ["player-1"] = [new EntityId("staleTemplateOrEntityId")]
+            }));
+
+        var validation = document.ValidateCanonicalAuthoring();
+        var materialization = ScenarioMaterializer.Materialize(document, "controller-supersedes-legacy");
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.Equal([new EntityId("authoredPlayer")], materialization.PlayerControls["player-1"]);
+        Assert.False(materialization.World.Entities.ContainsKey(new EntityId("legacyPlayer")));
     }
 
     [Fact]

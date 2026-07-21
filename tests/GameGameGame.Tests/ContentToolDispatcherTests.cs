@@ -178,12 +178,8 @@ public sealed class ContentToolDispatcherTests
         var data = Assert.IsType<AgentScenarioPlayerLogReport>(result.Data);
         Assert.Equal(new EntityId("toolLogPlayer"), data.ObserverEntityId);
         Assert.Equal("player narrative projection", data.ProjectionKind);
-        var turn = Assert.Single(data.Turns);
-        Assert.Equal("Turn 1", turn.Heading);
-        Assert.Equal("action.move_facing.success", Assert.Single(turn.Lines));
-        var row = Assert.Single(data.Rows);
-        Assert.Equal("action.move_facing.success", row.MessageId);
-        Assert.Null(row.Text);
+        Assert.Empty(data.Turns);
+        Assert.Empty(data.Rows);
         var serialized = JsonSerializer.Serialize(result, ContentToolJson.Options);
         Assert.DoesNotContain("traceLines", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("finalStateLines", serialized, StringComparison.OrdinalIgnoreCase);

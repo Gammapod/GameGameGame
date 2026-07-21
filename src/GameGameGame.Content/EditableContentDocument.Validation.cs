@@ -128,6 +128,11 @@ public sealed partial class EditableContentDocument
             return;
         }
 
+        if (HasAuthoredPlayerController(root, new HashSet<string>(StringComparer.Ordinal)))
+        {
+            return;
+        }
+
         var materializedEntityIds = new HashSet<string>(StringComparer.Ordinal);
         if (!string.IsNullOrWhiteSpace(scenario.PlayerEntityId))
         {
@@ -215,6 +220,27 @@ public sealed partial class EditableContentDocument
                 AddCarriedEntityIds(carriedTemplate, entityIds, visitedTemplateIds);
             }
         }
+    }
+
+    private bool HasAuthoredPlayerController(EntityTemplateDto template, HashSet<string> visitedTemplateIds)
+    {
+        foreach (var carried in template.CarriedEntities ?? [])
+        {
+            if (carried.Controller == EntityController.Player)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(carried.TemplateId)
+                && EntityTemplates.TryGetValue(carried.TemplateId, out var carriedTemplate)
+                && visitedTemplateIds.Add(carried.TemplateId)
+                && HasAuthoredPlayerController(carriedTemplate, visitedTemplateIds))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void AddActionPlanShapeDiagnostics(List<ContentDiagnostic> diagnostics, string planId, ActionPlanDescriptorDto plan)

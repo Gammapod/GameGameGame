@@ -81,6 +81,24 @@ public sealed class ScenarioRunReportTests
             destination => destination.CanExecute && destination.Destination.Coord == new GridCoord(5, 4));
     }
 
+    [Fact]
+    public void CanonicalEnterExitShowcaseScenariosLoadValidateAndPreferPlacedPlayerController()
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", "CanonicalActions", "CanonicalEnterExitShowcase.yaml"));
+        var document = EditableContentDocument.LoadYaml(File.ReadAllText(path));
+        var validation = new ContentEditorService(document).Validate();
+        var canonicalValidation = document.ValidateCanonicalAuthoring();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.True(canonicalValidation.IsValid, string.Join(Environment.NewLine, canonicalValidation.Errors));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "beta-canonical-exit-player-interaction");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Contains(new EntityId("exitPlayerChoiceBoxCanonicalExitPlayer"), materialization.PlayerControls["player-1"]);
+        Assert.False(materialization.World.Entities.ContainsKey(new EntityId("canonicalExitInteractionObserver")));
+    }
+
     private static string FindRepositoryFile(string relativePath, [CallerFilePath] string sourceFilePath = "")
     {
         var directory = new DirectoryInfo(Path.GetDirectoryName(sourceFilePath) ?? AppContext.BaseDirectory);

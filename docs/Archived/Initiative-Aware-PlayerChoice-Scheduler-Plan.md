@@ -2,7 +2,7 @@
 id: plan.initiative-aware-player-choice-scheduler
 title: Initiative-Aware PlayerChoice Scheduler Refactor Plan
 kind: plan
-status: draft
+status: archived
 truth_rank: 55
 truth_domains: [planning-priority, implementation-navigation]
 owners: [core-owner]
@@ -20,7 +20,9 @@ related:
 ---
 # Initiative-Aware PlayerChoice Scheduler Refactor Plan
 
-Status: Draft follow-up plan. This plan records the larger refactor revealed by instance-level `controller: Player` authoring: current play mode still treats one selected player entity as special and first in the turn cycle, rather than advancing initiative and pausing whenever the next actor's runtime control source is `PlayerChoice`.
+Status: Archived completed hardening plan. This plan records the larger refactor revealed by instance-level `controller: Player` authoring: play and headless simulation advance initiative and pause/report whenever the next actor's runtime control source is `PlayerChoice`.
+
+Implementation note: completed. Core has `InitiativePlayerChoiceStepper`, Content exposes shared scenario initiative ordering on playable sessions, SadConsole play mode consumes the stepper to pause at `PlayerChoice` actors in initiative order, and headless scenario runs stop/report when a `PlayerChoice` prompt is reached instead of resolving controlled actors as automatic. Core history can retarget the current controlled actor without restarting history (`SimulationHistorySession.SetCurrentControlledEntity`), and SadConsole consumes that shared history retargeting API so projected action-log/history continuity survives active controlled-actor changes in play mode.
 
 ## Problem statement
 
@@ -72,6 +74,16 @@ This should support:
 - rollback/history restore of current turn position and pending request state;
 - frontends presenting the active controlled actor as a scheduler result, not as a hardcoded player entity.
 
+Expected frontend UX for this slice:
+
+1. Simulation advances automatically until the scheduler reaches a `PlayerChoice` actor.
+2. The frontend redraws/presents the current state from that active actor's point of view and prompts for that actor's Action Choice.
+3. The player submits a choice for that actor.
+4. Simulation continues without intermediate required redraws until the next `PlayerChoice` actor is reached or another explicit stop condition is returned.
+5. The frontend redraws for the next active controlled actor and repeats.
+
+This means player-facing redraw/prompt cadence is event-driven by required player control, not by every automatic actor step. Debug panels may still expose the automatic interval trace/log when the prompt is shown.
+
 ## Non-goals
 
 - Do not redesign the full global time/speed system.
@@ -117,6 +129,8 @@ Exit criteria:
 
 Goal: add a shared scheduler/stepper service that owns initiative-aware control-source interpretation.
 
+Status: Implemented for the current slice. Automatic actors before a `PlayerChoice` actor resolve through shared stepping; multiple `PlayerChoice` actors are returned in order; playerless automatic cycles can advance; and `PlayerChoice` actors with no Action Choice request produce stepper diagnostics. Final scheduler cursor semantics remain intentionally deferred.
+
 Planned work:
 
 1. Define a turn-step result DTO, likely including:
@@ -141,6 +155,8 @@ Testable outcomes:
 
 Goal: make history record and restore scheduler cursor plus pending active actor state.
 
+Status: Implemented for the current slice. Core history can retarget the current controlled entity without restarting and preserves intervals/rollback state in tests. SadConsole consumes this API instead of restarting `SimulationHistorySession` when the active controlled actor changes.
+
 Planned work:
 
 1. Replace or supplement the single permanent `ControlledEntityId` frame field with scheduler state:
@@ -153,6 +169,10 @@ Planned work:
 5. Preserve failed submission behavior: failed choices log without advancing scheduler/frame unexpectedly.
 6. Restore pending actor/request state on rollback.
 
+Implemented coverage:
+
+- `CurrentControlledEntityCanChangeWithoutRestartingHistory`
+
 Testable outcomes:
 
 - Successful player-choice submission advances to the next prompt or turn boundary.
@@ -162,6 +182,8 @@ Testable outcomes:
 ## Phase 3: SadConsole play-mode consumption
 
 Goal: make the frontend consume active actor facts from shared scheduler/history state.
+
+Status: Implemented for the current slice. SadConsole projects POV/prompts from the active `PlayerChoice` actor returned by the stepper, records automatic intervals in shared history, advances automatic actors until the next player prompt, retargets history without restarting when the prompt actor changes, and supports no-player automatic advancement.
 
 Planned work:
 
@@ -191,6 +213,8 @@ Planned work:
 2. Update materialization/run/preview reports to distinguish initial control-source setup from active scheduler state.
 3. Update player narrative log projection to use scheduler/history rows once automatic and player-choice intervals share one history shape.
 4. Update docs and invariant traces with final test names.
+
+Status: Headless alignment implemented for persisted/root scenario runs: automatic actors are recorded through shared history intervals until a `PlayerChoice` actor is reached; the controlled prompt is reported as a runtime observation and is not auto-resolved without submitted input. Agent/content-tool persisted run tests were updated to expect prompt observations rather than automatic player movement.
 
 ## Open design questions
 

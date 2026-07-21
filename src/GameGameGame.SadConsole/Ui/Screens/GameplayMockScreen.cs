@@ -40,11 +40,11 @@ internal sealed class GameplayMockScreen
         _session = session;
         _sessionController = new GameplaySessionController(session);
         _panelProjection = new EntityPanelProjectionService(
-            entityId => session.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance(),
+            ResolveInspectionAppearance,
             _sessionController.GetActionPlanDescriptorForEntity);
     }
 
-    public EntityId PlayerEntityId => _session.PlayerEntityId;
+    public EntityId PlayerEntityId => _sessionController.PlayerEntityId;
     public EntityId? InspectedEntityId => _inspectedEntityId;
     public int FrameIndex => _sessionController.FrameIndex;
     public int SelectedActionStepIndex => _prompt.SelectedActionStepIndex;
@@ -59,13 +59,24 @@ internal sealed class GameplayMockScreen
     private WorldState World => _session.World;
     private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _sessionController.ProjectionActionPlans;
 
+    private EntityInspectionAppearance ResolveInspectionAppearance(EntityId entityId)
+    {
+        if (_session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId)
+            && _session.Registry.Presentations.TryGetValue(templateId, out var presentation))
+        {
+            return presentation.ToInspectionAppearance();
+        }
+
+        return new EntityInspectionAppearance('?', PresentationColor.Gray);
+    }
+
     public GameplayMockFrame BuildFrame(int width, int height)
     {
         var safeWidth = Math.Max(40, width);
         var safeHeight = Math.Max(18, height);
         _sessionController.RefreshForFrameBuilding();
         var projectionActionPlans = ProjectionActionPlans;
-        var playerProjection = _panelProjection.Project(World, _session.PlayerEntityId, projectionActionPlans, _session.PlayerEntityId, _sessionController.ActionLog);
+        var playerProjection = _panelProjection.Project(World, PlayerEntityId, projectionActionPlans, PlayerEntityId, _sessionController.ActionLog);
         var diagnostics = new List<string>();
         diagnostics.AddRange(_session.ValidationDiagnostics);
         diagnostics.AddRange(_session.RuntimeFailures);
@@ -81,7 +92,7 @@ internal sealed class GameplayMockScreen
         }
 
         var currentPlaceProjection = playerProjection.PointOfView?.CurrentPlace is { } currentPlace
-            ? _panelProjection.Project(World, currentPlace.EntityId, projectionActionPlans, _session.PlayerEntityId, _sessionController.ActionLog)
+            ? _panelProjection.Project(World, currentPlace.EntityId, projectionActionPlans, PlayerEntityId, _sessionController.ActionLog)
             : null;
 
         var hudWidth = Math.Clamp(safeWidth / 5, 20, Math.Max(20, safeWidth - 42));
@@ -102,7 +113,7 @@ internal sealed class GameplayMockScreen
         EntityPanelProjection? inspectedProjection = null;
         if (_inspectedEntityId is { } inspectedEntityId && World.Entities.ContainsKey(inspectedEntityId))
         {
-            inspectedProjection = _panelProjection.Project(World, inspectedEntityId, projectionActionPlans, _session.PlayerEntityId, _sessionController.ActionLog);
+            inspectedProjection = _panelProjection.Project(World, inspectedEntityId, projectionActionPlans, PlayerEntityId, _sessionController.ActionLog);
             components.Add(BuildInspectionComponent(inspectedProjection, inspectionBounds));
         }
 
@@ -152,7 +163,7 @@ internal sealed class GameplayMockScreen
         var frame = BuildFrame(SadConsoleScreenMetrics.ScreenWidth, SadConsoleScreenMetrics.ScreenHeight);
         var candidates = frame.CurrentPlaceProjection?.InventoryGrid?.Cells
             .Select(cell => cell.EntityId)
-            .Where(entityId => entityId is not null && entityId != _session.PlayerEntityId)
+            .Where(entityId => entityId is not null && entityId != PlayerEntityId)
             .Select(entityId => entityId!.Value)
             .Distinct()
             .OrderBy(entityId => entityId.Value, StringComparer.Ordinal)
@@ -210,7 +221,7 @@ internal sealed class GameplayMockScreen
         var result = _prompt.Cancel();
         if (result.InspectPlayer)
         {
-            _inspectedEntityId = _session.PlayerEntityId;
+            _inspectedEntityId = PlayerEntityId;
         }
 
         return result.Message;
@@ -234,7 +245,7 @@ internal sealed class GameplayMockScreen
         {
             if (promptResult.InspectPlayer)
             {
-                _inspectedEntityId = _session.PlayerEntityId;
+                _inspectedEntityId = PlayerEntityId;
             }
 
             return promptResult.Message;
@@ -263,7 +274,7 @@ internal sealed class GameplayMockScreen
 
         if (result.InspectPlayer)
         {
-            _inspectedEntityId = _session.PlayerEntityId;
+            _inspectedEntityId = PlayerEntityId;
         }
 
         return result.Message;
@@ -397,7 +408,7 @@ internal sealed class GameplayMockScreen
 
     private IReadOnlySet<GridCoord> InspectionValidSelectionCoords()
     {
-        if (_session.World.GetInventoryPlaneId(_session.PlayerEntityId) is not { } inventoryPlaneId)
+        if (_session.World.GetInventoryPlaneId(PlayerEntityId) is not { } inventoryPlaneId)
         {
             return new HashSet<GridCoord>();
         }
@@ -418,7 +429,7 @@ internal sealed class GameplayMockScreen
 
     private GridCoord? InspectionSelectedCoord()
     {
-        if (_session.World.GetInventoryPlaneId(_session.PlayerEntityId) is not { } inventoryPlaneId)
+        if (_session.World.GetInventoryPlaneId(PlayerEntityId) is not { } inventoryPlaneId)
         {
             return null;
         }

@@ -2,7 +2,7 @@
 id: plan.instance-controller-playable-starts-sprint
 title: Instance Controller Playable Starts Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 55
 truth_domains: [planning-priority, implementation-navigation]
 owners: [core-owner]
@@ -19,11 +19,11 @@ related:
 ---
 # Instance Controller Playable Starts Sprint Plan
 
-Status: Active sprint plan. This plan records the selected minimum slice for content-authored initial control source / nested playable starts.
+Status: Archived completed sprint plan. This plan records the selected minimum slice for content-authored initial control source / nested playable starts.
 
 Implementation note: Initial implementation encountered two non-design friction points. First, the content tool host can lock default build outputs, so verification used `dotnet test --artifacts-path C:\Users\Scramble\AppData\Local\Temp\opencode\...`. Second, Core-owner edit permissions do not allow changing `src/GameGameGame.SadConsole`; the Content snapshot keeps the existing non-null `PlayerStart` compatibility property for SadConsole compilation and adds nullable `AuthoredPlayerStart` for new content/editor consumers.
 
-Wrap-up note: the sprint completed instance-level controller authoring, nullable legacy player start handling, playerless scenario launch, and SadConsole inventory-grid controller toggling. It also exposed a larger pre-existing play-loop invariant violation: SadConsole and history currently prompt one focused controlled entity before advancing automatic actors, rather than advancing initiative and pausing at each `PlayerChoice` actor. Multiple authored `Player` starts are initialized and excluded from automatic turns, but true multi-controlled play is deferred to the initiative-aware PlayerChoice scheduler plan.
+Wrap-up note: the sprint completed instance-level controller authoring, nullable legacy player start handling, playerless scenario launch, and SadConsole inventory-grid controller toggling. It also exposed a larger pre-existing play-loop invariant violation, later completed by the archived initiative-aware PlayerChoice scheduler plan: play/headless simulation now advances initiative and pauses/reports at each `PlayerChoice` actor.
 
 ## Sprint target
 

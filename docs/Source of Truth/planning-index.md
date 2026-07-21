@@ -64,14 +64,14 @@ Do not read when:
 6. `docs/Source of Truth/vertical-slice-map.md`
      - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
      - Read selectively when a planned slice spans multiple layers.
-7. `docs/Plans/Instance-Controller-Playable-Starts-Sprint-Plan.md`
-    - Active sprint plan for content-authored initial control source / nested playable starts. It records the selected minimum slice: nullable instance-level `Controller` metadata on authored inventory placements, legacy player insertion as fallback, truly nullable player coordinates, and valid playerless scenarios.
-8. `docs/Plans/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
-    - Draft follow-up plan for replacing the remaining special first-player play loop with an initiative-aware scheduler that advances automatic actors and pauses at each `PlayerChoice` actor.
-9. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
+7. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
     - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible and promoting canonical actions through vertical slices. The canonical `Move` slice, first Pickup/Drop Action Choice interaction seam, componentized play-mode refactor, and Enter/Exit policy slice are complete enough to serve as reference workflow evidence; the next canonical action target is selected from the roadmap backlog.
-10. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
+8. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
     - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
+9. `docs/Archived/Instance-Controller-Playable-Starts-Sprint-Plan.md`
+    - Archived sprint plan for content-authored initial control source / nested playable starts. Treat as implementation history for placed-instance `controller` metadata, legacy player insertion fallback, nullable player coordinates, and valid playerless scenarios.
+10. `docs/Archived/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
+    - Archived hardening plan for initiative-aware `PlayerChoice` scheduling, headless prompt alignment, and history retargeting across active controlled actors.
 11. `docs/Plans/Gamma-Editor-MVP-Plan.md`
     - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
 12. `docs/Plans/SadConsole-Frontend-Roadmap.md`
@@ -99,7 +99,7 @@ Use `docs/Source of Truth/Current-Goals.md` for the mostly stable current projec
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Mostly stable current project direction and active planning bridge belongs in `Current-Goals.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently those plans are `Instance-Controller-Playable-Starts-Sprint-Plan.md` for the completed focused controller-starts sprint record, `Initiative-Aware-PlayerChoice-Scheduler-Plan.md` for the next draft scheduler refactor, and `Canonical-Actions-Vertical-Slice-Plan.md` for the broader release direction.
+- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently `Canonical-Actions-Vertical-Slice-Plan.md` is the broader active release direction, while completed focused controller-starts and initiative-aware scheduler plans live under `docs/Archived/`.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.

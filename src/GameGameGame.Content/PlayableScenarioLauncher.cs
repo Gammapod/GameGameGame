@@ -15,9 +15,12 @@ public sealed record PlayableScenarioSession(
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeFailures,
     IReadOnlyList<string> CapabilityGaps,
-    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null)
+    IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null,
+    IReadOnlyList<ScenarioActorSummary>? ActorOrder = null)
 {
     public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
+
+    public IReadOnlyList<ScenarioActorSummary> ActorOrder { get; } = ActorOrder ?? [];
 }
 
 public static class PlayableScenarioLauncher
@@ -66,6 +69,12 @@ public static class PlayableScenarioLauncher
         var fallbackFocusEntityId = FindFirstEntityOnPlane(result.World, activePlaneId) ?? result.ScenarioRootEntityId;
         var playerEntityId = materializedScenarioPlayerId ?? firstControlledEntityId ?? fallbackFocusEntityId;
 
+        var actorOrder = ScenarioInitiativeOrderService.GetScenarioActorsInInitiativeOrder(
+            result.World,
+            result.ActionPlans,
+            result.ScenarioRootEntityId,
+            activePlaneId);
+
         return new PlayableScenarioSession(
             result.ScenarioId,
             result.Name,
@@ -79,7 +88,8 @@ public static class PlayableScenarioLauncher
             result.ValidationDiagnostics,
             result.RuntimeFailures,
             result.CapabilityGaps,
-            result.PlayerControls);
+            result.PlayerControls,
+            actorOrder);
     }
 
     private static EntityId? FindFirstEntityOnPlane(WorldState world, PlaneId planeId)

@@ -8,32 +8,37 @@ internal sealed class GameplaySessionController
     private readonly MovementService _movement = new();
     private readonly ControlledActorCommandService _commands;
     private readonly ActionChoiceService _actionChoices;
-    private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _controlledCommandActionPlans;
-    private readonly SimulationHistorySession _history;
+    private readonly InitiativePlayerChoiceStepper _initiativeStepper;
+    private readonly IReadOnlyList<EntityId> _actorOrder;
+    private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _automaticActionPlans;
+    private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _emptyActionPlans = new Dictionary<EntityId, IEntityActionPlan>();
+    private SimulationHistorySession _history;
+    private int _initiativeCursor;
+    private int _frameIndex;
+    private EntityId _activeControlledActorId;
 
     public GameplaySessionController(PlayableScenarioSession session)
     {
         Session = session;
-        // Temporary debug wait and direct/action-choice movement use controlled-command compatibility:
-        // the controlled actor's authored plan must not also resolve autonomously while it is acting as
-        // the player-controlled entity.
-        var playerControlledEntityIds = session.PlayerControls.Values
-            .SelectMany(entityIds => entityIds)
-            .Append(session.PlayerEntityId)
-            .ToHashSet();
-        _controlledCommandActionPlans = session.ActionPlans
-            .Where(entry => !playerControlledEntityIds.Contains(entry.Key))
+        _actorOrder = session.ActorOrder.Count > 0
+            ? session.ActorOrder.Select(actor => actor.EntityId).ToList()
+            : session.ActionPlans.Keys.Append(session.PlayerEntityId).Distinct().ToList();
+        _automaticActionPlans = session.ActionPlans
+            .Where(entry => session.World.GetActionControlSource(entry.Key) != EntityControlSource.PlayerChoice)
             .ToDictionary(entry => entry.Key, entry => entry.Value);
+        _activeControlledActorId = session.PlayerEntityId;
         _commands = new ControlledActorCommandService(
             _movement,
-            _controlledCommandActionPlans,
+            _emptyActionPlans,
             (world, entityId) => TargetingService.RefreshTargets(world, session.Registry, entityId));
         _actionChoices = new ActionChoiceService(_movement);
+        _initiativeStepper = new InitiativePlayerChoiceStepper(_movement, _actionChoices);
         _history = SimulationHistorySession.Start(
             session.World,
-            session.PlayerEntityId,
+            _activeControlledActorId,
             session.ActivePlaneId,
             session.ActiveContainerEntityId);
+        AdvanceUntilPlayerChoice(0);
         RefreshDisplayTargets();
         RefreshActionChoiceRequest();
         ActionLog = ActionLogProjection.FromHistory(_history);
@@ -41,14 +46,14 @@ internal sealed class GameplaySessionController
 
     public PlayableScenarioSession Session { get; }
     public WorldState World => Session.World;
-    public EntityId PlayerEntityId => Session.PlayerEntityId;
-    public int FrameIndex => _history.CurrentFrame.FrameIndex;
+    public EntityId PlayerEntityId => _activeControlledActorId;
+    public int FrameIndex => _frameIndex;
     public ActionChoiceRequest? CurrentActionChoiceRequest { get; private set; }
     public ActionLogProjection? ActionLog { get; private set; }
     public IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => Session.ActionPlans;
 
     public IReadOnlyList<ActionPlanBehaviorStepDescriptor> AvailablePlayerActionSteps() =>
-        GetActionPlanDescriptorForEntity(Session.PlayerEntityId)?.Behavior?.Steps ?? [];
+        GetActionPlanDescriptorForEntity(_activeControlledActorId)?.Behavior?.Steps ?? [];
 
     public ActionPlanDescriptor? GetActionPlanDescriptorForEntity(EntityId entityId)
     {
@@ -72,8 +77,17 @@ internal sealed class GameplaySessionController
 
     public GameplayRuntimeSubmission SubmitWait()
     {
+        if (CurrentActionChoiceRequest is null)
+        {
+            AdvanceUntilPlayerChoice(_initiativeCursor);
+            _frameIndex++;
+            RefreshAfterRuntimeSubmission();
+            return new GameplayRuntimeSubmission(true, null, UsedCoreActionChoice: false);
+        }
+
+        EnsureHistoryControlledActor(_activeControlledActorId);
         var result = _history.SubmitControlledCommand(_commands, ControlledActorCommand.Wait());
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: false);
     }
 
@@ -82,16 +96,17 @@ internal sealed class GameplaySessionController
         RefreshActionChoiceRequest();
         var usedCoreChoice = CurrentActionChoiceRequest is { } request
             && request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move);
+        EnsureHistoryControlledActor(_activeControlledActorId);
         var result = usedCoreChoice
             ? _history.SubmitActionChoice(
                 _actionChoices,
                 CurrentActionChoiceRequest!,
                 direction,
-                _controlledCommandActionPlans,
+                _emptyActionPlans,
                 RefreshTargets)
             : _history.SubmitControlledCommand(_commands, ControlledActorCommand.Move(direction));
 
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), usedCoreChoice);
     }
 
@@ -107,10 +122,10 @@ internal sealed class GameplaySessionController
             request,
             targetId,
             destination,
-            _controlledCommandActionPlans,
+            _emptyActionPlans,
             RefreshTargets);
 
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
@@ -126,10 +141,10 @@ internal sealed class GameplaySessionController
             request,
             targetId,
             destination,
-            _controlledCommandActionPlans,
+            _emptyActionPlans,
             RefreshTargets);
 
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
@@ -144,10 +159,10 @@ internal sealed class GameplaySessionController
             _actionChoices,
             request,
             targetId,
-            _controlledCommandActionPlans,
+            _emptyActionPlans,
             RefreshTargets);
 
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
@@ -162,10 +177,10 @@ internal sealed class GameplaySessionController
             _actionChoices,
             request,
             direction,
-            _controlledCommandActionPlans,
+            _emptyActionPlans,
             RefreshTargets);
 
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
@@ -182,15 +197,110 @@ internal sealed class GameplaySessionController
             stepIndex,
             step);
 
-        RefreshAfterRuntimeSubmission();
+        RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
     private void RefreshActionChoiceRequest()
     {
-        CurrentActionChoiceRequest = GetActionPlanDescriptorForEntity(Session.PlayerEntityId) is { } descriptor
-            ? _actionChoices.CreateRequest(World, Session.PlayerEntityId, descriptor)
+        CurrentActionChoiceRequest = GetActionPlanDescriptorForEntity(_activeControlledActorId) is { } descriptor
+            ? _actionChoices.CreateRequest(World, _activeControlledActorId, descriptor)
             : null;
+    }
+
+    private void RefreshAfterControlledSubmission(bool succeeded)
+    {
+        if (succeeded)
+        {
+            _frameIndex++;
+            AdvanceUntilPlayerChoice(_initiativeCursor + 1);
+        }
+
+        RefreshAfterRuntimeSubmission();
+    }
+
+    private void AdvanceUntilPlayerChoice(int startIndex)
+    {
+        if (_actorOrder.Count == 0)
+        {
+            CurrentActionChoiceRequest = null;
+            return;
+        }
+
+        var result = _initiativeStepper.AdvanceUntilPlayerChoice(
+            World,
+            _actorOrder,
+            _automaticActionPlans,
+            GetActionPlanDescriptorForEntity,
+            startIndex,
+            (world, entityId) => TargetingService.RefreshTargets(world, Session.Registry, entityId));
+
+        // TODO(frontend): surface initiative stepper diagnostics in play-mode status once
+        // the gameplay screen has a durable non-debug status/log presentation for them.
+        if (result.Diagnostics.Count > 0)
+        {
+        }
+
+        var historyContextActorId = result.Request?.ActorId ?? _activeControlledActorId;
+        var (activePlaneId, activeContainerId) = ResolveActiveHistoryContext(historyContextActorId);
+        if (result.ActorLogs.Count > 0)
+        {
+            _history.RecordActorInterval(result.ActorLogs, activePlaneId, activeContainerId);
+        }
+
+        _initiativeCursor = result.NextActorIndex;
+        if (result.Request is { } request)
+        {
+            _activeControlledActorId = request.ActorId;
+            CurrentActionChoiceRequest = request;
+            EnsureHistoryControlledActor(_activeControlledActorId, activePlaneId, activeContainerId);
+        }
+        else
+        {
+            CurrentActionChoiceRequest = null;
+        }
+    }
+
+    private void EnsureHistoryControlledActor(EntityId actorId)
+    {
+        var (activePlaneId, activeContainerId) = ResolveActiveHistoryContext(actorId);
+        EnsureHistoryControlledActor(actorId, activePlaneId, activeContainerId);
+    }
+
+    private void EnsureHistoryControlledActor(EntityId actorId, PlaneId activePlaneId, EntityId? activeContainerId)
+    {
+        if (_history.CurrentFrame.ControlledEntityId == actorId)
+        {
+            return;
+        }
+
+        _history.SetCurrentControlledEntity(actorId, activePlaneId, activeContainerId);
+    }
+
+    private (PlaneId ActivePlaneId, EntityId? ActiveContainerId) ResolveActiveHistoryContext(EntityId actorId)
+    {
+        if (!World.Entities.ContainsKey(actorId))
+        {
+            return (Session.ActivePlaneId, Session.ActiveContainerEntityId);
+        }
+
+        var actorPlaneId = World.GetEntityLocation(actorId).PlaneId;
+        var activeContainerId = FindContainerForPlane(actorPlaneId)
+            ?? (actorPlaneId == Session.ActivePlaneId ? Session.ActiveContainerEntityId : null);
+        return (actorPlaneId, activeContainerId);
+    }
+
+    private EntityId? FindContainerForPlane(PlaneId planeId)
+    {
+        foreach (var (entityId, inventoryPlaneId) in World.InventoryPlanes)
+        {
+            if (inventoryPlaneId == planeId)
+            {
+                return entityId;
+            }
+        }
+
+        return null;
     }
 
     private void RefreshAfterRuntimeSubmission()

@@ -2,6 +2,7 @@ using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp;
 using GameGameGame.SadConsoleApp.Ui.Screens;
+using System.Reflection;
 
 namespace GameGameGame.SadConsole.Tests;
 
@@ -42,6 +43,23 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
+    public void FrameDoesNotThrowWhenCurrentPlaceLacksRegistryTemplateAssignment()
+    {
+        var session = CreateGameplayMockSession();
+        RemoveTemplateAssignment(session.Registry, session.ActiveContainerEntityId);
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Equal(session.ActiveContainerEntityId, frame.PlayerProjection.PointOfView?.CurrentPlace?.EntityId);
+        Assert.Equal(session.ActiveContainerEntityId, frame.CurrentPlaceProjection?.EntityId);
+        Assert.Equal('?', frame.PlayerProjection.PointOfView?.CurrentPlace?.Glyph);
+        Assert.Equal(PresentationColor.Gray, frame.PlayerProjection.PointOfView?.CurrentPlace?.Color);
+        Assert.Equal('?', frame.CurrentPlaceProjection?.Glyph);
+        Assert.Equal(PresentationColor.Gray, frame.CurrentPlaceProjection?.Color);
+    }
+
+    [Fact]
     public void FrameDrawsPersistentHudRowsAboveMainViewport()
     {
         var session = CreateGameplayMockSession();
@@ -71,7 +89,7 @@ public sealed class GameplayMockScreenTests
         Assert.Contains("Debug wait advanced", message);
         Assert.Equal(1, screen.FrameIndex);
         Assert.Contains("frame 1", frame.Title);
-        Assert.Contains("world turn 1", frame.Title);
+        Assert.Contains("world turn 2", frame.Title);
     }
 
     [Fact]
@@ -84,7 +102,7 @@ public sealed class GameplayMockScreenTests
 
         Assert.True(result.Succeeded, result.FailureText);
         Assert.Equal(1, controller.FrameIndex);
-        Assert.Equal(1, controller.World.TurnNumber);
+        Assert.Equal(2, controller.World.TurnNumber);
         Assert.NotNull(controller.ActionLog);
         Assert.NotEmpty(controller.ActionLog!.Chronological);
     }
@@ -100,7 +118,65 @@ public sealed class GameplayMockScreenTests
         Assert.True(result.UsedCoreActionChoice);
         Assert.True(result.Succeeded, result.FailureText);
         Assert.Equal(1, controller.FrameIndex);
-        Assert.Equal(1, controller.World.TurnNumber);
+        Assert.Equal(2, controller.World.TurnNumber);
+    }
+
+    [Fact]
+    public void GameplaySessionControllerPromptsLaterPlayerChoiceAfterEarlierAutomaticActorRuns()
+    {
+        var session = WithActorOrder(CreateGameplayMockSession(bindPlayerChoiceControl: true), [new EntityId("mockCrate"), new EntityId("mockPlayer")]);
+
+        var controller = new GameplaySessionController(session);
+
+        Assert.Equal(new EntityId("mockPlayer"), controller.PlayerEntityId);
+        Assert.NotNull(controller.CurrentActionChoiceRequest);
+        Assert.Equal(new EntityId("mockPlayer"), controller.CurrentActionChoiceRequest!.ActorId);
+        Assert.Equal(1, session.World.TurnNumber);
+    }
+
+    [Fact]
+    public void GameplaySessionControllerKeepsHistoryLogsWhenPromptActorChanges()
+    {
+        var automaticActorId = new EntityId("mockCrate");
+        var promptActorId = new EntityId("mockPlayer");
+        var session = WithActorOrder(CreateGameplayMockSession(bindPlayerChoiceControl: true), [automaticActorId, promptActorId]);
+
+        var controller = new GameplaySessionController(session);
+
+        Assert.Equal(promptActorId, controller.PlayerEntityId);
+        Assert.NotNull(controller.ActionLog);
+        Assert.Contains(controller.ActionLog!.Chronological, outcome => outcome.ActorId == automaticActorId);
+    }
+
+    [Fact]
+    public void GameplaySessionControllerPromptsMultiplePlayerChoiceActorsInInitiativeOrder()
+    {
+        var session = WithActorOrder(
+            CreateGameplayMockSession(bindPlayerChoiceControl: true, includeCratePlayerControl: true, includePlayerReciprocalAdjectives: true),
+            [new EntityId("mockPlayer"), new EntityId("mockCrate")]);
+        var controller = new GameplaySessionController(session);
+
+        var result = controller.SubmitWait();
+
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Equal(new EntityId("mockCrate"), controller.PlayerEntityId);
+        Assert.NotNull(controller.CurrentActionChoiceRequest);
+        Assert.Equal(new EntityId("mockCrate"), controller.CurrentActionChoiceRequest!.ActorId);
+    }
+
+    [Fact]
+    public void GameplaySessionControllerNoPlayerScenarioCanAdvanceAutomaticActors()
+    {
+        var session = CreateGameplayMockSession();
+        session.World.SetActionControlSource(session.PlayerEntityId, EntityControlSource.Automatic);
+        var controller = new GameplaySessionController(session);
+        var turnAfterStartupCycle = session.World.TurnNumber;
+
+        var result = controller.SubmitWait();
+
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Null(controller.CurrentActionChoiceRequest);
+        Assert.True(session.World.TurnNumber > turnAfterStartupCycle);
     }
 
     [Fact]
@@ -712,6 +788,31 @@ public sealed class GameplayMockScreenTests
         }
 
         return session;
+    }
+
+    private static PlayableScenarioSession WithActorOrder(PlayableScenarioSession session, IReadOnlyList<EntityId> actorOrder) =>
+        new(
+            session.ScenarioId,
+            session.Name,
+            session.World,
+            session.Registry,
+            session.ActionPlans,
+            session.PlayerEntityId,
+            session.ActivePlaneId,
+            session.ActiveContainerEntityId,
+            session.CanPlay,
+            session.ValidationDiagnostics,
+            session.RuntimeFailures,
+            session.CapabilityGaps,
+            session.PlayerControls,
+            actorOrder.Select(entityId => new ScenarioActorSummary(entityId, session.World.Entities[entityId].Name, session.World.GetEntityLocation(entityId))).ToList());
+
+    private static void RemoveTemplateAssignment(PrototypeContentRegistry registry, EntityId entityId)
+    {
+        var field = typeof(PrototypeContentRegistry).GetField("_entityTemplateAssignments", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        var assignments = Assert.IsType<Dictionary<EntityId, EntityTemplateId>>(field.GetValue(registry));
+        Assert.True(assignments.Remove(entityId));
     }
 
     private static string FormatEntityId(EntityId entityId) => entityId.Value;

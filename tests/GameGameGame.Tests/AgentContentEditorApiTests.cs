@@ -318,7 +318,9 @@ public sealed class AgentContentEditorApiTests
 
         Assert.Contains("Run mode: Persisted scenario simulation", report.SetupLines);
         Assert.Contains("Player: API Scenario Player apiPlayer at scenarioRoot(0,1), facing East, target none", report.SetupLines);
-        Assert.Contains("API Scenario Player: scenarioRoot(1,1), facing East, target none", report.FinalStateLines);
+        Assert.Empty(report.Turns);
+        Assert.Contains("API Scenario Player: scenarioRoot(0,1), facing East, target none", report.FinalStateLines);
+        Assert.Contains(report.RuntimeObservations, observation => observation.Contains("API Scenario Player is awaiting PlayerChoice input", StringComparison.Ordinal));
         Assert.Equal([new EntityId("apiPlayer")], report.ActorOrder.Select(actor => actor.EntityId).ToArray());
         Assert.Empty(report.InventorySummaryLines);
         Assert.Empty(report.ValidationDiagnostics);
@@ -352,18 +354,8 @@ public sealed class AgentContentEditorApiTests
         Assert.Equal("player narrative projection", report.ProjectionKind);
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
-        var turn = Assert.Single(report.Turns);
-        Assert.Equal(1, turn.TurnNumber);
-        Assert.Equal("Turn 1", turn.Heading);
-        Assert.Equal(["action.move_facing.success"], turn.Lines);
-        var row = Assert.Single(report.Rows);
-        Assert.Equal(ActionPlanBehaviorStepKind.MoveFacing.ToString(), row.ActionStepKind);
-        Assert.Equal(1, row.ActionStepIndex);
-        Assert.True(row.Succeeded);
-        Assert.Equal("action.move_facing.success", row.MessageId);
-        Assert.Null(row.Text);
-        Assert.Equal("Narrative Player", row.MessageArgs["actor"]);
-        Assert.Null(row.TargetEntityId);
+        Assert.Empty(report.Turns);
+        Assert.Empty(report.Rows);
         Assert.Contains(report.FollowUps, item => item.Contains("line-of-sight", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -416,7 +408,8 @@ public sealed class AgentContentEditorApiTests
             property => property.Name == "YamlPreview");
         Assert.Equal(new EntityId("reviewPlayer"), report.Materialization.PlayerEntityId);
         Assert.Contains("Run mode: Persisted scenario simulation", report.RunReport.SetupLines);
-        Assert.Contains("Review Player: scenarioRoot(1,1), facing East, target none", report.RunReport.FinalStateLines);
+        Assert.Contains("Review Player: scenarioRoot(0,1), facing East, target none", report.RunReport.FinalStateLines);
+        Assert.Contains(report.RunReport.RuntimeObservations, observation => observation.Contains("Review Player is awaiting PlayerChoice input", StringComparison.Ordinal));
     }
 
     private static void AssertSuccess(AgentApiResult result)

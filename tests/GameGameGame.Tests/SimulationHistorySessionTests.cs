@@ -117,6 +117,39 @@ public sealed class SimulationHistorySessionTests
     }
 
     [Fact]
+    public void CurrentControlledEntityCanChangeWithoutRestartingHistory()
+    {
+        var world = TestWorld.CreateWorld();
+        var history = SimulationHistorySession.Start(world, TestWorld.PlayerId, TestWorld.WorldPlaneId);
+        var trace = TraceNode.Success("automatic", "automatic actor ran before prompt");
+        world.AdvanceTurn();
+        history.RecordActorInterval([
+            new SimulationHistoryActorLog(
+                0,
+                TestWorld.SlimeId,
+                "Slime",
+                Succeeded: true,
+                ConsumedTurn: true,
+                ContinuePlan: false,
+                Summary: "Slime waited.",
+                trace)
+        ], TestWorld.WorldPlaneId);
+
+        history.SetCurrentControlledEntity(TestWorld.SlimeId, TestWorld.WorldPlaneId);
+
+        Assert.Equal(1, history.CurrentFrameIndex);
+        Assert.Equal(2, history.Frames.Count);
+        Assert.Single(history.Intervals);
+        Assert.Equal(TestWorld.SlimeId, history.CurrentFrame.ControlledEntityId);
+
+        history.RollbackPreviousFrame();
+
+        Assert.Equal(TestWorld.PlayerId, history.CurrentFrame.ControlledEntityId);
+        Assert.Empty(history.Intervals);
+        Assert.Equal(0, world.TurnNumber);
+    }
+
+    [Fact]
     public void SubmitSuccessfulControlledCommandCreatesIntervalAndNextFrame()
     {
         var world = TestWorld.CreateWorld();

@@ -111,6 +111,28 @@ public sealed class SimulationHistorySession
         return true;
     }
 
+    public void SetCurrentControlledEntity(
+        EntityId controlledEntityId,
+        PlaneId activePlaneId,
+        EntityId? activeContainerId = null)
+    {
+        var current = CurrentFrame;
+        if (current.ControlledEntityId == controlledEntityId
+            && current.ActivePlaneId == activePlaneId
+            && current.ActiveContainerId == activeContainerId)
+        {
+            return;
+        }
+
+        _frames[CurrentFrameIndex] = current with
+        {
+            ControlledEntityId = controlledEntityId,
+            ActivePlaneId = activePlaneId,
+            ActiveContainerId = activeContainerId,
+            Snapshot = World.Clone()
+        };
+    }
+
     public ControlledActorCommandResult SubmitControlledCommand(
         ControlledActorCommandService commands,
         ControlledActorCommand command)
