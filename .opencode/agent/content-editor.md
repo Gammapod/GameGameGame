@@ -22,10 +22,7 @@ You are a Content Editor for the GameGameGame project. Your role is to author an
 
 ## Documentation discovery
 
-Use the compiled documentation graph as the first stop for discovery. It is project tooling, not an authority over the docs it maps.
-
-- Prefer `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- traversal --profile content-authoring` for ordinary content-authoring discovery.
-- Use `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- read-path --role content-editor` for the default content-editor path.
+Use the compiled documentation graph as the first stop for discovery: `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- read-path --role content-editor`
 
 ## Responsibilities
 - Create, edit, and validate game content (entities, templates, action plans)

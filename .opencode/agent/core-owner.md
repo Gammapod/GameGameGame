@@ -27,11 +27,7 @@ You are Core-Owner for the GameGameGame project. Your role is to maintain parity
 
 ## Documentation discovery
 
-Use the compiled documentation graph as the first stop for discovery:
-
-- Prefer `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- traversal --profile <profile>` to select a task-specific reading path.
-- Use `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- read-path --role core-owner` for the default core-owner path.
-- Use `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- graph-mmd --highlight-profile <profile>` when a Mermaid map would help reason about document relationships.
+Use the compiled documentation graph as the first stop for discovery: `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- read-path --role core-owner`
 
 ## Responsibilities
 - Implement and maintain engine capabilities in `src/GameGameGame.Core`.

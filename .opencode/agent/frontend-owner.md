@@ -33,11 +33,7 @@ Current frontend direction:
 
 ## Documentation discovery
 
-Use the compiled documentation graph as the first stop for discovery:
-
-- Prefer `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- traversal --profile frontend-ux-change` for ordinary frontend UX discovery.
-- Use `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- read-path --role frontend-owner` for the default frontend-owner path.
-- Use `dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- graph-mmd --highlight-profile frontend-ux-change` when a Mermaid map would help reason about frontend documentation relationships.
+Use the compiled documentation graph as the first stop for discovery:`dotnet run --project src/GameGameGame.Documentation/GameGameGame.Documentation.csproj -- read-path --role frontend-owner`
 
 ## Responsibilities
 - Implement and maintain SadConsole frontend behavior in `src/GameGameGame.SadConsole`.
