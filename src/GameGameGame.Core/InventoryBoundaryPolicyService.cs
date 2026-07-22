@@ -2,7 +2,10 @@ namespace GameGameGame.Core;
 
 public sealed class InventoryBoundaryPolicyService
 {
-    public IReadOnlyList<PlaneCoord> OrderedEnterPolicyDestinations(WorldState world, EntityId destinationOwnerId)
+    public IReadOnlyList<PlaneCoord> OrderedEnterPolicyDestinations(
+        WorldState world,
+        EntityId destinationOwnerId,
+        EntityId? ignoredPolicyOwnerId = null)
     {
         if (!world.Entities.TryGetValue(destinationOwnerId, out var destinationOwner) ||
             world.GetRegisteredInventoryPlaneId(destinationOwnerId) is not { } inventoryPlaneId ||
@@ -13,7 +16,11 @@ public sealed class InventoryBoundaryPolicyService
 
         var candidates = PlaneCoords(inventoryPlane).ToList();
 
-        return destinationOwner.EffectiveEnterPolicy switch
+        var effectiveEnterPolicy = destinationOwnerId == ignoredPolicyOwnerId
+            ? EntityEnterPolicy.FirstUnoccupiedRowMajor
+            : destinationOwner.EffectiveEnterPolicy;
+
+        return effectiveEnterPolicy switch
         {
             EntityEnterPolicy.FarthestFromOccupied => candidates
                 .Where(coord => world.GetOccupant(coord) is null)
@@ -29,18 +36,31 @@ public sealed class InventoryBoundaryPolicyService
         WorldState world,
         EntityId movingEntityId,
         EntityId destinationOwnerId,
-        ConstrainedInventoryRelocationService constrainedRelocation)
+        ConstrainedInventoryRelocationService constrainedRelocation,
+        EntityId? ignoredEnterPolicyOwnerId = null)
     {
         var trace = new TraceNode($"Apply enter policy for {movingEntityId} -> {destinationOwnerId}", TraceStatus.Info);
+        if (!world.Entities.TryGetValue(destinationOwnerId, out var destinationOwner))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.TargetMissing;
+            trace.Detail = $"destination owner {destinationOwnerId} does not exist";
+            return new ConstrainedRelocationEvaluation(false, null, trace);
+        }
+
         ActionResolution? lastFailure = null;
-        foreach (var destination in OrderedEnterPolicyDestinations(world, destinationOwnerId))
+        var effectiveEnterPolicy = destinationOwnerId == ignoredEnterPolicyOwnerId
+            ? EntityEnterPolicy.FirstUnoccupiedRowMajor
+            : destinationOwner.EffectiveEnterPolicy;
+
+        foreach (var destination in OrderedEnterPolicyDestinations(world, destinationOwnerId, ignoredEnterPolicyOwnerId))
         {
             var evaluation = constrainedRelocation.Evaluate(world, movingEntityId, MovementDestination.Plane(destination));
             trace.Add(evaluation.Trace);
             if (evaluation is { CanRelocate: true, Destination: { } resolvedDestination })
             {
                 trace.Status = TraceStatus.Success;
-                trace.Detail = $"{world.Entities[destinationOwnerId].EffectiveEnterPolicy} selected {resolvedDestination.Coord}";
+                trace.Detail = $"{effectiveEnterPolicy} selected {resolvedDestination.Coord}";
                 return new ConstrainedRelocationEvaluation(true, resolvedDestination, trace);
             }
 
@@ -58,7 +78,11 @@ public sealed class InventoryBoundaryPolicyService
         return new ConstrainedRelocationEvaluation(false, null, trace);
     }
 
-    public InventoryBoundaryPolicyEvaluation EvaluateExitPolicy(WorldState world, EntityId movingEntityId, PlaneCoord destination)
+    public InventoryBoundaryPolicyEvaluation EvaluateExitPolicy(
+        WorldState world,
+        EntityId movingEntityId,
+        PlaneCoord destination,
+        EntityId? ignoredPolicyOwnerId = null)
     {
         var trace = new TraceNode($"Apply exit policy for {movingEntityId} -> {destination}", TraceStatus.Info);
         if (!world.Entities.ContainsKey(movingEntityId))
@@ -72,6 +96,7 @@ public sealed class InventoryBoundaryPolicyService
         var source = world.GetEntityLocation(movingEntityId);
         if (source.PlaneId == destination.PlaneId ||
             !InventoryPlaneOwnership.TryFindOwner(world, source.PlaneId, out var sourceOwnerId) ||
+            sourceOwnerId == ignoredPolicyOwnerId ||
             !world.Entities.TryGetValue(sourceOwnerId, out var sourceOwner))
         {
             trace.Status = TraceStatus.Success;

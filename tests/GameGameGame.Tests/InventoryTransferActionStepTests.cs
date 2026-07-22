@@ -44,6 +44,46 @@ public sealed class InventoryTransferActionStepTests
     }
 
     [Fact]
+    public void DropFacingIgnoresActorExitPolicy()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with
+        {
+            ExitPolicy = EntityExitPolicy.EdgeAlignedWithExitDirection
+        };
+        world.SetActionFacing(TestWorld.PlayerId, Direction.East);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = CreateBehaviorPlan("drop-ignores-actor-exit-policy", ActionPlanBehaviorStepKind.DropFacing);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void PickupTargetIgnoresActorEnterPolicy()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with
+        {
+            EnterPolicy = EntityEnterPolicy.FarthestFromOccupied
+        };
+        AddEntity(world, "blocker", "Blocker", new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.RockId);
+        var plan = CreateBehaviorPlan("pickup-ignores-actor-enter-policy", ActionPlanBehaviorStepKind.PickupTarget);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
     public void GiveTargetTransfersFirstCarriedEntityToTargetInventoryRowMajor()
     {
         var world = TestWorld.CreateWorld();

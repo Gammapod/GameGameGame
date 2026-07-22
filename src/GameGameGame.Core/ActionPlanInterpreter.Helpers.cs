@@ -156,6 +156,7 @@ public sealed partial class ActionPlanInterpreter
 
     private PlanEffectResult TransferToFirstOpenInventory(
         WorldState world,
+        EntityId actorId,
         EntityId carriedId,
         EntityId destinationOwnerId,
         TraceNode trace,
@@ -195,8 +196,13 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement);
-        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, carriedId, destinationOwnerId, constrainedRelocation);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement, ignoredPolicyOwnerId: actorId);
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(
+            world,
+            carriedId,
+            destinationOwnerId,
+            constrainedRelocation,
+            actorId);
         trace.Add(placement.Trace);
         if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
         {

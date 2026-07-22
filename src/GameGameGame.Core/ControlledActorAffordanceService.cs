@@ -236,7 +236,8 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
         var containerLocation = world.GetEntityLocation(containerId);
         destination = new PlaneCoord(containerLocation.PlaneId, containerLocation.Coord.Offset(direction));
         blockingEntity = world.GetOccupant(destination.Value);
-        return new ConstrainedInventoryRelocationService(movement).Evaluate(world, actorId, MovementDestination.AdjacentTo(containerId, direction));
+        return new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId)
+            .Evaluate(world, actorId, MovementDestination.AdjacentTo(containerId, direction));
     }
 
     private ControlledActorDestinationAffordance EvaluateDestination(EntityId targetId, PlaneCoord destination, IActionIntent action, WorldState world, EntityId actorId)

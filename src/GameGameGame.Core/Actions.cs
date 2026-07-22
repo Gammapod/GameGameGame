@@ -139,7 +139,7 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
 
         trace.Add(TraceNode.Success("Target is adjacent"));
 
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
         var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
         trace.Add(relocation.Trace);
 
@@ -155,7 +155,8 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        new ConstrainedInventoryRelocationService(movement).TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
+        new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId)
+            .TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
 }
 
 public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IActionIntent
@@ -212,7 +213,7 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
 
         trace.Add(TraceNode.Success("Destination is adjacent", Destination.ToString()));
 
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
         var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
         trace.Add(relocation.Trace);
 
@@ -227,7 +228,8 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
     }
 
     public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
-        new ConstrainedInventoryRelocationService(movement).TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
+        new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId)
+            .TryRelocate(world, TargetId, MovementDestination.Plane(Destination));
 
 }
 
@@ -283,8 +285,8 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
             return ActionTrace.Fail(trace, FailureReason.InvalidInventoryDestination, $"inventory plane {inventoryPlaneId} does not exist");
         }
 
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
-        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, actorId, TargetId, constrainedRelocation);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, actorId, TargetId, constrainedRelocation, actorId);
         trace.Add(placement.Trace);
         if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
         {
@@ -312,8 +314,8 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
             return;
         }
 
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
-        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, actorId, TargetId, constrainedRelocation);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, actorId, TargetId, constrainedRelocation, actorId);
         if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
         {
             movement.TryPlace(world, actorId, resolvedDestination);
@@ -339,7 +341,7 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
             return ActionTrace.Fail(trace, FailureReason.TargetNotInInventory, $"{actor.Name} is not inside an entity inventory plane");
         }
 
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
         var evaluation = constrainedRelocation.Evaluate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));
         trace.Add(evaluation.Trace);
 
@@ -358,7 +360,8 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
         var actorLocation = world.GetEntityLocation(actorId);
         if (InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId))
         {
-            new ConstrainedInventoryRelocationService(movement).TryRelocate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));
+            new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId)
+                .TryRelocate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));
         }
     }
 

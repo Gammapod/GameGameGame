@@ -2,7 +2,8 @@ namespace GameGameGame.Core;
 
 public sealed class ConstrainedInventoryRelocationService(
     MovementService movement,
-    InventoryTransitionService? transitions = null)
+    InventoryTransitionService? transitions = null,
+    EntityId? ignoredPolicyOwnerId = null)
 {
     private readonly InventoryTransitionService _transitions = transitions ?? new InventoryTransitionService();
     private readonly InventoryBoundaryPolicyService _policies = new();
@@ -32,7 +33,7 @@ public sealed class ConstrainedInventoryRelocationService(
             return new ConstrainedRelocationEvaluation(false, resolvedDestination, trace);
         }
 
-        var exitPolicy = _policies.EvaluateExitPolicy(world, movingEntityId, resolvedDestination);
+        var exitPolicy = _policies.EvaluateExitPolicy(world, movingEntityId, resolvedDestination, ignoredPolicyOwnerId);
         trace.Add(exitPolicy.Trace);
         if (!exitPolicy.CanPass)
         {

@@ -193,7 +193,7 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
             return Failure(capability, actorId, targetId, FailureReason.InvalidInventoryDestination, $"inventory plane {inventoryPlaneId} does not exist");
         }
 
-        var constrained = new ConstrainedInventoryRelocationService(movement);
+        var constrained = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
         ConstrainedRelocationEvaluation? lastFailure = null;
         for (var y = 0; y < inventoryPlane.Height; y++)
         {

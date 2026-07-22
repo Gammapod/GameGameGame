@@ -70,13 +70,18 @@ public sealed partial class ActionPlanInterpreter
         trace.Add(TraceNode.Success("Target is adjacent"));
 
         var policyService = new InventoryBoundaryPolicyService();
-        foreach (var candidate in policyService.OrderedEnterPolicyDestinations(world, actorId))
+        foreach (var candidate in policyService.OrderedEnterPolicyDestinations(world, actorId, actorId))
         {
             trace.Add(TraceNode.Info($"Pickup {target.Value} -> {candidate}"));
         }
 
         var placement = policyService
-            .EvaluatePolicyAwarePlacement(world, target.Value, actorId, new ConstrainedInventoryRelocationService(_movement));
+            .EvaluatePolicyAwarePlacement(
+                world,
+                target.Value,
+                actorId,
+                new ConstrainedInventoryRelocationService(_movement, ignoredPolicyOwnerId: actorId),
+                actorId);
         trace.Add(placement.Trace);
         if (placement is { CanRelocate: true, Destination: { } resolvedPickupDestination })
         {
@@ -121,7 +126,7 @@ public sealed partial class ActionPlanInterpreter
         }
 
         var destination = new MovementDestination.AdjacentMovementDestination(actorId, facing.Value);
-        var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement);
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement, ignoredPolicyOwnerId: actorId);
         var evaluation = constrainedRelocation.Evaluate(world, carried.Value, destination);
         trace.Add(evaluation.Trace);
         if (!evaluation.CanRelocate || evaluation.Destination is not { } resolvedDestination)
@@ -157,7 +162,7 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        return TransferToFirstOpenInventory(world, carried.Value, targetId, trace, "gave");
+        return TransferToFirstOpenInventory(world, actorId, carried.Value, targetId, trace, "gave");
     }
 
     private PlanEffectResult ApplyTakeTargetPrimitive(
@@ -195,7 +200,7 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        return TransferToFirstOpenInventory(world, carried.Value, actorId, trace, "took");
+        return TransferToFirstOpenInventory(world, actorId, carried.Value, actorId, trace, "took");
     }
 
     private PlanEffectResult ApplyEnterTargetPrimitive(

@@ -12,6 +12,7 @@ permission:
     "*": ask
     "docs/*": allow
     "src/*": deny
+    "src/GameGameGame.Content/*": allow
   task:
     "frontend-owner": allow
     "core-owner": allow
