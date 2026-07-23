@@ -66,27 +66,29 @@ Do not read when:
      - Read selectively when a planned slice spans multiple layers.
 7. `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
      - Active release plan focused on freezing the current Action Step catalog as legacy/prototype-compatible and promoting canonical actions through vertical slices. The canonical `Move` slice, first Pickup/Drop Action Choice interaction seam, componentized play-mode refactor, Enter/Exit policy slice, and canonical Transfer sprint are complete enough to serve as reference workflow evidence; the next canonical action target is selected from the roadmap backlog.
-8. `docs/Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md`
-   - Archived focused sprint plan for canonical peer inventory Transfer as a controller-agnostic atomic containment transfer with ActorToTarget/TargetToActor directions, policy-asymmetric validation, content test rooms, Action Choice/history/log support, and an explicitly designed frontend transfer workflow.
-9. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
-    - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
-10. `docs/Archived/Instance-Controller-Playable-Starts-Sprint-Plan.md`
+8. `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`
+   - Archived focused sprint plan for the behavior-preserving Core topology service refactor: default grid neighbor lookup/enumeration, MovementService topology consumption, Action Choice drop/transfer topology facts, controlled exit affordance projection, and Transfer counterparty lookup.
+9. `docs/Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md`
+    - Archived focused sprint plan for canonical peer inventory Transfer as a controller-agnostic atomic containment transfer with ActorToTarget/TargetToActor directions, policy-asymmetric validation, content test rooms, Action Choice/history/log support, and an explicitly designed frontend transfer workflow.
+10. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
+     - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
+11. `docs/Archived/Instance-Controller-Playable-Starts-Sprint-Plan.md`
     - Archived sprint plan for content-authored initial control source / nested playable starts. Treat as implementation history for placed-instance `controller` metadata, legacy player insertion fallback, nullable player coordinates, and valid playerless scenarios.
-11. `docs/Archived/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
+12. `docs/Archived/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
     - Archived hardening plan for initiative-aware `PlayerChoice` scheduling, headless prompt alignment, and history retargeting across active controlled actors.
-12. `docs/Plans/Gamma-Editor-MVP-Plan.md`
+13. `docs/Plans/Gamma-Editor-MVP-Plan.md`
     - On-hold Gamma release plan focused on the SadConsole Editor -> Preview -> Simulation -> Return loop. Treat as backlog/context until future roadmap selection promotes it again.
-13. `docs/Plans/SadConsole-Frontend-Roadmap.md`
+14. `docs/Plans/SadConsole-Frontend-Roadmap.md`
       - Broader frontend backlog/reference for SadConsole/debug-browser contracts. Not the active implementation plan while canonical action vertical slices are selected, except for the componentized play-mode replacement called out by that plan and focused frontend refactor sprints.
-14. `docs/Plans/Beta-Capability-Gap-Log.md`
+15. `docs/Plans/Beta-Capability-Gap-Log.md`
     - Reference log for scenario-discovered beta gaps, including headless-only, Console/frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-15. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+16. `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
     - Reference log for surprising, emergent, or currently-undocumented beta behavior that is not necessarily a bug or missing capability.
-16. `docs/Plans/Sprint-Retrospective.md`
+17. `docs/Plans/Sprint-Retrospective.md`
       - Recent process observations and open retrospective questions.
-17. `docs/Archived/`
+18. `docs/Archived/`
    - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
-   - Includes completed Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, the completed Enter/Exit policy vertical slice sprint, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the completed Core refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
+   - Includes completed Topology Service Phase 1, Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, the completed Enter/Exit policy vertical slice sprint, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the completed Core refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 
 ## Current goals bridge
 

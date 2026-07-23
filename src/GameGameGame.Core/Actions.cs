@@ -302,10 +302,9 @@ public sealed record TransferAction(TransferDirection TransferDirection, EntityI
     {
         counterpartyId = default;
         var actorLocation = world.GetEntityLocation(actorId);
-        var counterpartyCoord = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(CounterpartyDirection));
-        var adjacency = movement.EvaluateAdjacency(world, actorLocation, counterpartyCoord, actorId);
-        if (!adjacency.AreAdjacent)
+        if (!movement.TryGetMoveDestination(world, actorId, CounterpartyDirection, out var counterpartyCoord))
         {
+            var adjacency = movement.EvaluateAdjacency(world, actorLocation, counterpartyCoord, actorId);
             ActionTrace.Fail(trace, adjacency.FailureReason ?? FailureReason.TargetNotAdjacent, adjacency.FailureDetail ?? $"counterparty direction {CounterpartyDirection} is not adjacent");
             return false;
         }

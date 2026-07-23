@@ -2,6 +2,9 @@ namespace GameGameGame.Core;
 
 public sealed partial class ActionPlanInterpreter
 {
+    // Prototype targeting/pathing steps are intentionally geometric in Phase 1 topology work:
+    // they score coordinate-distance candidate steps and do not follow topology overlays until a
+    // future pathing/range slice explicitly chooses topological traversal semantics.
     private PlanEffectResult ApplyAcquireNearestTarget(
         WorldState world,
         EntityId actorId,

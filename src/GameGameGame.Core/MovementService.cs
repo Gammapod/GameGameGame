@@ -9,6 +9,18 @@ public sealed record AdjacencyEvaluation(
 
 public sealed class MovementService
 {
+    private readonly ITopologyService topology;
+
+    public MovementService()
+        : this(new DefaultTopologyService())
+    {
+    }
+
+    public MovementService(ITopologyService topology)
+    {
+        this.topology = topology;
+    }
+
     public RelocationEvaluation EvaluateRelocation(WorldState world, EntityId entityId, MovementDestination destination)
     {
         var trace = new TraceNode($"Relocate {entityId} -> {destination}", TraceStatus.Info);
@@ -81,42 +93,7 @@ public sealed class MovementService
 
     public AdjacencyEvaluation EvaluateAdjacency(WorldState world, PlaneCoord first, PlaneCoord second, EntityId? cornerAnchorId = null)
     {
-        if (first.PlaneId != second.PlaneId)
-        {
-            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not on the same plane as {first}");
-        }
-
-        var deltaX = second.Coord.X - first.Coord.X;
-        var deltaY = second.Coord.Y - first.Coord.Y;
-        if (Math.Max(Math.Abs(deltaX), Math.Abs(deltaY)) != 1)
-        {
-            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not adjacent to {first}");
-        }
-
-        var direction = DirectionFromDelta(deltaX, deltaY);
-        if (direction is null)
-        {
-            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not adjacent to {first}");
-        }
-
-        var corners = DirectionMath.OrthogonalCorners(direction.Value);
-        var isIntercardinal = corners is not null;
-        if (corners is { } intercardinalCorners)
-        {
-            var firstCorner = new PlaneCoord(first.PlaneId, first.Coord.Offset(intercardinalCorners.First));
-            var secondCorner = new PlaneCoord(first.PlaneId, first.Coord.Offset(intercardinalCorners.Second));
-            if (world.GetOccupant(firstCorner) is not null && world.GetOccupant(secondCorner) is not null)
-            {
-                return new(
-                    false,
-                    direction,
-                    true,
-                    FailureReason.MoveBlocked,
-                    $"intercardinal adjacency {direction} is blocked by both orthogonal corners");
-            }
-        }
-
-        return new(true, direction, isIntercardinal, null, null);
+        return topology.EvaluateAdjacency(world, first, second);
     }
 
     public bool CanPlace(WorldState world, PlaneCoord destination)
@@ -154,14 +131,13 @@ public sealed class MovementService
     {
         var entity = world.Entities[entityId];
         var currentNode = world.Nodes[entity.OccupiedNodeId];
-        var destinationCoord = currentNode.Coord.Offset(direction);
-
         if (!CanMove(world, entityId, direction))
         {
             return false;
         }
 
-        return TryPlace(world, entityId, new PlaneCoord(currentNode.PlaneId, destinationCoord));
+        return topology.TryGetNeighbor(world, new PlaneCoord(currentNode.PlaneId, currentNode.Coord), direction, out var neighbor)
+            && TryPlace(world, entityId, neighbor.Destination);
     }
 
     public bool TryGetMoveDestination(
@@ -172,11 +148,11 @@ public sealed class MovementService
     {
         var entity = world.Entities[entityId];
         var currentNode = world.Nodes[entity.OccupiedNodeId];
-        var destinationCoord = currentNode.Coord.Offset(direction);
-        destination = new PlaneCoord(currentNode.PlaneId, destinationCoord);
+        var origin = new PlaneCoord(currentNode.PlaneId, currentNode.Coord);
+        var found = topology.TryGetNeighbor(world, origin, direction, out var neighbor);
+        destination = neighbor.Destination;
 
-        return world.Planes[currentNode.PlaneId].Contains(destinationCoord)
-            && world.TryGetNodeId(destination, out _);
+        return found;
     }
 
     public EntityId? GetBlockingEntity(WorldState world, EntityId entityId, Direction direction)
@@ -189,7 +165,7 @@ public sealed class MovementService
         return world.GetOccupant(destination);
     }
 
-    private static bool TryResolveDestination(
+    private bool TryResolveDestination(
         WorldState world,
         MovementDestination destination,
         TraceNode trace,
@@ -245,17 +221,17 @@ public sealed class MovementService
                 }
 
                 var anchorLocation = world.GetEntityLocation(adjacentDestination.AnchorId);
-                var adjacentCoord = anchorLocation.Coord.Offset(adjacentDestination.Direction);
-                resolvedDestination = new PlaneCoord(anchorLocation.PlaneId, adjacentCoord);
-                if (world.Planes[anchorLocation.PlaneId].Contains(adjacentCoord) &&
-                    world.TryGetNodeId(resolvedDestination, out _))
+                if (topology.TryGetNeighbor(world, anchorLocation, adjacentDestination.Direction, out var neighbor))
                 {
+                    resolvedDestination = neighbor.Destination;
                     return true;
                 }
 
+                resolvedDestination = neighbor.Destination;
+
                 trace.Status = TraceStatus.Failure;
-                trace.Reason = FailureReason.MoveOutOfBounds;
-                trace.Detail = $"adjacent destination {resolvedDestination} is outside the anchor plane";
+                trace.Reason = neighbor.FailureReason ?? FailureReason.MoveOutOfBounds;
+                trace.Detail = neighbor.FailureDetail ?? $"adjacent destination {resolvedDestination} is outside the anchor plane";
                 return false;
 
             default:
@@ -267,16 +243,4 @@ public sealed class MovementService
         }
     }
 
-    private static Direction? DirectionFromDelta(int deltaX, int deltaY) => (deltaX, deltaY) switch
-    {
-        (0, -1) => Direction.North,
-        (1, -1) => Direction.NorthEast,
-        (1, 0) => Direction.East,
-        (1, 1) => Direction.SouthEast,
-        (0, 1) => Direction.South,
-        (-1, 1) => Direction.SouthWest,
-        (-1, 0) => Direction.West,
-        (-1, -1) => Direction.NorthWest,
-        _ => null
-    };
 }

@@ -332,14 +332,13 @@ public sealed class ActionChoiceService(MovementService movement)
             return new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>();
         }
 
-        var actorLocation = world.GetEntityLocation(actorId);
-        return dropSources.ToDictionary(source => source.TargetId, source => QueryAdjacentDropDestinations(world, actorId, source.TargetId, actorLocation));
+        return dropSources.ToDictionary(source => source.TargetId, source => QueryAdjacentDropDestinations(world, actorId, source.TargetId));
     }
 
-    private IReadOnlyList<ControlledActorDestinationAffordance> QueryAdjacentDropDestinations(WorldState world, EntityId actorId, EntityId targetId, PlaneCoord actorLocation) =>
+    private IReadOnlyList<ControlledActorDestinationAffordance> QueryAdjacentDropDestinations(WorldState world, EntityId actorId, EntityId targetId) =>
         DirectionMath.AllDirections.Select(direction =>
         {
-            var destination = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction));
+            movement.TryGetMoveDestination(world, actorId, direction, out var destination);
             var evaluation = new DropAction(targetId, destination).Evaluate(world, actorId, movement);
             var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
             return new ControlledActorDestinationAffordance(
@@ -358,10 +357,9 @@ public sealed class ActionChoiceService(MovementService movement)
             return [];
         }
 
-        var actorLocation = world.GetEntityLocation(actorId);
         return DirectionMath.AllDirections.Select(direction =>
             {
-                var coord = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction));
+                movement.TryGetMoveDestination(world, actorId, direction, out var coord);
                 var occupant = world.GetOccupant(coord);
                 if (occupant is null || !world.Entities.TryGetValue(occupant.Value, out var entity))
                 {

@@ -99,10 +99,45 @@ public sealed class ControlledActorAffordanceServiceTests
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), southExit.Destination);
     }
 
+    [Fact]
+    public void ControlledActorAffordanceExitDirectionsUseTopologyNeighborDestinations()
+    {
+        var world = TestWorld.CreateWorld();
+        var topologyDestination = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 3));
+        var movement = new MovementService(new OverrideNeighborTopologyService(
+            world.GetEntityLocation(TestWorld.SlimeId),
+            Direction.South,
+            topologyDestination));
+        Assert.True(new EnterAction(TestWorld.SlimeId).ExecuteForTest(world, TestWorld.PlayerId, movement));
+        var query = new ControlledActorAffordanceService(movement);
+
+        var affordances = query.Query(world, TestWorld.PlayerId);
+
+        var southExit = Assert.Single(affordances.ExitDirections, candidate => candidate.Direction == Direction.South);
+        Assert.True(southExit.CanExecute);
+        Assert.Equal(topologyDestination, southExit.Destination);
+    }
+
     private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
     {
         var nodeId = world.GetNodeId(location);
         world.Entities.Add(entityId, new Entity(entityId, name, nodeId, 0, 0, 1, 1));
         world.Occupancy.Add(nodeId, entityId);
+    }
+
+}
+
+file static class ControlledActorAffordanceTestExtensions
+{
+    public static bool ExecuteForTest(this IActionIntent action, WorldState world, EntityId actorId, MovementService movement)
+    {
+        var evaluation = action.Evaluate(world, actorId, movement);
+        if (!evaluation.CanExecute)
+        {
+            return false;
+        }
+
+        action.Execute(world, actorId, movement);
+        return true;
     }
 }

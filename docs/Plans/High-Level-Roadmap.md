@@ -130,13 +130,14 @@ Canonical action target statement:
 - Player control becomes runtime decision-source state over normal authored action steps rather than a permanently special player entity command path or a meta-control Action Step.
 - Componentized play mode consumes canonical action/Action Choice/POV/log contracts without inventing frontend-only simulation semantics.
 
-Recently completed focused sprint:
+Recently completed focused sprints:
 
+- [Topology Service Phase 1 Sprint Plan](../Archived/Topology-Service-Phase-1-Sprint-Plan.md): behavior-preserving Core topology service refactor for default eight-way grid neighbors, MovementService adjacency/directional relocation, controlled exit affordance projection, Action Choice drop/transfer topology facts, and Transfer counterparty lookup. Content/editor schema and frontend rendering were intentionally unchanged.
 - [Give/Take Transfer Vertical Slice Sprint Plan](../Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md): Core atomic Transfer semantics, policy-asymmetric ActorToTarget/TargetToActor directions, combined outcome/player rooms, Action Choice/history support, and a first frontend transfer workflow.
 
 Deferred foundation plan:
 
-- [Topology Service Plan](Topology-Service-Plan.md): backlog plan for centralizing Core adjacency/movement neighbor lookup into a shared topology service, then adding directed topology overlays/rays, and finally supporting authored entanglement-style relations without implementing them as teleport actions.
+- [Topology Service Plan](Topology-Service-Plan.md): backlog plan for the next topology stages after the completed Phase 1 default-grid service: directed topology overlays/rays, then authored entanglement-style relations without implementing them as teleport actions.
 
 New backlog items from Enter/Exit wrap-up:
 

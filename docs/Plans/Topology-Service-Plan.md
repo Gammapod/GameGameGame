@@ -16,10 +16,11 @@ related:
   - source.testing-charter
   - source.engine-editor-capabilities
   - plan.high-level-roadmap
+  - docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md
 ---
 # Topology Service Plan
 
-Status: Backlog reference. This is not the current sprint selection; it preserves the preferred later approach for turning implicit coordinate adjacency into a shared Core topology service. The first goal is behavior-preserving maintenance value. Non-Euclidean mechanics such as entanglement, portals, explicit inventory-space links, topological rays, and future vision/sound propagation should build on the same service rather than each action inventing spatial rules.
+Status: Backlog reference. Phase 1 behavior-preserving shared topology service work is complete; this plan now preserves the preferred later approach for directed topology overlays, topological rays, and future non-Euclidean mechanics such as entanglement, portals, explicit inventory-space links, and future vision/sound propagation. These mechanics should build on the same service rather than each action inventing spatial rules.
 
 Read when:
 
@@ -64,6 +65,8 @@ Exact DTO names are not committed. The important constraints are:
 - future ray/vision APIs must state whether they are **geometric** or **topological**.
 
 ## Phase 1: Shared topology API, behavior-preserving
+
+Status: Complete. See `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md` for the completed sprint plan and verification notes. Core now has `ITopologyService` / `DefaultTopologyService` support for default eight-way grid neighbors, neighbor enumeration, and adjacency evaluation. `MovementService`, controlled exit affordance projection, Action Choice drop destination enumeration, Action Choice transfer counterparty enumeration, and `TransferAction` counterparty lookup consume topology-backed movement facts. Remaining direct direction-offset calls in Core are either inside `DefaultTopologyService` or documented geometric/pathing candidate scoring in targeting handlers.
 
 Goal: introduce a shared Core topology service over the existing implicit grid without changing gameplay behavior.
 

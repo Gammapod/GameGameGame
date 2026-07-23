@@ -44,13 +44,13 @@ Alpha MVP is complete and Beta produced authored gameplay vignettes plus scenari
 
 The active release direction is canonical action vertical slices: freeze the current broad Action Step catalog as legacy/prototype-compatible, then promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, componentized play-mode consumption, and Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
 
-The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, componentized play-mode refactor, Enter/Exit policy/action-choice slice, and canonical peer inventory Transfer sprint are implemented. Transfer is one controller-agnostic atomic action with ActorToTarget and TargetToActor directions; legacy Give/Take remain compatibility/prototype behavior. Throw/Shove-style ranged transform variants remain backlog until the broader action vocabulary is proven. The next focused sprint should be selected from the active roadmap backlog.
+The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, componentized play-mode refactor, Enter/Exit policy/action-choice slice, canonical peer inventory Transfer sprint, and behavior-preserving Topology Service Phase 1 refactor are implemented. Transfer is one controller-agnostic atomic action with ActorToTarget and TargetToActor directions; legacy Give/Take remain compatibility/prototype behavior. Throw/Shove-style ranged transform variants and later topology overlays/rays/entanglement remain backlog until concrete scenario needs promote them. The next focused sprint should be selected from the active roadmap backlog.
 
 ## Active planning bridge
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
 - Active release plan: `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
-- Recently archived focused sprint plan: `docs/Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md`.
+- Recently archived focused sprint plan: `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 - Content/scenario capability gaps: `docs/Plans/Beta-Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Plans/Sprint-Retrospective.md`.
