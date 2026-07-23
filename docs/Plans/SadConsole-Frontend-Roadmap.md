@@ -36,6 +36,7 @@ Related source of truth:
 - `docs/Archived/SadConsole-UI-Pattern-Discovery-Sprint.md` records the completed componentized editor rebuild/parity sprint.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
+- `docs/Plans/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
 
 ## Direction
 
@@ -150,7 +151,7 @@ Scope:
 4. Valid-target highlighting and blocked-action explanations.
 5. Facing, target, active-actor, selected-entity, and focus visualization.
 6. Collapsible/expandable panel cards.
-7. Centralized panel layout geometry for later mouse hit-testing.
+7. Consume the resolved-region geometry from `docs/Plans/SadConsole-UI-Specification.md` when the componentized play/debug surface needs layout or mouse-hit-test work.
 8. Valid inspection target highlighting/cycling for Inspect mode, using visible/projection data without inventing simulation legality.
 
 Exit criteria:
@@ -205,7 +206,7 @@ Goal: improve usability and reassess whether SadConsole remains the right canoni
 
 Scope:
 
-1. Mouse hit-testing over centralized panel/cell geometry.
+1. Implement UI-N05 mouse hit-testing over resolved panel/cell geometry from `docs/Plans/SadConsole-UI-Specification.md`.
 2. Click to inspect, select action targets, expand/collapse panels, and focus panels.
 3. Packaging/distribution pass for downloadable builds.
 4. Package SadConsole as the default feedback build; investigate browser/HTML5 feasibility only if later distribution needs re-promote it as a technology-risk item.
@@ -222,30 +223,30 @@ Promote or consider while planning SadConsole work:
 - Breadcrumb display and containment paths.
 - Improved inspection summaries.
 - History playback / SadConsole-rendered visual export for shareable debug artifacts.
-- Compact world/state summaries.
-- Scenario report templates and saved runlogs.
-- Plan preview plus simulation/report workflows.
-- Primitive showcase and actor-zoo reports.
-- Actor isolation previews.
-- Per-initiative frames and active-actor display.
-- Player/screen messages and structured failure feedback.
-- Containment/inventory summaries and selection rules.
-- Runtime-created entity presentation/template binding for renderability.
-- Scenario curation, grouping, metadata, and content organization.
-- Entity/location/container indexes if frontend browsing or large scenarios create performance pressure.
-- Behavior/action-plan templates, usage display, and future editor/browser workflows.
-- Entity panel chain UX, collapsible panels, keyboard mode model, target highlighting, mouse layer, facing/target visualization, reusable layout geometry, runlog stepper, and integrated editor affordances.
+- Compact world/state summaries. Frontend-owned only where SadConsole presents the summaries; shared report/log fact shape remains Core/Content/Headless-owned.
+- Scenario report templates and saved runlogs. Frontend-owned only for SadConsole presentation/playback/export UX; saved format and headless generation remain shared tooling concerns.
+- Plan preview plus simulation/report workflows. Frontend-owned only for UI composition and navigation; preview/report facts remain shared services.
+- Primitive showcase and actor-zoo reports. Frontend-owned only if surfaced through SadConsole browsing/playback UI.
+- Actor isolation previews. Frontend-owned only for presentation once shared preview/run services exist.
+- Player/screen messages and structured failure feedback. Frontend-owned wording/presentation; structured facts remain shared outcomes/projections.
+- Containment/inventory summaries and selection rules. Frontend-owned presentation/selection focus; transfer legality and selection facts remain shared services.
+- Runtime-created entity presentation/template binding for renderability. Frontend-owned only for displaying provided presentation; binding/provenance support is shared Content/materialization work.
+- Scenario curation, grouping, metadata, and content organization. Frontend-owned only for SadConsole catalog/editor surfaces; catalog/content semantics remain Content-owned.
+- Entity/location/container indexes if frontend browsing or large scenarios create performance pressure. Frontend-discovered pressure, but runtime/index support is Core/Content-owned.
+- Behavior/action-plan templates, usage display, and future editor/browser workflows. Frontend-owned for UI surfaces; template/usage data and mutations require shared editor/content support.
+- Action prompt keyboard model, target highlighting, no-valid-target prompt suppression, and future target-first/bump-to-interact flows. Frontend-owned presentation/input over shared Action Choice/affordance facts.
+- Runlog stepper and integrated editor affordances. Frontend-owned UI workflows over shared history/editor services.
 - Scenario root/player-start editing, per-instance carried state/facing, and typed action-step parameter editing as shared editor capability gaps before richer authoring UI is added.
-- No-valid-target prompt suppression for current direct-control prompt modes, while preserving shared command execution as authoritative.
-- SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs.
-- Saved runlogs / runlog stepper backed by shared history.
-- Reaction trace causality when reactions are promoted.
-- Future runtime control-source / Action Choice model.
-- Long-horizon diegetic action-plan UI if action plans become gameplay objects.
-- Shared SadConsole frontend test fixture builders for playable sessions, editor snapshots, and common screen-model setup. Wanted by frontend-owner after the refactor sprint to avoid brittle YAML string surgery and duplicated private helpers.
-- Lightweight SadConsole architecture/boundary tests or documented grep checks for disallowed direct semantic calls, while allowing approved frontend-facing Core DTOs/services. Wanted by frontend-owner to protect the Core/Content boundary cleaned up during the refactor sprint.
-- Frontend screen-model harness for driving common directional/Select/Cancel flows in tests. Wanted by frontend-owner to simplify componentized editor/play-mode controller tests.
-- Debug-only frontend UI state panel showing current frontend controller states such as play prompt mode, selected action index, editor submode, dirty/stale status, and focused component. Wanted by frontend-owner as a pure presentation/debugging aid; it must not expose runtime mutation or authoring semantics outside shared services.
+- SadConsole temporary-output build script or command for verifying the frontend while an interactive app window may be locking normal build outputs. Frontend-owned developer ergonomics.
+- Reaction trace causality when reactions are promoted. Frontend-owned only for presentation after Core/shared trace causality exists.
+- Future runtime control-source / Action Choice model. Core-owned semantics first; frontend-owned consumption second.
+- Long-horizon diegetic action-plan UI if action plans become gameplay objects. Frontend-owned UI only after Core/Content semantics are promoted.
+- Shared SadConsole frontend test fixture builders for playable sessions, editor snapshots, and common screen-model setup. Frontend-owned test ergonomics; wanted by frontend-owner after the refactor sprint to avoid brittle YAML string surgery and duplicated private helpers.
+- Lightweight SadConsole architecture/boundary tests or documented grep checks for disallowed direct semantic calls, while allowing approved frontend-facing Core DTOs/services. Frontend-owned boundary protection.
+- Frontend screen-model harness for driving common directional/Select/Cancel flows in tests. Frontend-owned test ergonomics for componentized editor/play-mode controller tests.
+- Debug-only frontend UI state panel showing current frontend controller states such as play prompt mode, selected action index, editor submode, dirty/stale status, and focused component. Frontend-owned pure presentation/debugging aid; it must not expose runtime mutation or authoring semantics outside shared services.
+
+Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items formerly repeated in this bucket are consolidated in `docs/Plans/SadConsole-UI-Specification.md` and should be updated there instead of duplicated here.
 
 ## Near-term selection recommendation
 

@@ -33,6 +33,7 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` describes maintainer-facing implemented support tiers and layer coverage.
 - `docs/Source of Truth/Content-Authoring-Manual.md` describes what content authors and content-editing agents can safely author today.
 - `docs/Source of Truth/planning-index.md` describes planning-document navigation and reading order.
+- `docs/Plans/SadConsole-UI-Specification.md` consolidates frontend-owned UI layout/layering/resizing/mouse/render-style specifications that should not be duplicated in roadmap backlog bullets.
 
 ## Current strategic direction
 
@@ -520,16 +521,15 @@ Priority order:
 2. Continue SadConsole debug-browser UX polish over the completed shared history/session/action/target/log/panel contracts.
 3. Entity panel chain UX: improve inspected containment/breadcrumb panel behavior, auto-focus, collapse/expand, and dense local activity readability.
 4. Action-prompt targeting polish: show valid targets/destinations, skip invalid cells where practical, and explain blocked pickup/drop/enter/exit choices without inventing frontend-only simulation rules.
-5. Mouse convenience layer after keyboard UX is coherent: hit-test panels/cells, click to inspect/select prompt targets, and keep mouse behavior equivalent to keyboard-driven actions.
-6. Facing/target/active-actor visualization for play and dense debug simulations, including alternate render styles such as 2x2 color blocks, larger bordered glyph tiles, configurable themes/layouts, and active-actor/focus display.
-7. Saved runlog/playback UX: test inspector or runlog stepper with forward/back controls, plus richer visual state debugging backed by shared history.
-8. History playback / SadConsole-rendered visual export for shareable debug artifacts.
-9. Distribution for SadConsole feedback builds; browser/HTML5 hosting is deferred unless a later frontend-technology checkpoint re-promotes it.
-10. Componentized Editor -> Preview -> Simulation handoff: launch/play from the new editor surface, return to the same editor context, and add provenance-backed source jumps.
-11. Future integrated editor affordances: `Run in SadConsole` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
-12. Editor capability gaps discovered by the parity sprint: scenario root/player-start editing; per-carried-instance initial facing/state in inventory; typed action-step parameter/check/effect projection and mutation for Screen 4.
-13. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
-12. Former Avalonia GUI retired; continue replacing its useful authoring affordances through shared services and SadConsole/future editor surfaces.
+5. Apply `docs/Plans/SadConsole-UI-Specification.md` when this bucket needs layout/layering/resizing, mouse hit-testing, collapsible/pinned panels, user-customizable layouts, floating overlays, nested component regions, active-actor/focus/facing/target render styles, or configurable theme/layout profiles.
+6. Saved runlog/playback UX: test inspector or runlog stepper with forward/back controls, plus richer visual state debugging backed by shared history. Frontend-owned for SadConsole presentation; saved history/runlog facts remain shared tooling concerns.
+7. History playback / SadConsole-rendered visual export for shareable debug artifacts. Frontend-owned for rendering/export UX over shared history.
+8. Distribution for SadConsole feedback builds; browser/HTML5 hosting is deferred unless a later frontend-technology checkpoint re-promotes it.
+9. Componentized Editor -> Preview -> Simulation handoff: launch/play from the new editor surface, return to the same editor context, and add provenance-backed source jumps. Frontend-owned for UI flow; editor/runtime facts remain shared services.
+10. Future integrated editor affordances: `Run in SadConsole` or equivalent scenario-launch buttons, live preview of an entity performing its action plan, and eventually in-game editor functions using shared editor/API services.
+11. Editor capability gaps discovered by the parity sprint: scenario root/player-start editing; per-carried-instance initial facing/state in inventory; typed action-step parameter/check/effect projection and mutation for Screen 4. These are frontend-discovered but require shared editor/content/materialization support before rich UI.
+12. Frontend technology decision checkpoint: assess SadConsole against Godot, Unity, or another option once the prototype covers keyboard play, mouse hit-testing, entity panels, logs, editor affordance needs, packaging, and tester feedback.
+13. Former Avalonia GUI retired; continue replacing its useful authoring affordances through shared services and SadConsole/future editor surfaces.
 
 SadConsole prototype findings coverage snapshot:
 
@@ -543,11 +543,11 @@ This table summarizes findings from the completed spike; it does not imply that 
 | Expand/collapse panels and keyboard focus | Partially covered; prototype supports collapse/expand and Tab focus, but layout/focus rules are not production-ready. |
 | Keyboard-first play/inspect/action modes | Partially covered; Play, Inspect, pickup/drop/enter/exit prompt modes exist and need polish. |
 | Action valid-target highlighting/skipping | Not covered. |
-| Mouse hit-testing/click inspection | Not covered. |
-| Facing/target/active-actor visualization | Partially covered elsewhere by headless debug rendering; not yet a strong SadConsole UX. |
+| Mouse hit-testing/click inspection | Not covered; tracked as UI-N05 in `docs/Plans/SadConsole-UI-Specification.md`. |
+| Facing/target/active-actor visualization | Partially covered elsewhere by headless debug rendering; not yet a strong SadConsole UX. Tracked as UI-N07 in `docs/Plans/SadConsole-UI-Specification.md`. |
 | Local per-panel logs from universal turn trace | Partially covered in production SadConsole through history-backed global/local action logs with conservative autonomous anchors. |
 | Itch.io browser/HTML5 distribution | Deferred; current SadConsole feedback builds target desktop `net10.0` with `MonoGame.Framework.DesktopGL`, so browser export remains a later technology-risk investigation rather than a current requirement. |
-| Reusable panel layout geometry/view models | Partially covered; view models exist, but panel geometry and hit-testing are not centralized. |
+| Reusable panel layout geometry/view models | Partially covered; consolidated under UI-M01/UI-M02 and related notes in `docs/Plans/SadConsole-UI-Specification.md`. |
 | Runlog stepper / debug playback frontend | Not covered; backlog now prefers saved runlogs/history playback over extending the legacy recorder. |
 | Integrated editor affordances | Not covered; must reuse existing editor/API concepts when promoted. |
 | Final frontend engine choice | Not covered; SadConsole is now the preferred canonical debug/browser direction, with final engine comparison deferred until packaging, editor-widget, mouse, or layout evidence requires it. |
@@ -557,7 +557,7 @@ Dependencies:
 - Depends on shared Core/Content/Headless/Editor service/API contracts staying frontend-agnostic.
 - Frontend behavior must not contradict engine/editor capability contracts or add frontend-only simulation semantics.
 - Final frontend-engine choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer; short-term work should still pave SadConsole as the canonical debug/browser direction.
-- Interactive breadcrumbs, collapsible entity panels, and richer visual inspection belong in this consolidated SadConsole/frontend bucket.
+- Interactive breadcrumbs and richer visual inspection belong in this consolidated SadConsole/frontend bucket. Collapsible/pinned panel layout mechanics are specified in `docs/Plans/SadConsole-UI-Specification.md` and should be planned there when promoted.
 
 Promotion trigger:
 

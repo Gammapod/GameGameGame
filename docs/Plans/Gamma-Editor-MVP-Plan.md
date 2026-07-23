@@ -17,6 +17,7 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented Core/Editor/frontend-facing support tiers.
 - `docs/Source of Truth/Content-Authoring-Manual.md` records what authors can safely create today.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the broader SadConsole/debug-browser roadmap.
+- `docs/Plans/SadConsole-UI-Specification.md` records reusable UI layout/layering/resizing/mouse/render-style specifications that should be consumed instead of duplicated here.
 
 ## Reset note
 
@@ -104,8 +105,8 @@ These are valuable, but should not block Editor MVP unless user testing shows th
 3. Semantic reference browser: list all references to a template/action plan and jump between them.
 4. Saved runlogs or history playback integrated into Editor mode.
 5. SadConsole-rendered visual export replacing legacy PNG/GIF recorder workflows.
-6. Mouse hit-testing for editor panels, source jumps, scenario selection, and action target selection.
-7. Collapsible/pinned multi-panel editor layouts with reusable geometry.
+6. Apply UI-N05 from `SadConsole-UI-Specification.md` when adding mouse hit-testing for editor panels, source jumps, scenario selection, and action target selection.
+7. Apply UI-M01/UI-M02/UI-N06 from `SadConsole-UI-Specification.md` when adding collapsible/pinned multi-panel editor layouts with reusable geometry.
 8. Rich YAML path diagnostics for every validation issue.
 9. Strict/canonical validation toggle and schema/catalog export surfaced in the UI.
 10. Scenario curation UI for manifest ordering, descriptions, visibility, or deprecated/headless-only markers.
