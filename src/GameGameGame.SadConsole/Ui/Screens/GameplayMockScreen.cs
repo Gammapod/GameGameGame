@@ -25,7 +25,8 @@ internal sealed record GameplayMockFrame(
     GridCoord? CurrentPlaceSelectedCoord,
     IReadOnlySet<GridCoord> InspectionValidSelectionCoords,
     GridCoord? InspectionSelectedCoord,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics,
+    IReadOnlyList<GameplayMockRegion> Regions);
 
 internal sealed class GameplayMockScreen
 {
@@ -34,6 +35,9 @@ internal sealed class GameplayMockScreen
     private readonly ActionChoicePromptController _prompt = new();
     private readonly EntityPanelProjectionService _panelProjection;
     private EntityId? _inspectedEntityId;
+    private bool _layoutDebugVisible;
+    private (int X, int Y)? _layoutDebugMouseCell;
+    private GameplayMockManualLayoutRecalculation? _manualLayoutRecalculation;
 
     public GameplayMockScreen(PlayableScenarioSession session)
     {
@@ -56,6 +60,7 @@ internal sealed class GameplayMockScreen
     public bool UsesCoreActionChoiceDrop => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Drop) == true;
     public bool UsesCoreActionChoiceEnter => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Enter) == true;
     public bool UsesCoreActionChoiceExit => CurrentActionChoiceRequest?.Choices.Any(choice => choice.Kind == ActionChoiceKind.Exit) == true;
+    public bool IsLayoutDebugVisible => _layoutDebugVisible;
     private WorldState World => _session.World;
     private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _sessionController.ProjectionActionPlans;
 
@@ -72,8 +77,7 @@ internal sealed class GameplayMockScreen
 
     public GameplayMockFrame BuildFrame(int width, int height)
     {
-        var safeWidth = Math.Max(40, width);
-        var safeHeight = Math.Max(18, height);
+        var layout = GameplayMockLayout.Resolve(width, height);
         _sessionController.RefreshForFrameBuilding();
         var projectionActionPlans = ProjectionActionPlans;
         var playerProjection = _panelProjection.Project(World, PlayerEntityId, projectionActionPlans, PlayerEntityId, _sessionController.ActionLog);
@@ -95,18 +99,9 @@ internal sealed class GameplayMockScreen
             ? _panelProjection.Project(World, currentPlace.EntityId, projectionActionPlans, PlayerEntityId, _sessionController.ActionLog)
             : null;
 
-        var hudWidth = Math.Clamp(safeWidth / 5, 20, Math.Max(20, safeWidth - 42));
-        var hudBounds = SadConsoleRect.FromSize(0, 0, hudWidth, safeHeight);
-        var contentLeft = hudBounds.Left + hudBounds.Width + 1;
-        var contentWidth = Math.Max(20, safeWidth - contentLeft - 1);
-        var inspectionHeight = Math.Max(8, safeHeight / 3);
-        var inspectionTop = Math.Max(8, safeHeight - inspectionHeight);
-        var currentPlaceBounds = SadConsoleRect.FromSize(contentLeft, 0, contentWidth, inspectionTop);
-        var inspectionBounds = SadConsoleRect.FromSize(
-            contentLeft,
-            inspectionTop,
-            contentWidth,
-            Math.Max(0, safeHeight - inspectionTop));
+        var hudBounds = layout.HudBounds;
+        var currentPlaceBounds = layout.CurrentPlaceBounds;
+        var inspectionBounds = layout.InspectionBounds;
 
         var components = new List<IUiComponent>();
         components.Add(BuildCurrentPlaceComponent(currentPlaceProjection, currentPlaceBounds));
@@ -119,7 +114,8 @@ internal sealed class GameplayMockScreen
 
         if (_prompt.Mode == ActionChoicePromptMode.ActionList)
         {
-            components.Add(BuildActionSelectorComponent(currentPlaceBounds, AvailablePlayerActionSteps(), _prompt.SelectedActionStepIndex));
+            var actionSteps = AvailablePlayerActionSteps();
+            components.Add(BuildActionSelectorComponent(GameplayMockLayout.ResolveActionSelectorBounds(layout, actionSteps.Count), actionSteps, _prompt.SelectedActionStepIndex));
         }
 
         if (_prompt.Mode == ActionChoicePromptMode.TransferItem
@@ -135,9 +131,19 @@ internal sealed class GameplayMockScreen
             components.Add(new PanelComponent(
                 "play-mock-diagnostics",
                 "POV / setup diagnostics",
-                SadConsoleRect.FromSize(contentLeft, Math.Max(1, currentPlaceBounds.Bottom - 7), Math.Min(60, contentWidth), Math.Min(6, currentPlaceBounds.Height - 2)),
+                layout.DiagnosticsBounds,
                 diagnostics.Take(4).ToList(),
                 UiComponentState.Error));
+        }
+
+        if (_layoutDebugVisible)
+        {
+            components.Add(new PanelComponent(
+                "0.layout-debug",
+                "Layout regions (F12)",
+                layout.DiagnosticsBounds,
+                BuildLayoutDebugRows(layout),
+                UiComponentState.Focused));
         }
 
         return new GameplayMockFrame(
@@ -163,7 +169,8 @@ internal sealed class GameplayMockScreen
             CurrentPlaceSelectedCoord(),
             InspectionValidSelectionCoords(),
             InspectionSelectedCoord(),
-            diagnostics);
+            diagnostics,
+            layout.Regions);
     }
 
     public string InspectNextEntity()
@@ -189,6 +196,31 @@ internal sealed class GameplayMockScreen
     }
 
     public void ClearInspection() => _inspectedEntityId = null;
+
+    public string ToggleLayoutDebug()
+    {
+        _layoutDebugVisible = !_layoutDebugVisible;
+        return _layoutDebugVisible ? "Layout debug visible. F12 hides region overlay." : "Layout debug hidden.";
+    }
+
+    public string RecalculateLayout(int width, int height)
+    {
+        var layout = GameplayMockLayout.Resolve(width, height);
+        _manualLayoutRecalculation = new GameplayMockManualLayoutRecalculation(layout.Width, layout.Height, layout.Regions.Count);
+        return $"Recalculated layout from logical console {width}x{height}; resolved {layout.Width}x{layout.Height} with {layout.Regions.Count} regions. Window pixel resize does not change cells yet.";
+    }
+
+    public bool SetLayoutDebugMouseCell(int x, int y)
+    {
+        var next = (x, y);
+        if (_layoutDebugMouseCell == next)
+        {
+            return false;
+        }
+
+        _layoutDebugMouseCell = next;
+        return true;
+    }
 
     public string DebugAdvanceOneControlledTurn()
     {
@@ -402,12 +434,12 @@ internal sealed class GameplayMockScreen
             .ToList();
     }
 
-    private IUiComponent BuildActionSelectorComponent(SadConsoleRect currentPlaceBounds, IReadOnlyList<ActionPlanBehaviorStepDescriptor> steps, int selectedIndex)
+    private IUiComponent BuildActionSelectorComponent(SadConsoleRect bounds, IReadOnlyList<ActionPlanBehaviorStepDescriptor> steps, int selectedIndex)
     {
         var component = new SelectableListComponent(
             "0.2.1",
             "0.2.1 Action selector",
-            SadConsoleRect.FromSize(currentPlaceBounds.Left + 2, currentPlaceBounds.Top + 2, Math.Min(38, currentPlaceBounds.Width - 4), Math.Min(10, Math.Max(6, steps.Count + 3))),
+            bounds,
             steps.Select((step, index) => new SelectableListItem($"step-{index}", step.Kind.ToString(), ActionSelectorDetail(step))),
             UiComponentState.Focused,
             visibleRowCount: 7);
@@ -425,6 +457,28 @@ internal sealed class GameplayMockScreen
         ActionPlanBehaviorStepKind.Move => "movement also has direct controls",
         _ => "select authored action"
     };
+
+    private IReadOnlyList<string> BuildLayoutDebugRows(GameplayMockLayoutFrame layout)
+    {
+        var rows = new List<string>();
+        if (_layoutDebugMouseCell is { } cell)
+        {
+            rows.Add(GameplayMockLayout.HitTest(layout, cell.X, cell.Y)?.Format() ?? $"hit: none at {cell.X},{cell.Y}");
+        }
+        else
+        {
+            rows.Add("hit: move mouse over play surface");
+        }
+
+        rows.Add(_manualLayoutRecalculation is { } recalculation
+            ? $"manual: logical {recalculation.Width}x{recalculation.Height} regions {recalculation.RegionCount}; window pixels do not change cells yet"
+            : "manual: F11 recalculates current logical console layout");
+
+        rows.AddRange(layout.Regions
+            .OrderBy(region => region.Id, StringComparer.Ordinal)
+            .Select(region => $"{region.Id} {region.Title} L{region.Bounds.Left} T{region.Bounds.Top} W{region.Bounds.Width} H{region.Bounds.Height} Z{region.Layer}"));
+        return rows;
+    }
 
     private IReadOnlySet<GridCoord> CurrentPlaceValidSelectionCoords() => _prompt.Mode switch
     {
@@ -1051,3 +1105,5 @@ internal sealed record TransferInventorySideComponent(
     IReadOnlyList<InventoryGridCell> Cells,
     IReadOnlySet<GridCoord> ValidSelectionCoords,
     GridCoord? SelectedCoord);
+
+internal sealed record GameplayMockManualLayoutRecalculation(int Width, int Height, int RegionCount);

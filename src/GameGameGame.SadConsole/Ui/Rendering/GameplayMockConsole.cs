@@ -33,7 +33,7 @@ internal sealed class GameplayMockConsole : Console
             {
                 var session = PlayableScenarioLauncher.CreateFromFile(startup.DirectContentPath, startup.DirectScenarioId);
                 _screen = new GameplayMockScreen(session);
-                _message = "Play UX mock. Arrows/diagonals/numpad move. Enter acts. Space debug waits/advances. Esc exits.";
+                _message = "Play UX mock. Arrows/diagonals/numpad move. Enter acts. Space debug waits/advances. F11 recalc layout. F12 layout debug. Esc exits.";
             }
         }
         catch (Exception ex)
@@ -50,7 +50,7 @@ internal sealed class GameplayMockConsole : Console
         {
             var session = PlayableScenarioLauncher.CreateFromCatalogEntry(scenario);
             _screen = new GameplayMockScreen(session);
-            _message = "Editor-connected Play UX mock. Arrows/diagonals/numpad move. Enter acts. Space debug waits/advances. Esc returns to editor.";
+            _message = "Editor-connected Play UX mock. Arrows/diagonals/numpad move. Enter acts. Space debug waits/advances. F11 recalc layout. F12 layout debug. Esc returns to editor.";
         }
         catch (Exception ex)
         {
@@ -69,6 +69,7 @@ internal sealed class GameplayMockConsole : Console
         _onExit = onExit;
         _message = string.Empty;
         UseKeyboard = true;
+        UseMouse = true;
         IsFocused = true;
         FocusedMode = FocusBehavior.Set;
     }
@@ -98,6 +99,20 @@ internal sealed class GameplayMockConsole : Console
         if (keyboard.IsKeyReleased(Keys.I) && _screen is not null)
         {
             _message = _screen.InspectNextEntity();
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.F11) && _screen is not null)
+        {
+            _message = _screen.RecalculateLayout(Width, Height);
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.F12) && _screen is not null)
+        {
+            _message = _screen.ToggleLayoutDebug();
             Redraw();
             return true;
         }
@@ -147,6 +162,20 @@ internal sealed class GameplayMockConsole : Console
             _message = _screen.DebugAdvanceOneControlledTurn();
             Redraw();
             return true;
+        }
+
+        return false;
+    }
+
+    public override bool ProcessMouse(MouseScreenObjectState state)
+    {
+        if (_screen?.IsLayoutDebugVisible == true && state.IsOnScreenObject)
+        {
+            var position = state.SurfaceCellPosition;
+            if (_screen.SetLayoutDebugMouseCell(position.X, position.Y))
+            {
+                Redraw();
+            }
         }
 
         return false;

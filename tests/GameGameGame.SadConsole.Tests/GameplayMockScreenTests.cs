@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp;
+using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using System.Reflection;
 
@@ -75,6 +76,66 @@ public sealed class GameplayMockScreenTests
         Assert.Equal(0, frame.HudBounds.Top);
         Assert.Equal(42, frame.HudBounds.Bottom);
         Assert.True(frame.InspectionBounds.Top >= 28);
+    }
+
+    [Fact]
+    public void FrameHidesLayoutDebugPanelByDefault()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.False(screen.IsLayoutDebugVisible);
+        Assert.DoesNotContain(frame.Components, component => component.Id == "0.layout-debug");
+    }
+
+    [Fact]
+    public void ToggleLayoutDebugShowsResolvedRegionRows()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        var message = screen.ToggleLayoutDebug();
+        var frame = screen.BuildFrame(120, 42);
+
+        Assert.Contains("Layout debug visible", message);
+        Assert.True(screen.IsLayoutDebugVisible);
+        var panel = Assert.IsType<PanelComponent>(Assert.Single(frame.Components, component => component.Id == "0.layout-debug"));
+        Assert.Equal(frame.Regions.Count + 2, panel.BodyRows.Count);
+        Assert.Equal("hit: move mouse over play surface", panel.BodyRows[0]);
+        Assert.Equal("manual: F11 recalculates current logical console layout", panel.BodyRows[1]);
+        Assert.Contains(panel.BodyRows, row => row == "0.1 HUD/status L0 T0 W24 H42 Z2");
+        Assert.Contains(panel.BodyRows, row => row == "0.2.1 Action selector L27 T2 W38 H10 Z10");
+    }
+
+    [Fact]
+    public void LayoutDebugRowsShowMouseHitTestResult()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        screen.ToggleLayoutDebug();
+        Assert.True(screen.SetLayoutDebugMouseCell(27, 22));
+        var frame = screen.BuildFrame(120, 42);
+
+        var panel = Assert.IsType<PanelComponent>(Assert.Single(frame.Components, component => component.Id == "0.layout-debug"));
+        Assert.Equal("hit: 0.diagnostics Diagnostics local 2,1 Z20", panel.BodyRows[0]);
+    }
+
+    [Fact]
+    public void RecalculateLayoutRecordsManualDebugStatus()
+    {
+        var session = CreateGameplayMockSession();
+        var screen = new GameplayMockScreen(session);
+
+        screen.ToggleLayoutDebug();
+        var message = screen.RecalculateLayout(160, 60);
+        var frame = screen.BuildFrame(160, 60);
+
+        Assert.Equal("Recalculated layout from logical console 160x60; resolved 160x60 with 6 regions. Window pixel resize does not change cells yet.", message);
+        var panel = Assert.IsType<PanelComponent>(Assert.Single(frame.Components, component => component.Id == "0.layout-debug"));
+        Assert.Equal("manual: logical 160x60 regions 6; window pixels do not change cells yet", panel.BodyRows[1]);
     }
 
     [Fact]
