@@ -44,12 +44,13 @@ Alpha MVP is complete and Beta produced authored gameplay vignettes plus scenari
 
 The active release direction is canonical action vertical slices: freeze the current broad Action Step catalog as legacy/prototype-compatible, then promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, componentized play-mode consumption, and Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
 
-The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, componentized play-mode refactor, and Enter/Exit policy/action-choice slice are implemented. The next canonical action promotion target should be selected from the roadmap backlog, while Throw/Shove-style ranged transform variants should remain backlog until the broader action vocabulary is proven.
+The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, componentized play-mode refactor, Enter/Exit policy/action-choice slice, and canonical peer inventory Transfer sprint are implemented. Transfer is one controller-agnostic atomic action with ActorToTarget and TargetToActor directions; legacy Give/Take remain compatibility/prototype behavior. Throw/Shove-style ranged transform variants remain backlog until the broader action vocabulary is proven. The next focused sprint should be selected from the active roadmap backlog.
 
 ## Active planning bridge
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
 - Active release plan: `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
+- Recently archived focused sprint plan: `docs/Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 - Content/scenario capability gaps: `docs/Plans/Beta-Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Plans/Sprint-Retrospective.md`.
@@ -59,13 +60,13 @@ The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, 
 
 Trust `docs/Plans/High-Level-Roadmap.md` for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Canonical action vertical slices, next target to be selected from the action backlog.
+1. Select the next canonical action vertical slice from the roadmap backlog using the completed Move, Pickup/Drop seam, Enter/Exit, and Transfer evidence.
 2. Canonical runtime control-source / Action Choice model follow-through.
 3. Componentized Gamma play-mode follow-through over canonical action/Action Choice/POV/log services.
 4. Delta point-of-view follow-through where needed by canonical actions.
 5. Gamma SadConsole Editor MVP and broader SadConsole/debug-browser contract follow-through.
 6. Scenario/testing/tooling feedback loop and scenario/content packaging.
-7. Deferred mechanics/content systems: movement/peer primitives, inventory/containment/transfer, spawning/templates, runtime scale, behavior reuse, reactions, and long-horizon diegetic/meta systems.
+7. Deferred mechanics/content systems: movement/peer primitives, inventory/containment/transfer follow-ups, spawning/templates, runtime scale, behavior reuse, reactions, and long-horizon diegetic/meta systems.
 
 ## Maintenance rule
 

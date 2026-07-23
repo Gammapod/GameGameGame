@@ -122,6 +122,14 @@ internal sealed class GameplayMockScreen
             components.Add(BuildActionSelectorComponent(currentPlaceBounds, AvailablePlayerActionSteps(), _prompt.SelectedActionStepIndex));
         }
 
+        if (_prompt.Mode == ActionChoicePromptMode.TransferItem
+            && _prompt.SelectedTransferItem() is { } selectedTransferItem
+            && World.Entities.ContainsKey(selectedTransferItem.CounterpartyId))
+        {
+            var counterpartyProjection = _panelProjection.Project(World, selectedTransferItem.CounterpartyId, projectionActionPlans, PlayerEntityId, _sessionController.ActionLog);
+            components.Add(BuildTransferInventoryComparisonComponent(playerProjection, counterpartyProjection, inspectionBounds, _prompt.ValidSelectedTransferItems(), selectedTransferItem));
+        }
+
         if (diagnostics.Count > 0)
         {
             components.Add(new PanelComponent(
@@ -210,6 +218,8 @@ internal sealed class GameplayMockScreen
             ActionChoicePromptMode.Closed => OpenActionStepMenu(),
             ActionChoicePromptMode.ActionList => ConfirmSelectedActionStep(),
             ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource or ActionChoicePromptMode.EnterTarget => ConfirmSelectedTarget(),
+            ActionChoicePromptMode.TransferCounterparty => ConfirmSelectedTarget(),
+            ActionChoicePromptMode.TransferItem => ConfirmSelectedTransferItem(),
             ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => ConfirmSelectedDestination(),
             ActionChoicePromptMode.ExitFacing => ConfirmSelectedDirection(),
             _ => OpenActionStepMenu()
@@ -223,6 +233,8 @@ internal sealed class GameplayMockScreen
         {
             _inspectedEntityId = PlayerEntityId;
         }
+
+        UpdateTransferInspectionFocus();
 
         return result.Message;
     }
@@ -247,6 +259,8 @@ internal sealed class GameplayMockScreen
             {
                 _inspectedEntityId = PlayerEntityId;
             }
+
+            UpdateTransferInspectionFocus();
 
             return promptResult.Message;
         }
@@ -277,6 +291,8 @@ internal sealed class GameplayMockScreen
             _inspectedEntityId = PlayerEntityId;
         }
 
+        UpdateTransferInspectionFocus();
+
         return result.Message;
     }
 
@@ -294,6 +310,23 @@ internal sealed class GameplayMockScreen
         return result.Succeeded
             ? $"Exit {direction} via Core Action Choice; frame {FrameIndex}, world turn {World.TurnNumber}."
             : $"Exit {direction} failed via Core Action Choice: {result.FailureText ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
+    }
+
+    private string ConfirmSelectedTransferItem()
+    {
+        var submit = _prompt.ConfirmSelectedTransferItem();
+        if (submit.Kind == ActionChoicePromptTransferItemResultKind.Message)
+        {
+            return submit.Message;
+        }
+
+        var counterpartyId = submit.CounterpartyId!.Value;
+        var movingEntityId = submit.MovingEntityId!.Value;
+        var result = _sessionController.SubmitTransferActionChoice(counterpartyId, movingEntityId);
+        _prompt.Reset();
+        return result.Succeeded
+            ? $"Transfer {FormatEntityName(movingEntityId)} with {FormatEntityName(counterpartyId)} via Core Action Choice; frame {FrameIndex}, world turn {World.TurnNumber}."
+            : $"Transfer {FormatEntityName(movingEntityId)} with {FormatEntityName(counterpartyId)} failed via Core Action Choice: {result.FailureText ?? "unknown"}; frame {FrameIndex}, world turn {World.TurnNumber}.";
     }
 
     private string ConfirmSelectedDestination()
@@ -326,7 +359,23 @@ internal sealed class GameplayMockScreen
 
     private string SelectMenuItem(int delta)
     {
-        return _prompt.SelectMenuItem(delta, AvailablePlayerActionSteps(), FormatEntityName, FormatDestination);
+        var message = _prompt.SelectMenuItem(delta, AvailablePlayerActionSteps(), FormatEntityName, FormatDestination);
+        UpdateTransferInspectionFocus();
+        return message;
+    }
+
+    private void UpdateTransferInspectionFocus()
+    {
+        if (_prompt.Mode == ActionChoicePromptMode.TransferItem && _prompt.SelectedTransferItem() is { } item)
+        {
+            _inspectedEntityId = item.OwnerEntityId;
+            return;
+        }
+
+        if (_prompt.Mode == ActionChoicePromptMode.TransferCounterparty && _prompt.SelectedTransferCounterparty() is { } counterparty)
+        {
+            _inspectedEntityId = counterparty.CounterpartyId;
+        }
     }
 
     private IReadOnlyList<ActionPlanBehaviorStepDescriptor> AvailablePlayerActionSteps() =>
@@ -372,6 +421,7 @@ internal sealed class GameplayMockScreen
         ActionPlanBehaviorStepKind.DropFacing or ActionPlanBehaviorStepKind.TransformInventoryToAdjacent => "choose carried item, then drop destination",
         ActionPlanBehaviorStepKind.EnterTarget => "choose enter target",
         ActionPlanBehaviorStepKind.ExitFacing => "choose exit direction",
+        ActionPlanBehaviorStepKind.Transfer => "choose entity, then item from either inventory",
         ActionPlanBehaviorStepKind.Move => "movement also has direct controls",
         _ => "select authored action"
     };
@@ -382,6 +432,10 @@ internal sealed class GameplayMockScreen
             .Where(target => target.Source?.PlaneId == _session.ActivePlaneId)
             .Select(target => target.Source!.Value.Coord)
             .ToHashSet(),
+        ActionChoicePromptMode.TransferCounterparty => _prompt.SelectedEntityActionChoice?.TransferCounterparties
+            .Where(counterparty => counterparty.CanExecute && counterparty.Source.PlaneId == _session.ActivePlaneId)
+            .Select(counterparty => counterparty.Source.Coord)
+            .ToHashSet() ?? new HashSet<GridCoord>(),
         ActionChoicePromptMode.DropDestination => _prompt.ValidSelectedDestinations()
             .Where(destination => destination.Destination.PlaneId == _session.ActivePlaneId)
             .Select(destination => destination.Destination.Coord)
@@ -395,6 +449,12 @@ internal sealed class GameplayMockScreen
         {
             var targets = _prompt.ValidSelectedTargets();
             return targets.Count == 0 ? null : targets[Math.Clamp(_prompt.SelectedTargetIndex, 0, targets.Count - 1)].Source?.Coord;
+        }
+
+        if (_prompt.Mode == ActionChoicePromptMode.TransferCounterparty && _prompt.SelectedEntityActionChoice is { } transferChoice)
+        {
+            var counterparties = transferChoice.TransferCounterparties.Where(counterparty => counterparty.CanExecute).ToList();
+            return counterparties.Count == 0 ? null : counterparties[Math.Clamp(_prompt.SelectedTargetIndex, 0, counterparties.Count - 1)].Source.Coord;
         }
 
         if (_prompt.Mode == ActionChoicePromptMode.DropDestination)
@@ -423,6 +483,10 @@ internal sealed class GameplayMockScreen
                 .Where(destination => destination.Destination.PlaneId == inventoryPlaneId)
                 .Select(destination => destination.Destination.Coord)
                 .ToHashSet(),
+            ActionChoicePromptMode.TransferItem => _prompt.ValidSelectedTransferItems()
+                .Where(item => item.OwnerEntityId == _inspectedEntityId && item.Source.PlaneId == inventoryPlaneId)
+                .Select(item => item.Source.Coord)
+                .ToHashSet(),
             _ => new HashSet<GridCoord>()
         };
     }
@@ -450,6 +514,11 @@ internal sealed class GameplayMockScreen
             return destination.PlaneId == inventoryPlaneId ? destination.Coord : null;
         }
 
+        if (_prompt.Mode == ActionChoicePromptMode.TransferItem && _prompt.SelectedTransferItem() is { } item)
+        {
+            return item.OwnerEntityId == _inspectedEntityId && item.Source.PlaneId == inventoryPlaneId ? item.Source.Coord : null;
+        }
+
         return null;
     }
 
@@ -460,6 +529,8 @@ internal sealed class GameplayMockScreen
             ActionChoicePromptMode.Closed => ["Menu: Enter opens authored action steps"],
             ActionChoicePromptMode.ActionList => ["Menu: action selector shown in component 0.2.1"],
             ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource or ActionChoicePromptMode.EnterTarget => BuildTargetListRows(),
+            ActionChoicePromptMode.TransferCounterparty => BuildTransferCounterpartyRows(),
+            ActionChoicePromptMode.TransferItem => BuildTransferItemRows(),
             ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => BuildDestinationListRows(),
             ActionChoicePromptMode.ExitFacing => BuildDirectionListRows(),
             _ => []
@@ -507,6 +578,35 @@ internal sealed class GameplayMockScreen
         return [$"Menu: choose {choice.Kind} {label} for {FormatEntityName(targetId)}", .. destinations.Select((destination, index) => $"{(index == _prompt.SelectedDestinationIndex ? ">" : " ")} {FormatDestination(destination.Destination)}")];
     }
 
+    private IReadOnlyList<string> BuildTransferCounterpartyRows()
+    {
+        if (_prompt.SelectedEntityActionChoice is not { } choice)
+        {
+            return ["Menu: transfer entity list unavailable"];
+        }
+
+        var counterparties = choice.TransferCounterparties.Where(counterparty => counterparty.CanExecute).ToList();
+        return ["Menu: choose Transfer entity", .. counterparties.Select((counterparty, index) => $"{(index == _prompt.SelectedTargetIndex ? ">" : " ")} {FormatEntityName(counterparty.CounterpartyId)} {counterparty.Direction}")];
+    }
+
+    private IReadOnlyList<string> BuildTransferItemRows()
+    {
+        if (_prompt.SelectedEntityActionChoice is not { } choice || _prompt.SelectedEntityActionTargetId is not { } counterpartyId)
+        {
+            return ["Menu: transfer item list unavailable"];
+        }
+
+        var items = choice.TransferItems(counterpartyId).Where(item => item.CanExecute).ToList();
+        return [$"Menu: choose Transfer item with {FormatEntityName(counterpartyId)}", .. items.Select((item, index) => $"{(index == _prompt.SelectedDestinationIndex ? ">" : " ")} {FormatTransferDirection(item)} {FormatEntityName(item.MovingEntityId)} from {FormatEntityName(item.OwnerEntityId)}")];
+    }
+
+    private string FormatTransferDirection(ActionChoiceTransferItemOption item) => item.TransferDirection switch
+    {
+        TransferDirection.ActorToTarget => $"Give to {FormatEntityName(item.CounterpartyId)}",
+        TransferDirection.TargetToActor => $"Take from {FormatEntityName(item.CounterpartyId)}",
+        _ => item.TransferDirection.ToString()
+    };
+
     private string DescribeActionChoice(ActionChoice choice)
     {
         return choice.Kind switch
@@ -516,6 +616,7 @@ internal sealed class GameplayMockScreen
             ActionChoiceKind.Drop => DescribeEntityDestinationChoice("Drop", choice),
             ActionChoiceKind.Enter => DescribeEntityChoice("Enter", choice),
             ActionChoiceKind.Exit => $"Exit {choice.DirectionOptions.Count(option => option.CanExecute)}/{choice.DirectionOptions.Count} executable directions",
+            ActionChoiceKind.Transfer => $"Transfer {choice.TransferCounterparties.Count(option => option.CanExecute)}/{choice.TransferCounterparties.Count} counterparties",
             _ => choice.Kind.ToString()
         };
     }
@@ -737,6 +838,62 @@ internal sealed class GameplayMockScreen
         return new PanelComponent("0.3", "0.3 Inspection panel", bounds, rows, UiComponentState.Focused);
     }
 
+    private IUiComponent BuildTransferInventoryComparisonComponent(
+        EntityPanelProjection actorProjection,
+        EntityPanelProjection counterpartyProjection,
+        SadConsoleRect bounds,
+        IReadOnlyList<ActionChoiceTransferItemOption> validItems,
+        ActionChoiceTransferItemOption selectedItem)
+    {
+        var actorGrid = actorProjection.InventoryGrid;
+        var counterpartyGrid = counterpartyProjection.InventoryGrid;
+        var actorPlaneId = actorGrid?.PlaneId;
+        var counterpartyPlaneId = counterpartyGrid?.PlaneId;
+        return new TransferInventoryComparisonComponent(
+            "0.3.1",
+            "0.3.1 Transfer inventories",
+            bounds,
+            UiComponentState.Focused,
+            BuildTransferInventorySide(actorProjection, actorGrid, validItems, selectedItem, actorPlaneId),
+            BuildTransferInventorySide(counterpartyProjection, counterpartyGrid, validItems, selectedItem, counterpartyPlaneId),
+            $"Selected: {FormatTransferDirection(selectedItem)} {FormatEntityName(selectedItem.MovingEntityId)}",
+            "Controls: Up/Down choose valid item | Enter transfer | Esc back");
+    }
+
+    private static TransferInventorySideComponent BuildTransferInventorySide(
+        EntityPanelProjection projection,
+        InventoryInspectionGrid? grid,
+        IReadOnlyList<ActionChoiceTransferItemOption> validItems,
+        ActionChoiceTransferItemOption selectedItem,
+        PlaneId? planeId)
+    {
+        if (grid is null || planeId is null)
+        {
+            return new TransferInventorySideComponent(
+                $"{projection.Glyph} {projection.Name}",
+                ["inventory unavailable"],
+                0,
+                0,
+                [],
+                new HashSet<GridCoord>(),
+                null);
+        }
+
+        var validCoords = validItems
+            .Where(item => item.Source.PlaneId == planeId.Value)
+            .Select(item => item.Source.Coord)
+            .ToHashSet();
+        var selectedCoord = selectedItem.Source.PlaneId == planeId.Value ? selectedItem.Source.Coord : (GridCoord?)null;
+        return new TransferInventorySideComponent(
+            $"{projection.Glyph} {projection.Name}",
+            [$"inventory: {grid.Width}x{grid.Height} {grid.PlaneId}", $"valid items: {validCoords.Count}"],
+            grid.Width,
+            grid.Height,
+            grid.Cells.Select(cell => new InventoryGridCell(cell.Coord, cell.Glyph, cell.Color)).ToList(),
+            validCoords,
+            selectedCoord);
+    }
+
     private static IReadOnlyList<string> BuildHudRows(
         EntityPanelProjection playerProjection,
         EntityPanelProjection? currentPlaceProjection,
@@ -871,3 +1028,26 @@ internal sealed class GameplayMockScreen
     private static string FormatBreadcrumbFromCurrentPlace(EntityPanelProjection projection) =>
         string.Join(" > ", projection.Breadcrumb.Segments.Select(segment => segment.EntityId.Value));
 }
+
+internal sealed record TransferInventoryComparisonComponent(
+    string Id,
+    string Title,
+    SadConsoleRect Bounds,
+    UiComponentState State,
+    TransferInventorySideComponent ActorSide,
+    TransferInventorySideComponent CounterpartySide,
+    string SelectedSummary,
+    string Controls) : IUiComponent
+{
+    public IReadOnlyList<string> RenderRows(SadConsoleTheme theme) =>
+        [$"[{State.BorderColor(theme)}] {Title}", ActorSide.Title, CounterpartySide.Title, SelectedSummary, Controls];
+}
+
+internal sealed record TransferInventorySideComponent(
+    string Title,
+    IReadOnlyList<string> Rows,
+    int GridWidth,
+    int GridHeight,
+    IReadOnlyList<InventoryGridCell> Cells,
+    IReadOnlySet<GridCoord> ValidSelectionCoords,
+    GridCoord? SelectedCoord);

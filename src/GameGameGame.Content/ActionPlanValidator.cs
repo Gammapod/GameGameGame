@@ -143,6 +143,26 @@ internal static class ActionPlanValidator
                     actionPlanId: descriptor.Id,
                     stepIndex: index));
             }
+
+            if (step.Kind == ActionPlanBehaviorStepKind.Transfer && step.DirectionMode is null)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepField,
+                    $"Action plan {descriptor.Id} action step {step.Kind} requires directionMode.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+
+            if (step.Kind == ActionPlanBehaviorStepKind.Transfer && step.TransferDirection is null)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepField,
+                    $"Action plan {descriptor.Id} action step {step.Kind} requires transferDirection.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
         }
     }
 

@@ -233,6 +233,243 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
 
 }
 
+public enum TransferDirection
+{
+    ActorToTarget,
+    TargetToActor
+}
+
+public sealed record TransferAction(TransferDirection TransferDirection, EntityId MovingEntityId, Direction CounterpartyDirection) : IActionIntent
+{
+    public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"Transfer {TransferDirection} {MovingEntityId} {CounterpartyDirection}", TraceStatus.Info);
+        if (!TryResolve(world, actorId, movement, trace, out var destination))
+        {
+            return new ActionEvaluation(false, trace);
+        }
+
+        trace.Status = TraceStatus.Success;
+        if (world.Entities.TryGetValue(MovingEntityId, out var movingEntity) &&
+            InventoryPlaneOwnership.TryFindOwner(world, destination.PlaneId, out var destinationOwnerId) &&
+            world.Entities.TryGetValue(destinationOwnerId, out var destinationOwner))
+        {
+            var verb = TransferDirection == TransferDirection.ActorToTarget ? "gave" : "took";
+            trace.Detail = $"{verb} {MovingEntityId} ({movingEntity.Name}) to {destinationOwnerId} ({destinationOwner.Name}) slot {destination.Coord}";
+        }
+
+        return new ActionEvaluation(true, trace);
+    }
+
+    public void Execute(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"Transfer {TransferDirection} {MovingEntityId} {CounterpartyDirection}", TraceStatus.Info);
+        if (TryResolve(world, actorId, movement, trace, out var destination))
+        {
+            movement.TryPlace(world, MovingEntityId, destination);
+        }
+    }
+
+    private bool TryResolve(WorldState world, EntityId actorId, MovementService movement, TraceNode trace, out PlaneCoord destination)
+    {
+        destination = default;
+        if (!world.Entities.TryGetValue(actorId, out var actor))
+        {
+            ActionTrace.Fail(trace, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+            return false;
+        }
+
+        if (!world.Entities.TryGetValue(MovingEntityId, out var movingEntity))
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetMissing, $"moving entity {MovingEntityId} does not exist");
+            return false;
+        }
+
+        if (!TryResolveCounterparty(world, actorId, movement, trace, out var counterpartyId))
+        {
+            return false;
+        }
+
+        return TransferDirection switch
+        {
+            TransferDirection.ActorToTarget => TryResolveActorToTarget(world, actorId, actor, counterpartyId, movement, trace, out destination),
+            TransferDirection.TargetToActor => TryResolveTargetToActor(world, actorId, actor, counterpartyId, movement, trace, out destination),
+            _ => throw new InvalidOperationException($"Unsupported transfer direction {TransferDirection}.")
+        };
+    }
+
+    private bool TryResolveCounterparty(WorldState world, EntityId actorId, MovementService movement, TraceNode trace, out EntityId counterpartyId)
+    {
+        counterpartyId = default;
+        var actorLocation = world.GetEntityLocation(actorId);
+        var counterpartyCoord = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(CounterpartyDirection));
+        var adjacency = movement.EvaluateAdjacency(world, actorLocation, counterpartyCoord, actorId);
+        if (!adjacency.AreAdjacent)
+        {
+            ActionTrace.Fail(trace, adjacency.FailureReason ?? FailureReason.TargetNotAdjacent, adjacency.FailureDetail ?? $"counterparty direction {CounterpartyDirection} is not adjacent");
+            return false;
+        }
+
+        if (!world.Planes.TryGetValue(counterpartyCoord.PlaneId, out var plane) ||
+            !plane.Contains(counterpartyCoord.Coord) ||
+            world.TryGetNodeId(counterpartyCoord, out _) == false)
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"counterparty destination {counterpartyCoord} is outside the actor plane");
+            return false;
+        }
+
+        if (world.GetOccupant(counterpartyCoord) is not { } occupant || !world.Entities.ContainsKey(occupant))
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetMissing, $"no counterparty entity at {counterpartyCoord}");
+            return false;
+        }
+
+        counterpartyId = occupant;
+        return true;
+    }
+
+    private bool TryResolveActorToTarget(WorldState world, EntityId actorId, Entity actor, EntityId counterpartyId, MovementService movement, TraceNode trace, out PlaneCoord destination)
+    {
+        destination = default;
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } actorInventoryPlaneId)
+        {
+            ActionTrace.Fail(trace, FailureReason.ActorHasNoInventory, $"{actor.Name} has no inventory plane");
+            return false;
+        }
+
+        var movingLocation = world.GetEntityLocation(MovingEntityId);
+        if (movingLocation.PlaneId != actorInventoryPlaneId)
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetNotInInventory, $"{MovingEntityId} is not contained by actor {actorId}");
+            return false;
+        }
+
+        if (!world.Entities.TryGetValue(counterpartyId, out var counterparty))
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetMissing, $"counterparty {counterpartyId} does not exist");
+            return false;
+        }
+
+        if (world.GetRegisteredInventoryPlaneId(counterpartyId) is not { } counterpartyInventoryPlaneId)
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetHasNoInventory, $"{counterparty.Name} has no inventory plane");
+            return false;
+        }
+
+        if (!counterparty.HasUsableInventory)
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetInventoryUnusable, $"{counterparty.Name} inventory dimensions are {counterparty.InventoryWidth}x{counterparty.InventoryHeight}");
+            return false;
+        }
+
+        if (!world.Planes.ContainsKey(counterpartyInventoryPlaneId))
+        {
+            ActionTrace.Fail(trace, FailureReason.InvalidInventoryDestination, $"inventory plane {counterpartyInventoryPlaneId} does not exist");
+            return false;
+        }
+
+        var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
+        var placement = new InventoryBoundaryPolicyService().EvaluatePolicyAwarePlacement(world, MovingEntityId, counterpartyId, constrainedRelocation, actorId);
+        trace.Add(placement.Trace);
+        if (placement is { CanRelocate: true, Destination: { } resolvedDestination })
+        {
+            destination = resolvedDestination;
+            return true;
+        }
+
+        ActionTrace.Fail(trace, placement.Trace.Reason == FailureReason.None ? FailureReason.InvalidPlacement : placement.Trace.Reason, placement.Trace.Detail ?? $"no inventory coordinate in {counterpartyInventoryPlaneId} can accept {MovingEntityId}");
+        return false;
+    }
+
+    private bool TryResolveTargetToActor(WorldState world, EntityId actorId, Entity actor, EntityId counterpartyId, MovementService movement, TraceNode trace, out PlaneCoord destination)
+    {
+        destination = default;
+        if (world.GetRegisteredInventoryPlaneId(counterpartyId) is not { } counterpartyInventoryPlaneId || !world.Entities.TryGetValue(counterpartyId, out var counterparty))
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetHasNoInventory, $"{counterpartyId} has no inventory plane");
+            return false;
+        }
+
+        var movingLocation = world.GetEntityLocation(MovingEntityId);
+        if (movingLocation.PlaneId != counterpartyInventoryPlaneId)
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetNotInInventory, $"{MovingEntityId} is not contained by counterparty {counterpartyId}");
+            return false;
+        }
+
+        if (!counterparty.HasUsableInventory)
+        {
+            ActionTrace.Fail(trace, FailureReason.TargetInventoryUnusable, $"{counterparty.Name} inventory dimensions are {counterparty.InventoryWidth}x{counterparty.InventoryHeight}");
+            return false;
+        }
+
+        if (world.GetRegisteredInventoryPlaneId(actorId) is not { } actorInventoryPlaneId)
+        {
+            ActionTrace.Fail(trace, FailureReason.ActorHasNoInventory, $"{actor.Name} has no inventory plane");
+            return false;
+        }
+
+        if (!actor.HasUsableInventory)
+        {
+            ActionTrace.Fail(trace, FailureReason.ActorInventoryUnusable, $"{actor.Name} inventory dimensions are {actor.InventoryWidth}x{actor.InventoryHeight}");
+            return false;
+        }
+
+        if (!world.Planes.ContainsKey(actorInventoryPlaneId))
+        {
+            ActionTrace.Fail(trace, FailureReason.InvalidInventoryDestination, $"inventory plane {actorInventoryPlaneId} does not exist");
+            return false;
+        }
+
+        var policies = new InventoryBoundaryPolicyService();
+        var transitions = new InventoryTransitionService();
+        InventoryTransitionEvaluation? lastTransitionFailure = null;
+        InventoryBoundaryPolicyEvaluation? lastPolicyFailure = null;
+        foreach (var candidate in policies.OrderedEnterPolicyDestinations(world, actorId, actorId))
+        {
+            if (!movement.CanPlace(world, candidate))
+            {
+                continue;
+            }
+
+            var transition = transitions.Evaluate(world, MovingEntityId, candidate);
+            trace.Add(transition.Trace);
+            if (!transition.CanTransition)
+            {
+                lastTransitionFailure = transition;
+                continue;
+            }
+
+            var actorLocation = world.GetEntityLocation(actorId);
+            var exitPolicy = policies.EvaluateExitPolicy(world, MovingEntityId, actorLocation, actorId);
+            trace.Add(exitPolicy.Trace);
+            if (!exitPolicy.CanPass)
+            {
+                lastPolicyFailure = exitPolicy;
+                continue;
+            }
+
+            destination = candidate;
+            return true;
+        }
+
+        if (lastPolicyFailure is { CanPass: false })
+        {
+            ActionTrace.Fail(trace, lastPolicyFailure.Trace.Reason, lastPolicyFailure.Trace.Detail ?? "source exit policy blocks selected item");
+            return false;
+        }
+
+        if (lastTransitionFailure is { CanTransition: false })
+        {
+            ActionTrace.Fail(trace, lastTransitionFailure.Trace.Reason, lastTransitionFailure.Trace.Detail ?? "inventory transition blocks selected item");
+            return false;
+        }
+
+        ActionTrace.Fail(trace, FailureReason.InvalidPlacement, $"no inventory coordinate in {actorInventoryPlaneId} can accept {MovingEntityId}");
+        return false;
+    }
+}
+
 public sealed record EnterAction(EntityId TargetId) : IActionIntent
 {
     public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)

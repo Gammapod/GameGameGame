@@ -98,6 +98,12 @@ internal sealed class SadConsoleComponentRenderer
             return;
         }
 
+        if (component is TransferInventoryComparisonComponent transferInventory)
+        {
+            DrawTransferInventoryComparisonComponent(target, transferInventory, localBounds);
+            return;
+        }
+
         var border = ColorFromToken(component.State.BorderColor(theme));
         var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
         FillRect(target, bounds, Color.Black);
@@ -112,6 +118,79 @@ internal sealed class SadConsoleComponentRenderer
             var visibleRow = ComponentGalleryConsole.StripStyleTokens(row);
             PrintClipped(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, ColorForRow(row, component.State));
             DrawColorSampleGlyph(target, bounds.Left + 1, bounds.Top + 1 + index, Math.Max(0, bounds.Width - 2), visibleRow, row);
+        }
+    }
+
+    private void DrawTransferInventoryComparisonComponent(Console target, TransferInventoryComparisonComponent component, bool localBounds)
+    {
+        var border = ColorFromToken(component.State.BorderColor(theme));
+        var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
+        FillRect(target, bounds, Color.Black);
+        DrawBox(target, bounds, border, tileset.Roles.PanelBorder);
+        PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
+
+        var innerLeft = bounds.Left + 1;
+        var innerTop = bounds.Top + 1;
+        var innerWidth = Math.Max(0, bounds.Width - 2);
+        if (innerWidth <= 0 || bounds.Height <= 3)
+        {
+            return;
+        }
+
+        PrintClipped(target, innerLeft, bounds.Bottom - 3, innerWidth, component.SelectedSummary, Color.Gold);
+        PrintClipped(target, innerLeft, bounds.Bottom - 2, innerWidth, component.Controls, Color.Gray);
+
+        var sideTop = innerTop;
+        var sideHeight = Math.Max(1, bounds.Height - 5);
+        var gap = 1;
+        var sideWidth = Math.Max(8, (innerWidth - gap) / 2);
+        DrawTransferInventorySide(target, component.ActorSide, SadConsoleRect.FromSize(innerLeft, sideTop, sideWidth, sideHeight));
+        DrawTransferInventorySide(target, component.CounterpartySide, SadConsoleRect.FromSize(innerLeft + sideWidth + gap, sideTop, Math.Max(8, innerWidth - sideWidth - gap), sideHeight));
+    }
+
+    private void DrawTransferInventorySide(Console target, TransferInventorySideComponent side, SadConsoleRect bounds)
+    {
+        DrawBox(target, bounds, Color.DarkGray, tileset.Roles.PanelBorder);
+        PrintClipped(target, bounds.Left + 1, bounds.Top, Math.Max(0, bounds.Width - 2), side.Title, Color.White);
+        var y = bounds.Top + 1;
+        foreach (var row in side.Rows)
+        {
+            if (y >= bounds.Bottom - 1) break;
+            PrintClipped(target, bounds.Left + 1, y++, Math.Max(0, bounds.Width - 2), row, Color.LightGray);
+        }
+
+        if (side.GridWidth <= 0 || side.GridHeight <= 0)
+        {
+            PrintClipped(target, bounds.Left + 1, y, Math.Max(0, bounds.Width - 2), "no usable inventory", Color.DarkGray);
+            return;
+        }
+
+        var cellWidth = 3;
+        var gridPixelWidth = side.GridWidth * cellWidth;
+        var gridLeft = Math.Max(bounds.Left + 4, bounds.Left + ((bounds.Width - gridPixelWidth) / 2));
+        var gridTop = Math.Min(bounds.Bottom - 2, Math.Max(y + 1, bounds.Top + 4));
+        var cells = side.Cells.ToDictionary(cell => cell.Coord);
+        for (var row = 0; row < side.GridHeight && gridTop + row < bounds.Bottom - 1; row++)
+        {
+            PrintClipped(target, bounds.Left + 1, gridTop + row, 3, $"{row,2}:", Color.DarkGray);
+            for (var column = 0; column < side.GridWidth; column++)
+            {
+                var x = gridLeft + column * cellWidth;
+                if (x + 2 >= bounds.Left + bounds.Width - 1) break;
+
+                var coord = new GameGameGame.Core.GridCoord(column, row);
+                var cell = cells.GetValueOrDefault(coord);
+                var foreground = cell?.Color is { } color ? ColorFromToken(color.ToString()) : Color.DarkGray;
+                var background = side.SelectedCoord == coord
+                    ? Color.DarkGoldenrod
+                    : side.ValidSelectionCoords.Contains(coord)
+                        ? Color.DarkGreen
+                        : Color.Black;
+                var glyph = cell?.Glyph ?? '.';
+                SetCell(target, x, gridTop + row, tileset.Blank, foreground, background);
+                SetCell(target, x + 1, gridTop + row, glyph, side.SelectedCoord == coord ? Color.Yellow : foreground, background);
+                SetCell(target, x + 2, gridTop + row, tileset.Blank, foreground, background);
+            }
         }
     }
 

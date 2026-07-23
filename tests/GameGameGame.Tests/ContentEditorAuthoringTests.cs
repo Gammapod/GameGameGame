@@ -158,6 +158,35 @@ public sealed class ContentEditorAuthoringTests
     }
 
     [Fact]
+    public void ContentEditorAuthorsCanonicalTransferBehaviorChain()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var traderId = editor.CreateEntityPreset("Transfer Trader");
+        editor.UpdateEntityPreset(
+            traderId,
+            new EntityTemplate("Transfer Trader", InventoryWidth: 2, InventoryHeight: 1, Bulk: 1, Aperture: 10),
+            new EntityPresentation('t', PresentationColor.Yellow));
+
+        var planId = editor.CreateActionPlan("Transfer Behavior");
+        editor.SetActionPlanBehavior(planId, [new ActionPlanBehaviorStepDescriptor(
+            ActionPlanBehaviorStepKind.Transfer,
+            TargetLabel: "offers",
+            DirectionMode: ActionPlanMoveDirectionMode.Forward,
+            TransferDirection: TransferDirection.ActorToTarget)]);
+        editor.SetDefaultActionPlan(traderId, planId);
+
+        var yaml = document.SaveYaml();
+
+        Assert.True(editor.Validate().IsValid, string.Join(Environment.NewLine, editor.Validate().Errors));
+        Assert.Contains("kind: Transfer", yaml);
+        Assert.Contains("targetLabel: offers", yaml);
+        Assert.Contains("directionMode: Forward", yaml);
+        Assert.Contains("transferDirection: ActorToTarget", yaml);
+        Assert.DoesNotContain("primitive:", yaml);
+    }
+
+    [Fact]
     public void ContentEditorPreviewsCanonicalBehaviorPlan()
     {
         var editor = new ContentEditorService(new EditableContentDocument());

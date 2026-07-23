@@ -143,6 +143,54 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void ActionChoiceRequestExposesTransferCounterpartiesFromAuthoredTransferStep()
+    {
+        var movement = new MovementService();
+        var world = TestWorld.CreateWorld();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(
+            ActionPlanBehaviorStepKind.Transfer,
+            TargetSlot: 1,
+            DirectionMode: ActionPlanMoveDirectionMode.Forward,
+            TransferDirection: TransferDirection.ActorToTarget));
+        var service = new ActionChoiceService(movement);
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        Assert.Equal(ActionChoiceKind.Transfer, choice.Kind);
+        var counterparty = Assert.Single(choice.TransferCounterparties, option => option.CounterpartyId == TestWorld.SlimeId);
+        Assert.Equal(Direction.North, counterparty.Direction);
+        Assert.True(counterparty.CanExecute);
+    }
+
+    [Fact]
+    public void ActionChoiceRequestExposesTransferItemsFromActorAndCounterparty()
+    {
+        var movement = new MovementService();
+        var world = TestWorld.CreateWorld();
+        var coinId = new EntityId("coin");
+        AddEntity(world, coinId, "Coin", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)));
+        Assert.True(movement.TryPlace(world, coinId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(
+            ActionPlanBehaviorStepKind.Transfer,
+            TargetSlot: 1,
+            DirectionMode: ActionPlanMoveDirectionMode.Forward,
+            TransferDirection: TransferDirection.ActorToTarget));
+        var service = new ActionChoiceService(movement);
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var choice = Assert.Single(request.Choices);
+        var items = choice.TransferItems(TestWorld.SlimeId);
+        Assert.Contains(items, item => item.MovingEntityId == coinId && item.OwnerEntityId == TestWorld.PlayerId && item.TransferDirection == TransferDirection.ActorToTarget);
+        Assert.Contains(items, item => item.MovingEntityId == TestWorld.RockId && item.OwnerEntityId == TestWorld.SlimeId && item.TransferDirection == TransferDirection.TargetToActor);
+    }
+
+    [Fact]
     public void ActionChoiceRequestExposesNonParameterizedAuthoredStepsForCoreSubmission()
     {
         var world = TestWorld.CreateWorld();
@@ -282,6 +330,44 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void SubmitTransferChoiceDerivesActorToTargetFromSelectedActorOwnedItem()
+    {
+        var movement = new MovementService();
+        var world = TestWorld.CreateWorld();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Transfer));
+        var service = new ActionChoiceService(movement);
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = service.SubmitTransferChoice(world, request, TestWorld.SlimeId, TestWorld.RockId, new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.AdvancedTurn);
+        Assert.Equal(ControlledActorCommandKind.Transfer, result.Kind);
+        Assert.Equal(TestWorld.RockId, result.TargetId);
+        Assert.Equal(TestWorld.SlimeInventoryPlaneId, world.GetEntityLocation(TestWorld.RockId).PlaneId);
+    }
+
+    [Fact]
+    public void SubmitTransferChoiceDerivesTargetToActorFromSelectedCounterpartyOwnedItem()
+    {
+        var movement = new MovementService();
+        var world = TestWorld.CreateWorld();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Transfer));
+        var service = new ActionChoiceService(movement);
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = service.SubmitTransferChoice(world, request, TestWorld.SlimeId, TestWorld.RockId, new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.AdvancedTurn);
+        Assert.Equal(TestWorld.PlayerInventoryPlaneId, world.GetEntityLocation(TestWorld.RockId).PlaneId);
+    }
+
+    [Fact]
     public void SubmitAuthoredStepChoiceExecutesThroughCoreServiceAndAdvancesWhenConsuming()
     {
         var world = TestWorld.CreateWorld();
@@ -375,4 +461,11 @@ public sealed class CoreActionChoiceTests
 
     private static ActionPlanDescriptor MovePlan(params ActionPlanBehaviorStepDescriptor[] steps) =>
         new(new ActionPlanId("choice-plan"), [], Behavior: new ActionPlanBehaviorDescriptor(steps));
+
+    private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1));
+        world.Occupancy.Add(nodeId, entityId);
+    }
 }

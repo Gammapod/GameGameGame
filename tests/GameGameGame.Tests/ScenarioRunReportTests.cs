@@ -99,6 +99,59 @@ public sealed class ScenarioRunReportTests
         Assert.False(materialization.World.Entities.ContainsKey(new EntityId("canonicalExitInteractionObserver")));
     }
 
+    [Fact]
+    public void CanonicalTransferShowcaseScenariosLoadValidateRunAndExposeManualPlayerPlan()
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", "CanonicalActions", "CanonicalTransferShowcase.yaml"));
+        var document = EditableContentDocument.LoadYaml(File.ReadAllText(path));
+        var validation = new ContentEditorService(document).Validate();
+        var canonicalValidation = document.ValidateCanonicalAuthoring();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.True(canonicalValidation.IsValid, string.Join(Environment.NewLine, canonicalValidation.Errors));
+
+        var outcomeReport = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-transfer-outcomes", TurnCount: 1));
+
+        Assert.Empty(outcomeReport.ValidationDiagnostics);
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Give Success Actor" && turn.TraceLines.Contains("1. Transfer: Success; fallback=stopped"));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Take Success Actor" && turn.TraceLines.Contains("1. Transfer: Success; fallback=stopped"));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Missing Target Actor" && turn.TraceLines.Any(line => line.Contains("Transfer: Failure", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer No Counterparty Actor" && turn.TraceLines.Any(line => line.Contains("reason=TargetMissing", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer No Inventory Actor" && turn.TraceLines.Any(line => line.Contains("reason=TargetHasNoInventory", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Not In Actor Actor" && turn.TraceLines.Any(line => line.Contains("reason=TargetNotInInventory", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Destination Full Actor" && turn.TraceLines.Any(line => line.Contains("reason=InvalidPlacement", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Destination Aperture Actor" && turn.TraceLines.Any(line => line.Contains("reason=ApertureBlocked", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Source Aperture Actor" && turn.TraceLines.Any(line => line.Contains("reason=ApertureBlocked", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Take Not In Source Actor" && turn.TraceLines.Any(line => line.Contains("reason=TargetNotInInventory", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Actor Full Actor" && turn.TraceLines.Any(line => line.Contains("reason=InvalidPlacement", StringComparison.Ordinal)));
+        Assert.Contains(outcomeReport.Turns, turn => turn.ActorName == "Transfer Exit Policy Actor" && turn.TraceLines.Any(line => line.Contains("reason=InventoryPolicyBlocked", StringComparison.Ordinal)));
+        Assert.Contains("  - Transfer Gem giveSuccessGem at (0,0)", outcomeReport.InventorySummaryLines);
+        Assert.Contains("  - Transfer Gem takeSuccessGem at (0,0)", outcomeReport.InventorySummaryLines);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "beta-canonical-transfer-player-interaction");
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        Assert.Contains("Control: player-1 -> canonicalTransferPlayer", materialization.SetupLines);
+
+        var descriptor = materialization.Registry.ActionPlanDescriptors[new ActionPlanTemplateId("transferPlayerGiveTakePlan")];
+        Assert.Collection(
+            descriptor.Behavior!.Steps,
+            giveStep =>
+            {
+                Assert.Equal(ActionPlanBehaviorStepKind.Transfer, giveStep.Kind);
+                Assert.Equal(TransferDirection.ActorToTarget, giveStep.TransferDirection);
+                Assert.Equal(ActionPlanMoveDirectionMode.Forward, giveStep.DirectionMode);
+                Assert.Equal(1, giveStep.TargetSlot);
+            },
+            takeStep =>
+            {
+                Assert.Equal(ActionPlanBehaviorStepKind.Transfer, takeStep.Kind);
+                Assert.Equal(TransferDirection.TargetToActor, takeStep.TransferDirection);
+                Assert.Equal(ActionPlanMoveDirectionMode.Forward, takeStep.DirectionMode);
+                Assert.Equal(1, takeStep.TargetSlot);
+            });
+    }
+
     private static string FindRepositoryFile(string relativePath, [CallerFilePath] string sourceFilePath = "")
     {
         var directory = new DirectoryInfo(Path.GetDirectoryName(sourceFilePath) ?? AppContext.BaseDirectory);

@@ -72,7 +72,8 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
                         step.TargetSlot,
                         step.TargetLabel,
                         step.PlanId,
-                        step.DirectionMode);
+                        step.DirectionMode,
+                        step.TransferDirection);
                 })
                 .ToList();
         }

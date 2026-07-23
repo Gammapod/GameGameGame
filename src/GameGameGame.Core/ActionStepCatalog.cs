@@ -182,6 +182,12 @@ public static class ActionStepCatalog
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
         new(
+            ActionPlanBehaviorStepKind.Transfer,
+            "Transfer",
+            "Canonical peer inventory transfer. Reads Target as the moving entity, resolves directionMode as the adjacent counterparty direction, and moves the selected entity ActorToTarget or TargetToActor according to transferDirection while respecting the other entity's inventory policy.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity), State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity), State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
             ActionPlanBehaviorStepKind.ApplyPrePlan,
             "Apply Pre-Plan",
             "Reads the persistent Target and applies the referenced Action Plan as that target's one-turn Pre override, replacing any existing Pre override on the target.",

@@ -184,6 +184,25 @@ internal sealed class GameplaySessionController
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
     }
 
+    public GameplayRuntimeSubmission SubmitTransferActionChoice(EntityId counterpartyId, EntityId movingEntityId)
+    {
+        if (CurrentActionChoiceRequest is not { } request)
+        {
+            return new GameplayRuntimeSubmission(false, "No Core Action Choice request is active.", UsedCoreActionChoice: true);
+        }
+
+        var result = _history.SubmitTransferActionChoice(
+            _actionChoices,
+            request,
+            counterpartyId,
+            movingEntityId,
+            _emptyActionPlans,
+            RefreshTargets);
+
+        RefreshAfterControlledSubmission(result.Succeeded);
+        return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: true);
+    }
+
     public GameplayRuntimeSubmission SubmitAuthoredActionStepChoice(int stepIndex, ActionPlanBehaviorStepDescriptor step)
     {
         if (CurrentActionChoiceRequest is not { } request)

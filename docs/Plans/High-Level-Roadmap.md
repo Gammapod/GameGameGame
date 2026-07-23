@@ -117,7 +117,7 @@ Immediate canonical action priority:
 - Treat the completed canonical `Move` slice as the reference promotion workflow: engine rules, structured outcomes, player-facing log IDs, two content rooms, editor/headless tool support, and Action Choice/play-mode consumption.
 - Treat the first Pickup/Drop interaction seam as implemented evidence: Core Action Choice exposes target/source/destination facts for `TransformAdjacentToInventory`/`PickupTarget` and `TransformInventoryToAdjacent`/`DropFacing`, submissions execute through shared history/command services, and componentized play mode has an action-step-first menu path.
 - Treat the completed Enter/Exit policy slice as implemented evidence: Core/content/editor/frontend layers support nullable `EnterPolicy`/`ExitPolicy`, typed Enter/Exit Action Choice prompts, frontend policy editing, and canonical Enter/Exit rooms.
-- Use that evidence to select the next broad action pair rather than immediately adding transform variants. Candidate next options include `PushFacing`, target-relative actions such as `SeekTarget`, or transfer actions such as `GiveTarget`/`TakeTarget` after their policy interpretation is planned.
+- Treat the completed canonical peer inventory Transfer sprint as implemented evidence: Transfer is one controller-agnostic atomic containment action with ActorToTarget and TargetToActor directions, not a direct promotion of legacy `GiveTarget`/`TakeTarget` shortcuts. It now has Core semantics, descriptor/YAML/editor/API parity, content outcome/player rooms, Action Choice/history submission, and first SadConsole workflow support.
 - Keep `TransformInventoryToRanged`/Throw and `TransformAdjacentToRanged`/Shove in backlog until the broader canonical action vocabulary is proven, unless a concrete scenario requires ranged transform semantics sooner.
 - Consider `Teleport` only as an advanced/stretch relocation slice: it is already supported as a generic effect, but canonical player-facing semantics, safety/authoring limits, and log/POV expectations differ from constrained inventory verbs.
 
@@ -128,14 +128,14 @@ Canonical action target statement:
 - Player control becomes runtime decision-source state over normal authored action steps rather than a permanently special player entity command path or a meta-control Action Step.
 - Componentized play mode consumes canonical action/Action Choice/POV/log contracts without inventing frontend-only simulation semantics.
 
-Planned next sprint:
+Recently completed focused sprint:
 
-- Select the next canonical action slice from the action backlog. Before selecting `GiveTarget`/`TakeTarget`, decide how `ExitPolicy` should apply to non-directional inventory-to-inventory transfers.
+- [Give/Take Transfer Vertical Slice Sprint Plan](../Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md): Core atomic Transfer semantics, policy-asymmetric ActorToTarget/TargetToActor directions, combined outcome/player rooms, Action Choice/history support, and a first frontend transfer workflow.
 
 New backlog items from Enter/Exit wrap-up:
 
 - **Content-authored initial control source / nested playable starts**: implemented through instance-level placed-entity `controller` metadata. Authored `controller: Player` instances initialize to `PlayerChoice`, missing/`Computer` defaults to automatic control, nested/multiple/playerless starts are supported at materialization, and legacy scenario-root `playerStart` insertion remains fallback only when no placed player controller exists. SadConsole and headless runs now use initiative-aware `PlayerChoice` scheduling: automatic actors advance in deterministic order, prompts occur when controlled actors are reached, and headless reports pending prompts as runtime observations.
-- **Give/Take policy interpretation**: when promoting canonical `GiveTarget`/`TakeTarget`, decide whether non-directional inventory-to-inventory transfers can satisfy `EdgeAlignedWithExitDirection`, require a future direction/source-destination model, or use a different explicit policy interpretation.
+- **Transfer policy interpretation**: implemented by the completed Transfer sprint. ActorToTarget invokes the adjacent destination holder's `EnterPolicy` but not the actor's `ExitPolicy`; TargetToActor invokes the adjacent source holder's `ExitPolicy` but not the actor's `EnterPolicy`. Both directions are atomic containment transfers with structured failure reasons.
 
 Open player-control models after the first action-step-first path:
 
@@ -394,14 +394,14 @@ Priority order:
 
 1. Weight mechanics simplification: replace carrying capacity as a primary mechanic with a simpler containment rule where an entity may exist inside another entity when contained weight is less than or equal to container weight.
 2. Clarify containment/inventory rules through generated scenarios.
-3. Carried entity selection rules for `Give`.
-4. Source inventory selection rules for `Take`.
+3. Predicate/item selection rules for authored `Transfer` beyond the current concrete `targetSlot`/`targetLabel` moving-entity reference.
+4. Richer peer-transfer restrictions/permissions, trade/barter rules, and author-facing diagnostics.
 5. Richer containment/inventory report summaries for generated scenarios.
 
 Dependencies:
 
-- `Give`/`Take` are promoted into Bucket 2 as foundational peer-interaction primitives; this bucket retains the deeper inventory/containment model and selection-rule follow-up work.
-- Give/take selection rules depend on the inventory/containment model.
+- Canonical `Transfer` is promoted as a foundational peer-interaction primitive; this bucket retains deeper inventory/containment model, permission, and selection-rule follow-up work.
+- Richer Transfer selection rules depend on the inventory/containment model.
 - Weight simplification should wait for clearer inventory/weight expectations from generated scenario tests.
 
 Promotion trigger:

@@ -7,6 +7,7 @@ public enum ControlledActorCommandKind
     Drop,
     Enter,
     Exit,
+    Transfer,
     Wait
 }
 
@@ -32,8 +33,13 @@ public sealed record ControlledActorCommand(
     public static ControlledActorCommand Exit(Direction direction) =>
         new(ControlledActorCommandKind.Exit, Direction: direction);
 
+    public static ControlledActorCommand Transfer(EntityId movingEntityId, EntityId counterpartyId) =>
+        new ControlledActorCommand(ControlledActorCommandKind.Transfer, TargetId: movingEntityId) with { CounterpartyId = counterpartyId };
+
     public static ControlledActorCommand Wait() =>
         new(ControlledActorCommandKind.Wait);
+
+    public EntityId? CounterpartyId { get; init; }
 }
 
 public sealed record ControlledActorCommandResult(
@@ -49,7 +55,10 @@ public sealed record ControlledActorCommandResult(
     bool ConsumedTurn,
     bool AdvancedTurn,
     TraceNode Trace,
-    SimulationTurnReport? TurnReport);
+    SimulationTurnReport? TurnReport)
+{
+    public EntityId? CounterpartyId { get; init; }
+}
 
 public sealed class ControlledActorCommandService(
     MovementService movement,
@@ -107,9 +116,15 @@ public sealed class ControlledActorCommandService(
             ControlledActorCommandKind.Drop when command.TargetId is { } targetId && command.Destination is { } destination => new DropAction(targetId, destination),
             ControlledActorCommandKind.Enter when command.TargetId is { } targetId => new EnterAction(targetId),
             ControlledActorCommandKind.Exit when command.Direction is { } direction => new ExitAction(direction),
+            ControlledActorCommandKind.Transfer when command.TargetId is { } movingEntityId && command.CounterpartyId is { } counterpartyId => CreateTransferAction(command, movingEntityId, counterpartyId),
             ControlledActorCommandKind.Wait => new WaitAction(),
             _ => throw new InvalidOperationException($"Controlled command {command.Kind} is missing required command data.")
         };
+
+    private static IActionIntent CreateTransferAction(ControlledActorCommand command, EntityId movingEntityId, EntityId counterpartyId)
+    {
+        throw new InvalidOperationException("Transfer commands must be constructed by ActionChoiceService so direction can be derived from the current world state.");
+    }
 
     private static TraceNode? FindFailure(TraceNode trace)
     {

@@ -56,13 +56,6 @@ sections:
     status: legacy
     tags: [beta, legacy, containment, bulk, aperture, blocked]
     source: Beta content exploration
-  - contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
-    scenarioId: beta-pocket-bazaar
-    name: Pocket Bazaar
-    description: Legacy Beta nested-scene showcase with several inventory spaces; reviewers can enter with E and exit with X to inspect containment behavior.
-    status: legacy
-    tags: [beta, legacy, containment, nested, manual]
-    source: Beta content exploration
   - contentPath: src\GameGameGame.Content\Beta\CurrentTools\AlphaSlimeRecreation.yaml
     scenarioId: beta-alpha-slime-recreation
     name: Alpha Slime Recreation
@@ -323,6 +316,20 @@ sections:
     status: active-delta
     tags: [delta, canonical-action, exit, containment, player-interaction, vertical-slice]
     source: docs/Plans/Enter-Exit-Policy-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTransferShowcase.yaml
+    scenarioId: beta-canonical-transfer-outcomes
+    name: Canonical Transfer Outcomes
+    description: "Delta/canonical action outcome room for peer inventory Transfer success plus supported failure logs: missing/invalid selected target, missing counterparty, no counterparty inventory, selected entity not in required holder, full/no open destination, aperture blocks on source or destination, and source exit-policy denial."
+    status: active-delta
+    tags: [delta, canonical-action, transfer, give, take, inventory, outcomes, vertical-slice]
+    source: docs/Plans/Give-Take-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTransferShowcase.yaml
+    scenarioId: beta-canonical-transfer-player-interaction
+    name: Canonical Transfer Player Interaction
+    description: Delta/canonical action player-interaction room where the player can manually round-trip a preselected carried coin with an adjacent chest through authored Transfer ActorToTarget then TargetToActor steps.
+    status: active-delta
+    tags: [delta, canonical-action, transfer, give, take, inventory, player-interaction, vertical-slice]
+    source: docs/Plans/Give-Take-Vertical-Slice-Sprint-Plan.md
   - contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
     scenarioId: beta-success-criteria-log-room
     name: Success Criteria Log Room
@@ -343,5 +350,19 @@ sections:
   status: canonical
   tags:
   - canonical
-  entries: []
+  entries:
+  - contentPath: src\GameGameGame.Content\Beta\Debug\CanonicalDebugRooms.yaml
+    scenarioId: canonical-debug-size-calibration-room
+    name: Canonical Debug Size Calibration Room
+    description: Canonical debug room with the standard Player template and calibration fixtures for bulk, aperture, nested rooms, nested bags, narrowing crevices, and narrowing boxes; intended as a maintained manual test/debug room for containment and inventory boundary behavior.
+    status: canonical-candidate
+    tags: [canonical, debug, calibration, containment, inventory, bulk, aperture]
+    source: Maintained debug-room request
+  - contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
+    scenarioId: beta-pocket-bazaar
+    name: Pocket Bazaar
+    description: Canonical-candidate nested showcase bazaar with several gameplay exhibits and inventory spaces; reviewers can enter with E and exit with X to inspect containment behavior, and this room is intended to grow with additional creature-interaction exhibits.
+    status: canonical-candidate
+    tags: [canonical, candidate, bazaar, containment, nested, manual, exhibits]
+    source: Promoted from Beta content exploration
 diagnostics: []

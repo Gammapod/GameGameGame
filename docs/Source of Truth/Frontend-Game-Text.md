@@ -72,7 +72,7 @@ Player-facing log text should first answer why the player is reading the log, th
 2. **Know whether the change matters to them.** The log should make nearby, visible, audible, player-targeting, inventory-changing, or path-blocking events feel more important than distant background churn.
 3. **Identify the participants.** When multiple entities share a display name, the player needs enough disambiguation to tell whether this is the same slime as before, a different slime, an item, or the player character.
 4. **Understand cause and obstacle.** Failures should communicate actionable world reasons when known: wall, edge, blocker, too bulky, not adjacent, no room, or unknown/hidden cause.
-5. **Track possession and containment changes.** Pickup, drop, give, take, enter, and exit events change where entities are. The player needs to know who gained/lost what, especially when an actor picks up another actor.
+5. **Track possession and containment changes.** Pickup, drop, transfer/give/take, enter, and exit events change where entities are. The player needs to know who gained/lost what, especially when an actor picks up another actor.
 6. **Understand agency and turn structure.** The log should make clear whether the player acted, waited, or is only observing autonomous actors, and should help the player recognize repeated initiative/order patterns without needing debug indices.
 7. **Distinguish intended behavior from scenario failure.** Validation/runtime status is useful to authors and testers because it tells them whether odd behavior is expected simulation output or a broken run.
 8. **Preserve point-of-view trust.** A player-facing log must not imply omniscient perception. Until line-of-sight/audibility filtering exists, label output as a narrative projection and avoid wording that claims exact player knowledge.
@@ -101,6 +101,7 @@ Current ratio-bearing Action Steps are constrained inventory/containment transit
 |---|---|---|---|---|---|---|
 | `PickupTarget` | `action.pickup_target.success` | `action.pickup_target.failure` | `action.pickup_target.success.large` | `action.pickup_target.success.barely` | `action.pickup_target.failure.barely` | `action.pickup_target.failure.large` |
 | `DropFacing` | `action.drop_facing.success` | `action.drop_facing.failure` | `action.drop_facing.success.large` | `action.drop_facing.success.barely` | `action.drop_facing.failure.barely` | `action.drop_facing.failure.large` |
+| `Transfer` | `action.transfer.success` | `action.transfer.failure` | `action.transfer.success.large` | `action.transfer.success.barely` | `action.transfer.failure.barely` | `action.transfer.failure.large` |
 | `GiveTarget` | `action.give_target.success` | `action.give_target.failure` | `action.give_target.success.large` | `action.give_target.success.barely` | `action.give_target.failure.barely` | `action.give_target.failure.large` |
 | `TakeTarget` | `action.take_target.success` | `action.take_target.failure` | `action.take_target.success.large` | `action.take_target.success.barely` | `action.take_target.failure.barely` | `action.take_target.failure.large` |
 | `EnterTarget` | `action.enter_target.success` | `action.enter_target.failure` | `action.enter_target.success.large` | `action.enter_target.success.barely` | `action.enter_target.failure.barely` | `action.enter_target.failure.large` |

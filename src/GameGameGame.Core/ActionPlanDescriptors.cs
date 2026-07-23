@@ -92,7 +92,8 @@ public enum ActionPlanBehaviorStepKind
     ApplyMainPlan,
     ApplyPostPlan,
     TransformAdjacentToInventory,
-    TransformInventoryToAdjacent
+    TransformInventoryToAdjacent,
+    Transfer
 }
 
 public enum ActionPlanMoveDirectionMode
@@ -120,7 +121,8 @@ public sealed record ActionPlanBehaviorStepDescriptor(
     int? TargetSlot = null,
     string? TargetLabel = null,
     ActionPlanId? PlanId = null,
-    ActionPlanMoveDirectionMode? DirectionMode = null);
+    ActionPlanMoveDirectionMode? DirectionMode = null,
+    TransferDirection? TransferDirection = null);
 
 public enum ActionPlanPrimitiveKind
 {

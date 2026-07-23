@@ -224,13 +224,16 @@ public sealed partial class EditableContentDocument
 
         public string? DirectionMode { get; set; }
 
+        public string? TransferDirection { get; set; }
+
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
             TargetSlot = descriptor.TargetSlot,
             TargetLabel = descriptor.TargetLabel,
             PlanId = descriptor.PlanId?.Value,
-            DirectionMode = descriptor.DirectionMode?.ToString()
+            DirectionMode = descriptor.DirectionMode?.ToString(),
+            TransferDirection = descriptor.TransferDirection?.ToString()
         };
 
         public ActionPlanBehaviorStepDescriptor ToDescriptor() =>
@@ -239,7 +242,8 @@ public sealed partial class EditableContentDocument
                 TargetSlot,
                 TargetLabel,
                 PlanId is null ? null : new ActionPlanId(PlanId),
-                DirectionMode is { } mode ? Enum.Parse<ActionPlanMoveDirectionMode>(mode, ignoreCase: true) : null);
+                DirectionMode is { } mode ? Enum.Parse<ActionPlanMoveDirectionMode>(mode, ignoreCase: true) : null,
+                TransferDirection is { } transferDirection ? Enum.Parse<TransferDirection>(transferDirection, ignoreCase: true) : null);
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

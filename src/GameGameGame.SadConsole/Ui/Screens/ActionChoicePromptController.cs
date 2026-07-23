@@ -11,7 +11,9 @@ internal enum ActionChoicePromptMode
     DropSource,
     DropDestination,
     EnterTarget,
-    ExitFacing
+    ExitFacing,
+    TransferCounterparty,
+    TransferItem
 }
 
 internal sealed class ActionChoicePromptController
@@ -55,6 +57,7 @@ internal sealed class ActionChoicePromptController
             case ActionChoicePromptMode.DropSource:
             case ActionChoicePromptMode.EnterTarget:
             case ActionChoicePromptMode.ExitFacing:
+            case ActionChoicePromptMode.TransferCounterparty:
                 Mode = ActionChoicePromptMode.ActionList;
                 SelectedEntityActionChoice = null;
                 SelectedEntityActionTargetId = null;
@@ -72,6 +75,11 @@ internal sealed class ActionChoicePromptController
                 SelectedEntityActionTargetId = null;
                 SelectedDestinationIndex = 0;
                 return new ActionChoicePromptCancelResult("Returned to inventory item selection.", InspectPlayer: true);
+            case ActionChoicePromptMode.TransferItem:
+                Mode = ActionChoicePromptMode.TransferCounterparty;
+                SelectedEntityActionTargetId = null;
+                SelectedDestinationIndex = 0;
+                return new ActionChoicePromptCancelResult("Returned to transfer counterparty selection.");
             default:
                 Reset();
                 return new ActionChoicePromptCancelResult("Closed action selector.");
@@ -91,7 +99,26 @@ internal sealed class ActionChoicePromptController
 
         SelectedActionStepIndex = Math.Clamp(SelectedActionStepIndex, 0, steps.Count - 1);
         var step = steps[SelectedActionStepIndex];
-        if (TryFindActionChoiceForStep(step, request, out var selectedChoice) && selectedChoice.Kind is ActionChoiceKind.Pickup or ActionChoiceKind.Drop or ActionChoiceKind.Enter)
+        if (TryFindActionChoiceForStep(step, request, out var selectedChoice) && selectedChoice.Kind == ActionChoiceKind.Transfer)
+        {
+            var validCounterparties = ValidTransferCounterparties(selectedChoice).ToList();
+            if (validCounterparties.Count == 0)
+            {
+                return ActionChoicePromptActionResult.Info($"Selected action {step.Kind}, but Core Action Choice reports no valid transfer counterparties.");
+            }
+
+            SelectedEntityActionChoice = selectedChoice;
+            SelectedTargetIndex = 0;
+            SelectedDestinationIndex = 0;
+            SelectedDirectionIndex = 0;
+            SelectedEntityActionTargetId = null;
+            Mode = ActionChoicePromptMode.TransferCounterparty;
+            return ActionChoicePromptActionResult.ChoosingTarget(
+                $"Selected action {step.Kind}. Choose transfer entity 1/{validCounterparties.Count}: {formatEntityName(validCounterparties[0].CounterpartyId)}.",
+                inspectPlayer: false);
+        }
+
+        if (TryFindActionChoiceForStep(step, request, out selectedChoice) && selectedChoice.Kind is ActionChoiceKind.Pickup or ActionChoiceKind.Drop or ActionChoiceKind.Enter)
         {
             var validTargets = ValidTargets(selectedChoice).ToList();
             if (validTargets.Count == 0)
@@ -147,6 +174,28 @@ internal sealed class ActionChoicePromptController
         {
             Reset();
             return ActionChoicePromptTargetResult.Info("No Core Action Choice target list is active.");
+        }
+
+        if (choice.Kind == ActionChoiceKind.Transfer)
+        {
+            var counterparty = ValidTransferCounterparties(choice).ElementAtOrDefault(SelectedTargetIndex);
+            if (counterparty is null)
+            {
+                return ActionChoicePromptTargetResult.Info("No valid transfer counterparty is selected.");
+            }
+
+            var items = ValidTransferItems(choice, counterparty.CounterpartyId).ToList();
+            if (items.Count == 0)
+            {
+                return ActionChoicePromptTargetResult.Info($"Selected {formatEntityName(counterparty.CounterpartyId)}, but Core Action Choice reports no transferable items.");
+            }
+
+            SelectedEntityActionTargetId = counterparty.CounterpartyId;
+            SelectedDestinationIndex = 0;
+            Mode = ActionChoicePromptMode.TransferItem;
+            return ActionChoicePromptTargetResult.ChoosingDestination(
+                $"Selected {formatEntityName(counterparty.CounterpartyId)}. Choose transfer item 1/{items.Count}: {formatEntityName(items[0].MovingEntityId)}.",
+                inspectPlayer: false);
         }
 
         var targets = ValidTargets(choice).ToList();
@@ -223,6 +272,8 @@ internal sealed class ActionChoicePromptController
         {
             ActionChoicePromptMode.ActionList => SelectActionStep(delta, steps),
             ActionChoicePromptMode.PickupTarget or ActionChoicePromptMode.DropSource or ActionChoicePromptMode.EnterTarget => SelectTarget(delta, formatEntityName),
+            ActionChoicePromptMode.TransferCounterparty => SelectTransferCounterparty(delta, formatEntityName),
+            ActionChoicePromptMode.TransferItem => SelectTransferItem(delta, formatEntityName),
             ActionChoicePromptMode.PickupDestination or ActionChoicePromptMode.DropDestination => SelectDestination(delta, formatDestination),
             ActionChoicePromptMode.ExitFacing => SelectDirection(delta),
             _ => SelectActionStep(delta, steps)
@@ -236,6 +287,45 @@ internal sealed class ActionChoicePromptController
         SelectedEntityActionChoice is { } choice && SelectedEntityActionTargetId is { } targetId
             ? ValidDestinations(choice, targetId).ToList()
             : [];
+
+    public IReadOnlyList<ActionChoiceTransferItemOption> ValidSelectedTransferItems() =>
+        SelectedEntityActionChoice is { } choice && SelectedEntityActionTargetId is { } counterpartyId
+            ? ValidTransferItems(choice, counterpartyId).ToList()
+            : [];
+
+    public ActionChoiceTransferCounterpartyOption? SelectedTransferCounterparty()
+    {
+        if (SelectedEntityActionChoice is not { } choice)
+        {
+            return null;
+        }
+
+        var counterparties = ValidTransferCounterparties(choice).ToList();
+        return counterparties.Count == 0 ? null : counterparties[Math.Clamp(SelectedTargetIndex, 0, counterparties.Count - 1)];
+    }
+
+    public ActionChoiceTransferItemOption? SelectedTransferItem()
+    {
+        var items = ValidSelectedTransferItems();
+        return items.Count == 0 ? null : items[Math.Clamp(SelectedDestinationIndex, 0, items.Count - 1)];
+    }
+
+    public ActionChoicePromptTransferItemResult ConfirmSelectedTransferItem()
+    {
+        if (SelectedEntityActionChoice is not { } choice || SelectedEntityActionTargetId is not { } counterpartyId)
+        {
+            return ActionChoicePromptTransferItemResult.Info("No Core Action Choice transfer item list is active.");
+        }
+
+        var items = ValidTransferItems(choice, counterpartyId).ToList();
+        if (items.Count == 0)
+        {
+            return ActionChoicePromptTransferItemResult.Info("No valid transfer items are available.");
+        }
+
+        SelectedDestinationIndex = Math.Clamp(SelectedDestinationIndex, 0, items.Count - 1);
+        return ActionChoicePromptTransferItemResult.Submit(counterpartyId, items[SelectedDestinationIndex].MovingEntityId);
+    }
 
     public void Reset()
     {
@@ -313,6 +403,42 @@ internal sealed class ActionChoicePromptController
         return $"Selected direction {SelectedDirectionIndex + 1}/{directions.Count}: {directions[SelectedDirectionIndex].Direction}.";
     }
 
+    private string SelectTransferCounterparty(int delta, Func<EntityId, string> formatEntityName)
+    {
+        if (SelectedEntityActionChoice is not { } choice)
+        {
+            return "No Core Action Choice transfer counterparty list is active.";
+        }
+
+        var counterparties = ValidTransferCounterparties(choice).ToList();
+        if (counterparties.Count == 0)
+        {
+            SelectedTargetIndex = 0;
+            return "No valid Transfer counterparties are available.";
+        }
+
+        SelectedTargetIndex = (SelectedTargetIndex + delta + counterparties.Count) % counterparties.Count;
+        return $"Selected transfer entity {SelectedTargetIndex + 1}/{counterparties.Count}: {formatEntityName(counterparties[SelectedTargetIndex].CounterpartyId)}.";
+    }
+
+    private string SelectTransferItem(int delta, Func<EntityId, string> formatEntityName)
+    {
+        if (SelectedEntityActionChoice is not { } choice || SelectedEntityActionTargetId is not { } counterpartyId)
+        {
+            return "No Core Action Choice transfer item list is active.";
+        }
+
+        var items = ValidTransferItems(choice, counterpartyId).ToList();
+        if (items.Count == 0)
+        {
+            SelectedDestinationIndex = 0;
+            return "No valid Transfer items are available.";
+        }
+
+        SelectedDestinationIndex = (SelectedDestinationIndex + delta + items.Count) % items.Count;
+        return $"Selected transfer item {SelectedDestinationIndex + 1}/{items.Count}: {formatEntityName(items[SelectedDestinationIndex].MovingEntityId)}.";
+    }
+
     private static bool TryFindActionChoiceForStep(ActionPlanBehaviorStepDescriptor step, ActionChoiceRequest? request, out ActionChoice choice)
     {
         var kind = step.Kind switch
@@ -324,6 +450,7 @@ internal sealed class ActionChoicePromptController
             ActionPlanBehaviorStepKind.TransformInventoryToAdjacent => ActionChoiceKind.Drop,
             ActionPlanBehaviorStepKind.EnterTarget => ActionChoiceKind.Enter,
             ActionPlanBehaviorStepKind.ExitFacing => ActionChoiceKind.Exit,
+            ActionPlanBehaviorStepKind.Transfer => ActionChoiceKind.Transfer,
             _ => (ActionChoiceKind?)null
         };
 
@@ -345,6 +472,12 @@ internal sealed class ActionChoicePromptController
 
     private static IEnumerable<ActionChoiceDirectionOption> ValidDirections(ActionChoice choice) =>
         choice.DirectionOptions.Where(direction => direction.CanExecute);
+
+    private static IEnumerable<ActionChoiceTransferCounterpartyOption> ValidTransferCounterparties(ActionChoice choice) =>
+        choice.TransferCounterparties.Where(counterparty => counterparty.CanExecute);
+
+    private static IEnumerable<ActionChoiceTransferItemOption> ValidTransferItems(ActionChoice choice, EntityId counterpartyId) =>
+        choice.TransferItems(counterpartyId).Where(item => item.CanExecute);
 }
 
 internal sealed record ActionChoicePromptCancelResult(string Message, bool InspectPlayer = false);
@@ -418,6 +551,20 @@ internal sealed record ActionChoicePromptDirectionResult(ActionChoicePromptDirec
 }
 
 internal enum ActionChoicePromptDirectionResultKind
+{
+    Message,
+    Submit
+}
+
+internal sealed record ActionChoicePromptTransferItemResult(ActionChoicePromptTransferItemResultKind Kind, string Message, EntityId? CounterpartyId = null, EntityId? MovingEntityId = null)
+{
+    public static ActionChoicePromptTransferItemResult Info(string message) => new(ActionChoicePromptTransferItemResultKind.Message, message);
+
+    public static ActionChoicePromptTransferItemResult Submit(EntityId counterpartyId, EntityId movingEntityId) =>
+        new(ActionChoicePromptTransferItemResultKind.Submit, string.Empty, counterpartyId, movingEntityId);
+}
+
+internal enum ActionChoicePromptTransferItemResultKind
 {
     Message,
     Submit

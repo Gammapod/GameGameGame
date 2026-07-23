@@ -7,8 +7,28 @@ public enum ActionChoiceKind
     Drop,
     Enter,
     Exit,
+    Transfer,
     AuthoredStep
 }
+
+public sealed record ActionChoiceTransferCounterpartyOption(
+    EntityId CounterpartyId,
+    Direction Direction,
+    PlaneCoord Source,
+    bool CanExecute,
+    FailureReason? FailureReason,
+    string? FailureDetail);
+
+public sealed record ActionChoiceTransferItemOption(
+    EntityId CounterpartyId,
+    EntityId MovingEntityId,
+    EntityId OwnerEntityId,
+    PlaneCoord Source,
+    TransferDirection TransferDirection,
+    bool CanExecute,
+    FailureReason? FailureReason,
+    string? FailureDetail,
+    PlaneCoord? Destination = null);
 
 public sealed record ActionChoiceDirectionOption(
     Direction Direction,
@@ -23,10 +43,15 @@ public sealed record ActionChoice(
     int StepIndex,
     IReadOnlyList<ActionChoiceDirectionOption> DirectionOptions,
     IReadOnlyList<ControlledActorEntityAffordance> EntityOptions,
-    IReadOnlyDictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>> DestinationsByTargetId)
+    IReadOnlyDictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>> DestinationsByTargetId,
+    IReadOnlyList<ActionChoiceTransferCounterpartyOption> TransferCounterparties = null!,
+    IReadOnlyDictionary<EntityId, IReadOnlyList<ActionChoiceTransferItemOption>>? TransferItemsByCounterpartyId = null)
 {
     public IReadOnlyList<ControlledActorDestinationAffordance> Destinations(EntityId targetId) =>
         DestinationsByTargetId.TryGetValue(targetId, out var destinations) ? destinations : [];
+
+    public IReadOnlyList<ActionChoiceTransferItemOption> TransferItems(EntityId counterpartyId) =>
+        TransferItemsByCounterpartyId is not null && TransferItemsByCounterpartyId.TryGetValue(counterpartyId, out var items) ? items : [];
 }
 
 public sealed record ActionChoiceRequest(
@@ -76,6 +101,17 @@ public sealed class ActionChoiceService(MovementService movement)
                     break;
                 case ActionPlanBehaviorStepKind.ExitFacing:
                     choices.Add(new ActionChoice(ActionChoiceKind.Exit, index, affordances.ExitDirections.Select(ToDirectionOption).ToList(), [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
+                    break;
+                case ActionPlanBehaviorStepKind.Transfer:
+                    var transferCounterparties = QueryTransferCounterparties(world, actorId);
+                    choices.Add(new ActionChoice(
+                        ActionChoiceKind.Transfer,
+                        index,
+                        [],
+                        [],
+                        new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>(),
+                        transferCounterparties,
+                        transferCounterparties.ToDictionary(counterparty => counterparty.CounterpartyId, counterparty => QueryTransferItems(world, actorId, counterparty))));
                     break;
                 default:
                     choices.Add(new ActionChoice(ActionChoiceKind.AuthoredStep, index, [], [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
@@ -196,6 +232,69 @@ public sealed class ActionChoiceService(MovementService movement)
         return result;
     }
 
+    public ControlledActorCommandResult SubmitTransferChoice(
+        WorldState world,
+        ActionChoiceRequest request,
+        EntityId counterpartyId,
+        EntityId movingEntityId,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null)
+    {
+        if (!request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Transfer))
+        {
+            throw new InvalidOperationException("Action choice request does not contain a Transfer choice.");
+        }
+
+        var command = ControlledActorCommand.Transfer(movingEntityId, counterpartyId);
+        if (!TryDeriveTransfer(world, request.ActorId, counterpartyId, movingEntityId, out var transferDirection, out var counterpartyDirection, out var source, out var failure))
+        {
+            var trace = TraceNode.Failure("Transfer choice", failure.Reason, failure.Detail);
+            world.RecordTrace(trace);
+            return new ControlledActorCommandResult(request.ActorId, ControlledActorCommandKind.Transfer, null, movingEntityId, source, null, false, failure.Reason, failure.Detail, false, false, trace, null);
+        }
+
+        var action = new TransferAction(transferDirection, movingEntityId, counterpartyDirection);
+        var evaluation = action.Evaluate(world, request.ActorId, movement);
+        if (!evaluation.CanExecute)
+        {
+            world.RecordTrace(evaluation.Trace);
+            var failureTrace = FindFailure(evaluation.Trace) ?? evaluation.Trace;
+            return new ControlledActorCommandResult(
+                request.ActorId,
+                ControlledActorCommandKind.Transfer,
+                counterpartyDirection,
+                movingEntityId,
+                source,
+                null,
+                false,
+                failureTrace.Reason == FailureReason.None ? null : failureTrace.Reason,
+                failureTrace.Detail,
+                false,
+                false,
+                evaluation.Trace,
+                null)
+            { CounterpartyId = counterpartyId };
+        }
+
+        var turns = new TurnService(movement, actionPlans, beforePlan);
+        var succeeded = turns.TakeActorTurnThenAdvance(world, request.ActorId, PlannedActionPlan.Single(action));
+        return new ControlledActorCommandResult(
+            request.ActorId,
+            ControlledActorCommandKind.Transfer,
+            counterpartyDirection,
+            movingEntityId,
+            source,
+            null,
+            succeeded,
+            null,
+            null,
+            succeeded,
+            true,
+            world.LastTrace ?? evaluation.Trace,
+            world.LastTurnReport)
+        { CounterpartyId = counterpartyId };
+    }
+
     private IReadOnlyList<ActionChoiceDirectionOption> QueryMoveDirections(WorldState world, EntityId actorId) =>
         DirectionMath.AllDirections.Select(direction =>
         {
@@ -251,6 +350,113 @@ public sealed class ActionChoiceService(MovementService movement)
                 failure?.Detail,
                 world.GetOccupant(destination));
         }).ToList();
+
+    private IReadOnlyList<ActionChoiceTransferCounterpartyOption> QueryTransferCounterparties(WorldState world, EntityId actorId)
+    {
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            return [];
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        return DirectionMath.AllDirections.Select(direction =>
+            {
+                var coord = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction));
+                var occupant = world.GetOccupant(coord);
+                if (occupant is null || !world.Entities.TryGetValue(occupant.Value, out var entity))
+                {
+                    return null;
+                }
+
+                var canExecute = entity.HasUsableInventory && world.GetRegisteredInventoryPlaneId(occupant.Value) is not null;
+                return new ActionChoiceTransferCounterpartyOption(
+                    occupant.Value,
+                    direction,
+                    coord,
+                    canExecute,
+                    canExecute ? null : FailureReason.TargetHasNoInventory,
+                    canExecute ? null : $"{entity.Name} has no usable inventory");
+            })
+            .Where(option => option is not null)
+            .Cast<ActionChoiceTransferCounterpartyOption>()
+            .ToList();
+    }
+
+    private IReadOnlyList<ActionChoiceTransferItemOption> QueryTransferItems(WorldState world, EntityId actorId, ActionChoiceTransferCounterpartyOption counterparty)
+    {
+        var items = new List<ActionChoiceTransferItemOption>();
+        items.AddRange(QueryTransferItemsFromOwner(world, actorId, actorId, counterparty.CounterpartyId, counterparty.Direction, TransferDirection.ActorToTarget));
+        items.AddRange(QueryTransferItemsFromOwner(world, actorId, counterparty.CounterpartyId, counterparty.CounterpartyId, counterparty.Direction, TransferDirection.TargetToActor));
+        return items;
+    }
+
+    private IReadOnlyList<ActionChoiceTransferItemOption> QueryTransferItemsFromOwner(WorldState world, EntityId actorId, EntityId ownerId, EntityId counterpartyId, Direction counterpartyDirection, TransferDirection transferDirection)
+    {
+        if (world.GetRegisteredInventoryPlaneId(ownerId) is not { } inventoryPlaneId)
+        {
+            return [];
+        }
+
+        return world.Occupancy
+            .Where(entry => world.Nodes.TryGetValue(entry.Key, out var node) && node.PlaneId == inventoryPlaneId)
+            .OrderBy(entry => world.Nodes[entry.Key].Coord.Y)
+            .ThenBy(entry => world.Nodes[entry.Key].Coord.X)
+            .Select(entry =>
+            {
+                var source = world.GetEntityLocation(entry.Value);
+                var evaluation = new TransferAction(transferDirection, entry.Value, counterpartyDirection).Evaluate(world, actorId, movement);
+                var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
+                return new ActionChoiceTransferItemOption(
+                    counterpartyId,
+                    entry.Value,
+                    ownerId,
+                    source,
+                    transferDirection,
+                    evaluation.CanExecute,
+                    failure?.Reason == FailureReason.None ? null : failure?.Reason,
+                    failure?.Detail);
+            })
+            .ToList();
+    }
+
+    private bool TryDeriveTransfer(WorldState world, EntityId actorId, EntityId counterpartyId, EntityId movingEntityId, out TransferDirection transferDirection, out Direction counterpartyDirection, out PlaneCoord? source, out (FailureReason Reason, string Detail) failure)
+    {
+        transferDirection = default;
+        counterpartyDirection = default;
+        source = null;
+        failure = (FailureReason.None, string.Empty);
+        if (!world.Entities.ContainsKey(actorId) || !world.Entities.ContainsKey(counterpartyId) || !world.Entities.ContainsKey(movingEntityId))
+        {
+            failure = (FailureReason.TargetMissing, "actor, counterparty, or moving entity is missing");
+            return false;
+        }
+
+        var adjacency = movement.EvaluateAdjacency(world, actorId, counterpartyId);
+        if (!adjacency.AreAdjacent || adjacency.Direction is null)
+        {
+            failure = (adjacency.FailureReason ?? FailureReason.TargetNotAdjacent, adjacency.FailureDetail ?? "counterparty is not adjacent");
+            return false;
+        }
+
+        counterpartyDirection = adjacency.Direction.Value;
+        source = world.GetEntityLocation(movingEntityId);
+        var actorInventory = world.GetRegisteredInventoryPlaneId(actorId);
+        var counterpartyInventory = world.GetRegisteredInventoryPlaneId(counterpartyId);
+        if (source.Value.PlaneId == actorInventory)
+        {
+            transferDirection = TransferDirection.ActorToTarget;
+            return true;
+        }
+
+        if (source.Value.PlaneId == counterpartyInventory)
+        {
+            transferDirection = TransferDirection.TargetToActor;
+            return true;
+        }
+
+        failure = (FailureReason.TargetNotInInventory, $"{movingEntityId} is not contained by actor {actorId} or counterparty {counterpartyId}");
+        return false;
+    }
 
     private static TraceNode? FindFailure(TraceNode trace)
     {

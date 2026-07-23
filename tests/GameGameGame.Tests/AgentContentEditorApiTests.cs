@@ -102,6 +102,32 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalTransferBehavior()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var planId = AssertSuccess(api.CreateActionPlan("Canonical Transfer"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.Transfer));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetLabel(planId, stepIndex: 0, "offers"));
+        AssertSuccess(api.SetActionPlanBehaviorStepDirectionMode(planId, stepIndex: 0, ActionPlanMoveDirectionMode.Forward));
+        AssertSuccess(api.SetActionPlanBehaviorStepTransferDirection(planId, stepIndex: 0, TransferDirection.ActorToTarget));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId));
+        var step = Assert.Single(preview.ActionSteps);
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Equal(ActionPlanBehaviorStepKind.Transfer, step.Kind);
+        Assert.Equal("offers", step.TargetLabel);
+        Assert.Equal(ActionPlanMoveDirectionMode.Forward, step.DirectionMode);
+        Assert.Equal(TransferDirection.ActorToTarget, step.TransferDirection);
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("kind: Transfer", snapshot.YamlPreview);
+        Assert.Contains("targetLabel: offers", snapshot.YamlPreview);
+        Assert.Contains("directionMode: Forward", snapshot.YamlPreview);
+        Assert.Contains("transferDirection: ActorToTarget", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsInventoryBoundaryPolicies()
     {
         var api = AgentContentEditorApi.CreateNew();

@@ -219,6 +219,197 @@ public sealed class InventoryTransferActionStepTests
     }
 
     [Fact]
+    public void CanonicalTransferActorToTargetUsesSelectedMovingEntityAndFacingCounterparty()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var gemId = AddEntity(world, "gem", "Gem", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)));
+        Assert.True(movement.TryPlace(world, gemId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 1))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.ActorToTarget, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(gemId));
+        Assert.True(TraceDetailContains(result.Trace, "gave rock (Rock) to slime (Slime) slot (0,0)"));
+    }
+
+    [Fact]
+    public void CanonicalTransferActorToTargetDoesNotInvokeActorExitPolicy()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with
+        {
+            ExitPolicy = EntityExitPolicy.EdgeAlignedWithExitDirection
+        };
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 1))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.ActorToTarget, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void CanonicalTransferFailureKeepsSelectedItemInSourceSlotWithoutIntermediateWorldPlacement()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var blockerId = AddEntity(world, "blocker", "Blocker", new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 1))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.ActorToTarget, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(blockerId));
+        Assert.True(TraceHasReason(result.Trace, FailureReason.InvalidPlacement));
+    }
+
+    [Fact]
+    public void CanonicalTransferTargetToActorUsesSelectedMovingEntityFromAdjacentHolder()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var coinId = AddEntity(world, "coin", "Coin", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)));
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with
+        {
+            InventoryWidth = 2,
+            InventoryHeight = 1,
+            Aperture = 20
+        };
+        var slimeInventory = new PlaneId("slimeInventory2");
+        AddPlane(world, slimeInventory, 2, 1);
+        world.RegisterInventoryPlane(TestWorld.SlimeId, slimeInventory);
+        Assert.True(movement.TryPlace(world, coinId, new PlaneCoord(slimeInventory, new GridCoord(0, 0))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(slimeInventory, new GridCoord(1, 0))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.TargetToActor, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(new PlaneCoord(slimeInventory, new GridCoord(0, 0)), world.GetEntityLocation(coinId));
+        Assert.True(TraceDetailContains(result.Trace, "took rock (Rock) to player (Player) slot (0,0)"));
+    }
+
+    [Fact]
+    public void CanonicalTransferActorToTargetReportsDestinationApertureFailure()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 1 };
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.ActorToTarget, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.ApertureBlocked));
+        Assert.True(TraceDetailContains(result.Trace, "Rock bulk 3 exceeds Slime aperture 1"));
+    }
+
+    [Fact]
+    public void CanonicalTransferBehaviorStepReadsTargetDirectionModeAndTransferDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.SetActionFacing(TestWorld.PlayerId, Direction.North);
+        world.SetActionTarget(TestWorld.PlayerId, "offers", TestWorld.RockId);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("transfer"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Transfer,
+                    TargetLabel: "offers",
+                    DirectionMode: ActionPlanMoveDirectionMode.Forward,
+                    TransferDirection: TransferDirection.ActorToTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceContains(result.Trace, "Action Step Transfer"));
+    }
+
+    [Fact]
+    public void CanonicalTransferTargetToActorReportsActorInventoryFullSeparatelyFromExitPolicyFailure()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        for (var y = 0; y < 2; y++)
+        {
+            for (var x = 0; x < 3; x++)
+            {
+                AddEntity(world, $"blocker-{x}-{y}", "Blocker", new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(x, y)));
+            }
+        }
+
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.TargetToActor, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.False(result.Succeeded);
+        Assert.True(TraceHasReason(result.Trace, FailureReason.InvalidPlacement));
+        Assert.True(TraceDetailContains(result.Trace, "no inventory coordinate in player can accept rock"));
+    }
+
+    [Fact]
+    public void CanonicalTransferTargetToActorDoesNotInvokeActorEnterPolicy()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with
+        {
+            EnterPolicy = EntityEnterPolicy.FarthestFromOccupied
+        };
+        AddEntity(world, "blocker", "Blocker", new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.TargetToActor, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void CanonicalTransferTargetToActorFailsWhenSourceExitPolicyRejectsItem()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with
+        {
+            InventoryWidth = 3,
+            InventoryHeight = 3,
+            Aperture = 20,
+            ExitPolicy = EntityExitPolicy.EdgeAlignedWithExitDirection
+        };
+        var slimeInventory = new PlaneId("slimeInventory3");
+        AddPlane(world, slimeInventory, 3, 3);
+        world.RegisterInventoryPlane(TestWorld.SlimeId, slimeInventory);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(slimeInventory, new GridCoord(1, 1))));
+
+        var result = ((IActionIntent)new TransferAction(TransferDirection.TargetToActor, TestWorld.RockId, Direction.North))
+            .Resolve(world, TestWorld.PlayerId, movement);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(new PlaneCoord(slimeInventory, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceHasReason(result.Trace, FailureReason.InventoryPolicyBlocked));
+    }
+
+    [Fact]
     public void FarthestFromOccupiedEnterPolicyChoosesFarthestEmptyCellWithRowMajorTieBreak()
     {
         var world = TestWorld.CreateWorld();

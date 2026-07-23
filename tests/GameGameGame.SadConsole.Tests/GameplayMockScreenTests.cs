@@ -251,6 +251,71 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
+    public void TransferChoiceUsesCounterpartyThenItemPromptStack()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, startWithCarriedItem: true, includeTransferStep: true);
+        var runtime = new GameplaySessionController(session);
+        var request = runtime.CurrentActionChoiceRequest!;
+        var steps = new[] { new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Transfer) };
+        var prompt = new ActionChoicePromptController();
+        prompt.OpenActionStepMenu(steps);
+
+        var counterparty = prompt.ConfirmSelectedActionStep(steps, request, FormatEntityId);
+        var counterpartyMode = prompt.Mode;
+        var item = prompt.ConfirmSelectedTarget(FormatEntityId, FormatPlaneCoord);
+        var itemMode = prompt.Mode;
+        var submit = prompt.ConfirmSelectedTransferItem();
+        var cancelItem = prompt.Cancel();
+        var cancelCounterparty = prompt.Cancel();
+
+        Assert.Equal(ActionChoicePromptActionResultKind.ChoosingTarget, counterparty.Kind);
+        Assert.Equal(ActionChoicePromptMode.TransferCounterparty, counterpartyMode);
+        Assert.Equal(ActionChoicePromptTargetResultKind.ChoosingDestination, item.Kind);
+        Assert.Equal(ActionChoicePromptMode.TransferItem, itemMode);
+        Assert.Equal(ActionChoicePromptTransferItemResultKind.Submit, submit.Kind);
+        Assert.Equal(new EntityId("mockCrate"), submit.CounterpartyId);
+        Assert.Equal(new EntityId("mockToken"), submit.MovingEntityId);
+        Assert.Equal("Returned to transfer counterparty selection.", cancelItem.Message);
+        Assert.Equal("Returned to action selector.", cancelCounterparty.Message);
+    }
+
+    [Fact]
+    public void TransferUxFocusesCounterpartyThenItemOwnerInventory()
+    {
+        var session = CreateGameplayMockSession(bindPlayerChoiceControl: true, startWithCarriedItem: true, includeTransferStep: true);
+        var screen = new GameplayMockScreen(session);
+
+        screen.ExecuteSelectedActionStep();
+        screen.SelectNextActionStep();
+        screen.ExecuteSelectedActionStep();
+        var counterpartyMode = screen.ActionMenuState;
+        var counterpartyFrame = screen.BuildFrame(120, 42);
+        screen.ExecuteSelectedActionStep();
+        var itemMode = screen.ActionMenuState;
+        var itemFrame = screen.BuildFrame(120, 42);
+
+        Assert.Equal(ActionChoicePromptMode.TransferCounterparty.ToString(), counterpartyMode);
+        Assert.Equal(new EntityId("mockCrate"), counterpartyFrame.InspectedProjection?.EntityId);
+        Assert.Equal(new GridCoord(2, 1), counterpartyFrame.CurrentPlaceSelectedCoord);
+        Assert.Contains(counterpartyFrame.HudRows, row => row.Contains("Menu: choose Transfer entity", StringComparison.Ordinal));
+
+        Assert.Equal(ActionChoicePromptMode.TransferItem.ToString(), itemMode);
+        Assert.Equal(new EntityId("mockPlayer"), itemFrame.InspectedProjection?.EntityId);
+        Assert.Equal(new GridCoord(0, 0), itemFrame.InspectionSelectedCoord);
+        Assert.Contains(new GridCoord(0, 0), itemFrame.InspectionValidSelectionCoords);
+        Assert.Contains(itemFrame.HudRows, row => row.Contains("Give to Mock Crate Mock Token from Mock Player", StringComparison.Ordinal));
+
+        var transferComponent = Assert.IsType<TransferInventoryComparisonComponent>(Assert.Single(itemFrame.Components, component => component.Id == "0.3.1"));
+        Assert.Equal("0.3.1 Transfer inventories", transferComponent.Title);
+        Assert.Contains("Mock Player", transferComponent.ActorSide.Title, StringComparison.Ordinal);
+        Assert.Contains("Mock Crate", transferComponent.CounterpartySide.Title, StringComparison.Ordinal);
+        Assert.Contains(new GridCoord(0, 0), transferComponent.ActorSide.ValidSelectionCoords);
+        Assert.Equal(new GridCoord(0, 0), transferComponent.ActorSide.SelectedCoord);
+        Assert.Empty(transferComponent.CounterpartySide.ValidSelectionCoords);
+        Assert.Contains("Give to Mock Crate Mock Token", transferComponent.SelectedSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ActionChoicePromptControllerEmptyTargetListExplainsWithoutEnteringDeadEndMode()
     {
         var session = CreateGameplayMockSession(bindPlayerChoiceControl: true);
@@ -681,7 +746,8 @@ public sealed class GameplayMockScreenTests
         bool startWithCarriedItem = false,
         bool includeExitStep = false,
         bool startPlayerInsideCrate = false,
-        bool includeCratePlayerControl = false)
+        bool includeCratePlayerControl = false,
+        bool includeTransferStep = false)
     {
         var document = new EditableContentDocument();
         var playerInteractionPlanId = new ActionPlanTemplateId("mockPlayerInteractionPlan");
@@ -695,6 +761,15 @@ public sealed class GameplayMockScreenTests
         if (includeDropStep)
         {
             playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DropFacing));
+        }
+
+        if (includeTransferStep)
+        {
+            playerSteps.Add(new ActionPlanBehaviorStepDescriptor(
+                ActionPlanBehaviorStepKind.Transfer,
+                TargetSlot: 1,
+                DirectionMode: ActionPlanMoveDirectionMode.Forward,
+                TransferDirection: TransferDirection.ActorToTarget));
         }
 
         playerSteps.Add(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.EnterTarget));

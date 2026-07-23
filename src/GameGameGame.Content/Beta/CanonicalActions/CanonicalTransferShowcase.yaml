@@ -1,0 +1,465 @@
+entityTemplates:
+  canonicalTransferOutcomeRoom:
+    name: Canonical Transfer Outcome Room
+    inventoryWidth: 16
+    inventoryHeight: 12
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: transferGiveSuccessActor
+      templateId: transferGiveSuccessActorTemplate
+      coord: { x: 1, y: 1 }
+    - entityId: transferGiveSuccessChest
+      templateId: transferOpenChest
+      coord: { x: 2, y: 1 }
+    - entityId: transferTakeSuccessActor
+      templateId: transferTakeSuccessActorTemplate
+      coord: { x: 5, y: 1 }
+    - entityId: transferTakeSuccessChest
+      templateId: transferTakeSuccessChestTemplate
+      coord: { x: 6, y: 1 }
+    - entityId: transferMissingTargetActor
+      templateId: transferMissingTargetActorTemplate
+      coord: { x: 9, y: 1 }
+    - entityId: transferMissingTargetChest
+      templateId: transferOpenChest
+      coord: { x: 10, y: 1 }
+    - entityId: transferNoCounterpartyActor
+      templateId: transferNoCounterpartyActorTemplate
+      coord: { x: 13, y: 1 }
+    - entityId: transferNoInventoryActor
+      templateId: transferNoInventoryActorTemplate
+      coord: { x: 1, y: 4 }
+    - entityId: transferNoInventoryRock
+      templateId: transferRockNoInventory
+      coord: { x: 2, y: 4 }
+    - entityId: transferNotInActorActor
+      templateId: transferNotInActorActorTemplate
+      coord: { x: 5, y: 4 }
+    - entityId: transferNotInActorChest
+      templateId: transferNotInActorChestTemplate
+      coord: { x: 6, y: 4 }
+    - entityId: transferDestinationFullActor
+      templateId: transferDestinationFullActorTemplate
+      coord: { x: 9, y: 4 }
+    - entityId: transferFullChest
+      templateId: transferFullChestTemplate
+      coord: { x: 10, y: 4 }
+    - entityId: transferDestinationApertureActor
+      templateId: transferDestinationApertureActorTemplate
+      coord: { x: 13, y: 4 }
+    - entityId: transferNarrowDestinationChest
+      templateId: transferNarrowChest
+      coord: { x: 14, y: 4 }
+    - entityId: transferSourceApertureActor
+      templateId: transferSourceApertureActorTemplate
+      coord: { x: 1, y: 7 }
+    - entityId: transferSourceApertureChest
+      templateId: transferOpenChest
+      coord: { x: 2, y: 7 }
+    - entityId: transferTakeNotInSourceActor
+      templateId: transferTakeNotInSourceActorTemplate
+      coord: { x: 5, y: 7 }
+    - entityId: transferTakeNotInSourceChest
+      templateId: transferOpenChest
+      coord: { x: 6, y: 7 }
+    - entityId: transferActorFullActor
+      templateId: transferActorFullActorTemplate
+      coord: { x: 9, y: 7 }
+    - entityId: transferActorFullChest
+      templateId: transferActorFullChestTemplate
+      coord: { x: 10, y: 7 }
+    - entityId: transferExitPolicyActor
+      templateId: transferExitPolicyActorTemplate
+      coord: { x: 0, y: 0 }
+    - entityId: transferExitPolicyChest
+      templateId: transferExitPolicyChestTemplate
+      coord: { x: 1, y: 0 }
+  canonicalTransferInteractionRoom:
+    name: Canonical Transfer Player Interaction Room
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: playerTransferChest
+      templateId: playerTransferChestTemplate
+      coord: { x: 5, y: 3 }
+
+  canonicalTransferObserver:
+    name: Canonical Transfer Observer
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    actionStateDefaults:
+      facing: West
+  transferGiveSuccessActorTemplate:
+    name: Transfer Give Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: giveSuccessGem }
+    carriedEntities:
+    - entityId: giveSuccessGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferTakeSuccessActorTemplate:
+    name: Transfer Take Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferTakeForwardPlan
+    actionStateDefaults: { facing: East, target: takeSuccessGem }
+  transferTakeSuccessChestTemplate:
+    name: Transfer Take Success Chest
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: takeSuccessGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferMissingTargetActorTemplate:
+    name: Transfer Missing Target Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East }
+  transferNoCounterpartyActorTemplate:
+    name: Transfer No Counterparty Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: noCounterpartyGem }
+    carriedEntities:
+    - entityId: noCounterpartyGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferNoInventoryActorTemplate:
+    name: Transfer No Inventory Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: noInventoryGem }
+    carriedEntities:
+    - entityId: noInventoryGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferNotInActorActorTemplate:
+    name: Transfer Not In Actor Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: notInActorGem }
+  transferNotInActorChestTemplate:
+    name: Transfer Not In Actor Chest
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    carriedEntities:
+    - entityId: notInActorGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferDestinationFullActorTemplate:
+    name: Transfer Destination Full Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: destinationFullGem }
+    carriedEntities:
+    - entityId: destinationFullGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferDestinationApertureActorTemplate:
+    name: Transfer Destination Aperture Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: destinationApertureBoulder }
+    carriedEntities:
+    - entityId: destinationApertureBoulder
+      templateId: transferHeavyBoulder
+      coord: { x: 0, y: 0 }
+  transferSourceApertureActorTemplate:
+    name: Transfer Source Aperture Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: transferGiveForwardPlan
+    actionStateDefaults: { facing: East, target: sourceApertureBoulder }
+    carriedEntities:
+    - entityId: sourceApertureBoulder
+      templateId: transferHeavyBoulder
+      coord: { x: 0, y: 0 }
+  transferTakeNotInSourceActorTemplate:
+    name: Transfer Take Not In Source Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferTakeForwardPlan
+    actionStateDefaults: { facing: East, target: takeNotInSourceGem }
+    carriedEntities:
+    - entityId: takeNotInSourceGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferActorFullActorTemplate:
+    name: Transfer Actor Full Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferTakeForwardPlan
+    actionStateDefaults: { facing: East, target: actorFullGem }
+    carriedEntities:
+    - entityId: actorFullBlocker
+      templateId: transferBlocker
+      coord: { x: 0, y: 0 }
+  transferActorFullChestTemplate:
+    name: Transfer Actor Full Chest
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: actorFullGem
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  transferExitPolicyActorTemplate:
+    name: Transfer Exit Policy Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferTakeForwardPlan
+    actionStateDefaults: { facing: East, target: exitPolicyGem }
+  transferExitPolicyChestTemplate:
+    name: Transfer Exit Policy Chest
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: EdgeAlignedWithExitDirection
+    carriedEntities:
+    - entityId: exitPolicyGem
+      templateId: transferGem
+      coord: { x: 1, y: 0 }
+  transferOpenChest:
+    name: Transfer Open Chest
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+  transferFullChestTemplate:
+    name: Transfer Full Chest
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    carriedEntities:
+    - entityId: fullChestBlocker
+      templateId: transferBlocker
+      coord: { x: 0, y: 0 }
+  transferNarrowChest:
+    name: Transfer Narrow Chest
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 2
+  transferRockNoInventory:
+    name: Transfer Rock No Inventory
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  canonicalTransferPlayer:
+    name: Canonical Transfer Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 20
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: transferPlayerGiveTakePlan
+    actionStateDefaults: { facing: East, target: playerTransferCoin }
+    carriedEntities:
+    - entityId: playerTransferCoin
+      templateId: transferGem
+      coord: { x: 0, y: 0 }
+  playerTransferChestTemplate:
+    name: Player Transfer Chest
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 3
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    exitPolicy: AnyCell
+  transferGem:
+    name: Transfer Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  transferHeavyBoulder:
+    name: Transfer Heavy Boulder
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+    bulk: 5
+    aperture: 0
+  transferBlocker:
+    name: Transfer Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+presentations:
+  canonicalTransferOutcomeRoom: { glyph: '#', color: Gray }
+  canonicalTransferInteractionRoom: { glyph: '#', color: Gray }
+  canonicalTransferObserver: { glyph: '@', color: Yellow }
+  transferGiveSuccessActorTemplate: { glyph: 'g', color: Green }
+  transferTakeSuccessActorTemplate: { glyph: 't', color: Green }
+  transferMissingTargetActorTemplate: { glyph: 'm', color: Earth }
+  transferNoCounterpartyActorTemplate: { glyph: 'n', color: Earth }
+  transferNoInventoryActorTemplate: { glyph: 'i', color: Earth }
+  transferNotInActorActorTemplate: { glyph: 'a', color: Earth }
+  transferDestinationFullActorTemplate: { glyph: 'f', color: Earth }
+  transferDestinationApertureActorTemplate: { glyph: 'd', color: Earth }
+  transferSourceApertureActorTemplate: { glyph: 's', color: Earth }
+  transferTakeNotInSourceActorTemplate: { glyph: 'o', color: Earth }
+  transferActorFullActorTemplate: { glyph: 'u', color: Earth }
+  transferExitPolicyActorTemplate: { glyph: 'p', color: Earth }
+  canonicalTransferPlayer: { glyph: '@', color: Yellow }
+  transferOpenChest: { glyph: 'C', color: Cyan }
+  transferTakeSuccessChestTemplate: { glyph: 'C', color: Cyan }
+  transferNotInActorChestTemplate: { glyph: 'C', color: Cyan }
+  transferActorFullChestTemplate: { glyph: 'C', color: Cyan }
+  transferExitPolicyChestTemplate: { glyph: 'E', color: Cyan }
+  transferFullChestTemplate: { glyph: 'F', color: Cyan }
+  transferNarrowChest: { glyph: 'N', color: Cyan }
+  playerTransferChestTemplate: { glyph: 'C', color: Cyan }
+  transferRockNoInventory: { glyph: 'x', color: Gray }
+  transferGem: { glyph: '*', color: Yellow }
+  transferHeavyBoulder: { glyph: 'O', color: Gray }
+  transferBlocker: { glyph: '.', color: White }
+actionPlans:
+  transferGiveForwardPlan:
+    id: transferGiveForwardPlan
+    behavior:
+      steps:
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: ActorToTarget
+  transferTakeForwardPlan:
+    id: transferTakeForwardPlan
+    behavior:
+      steps:
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: TargetToActor
+  transferPlayerGiveTakePlan:
+    id: transferPlayerGiveTakePlan
+    behavior:
+      steps:
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: ActorToTarget
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: TargetToActor
+scenarios:
+  beta-canonical-transfer-outcomes:
+    name: Beta Canonical Transfer Outcomes
+    scenarioRootEntityTemplateId: canonicalTransferOutcomeRoom
+    playerEntityTemplateId: canonicalTransferObserver
+    playerEntityId: canonicalTransferOutcomeObserver
+    playerStart: { x: 15, y: 11 }
+    playerControls:
+      player-1:
+      - canonicalTransferOutcomeObserver
+  beta-canonical-transfer-player-interaction:
+    name: Beta Canonical Transfer Player Interaction
+    scenarioRootEntityTemplateId: canonicalTransferInteractionRoom
+    playerEntityTemplateId: canonicalTransferPlayer
+    playerEntityId: canonicalTransferPlayer
+    playerStart: { x: 4, y: 3 }
+    playerControls:
+      player-1:
+      - canonicalTransferPlayer

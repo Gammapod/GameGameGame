@@ -183,12 +183,25 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
     {
         var steps = GetActionPlanBehaviorSteps(planId);
         var step = steps[stepIndex];
-        if (step.Kind != ActionPlanBehaviorStepKind.Move && directionMode is not null)
+        if (step.Kind is not (ActionPlanBehaviorStepKind.Move or ActionPlanBehaviorStepKind.Transfer) && directionMode is not null)
         {
-            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Move steps support directionMode.");
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Move and Transfer steps support directionMode.");
         }
 
         step.DirectionMode = directionMode?.ToString();
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepTransferDirection(ActionPlanTemplateId planId, int stepIndex, TransferDirection? transferDirection)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.Transfer && transferDirection is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Transfer steps support transferDirection.");
+        }
+
+        step.TransferDirection = transferDirection?.ToString();
         onChanged?.Invoke();
     }
 

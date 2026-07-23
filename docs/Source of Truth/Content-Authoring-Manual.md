@@ -127,6 +127,7 @@ Use constrained inventory behavior where possible:
 
 - `TransformAdjacentToInventory` attempts to place the current adjacent `Target` into actor inventory. `PickupTarget` remains a compatibility name for the same semantics.
 - `TransformInventoryToAdjacent` attempts to drop a carried entity in the actor's facing direction. `DropFacing` remains a compatibility name for the same semantics.
+- `Transfer` is the preferred canonical peer-inventory transfer step. It moves a selected concrete entity between the actor and an adjacent counterparty using `transferDirection: ActorToTarget` or `TargetToActor`.
 - `GiveTarget` transfers the actor's first carried entity into the current `Target` inventory.
 - `TakeTarget` transfers the current `Target`'s first carried entity into actor inventory.
 - `EnterTarget` moves the actor into the adjacent current `Target` inventory.
@@ -136,7 +137,7 @@ Bulk/Aperture checks and inventory-boundary policies apply to every inventory bo
 
 Supported `enterPolicy` values are `FirstUnoccupiedRowMajor` and `FarthestFromOccupied`; the latter breaks ties row-major, left-to-right/top-to-bottom. Supported `exitPolicy` values are `AnyCell` and `EdgeAlignedWithExitDirection`; the latter requires the carried/source coordinate to be on the edge or corner matching the selected exit direction.
 
-For player-controlled actors, the shared Core Action Choice seam can expose authored `TransformAdjacentToInventory`/`PickupTarget` as selectable adjacent pickup targets plus inventory-slot destinations, authored `TransformInventoryToAdjacent`/`DropFacing` as selectable carried sources plus adjacent map destinations, authored `EnterTarget` as Enter target choices, and authored `ExitFacing` as Exit direction choices. Player-facing menu vocabulary may present them as Pickup, Drop, Enter, and Exit.
+For player-controlled actors, the shared Core Action Choice seam can expose authored `TransformAdjacentToInventory`/`PickupTarget` as selectable adjacent pickup targets plus inventory-slot destinations, authored `TransformInventoryToAdjacent`/`DropFacing` as selectable carried sources plus adjacent map destinations, authored `EnterTarget` as Enter target choices, authored `ExitFacing` as Exit direction choices, and authored `Transfer` as a counterparty-then-item workflow over the actor and counterparty inventories. Player-facing menu vocabulary may present them as Pickup, Drop, Enter, Exit, and Transfer/Give/Take as appropriate.
 
 Use report `InventorySummaryLines`, direct validation output, or recorded scenarios to confirm containment behavior. Scenario reports summarize carried contents with inventory coordinates and guard against recursive containment cycles.
 
@@ -215,8 +216,9 @@ Planning note: the active canonical-actions release plan freezes the current bro
 | `TransformInventoryToAdjacent` | `Facing` | carried/world placement | Preferred name for adjacent drop semantics: transform the first carried entity into the facing adjacent cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
 | `PickupTarget` | `Target` | carried inventory state | Compatibility name for `TransformAdjacentToInventory`. | existing/prototype pickup content |
 | `DropFacing` | `Facing` | carried/world placement | Compatibility name for `TransformInventoryToAdjacent`. | existing/prototype drop content |
-| `GiveTarget` | `Target` | actor/target inventory state | Transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/aperture checks fail. | peer transfer, offering, handoff demos |
-| `TakeTarget` | `Target` | target/actor inventory state | Transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/aperture checks fail. | taking from containers, stealing prototypes |
+| `Transfer` | moving entity target label/slot; adjacent counterparty direction; `transferDirection` | actor/counterparty inventory state | Preferred canonical peer transfer. `ActorToTarget` moves the selected actor-owned item into the adjacent counterparty, checking the counterparty's `EnterPolicy`; `TargetToActor` moves the selected counterparty-owned item into the actor, checking the counterparty/source `ExitPolicy`. | peer transfer, offering, taking, handoff demos, player inventory exchange |
+| `GiveTarget` | `Target` | actor/target inventory state | Compatibility/prototype give shortcut: transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/aperture checks fail. Prefer `Transfer` for new canonical content. | older peer transfer/offering demos |
+| `TakeTarget` | `Target` | target/actor inventory state | Compatibility/prototype take shortcut: transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/aperture checks fail. Prefer `Transfer` for new canonical content. | older taking/stealing prototypes |
 | `EnterTarget` | `Target` | actor/container inventory state | Enter an adjacent target's inventory at the first open row-major coordinate; falls through when target adjacency, inventory, space, or aperture checks fail. | rooms-inside-entities, containers as spaces |
 | `ExitFacing` | `Facing` | actor/container/world placement | Exit the current containing entity toward facing; falls through when not contained, blocked, out of bounds, or aperture checks fail. | leaving entered containers/rooms |
 | `PushFacing` | `Facing` | world positions | Push blocking entity one cell in facing direction, then move actor into blocker original cell; consumes the turn on success. | shovers, obstacle interaction |
@@ -253,12 +255,13 @@ Common chain patterns:
 | Make a selected target try a temporary behavior next turn | `ApplyPrePlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn pre-plan |
 | Temporarily replace or append selected target behavior next turn | `ApplyMainPlan` or `ApplyPostPlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn override plan |
 | Drop carried entity forward, otherwise move | `DropFacing -> MoveFacing` |
-| Give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
+| Transfer a specific targeted item to or from an adjacent counterparty | `Transfer`, with `targetLabel`/`targetSlot`, `directionMode`, and `transferDirection` |
+| Legacy give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
 | Move into a bumped/targeted container, then later leave it | `MoveFacing -> EnterTarget`; contained actor can use `ExitFacing` |
 
 Targeting rules currently select by optional template ID, target-capability adjectives, same-plane Manhattan range, and nearest deterministic tie-break. A rule may be noun-only (`thief loves gold`), adjective-only (`thief loves portables`), or noun-plus-adjective (`thief loves portable gold`). Supported target capabilities are the Action Steps that expose non-mutating target affordance checks: `PickupTarget`, `EnterTarget`, `GiveTarget`, `TakeTarget`, `DestroyTarget`, and `PushFacing`. Capability rules are validated against the template's default behavior chain: the referenced capability step should exist and consume the same target label/slot. Use stable labels such as `danger`, `home`, `food`, or `shelter` when one entity needs different content-defined target concepts; numeric slots are still stored for compatibility but should not be the primary reference in new action steps.
 
-`GiveTarget` and `TakeTarget` use first-item deterministic selection only. They do not support authorable item filters, barter/trade permissions, or transfer restrictions yet. Runtime reports identify transferred entity ID/name and coordinates; template IDs are not shown because runtime entities do not currently carry template IDs.
+`Transfer` currently selects a concrete moving entity through the actor's target label/slot state. It does not yet support authoring an item predicate such as "first potion in this inventory"; use `targetingRules` when a same-plane target can select the moving entity directly, or log a capability gap when inventory-internal item matching is needed. Legacy `GiveTarget` and `TakeTarget` use first-item deterministic selection only. None of the current peer-transfer steps support barter/trade permissions or transfer restrictions yet. Runtime reports identify transferred entity ID/name and coordinates; template IDs are not shown because runtime entities do not currently carry template IDs.
 
 `CreateFacing` creates a placeholder entity rather than an authored template-backed spawn. Use it for prototype creation showcases only.
 

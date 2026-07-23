@@ -1,0 +1,359 @@
+entityTemplates:
+  standardPlayer:
+    name: Standard Player
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 100
+    bulk: 100
+    aperture: 100
+    defaultActionPlanId: Player_Debug_Action_Plan
+    actionStateDefaults:
+      facing: East
+
+  debugSizeCalibrationRoom:
+    name: Debug Size Calibration Room
+    inventoryWidth: 18
+    inventoryHeight: 13
+    weight: 100000
+    carryingCapacity: 100000
+    bulk: 100000
+    aperture: 100000
+    carriedEntities:
+    - entityId: debugWeightBulk0
+      templateId: debugWeightBulk0
+      coord: { x: 1, y: 1 }
+    - entityId: debugWeightBulk1
+      templateId: debugWeightBulk1
+      coord: { x: 3, y: 1 }
+    - entityId: debugWeightBulk10
+      templateId: debugWeightBulk10
+      coord: { x: 5, y: 1 }
+    - entityId: debugWeightBulk99
+      templateId: debugWeightBulk99
+      coord: { x: 7, y: 1 }
+    - entityId: debugWeightBulk100
+      templateId: debugWeightBulk100
+      coord: { x: 9, y: 1 }
+    - entityId: debugWeightBulk101
+      templateId: debugWeightBulk101
+      coord: { x: 11, y: 1 }
+    - entityId: debugWeightBulk1000
+      templateId: debugWeightBulk1000
+      coord: { x: 13, y: 1 }
+    - entityId: debugChestAperture0
+      templateId: debugChestAperture0
+      coord: { x: 1, y: 3 }
+    - entityId: debugChestAperture1
+      templateId: debugChestAperture1
+      coord: { x: 3, y: 3 }
+    - entityId: debugChestAperture10
+      templateId: debugChestAperture10
+      coord: { x: 5, y: 3 }
+    - entityId: debugChestAperture99
+      templateId: debugChestAperture99
+      coord: { x: 7, y: 3 }
+    - entityId: debugChestAperture100
+      templateId: debugChestAperture100
+      coord: { x: 9, y: 3 }
+    - entityId: debugChestAperture101
+      templateId: debugChestAperture101
+      coord: { x: 11, y: 3 }
+    - entityId: debugChestAperture1000
+      templateId: debugChestAperture1000
+      coord: { x: 13, y: 3 }
+    - entityId: debugNestedRoom1
+      templateId: debugNestedRoom1
+      coord: { x: 1, y: 5 }
+    - entityId: debugNestedBag1
+      templateId: debugNestedBag1
+      coord: { x: 4, y: 5 }
+    - entityId: debugNestedCrevice103
+      templateId: debugNestedCrevice103
+      coord: { x: 7, y: 5 }
+    - entityId: debugNestedBox103
+      templateId: debugNestedBox103
+      coord: { x: 10, y: 5 }
+
+  debugWeightBulk0: { name: Weight Bulk 0, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 0, aperture: 0 }
+  debugWeightBulk1: { name: Weight Bulk 1, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 1, aperture: 0 }
+  debugWeightBulk10: { name: Weight Bulk 10, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 10, aperture: 0 }
+  debugWeightBulk99: { name: Weight Bulk 99, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 99, aperture: 0 }
+  debugWeightBulk100: { name: Weight Bulk 100, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 100, aperture: 0 }
+  debugWeightBulk101: { name: Weight Bulk 101, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 101, aperture: 0 }
+  debugWeightBulk1000: { name: Weight Bulk 1000, inventoryWidth: 0, inventoryHeight: 0, weight: 0, carryingCapacity: 0, bulk: 1000, aperture: 0 }
+
+  debugChestAperture0: { name: Chest Aperture 0, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 0 }
+  debugChestAperture1: { name: Chest Aperture 1, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 1 }
+  debugChestAperture10: { name: Chest Aperture 10, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 10 }
+  debugChestAperture99: { name: Chest Aperture 99, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 99 }
+  debugChestAperture100: { name: Chest Aperture 100, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 100 }
+  debugChestAperture101: { name: Chest Aperture 101, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 101 }
+  debugChestAperture1000: { name: Chest Aperture 1000, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 1000 }
+
+  debugNestedRoom1:
+    name: Nested Room 1
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedRoom2
+      templateId: debugNestedRoom2
+      coord: { x: 2, y: 2 }
+  debugNestedRoom2:
+    name: Nested Room 2
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedRoom3
+      templateId: debugNestedRoom3
+      coord: { x: 2, y: 2 }
+  debugNestedRoom3:
+    name: Nested Room 3
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedRoom4
+      templateId: debugNestedRoom4
+      coord: { x: 2, y: 2 }
+  debugNestedRoom4:
+    name: Nested Room 4
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedRoom5
+      templateId: debugNestedRoom5
+      coord: { x: 2, y: 2 }
+  debugNestedRoom5: { name: Nested Room 5, inventoryWidth: 5, inventoryHeight: 5, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 10000 }
+
+  debugNestedBag1:
+    name: Nested Bag 1
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedBag2
+      templateId: debugNestedBag2
+      coord: { x: 1, y: 1 }
+  debugNestedBag2:
+    name: Nested Bag 2
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedBag3
+      templateId: debugNestedBag3
+      coord: { x: 1, y: 1 }
+  debugNestedBag3:
+    name: Nested Bag 3
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedBag4
+      templateId: debugNestedBag4
+      coord: { x: 1, y: 1 }
+  debugNestedBag4:
+    name: Nested Bag 4
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 10000
+    carriedEntities:
+    - entityId: debugNestedBag5
+      templateId: debugNestedBag5
+      coord: { x: 1, y: 1 }
+  debugNestedBag5: { name: Nested Bag 5, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10, aperture: 10000 }
+
+  debugNestedCrevice103:
+    name: Nested Crevice Aperture 103
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 103
+    carriedEntities:
+    - entityId: debugNestedCrevice102
+      templateId: debugNestedCrevice102
+      coord: { x: 1, y: 1 }
+  debugNestedCrevice102:
+    name: Nested Crevice Aperture 102
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 102
+    carriedEntities:
+    - entityId: debugNestedCrevice101
+      templateId: debugNestedCrevice101
+      coord: { x: 1, y: 1 }
+  debugNestedCrevice101:
+    name: Nested Crevice Aperture 101
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 101
+    carriedEntities:
+    - entityId: debugNestedCrevice100
+      templateId: debugNestedCrevice100
+      coord: { x: 1, y: 1 }
+  debugNestedCrevice100:
+    name: Nested Crevice Aperture 100
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10000
+    aperture: 100
+    carriedEntities:
+    - entityId: debugNestedCrevice99
+      templateId: debugNestedCrevice99
+      coord: { x: 1, y: 1 }
+  debugNestedCrevice99: { name: Nested Crevice Aperture 99, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10000, aperture: 99 }
+
+  debugNestedBox103:
+    name: Nested Box Aperture 103
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 103
+    carriedEntities:
+    - entityId: debugNestedBox102
+      templateId: debugNestedBox102
+      coord: { x: 1, y: 1 }
+  debugNestedBox102:
+    name: Nested Box Aperture 102
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 102
+    carriedEntities:
+    - entityId: debugNestedBox101
+      templateId: debugNestedBox101
+      coord: { x: 1, y: 1 }
+  debugNestedBox101:
+    name: Nested Box Aperture 101
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 101
+    carriedEntities:
+    - entityId: debugNestedBox100
+      templateId: debugNestedBox100
+      coord: { x: 1, y: 1 }
+  debugNestedBox100:
+    name: Nested Box Aperture 100
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 10000
+    bulk: 10
+    aperture: 100
+    carriedEntities:
+    - entityId: debugNestedBox99
+      templateId: debugNestedBox99
+      coord: { x: 1, y: 1 }
+  debugNestedBox99: { name: Nested Box Aperture 99, inventoryWidth: 3, inventoryHeight: 3, weight: 0, carryingCapacity: 10000, bulk: 10, aperture: 99 }
+
+presentations:
+  standardPlayer: { glyph: '@', color: Yellow }
+  debugSizeCalibrationRoom: { glyph: '#', color: Gray }
+  debugWeightBulk0: { glyph: '0', color: White }
+  debugWeightBulk1: { glyph: '1', color: White }
+  debugWeightBulk10: { glyph: '2', color: White }
+  debugWeightBulk99: { glyph: '3', color: White }
+  debugWeightBulk100: { glyph: '4', color: White }
+  debugWeightBulk101: { glyph: '5', color: White }
+  debugWeightBulk1000: { glyph: '6', color: White }
+  debugChestAperture0: { glyph: 'C', color: Earth }
+  debugChestAperture1: { glyph: 'C', color: Earth }
+  debugChestAperture10: { glyph: 'C', color: Earth }
+  debugChestAperture99: { glyph: 'C', color: Earth }
+  debugChestAperture100: { glyph: 'C', color: Earth }
+  debugChestAperture101: { glyph: 'C', color: Earth }
+  debugChestAperture1000: { glyph: 'C', color: Earth }
+  debugNestedRoom1: { glyph: 'R', color: Cyan }
+  debugNestedRoom2: { glyph: 'R', color: Cyan }
+  debugNestedRoom3: { glyph: 'R', color: Cyan }
+  debugNestedRoom4: { glyph: 'R', color: Cyan }
+  debugNestedRoom5: { glyph: 'R', color: Cyan }
+  debugNestedBag1: { glyph: 'B', color: Green }
+  debugNestedBag2: { glyph: 'B', color: Green }
+  debugNestedBag3: { glyph: 'B', color: Green }
+  debugNestedBag4: { glyph: 'B', color: Green }
+  debugNestedBag5: { glyph: 'B', color: Green }
+  debugNestedCrevice103: { glyph: 'c', color: Gray }
+  debugNestedCrevice102: { glyph: 'c', color: Gray }
+  debugNestedCrevice101: { glyph: 'c', color: Gray }
+  debugNestedCrevice100: { glyph: 'c', color: Gray }
+  debugNestedCrevice99: { glyph: 'c', color: Gray }
+  debugNestedBox103: { glyph: 'b', color: Yellow }
+  debugNestedBox102: { glyph: 'b', color: Yellow }
+  debugNestedBox101: { glyph: 'b', color: Yellow }
+  debugNestedBox100: { glyph: 'b', color: Yellow }
+  debugNestedBox99: { glyph: 'b', color: Yellow }
+
+actionPlans:
+  Player_Debug_Action_Plan:
+    id: Player_Debug_Action_Plan
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Forward
+      - kind: TransformAdjacentToInventory
+        targetSlot: 1
+      - kind: TransformInventoryToAdjacent
+      - kind: EnterTarget
+        targetSlot: 1
+      - kind: ExitFacing
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: ActorToTarget
+
+scenarios:
+  canonical-debug-size-calibration-room:
+    name: Canonical Debug Size Calibration Room
+    scenarioRootEntityTemplateId: debugSizeCalibrationRoom
+    playerEntityTemplateId: standardPlayer
+    playerEntityId: standardPlayer
+    playerStart: { x: 1, y: 7 }
+    playerControls:
+      player-1:
+      - standardPlayer

@@ -353,6 +353,40 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void CanonicalTransferDescriptorRoundTripsDirectionModeAndTransferDirection()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              transferPlan:
+                id: transferPlan
+                behavior:
+                  steps:
+                    - kind: Transfer
+                      targetLabel: offers
+                      directionMode: Forward
+                      transferDirection: ActorToTarget
+            """);
+
+        var registry = document.ToRegistry();
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+
+        var step = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("transferPlan")).Behavior!.Steps[0];
+        Assert.Equal(ActionPlanBehaviorStepKind.Transfer, step.Kind);
+        Assert.Equal("offers", step.TargetLabel);
+        Assert.Equal(ActionPlanMoveDirectionMode.Forward, step.DirectionMode);
+        Assert.Equal(TransferDirection.ActorToTarget, step.TransferDirection);
+        Assert.Contains("kind: Transfer", saved);
+        Assert.Contains("targetLabel: offers", saved);
+        Assert.Contains("directionMode: Forward", saved);
+        Assert.Contains("transferDirection: ActorToTarget", saved);
+        Assert.Equal(TransferDirection.ActorToTarget, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("transferPlan")).Behavior!.Steps[0].TransferDirection);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCanonicalActorActionStateDefaults()
     {
         var registry = YamlContentLoader.LoadRegistry(

@@ -296,4 +296,67 @@ public sealed partial class ActionPlanInterpreter
         trace.Detail = $"destroyed {string.Join(", ", destroyed)}";
         return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace);
     }
+
+    private PlanEffectResult ApplyCanonicalTransfer(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        ActionPlanBehaviorStepDescriptor step)
+    {
+        var trace = new TraceNode("Primitive Transfer", TraceStatus.Info);
+        if (step.TransferDirection is not { } transferDirection)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = "Transfer requires transferDirection";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (step.DirectionMode is not { } mode)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = "Transfer requires directionMode";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (!TryResolveMoveDirection(mode, context, out var counterpartyDirection, out var directionReadTrace, out var directionFailureDetail))
+        {
+            if (directionReadTrace is not null)
+            {
+                trace.Add(directionReadTrace);
+            }
+
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = directionFailureDetail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        if (directionReadTrace is not null)
+        {
+            trace.Add(directionReadTrace);
+        }
+
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var targetReadTrace))
+        {
+            trace.Add(targetReadTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = targetReadTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(targetReadTrace);
+        var resolution = ((IActionIntent)new TransferAction(transferDirection, target.Value, counterpartyDirection))
+            .Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+        if (resolution.Succeeded)
+        {
+            trace.Status = TraceStatus.Success;
+            trace.Detail = resolution.Trace.Detail;
+            return new PlanEffectResult(true, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+        }
+
+        trace.Status = TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+    }
 }
