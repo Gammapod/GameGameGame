@@ -37,6 +37,7 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 - `docs/Plans/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
+- `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` records the proposed low-risk mock play-mode pattern sprint.
 
 ## Direction
 
@@ -250,4 +251,4 @@ Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items for
 
 ## Near-term selection recommendation
 
-No next implementation sequence is currently selected from this roadmap. If SadConsole/frontend work is re-promoted, select the sequence through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a new active plan, and classify remaining items as Must Have or Could Have for the chosen release checkpoint.
+If a small SadConsole/frontend slice is selected before the full componentized play-mode rewrite, use `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` to gain layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a new active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.

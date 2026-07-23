@@ -34,6 +34,7 @@ Related source of truth:
 - `docs/Source of Truth/Content-Authoring-Manual.md` describes what content authors and content-editing agents can safely author today.
 - `docs/Source of Truth/planning-index.md` describes planning-document navigation and reading order.
 - `docs/Plans/SadConsole-UI-Specification.md` consolidates frontend-owned UI layout/layering/resizing/mouse/render-style specifications that should not be duplicated in roadmap backlog bullets.
+- `docs/Plans/Topology-Service-Plan.md` preserves the deferred Core topology-service plan for shared adjacency, graph overlays, topological rays, and future entanglement/portal-like mechanics.
 
 ## Current strategic direction
 
@@ -132,6 +133,10 @@ Canonical action target statement:
 Recently completed focused sprint:
 
 - [Give/Take Transfer Vertical Slice Sprint Plan](../Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md): Core atomic Transfer semantics, policy-asymmetric ActorToTarget/TargetToActor directions, combined outcome/player rooms, Action Choice/history support, and a first frontend transfer workflow.
+
+Deferred foundation plan:
+
+- [Topology Service Plan](Topology-Service-Plan.md): backlog plan for centralizing Core adjacency/movement neighbor lookup into a shared topology service, then adding directed topology overlays/rays, and finally supporting authored entanglement-style relations without implementing them as teleport actions.
 
 New backlog items from Enter/Exit wrap-up:
 
