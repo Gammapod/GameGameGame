@@ -374,6 +374,25 @@ internal sealed class FrontendActionPlanMutationService(
             return [];
         }
 
+        if (allowEmptyPassive && IsDefaultWaitPlaceholder(descriptor))
+        {
+            return [];
+        }
+
         throw new InvalidOperationException($"Action plan {planId} is {ContentEditorService.FormatActionPlanShape(shape)}; only canonical behavior chains are editable in this slice.");
+    }
+
+    private static bool IsDefaultWaitPlaceholder(ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Primitive is not null || descriptor.Behavior is not null || descriptor.Steps.Count != 1)
+        {
+            return false;
+        }
+
+        var step = descriptor.Steps[0];
+        return step.Label == "wait"
+            && step.Checks.Count == 0
+            && step.OnSuccess?.Kind == PlanEffectKind.Wait
+            && step.OnFailure is null;
     }
 }

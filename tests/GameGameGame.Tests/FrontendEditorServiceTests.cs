@@ -1325,6 +1325,23 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void InsertActionPlanStepConvertsNewPlaceholderPlanToCanonicalBehavior()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var create = service.CreateActionPlan("Player Debug");
+        Assert.True(create.IsSuccess, create.StatusMessage);
+
+        var result = service.InsertActionPlanStep("playerDebug", 0, ActionPlanBehaviorStepKind.Move);
+
+        Assert.True(result.IsSuccess, result.StatusMessage);
+        var plan = Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "playerDebug");
+        Assert.Equal("Canonical Behavior Chain", plan.Shape);
+        var step = Assert.Single(plan.ActionSteps);
+        Assert.Equal(ActionPlanBehaviorStepKind.Move, step.Kind);
+        Assert.Equal(["Move"], plan.ActionStepNames);
+    }
+
+    [Fact]
     public void CreatePassiveActionPlanAddsEmptyPassivePlan()
     {
         var service = FrontendEditorService.CreateNew();
