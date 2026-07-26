@@ -13,6 +13,12 @@ entityTemplates:
       coord:
         x: 3
         y: 2
+    - entityId: pocketBazaarOuterRoomBazaar_Player
+      templateId: bazaarPlayer
+      coord:
+        x: 0
+        y: 1
+      controller: Player
   pocketBazaarBox:
     name: Impossible Box
     inventoryWidth: 11
@@ -393,6 +399,38 @@ entityTemplates:
     carryingCapacity: 0
     bulk: 1
     aperture: 0
+  bazaarPlayer:
+    name: Bazaar_Player
+    inventoryWidth: 5
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 0
+    bulk: 10
+    aperture: 20
+    defaultActionPlanId: player_Debug
+    actionStateDefaults:
+      facing: West
+    carriedEntities:
+    - entityId: bazaar_PlayerLeft-TurnPatroller
+      templateId: pocketBazaarLeftPatroller
+      coord:
+        x: 0
+        y: 0
+    - entityId: bazaar_PlayerPatrolWall
+      templateId: pocketBazaarPatrolWall
+      coord:
+        x: 2
+        y: 0
+    - entityId: bazaar_PlayerPatrolWall2
+      templateId: pocketBazaarPatrolWall
+      coord:
+        x: 3
+        y: 2
+    - entityId: bazaar_PlayerRuby
+      templateId: pocketBazaarRuby
+      coord:
+        x: 4
+        y: 1
 presentations:
   pocketBazaarOuterRoom:
     glyph: '#'
@@ -463,6 +501,9 @@ presentations:
   pocketBazaarRuby:
     glyph: '*'
     color: Cyan
+  bazaarPlayer:
+    glyph: '@'
+    color: Green
 actionPlans:
   pocketBazaarMouseRetreat:
     id: pocketBazaarMouseRetreat
@@ -506,6 +547,17 @@ actionPlans:
         targetSlot: 2
       - kind: GiveTarget
         targetSlot: 2
+  player_Debug:
+    id: player_Debug
+    behavior:
+      steps:
+      - kind: Move
+      - kind: PickupTarget
+      - kind: DropFacing
+      - kind: EnterTarget
+      - kind: ExitFacing
+      - kind: Transfer
+    steps: []
 scenarios:
   beta-pocket-bazaar:
     name: Beta Pocket Bazaar

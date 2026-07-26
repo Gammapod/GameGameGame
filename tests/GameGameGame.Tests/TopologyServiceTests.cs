@@ -77,6 +77,158 @@ public sealed class TopologyServiceTests
         Assert.All(neighbors, neighbor => Assert.Equal(TopologyEdgeKind.DefaultGrid, neighbor.Kind));
     }
 
+    [Fact]
+    public void DirectedOverlayTopologyMakesRemoteNodeAdjacentInChosenDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var remote = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        ITopologyService topology = new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [new DirectedTopologyEdge(origin, Direction.North, remote)]);
+
+        var found = topology.TryGetNeighbor(world, origin, Direction.North, out var neighbor);
+        var adjacency = topology.EvaluateAdjacency(world, origin, remote);
+
+        Assert.True(found);
+        Assert.Equal(remote, neighbor.Destination);
+        Assert.Equal(Direction.North, neighbor.Direction);
+        Assert.Equal(TopologyEdgeKind.DirectedOverlay, neighbor.Kind);
+        Assert.False(neighbor.IsBlocked);
+        Assert.True(adjacency.AreAdjacent);
+        Assert.Equal(Direction.North, adjacency.Direction);
+        Assert.False(adjacency.IsIntercardinal);
+    }
+
+    [Fact]
+    public void MovementFollowsDirectedOverlayTopologyAndStillRejectsOccupiedDestination()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var remote = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        var occupied = world.GetEntityLocation(TestWorld.SlimeId);
+        var movement = new MovementService(new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [
+                new DirectedTopologyEdge(origin, Direction.North, remote),
+                new DirectedTopologyEdge(origin, Direction.South, occupied)
+            ]));
+
+        var canMoveSouth = movement.CanMove(world, TestWorld.PlayerId, Direction.South);
+        var movedNorth = movement.TryMove(world, TestWorld.PlayerId, Direction.North);
+
+        Assert.False(canMoveSouth);
+        Assert.True(movedNorth);
+        Assert.Equal(remote, world.GetEntityLocation(TestWorld.PlayerId));
+    }
+
+    [Fact]
+    public void DirectedOverlayTopologyRejectsCrossPlaneEdgeForFirstSlice()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var inventoryDestination = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
+        ITopologyService topology = new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [new DirectedTopologyEdge(origin, Direction.North, inventoryDestination)]);
+
+        var found = topology.TryGetNeighbor(world, origin, Direction.North, out var neighbor);
+        var adjacency = topology.EvaluateAdjacency(world, origin, inventoryDestination);
+
+        Assert.False(found);
+        Assert.Equal(inventoryDestination, neighbor.Destination);
+        Assert.Equal(TopologyEdgeKind.DirectedOverlay, neighbor.Kind);
+        Assert.True(neighbor.IsBlocked);
+        Assert.Equal(FailureReason.TargetNotAdjacent, neighbor.FailureReason);
+        Assert.Contains("cross-plane", neighbor.FailureDetail);
+        Assert.False(adjacency.AreAdjacent);
+        Assert.Equal(Direction.North, adjacency.Direction);
+        Assert.Equal(FailureReason.TargetNotAdjacent, adjacency.FailureReason);
+    }
+
+    [Fact]
+    public void TopologicalRayFollowsDirectedOverlayThenContinuesInSameDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var remote = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        var topology = new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [new DirectedTopologyEdge(origin, Direction.North, remote)]);
+        var traversal = new TopologyTraversalService(topology);
+
+        var ray = traversal.CastDirectionalRay(world, origin, Direction.North, maxSteps: 2);
+
+        Assert.Equal(2, ray.Count);
+        Assert.Equal(origin, ray[0].Origin);
+        Assert.Equal(remote, ray[0].Destination);
+        Assert.Equal(TopologyEdgeKind.DirectedOverlay, ray[0].Kind);
+        Assert.Equal(remote, ray[1].Origin);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 3)), ray[1].Destination);
+        Assert.Equal(TopologyEdgeKind.DefaultGrid, ray[1].Kind);
+    }
+
+    [Fact]
+    public void TopologicalRayStopsBeforeBlockedOrOutOfBoundsNeighbor()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0));
+        var traversal = new TopologyTraversalService(new DefaultTopologyService());
+
+        var ray = traversal.CastDirectionalRay(world, origin, Direction.West, maxSteps: 3);
+
+        Assert.Empty(ray);
+    }
+
+    [Fact]
+    public void TopologicalFloodIncludesOriginAndBoundedReachableNeighbors()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var remote = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        var topology = new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [new DirectedTopologyEdge(origin, Direction.North, remote)]);
+        var traversal = new TopologyTraversalService(topology);
+
+        var flood = traversal.Flood(world, origin, maxDepth: 1);
+
+        Assert.Contains(flood, step =>
+            step.Coord == origin &&
+            step.Distance == 0 &&
+            step.From is null &&
+            step.Direction is null &&
+            step.Kind is null);
+        Assert.Contains(flood, step =>
+            step.Coord == remote &&
+            step.Distance == 1 &&
+            step.From == origin &&
+            step.Direction == Direction.North &&
+            step.Kind == TopologyEdgeKind.DirectedOverlay);
+        Assert.DoesNotContain(flood, step => step.Distance > 1);
+    }
+
+    [Fact]
+    public void TopologicalFloodDoesNotRevisitNodesThroughCycles()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var remote = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        var topology = new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [
+                new DirectedTopologyEdge(origin, Direction.North, remote),
+                new DirectedTopologyEdge(remote, Direction.South, origin)
+            ]);
+        var traversal = new TopologyTraversalService(topology);
+
+        var flood = traversal.Flood(world, origin, maxDepth: 3);
+
+        Assert.Equal(flood.Select(step => step.Coord).Distinct().Count(), flood.Count);
+        Assert.Single(flood, step => step.Coord == origin);
+        Assert.Single(flood, step => step.Coord == remote);
+    }
+
     private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
     {
         var nodeId = world.GetNodeId(location);
