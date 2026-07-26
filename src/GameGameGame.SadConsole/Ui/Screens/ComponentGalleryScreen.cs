@@ -1,3 +1,5 @@
+using GameGameGame.Content;
+using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Navigation;
 using GameGameGame.SadConsoleApp.Ui.Styling;
@@ -22,6 +24,7 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("confirm-overlay"),
             new FocusTarget("candii-tileset"),
             new FocusTarget("play-mode-components"),
+            new FocusTarget("inventory-space"),
             new FocusTarget("footer")
         ]);
     }
@@ -47,6 +50,7 @@ internal sealed class ComponentGalleryScreen
             ConfirmOverlayExample(),
             CandiiTilesetExample(),
             PlayModeComponentMapExample(),
+            InventorySpaceExample(),
             FooterPanel()
         ];
     }
@@ -96,7 +100,7 @@ internal sealed class ComponentGalleryScreen
             "Selectable lists",
             new SadConsoleRect(40, 3, 37, 14),
             [
-                new SelectableListItem("scenario", "Scenario row", "opens Play/Edit; Esc cancels/back"),
+                new SelectableListItem("scenario", "Scenario row", "opens Play/Debug/Edit; Esc cancels/back"),
                 new SelectableListItem("entity", "Entity template row", "opens entity editor"),
                 new SelectableListItem("action-plan", "Action plan row", "opens action-plan editor"),
                 new SelectableListItem("disabled", "Disabled row", "not selectable later", IsEnabled: false),
@@ -160,6 +164,42 @@ internal sealed class ComponentGalleryScreen
             ],
             _focusRouter.StateFor("play-mode-components"),
             "Player action prompts consume Core choice facts; highlights are hints.");
+    }
+
+    private InventorySpaceComponent InventorySpaceExample()
+    {
+        var view = new InventorySpaceViewModel(
+            "gallery.inventory-space.view",
+            "Gallery inventory space",
+            new PlaneId("galleryPlane"),
+            Width: 5,
+            Height: 4,
+            InventorySpaceCellMetrics.Default,
+            InventorySpaceViewport.Full(5, 4),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
+            [
+                new InventorySpaceEntityVisual(new GridCoord(1, 1), new EntityId("gallery-player"), new InventorySpaceVisualLayer('@', PresentationColor.Yellow), Accent: null, InventorySpaceVisualPlacement.Default),
+                new InventorySpaceEntityVisual(new GridCoord(3, 2), new EntityId("gallery-box"), new InventorySpaceVisualLayer('B', PresentationColor.Earth), Accent: null, InventorySpaceVisualPlacement.Default)
+            ],
+            [
+                new InventorySpaceDecorator(new GridCoord(1, 1), InventorySpaceDecoratorRole.Controlled, new EntityId("gallery-player"), new InventorySpaceVisualLayer('*', PresentationColor.Cyan), Priority: 100),
+                new InventorySpaceDecorator(new GridCoord(3, 2), InventorySpaceDecoratorRole.Warning, new EntityId("gallery-box"), new InventorySpaceVisualLayer('!', PresentationColor.Yellow), Priority: 50)
+            ],
+            new InventorySpaceFrame(Visible: true, Title: "Gallery inventory space", Color: PresentationColor.Yellow));
+
+        return new InventorySpaceComponent(
+            "inventory-space",
+            "Inventory-space component",
+            SadConsoleRect.FromSize(40, 32, 37, 12),
+            view,
+            [
+                "backdrop glyph 160 fg 808080 bg 404040",
+                "entity glyphs preserve identity",
+                "decorators are separate overlay facts",
+                "profile: framed debug"
+            ],
+            _focusRouter.StateFor("inventory-space"),
+            InventorySpaceRenderOptions.FramedDebug);
     }
 
     private PanelComponent CandiiTilesetExample()

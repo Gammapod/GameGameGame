@@ -15,6 +15,7 @@ related:
   - source.frontend-ux-standards
   - source.engine-editor-capabilities
   - source.invariants
+  - plan.new-play-mode-mvp-sprint
 ---
 # SadConsole Frontend Roadmap
 
@@ -38,6 +39,7 @@ Related source of truth:
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 - `docs/Plans/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
 - `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` records the proposed low-risk mock play-mode pattern sprint.
+- `docs/Plans/New-Play-Mode-MVP-Sprint-Plan.md` records the active focused sprint plan for a new consumer-facing Play mode route and reusable inventory-space component.
 
 ## Direction
 
@@ -251,4 +253,6 @@ Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items for
 
 ## Near-term selection recommendation
 
-If a small SadConsole/frontend slice is selected before the full componentized play-mode rewrite, use `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` to gain layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a new active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.
+Current selected focused frontend sprint: `docs/Plans/New-Play-Mode-MVP-Sprint-Plan.md`. It starts the consumer-facing Play mode as an isolated componentized route inside the existing SadConsole project, while relabeling the current play/debug path as `Debug` and introducing a reusable inventory-space renderer for the controlled actor's current space.
+
+If a smaller SadConsole/frontend slice is selected before or around that sprint, use `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` as completed/reference layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a future active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.

@@ -90,6 +90,68 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
    - Border suitability criteria: corner tiles must visually join horizontal and vertical edge tiles; edge tiles must repeat cleanly at one-cell thickness; tiles must be readable at the target scale and color treatment; and the mapping must be reusable across selected/focused/error border colors without changing the glyph role.
    - If a tileset lacks suitable one-cell border tiles, use a tileset-specific fallback treatment such as filled panel backgrounds, two-cell frame art, or simple ASCII-like borders rather than forcing incorrect CP437 indexes.
 
+## Inventory-space component specification
+
+The SadConsole inventory-space component is the first reusable player-facing standard for drawing runtime inventory spaces in the new Play mode. It should remain stable, testable, and modifiable because future current-space, inspected-inventory, targeting, mouse hit-testing, editor preview, and gallery examples will build on it.
+
+1. **Inventory-space view models are renderer-neutral presentation models.**
+   - The model may contain cell metrics, viewport, backdrop, entity visuals, accent visuals, decorators, frame, and coordinate-to-cell geometry.
+   - It must not own containment rules, action legality, visibility semantics, or simulation state.
+
+2. **Terminology: use `backdrop` for the inventory-space base tile layer.**
+   - Avoid using “background layer” for the inventory-space layer because SadConsole cells also have a `Background`/secondary color.
+   - A backdrop tile has a glyph/tile index, foreground color, and SadConsole background/secondary color.
+   - The current accepted MVP backdrop is Candii glyph `160`, foreground `0x808080`, background `0x404040`.
+
+3. **Entity identity visuals are separate from the backdrop.**
+   - Primary entity visuals identify entities and should preserve their glyph/tile identity.
+   - Primary entity visuals have a foreground color and conceptually transparent background over the current backdrop cell.
+   - Until the renderer supports true layered transparency, drawing an entity glyph directly into a SadConsole cell should preserve the backdrop secondary color rather than replacing it with black or a decorator color.
+
+4. **Accent and information layers are designed-for but not fully implemented.**
+   - Accent visuals will be optional foreground-only identity accents over the same cell.
+   - Information layers such as controlled, selected, warning, facing, target, valid target, blocked target, hover, and next action should be modeled as decorators/overlays, not identity replacement.
+   - Future semi-transparent foreground or true layering should be implemented through a renderer capability, not by changing shared runtime facts.
+
+5. **Cells are square logical tiles by default.**
+   - The MVP inventory-space renderer uses one square tile cell per inventory coordinate.
+   - Scaling, per-entity centered smaller visuals, and larger display profiles are future presentation features; they should be expressed through cell metrics/placement, not by changing inventory semantics.
+
+6. **Grid labels are presentation aids.**
+   - Row labels are numeric.
+   - Column labels are capital letters.
+   - Labels are outside the inventory coordinate cells and should not affect hit-testing or gameplay semantics.
+
+7. **Components should size from content requirements.**
+   - Inventory-space components expose required width/height from body rows, labels, viewport, and cell metrics.
+   - New component bounds should prefer `SadConsoleRect.FromSize(...)` and should be large enough to show all visible viewport cells unless explicitly using clipping/scrolling.
+
+8. **Render options separate grid content from component chrome/debug aids.**
+   - `Bare` profile: no frame, title, labels, or debug rows; suitable for embedding inside another component or compact visual summaries.
+   - `Labeled` profile: row/column labels without frame/title/debug rows; suitable for player-facing spatial inventory views where coordinates help readability.
+   - `FramedDebug` profile: frame, title, row/column labels, and debug/body rows; suitable for Play-mode skeletons, component-gallery review, and debugging.
+   - Future profiles may add scrolling, clipping, scale, or mouse-hit-test affordances, but should preserve this options-based separation.
+
+9. **The component gallery is the executable pattern reference.**
+    - The gallery must include an inventory-space example demonstrating backdrop, entity visuals, decorators, frame, labels, and required-size behavior.
+    - Future accepted changes to the component should update the gallery example and focused tests before broad Play-mode usage changes.
+
+## Consumer Play-mode display shell
+
+1. **Play mode owns display chrome, not gameplay semantics.**
+   - Selecting `Play` attempts fullscreen through the SadConsole/MonoGame host.
+   - Logical play size is calculated from available display pixels divided by the active scaled tile size from `SadConsoleDisplaySettings`.
+   - If fullscreen switching is unavailable, the mode still resolves a usable logical layout from the active display metrics.
+
+2. **A fixed one-tile border buffer surrounds drawable content.**
+   - The outermost tile row/column is reserved presentation chrome and must never be used for gameplay content.
+   - The buffer uses Candii glyph `181`.
+   - Normal mode renders the buffer black; debug mode renders the same buffer red.
+
+3. **Drawable bounds are the only content target.**
+   - Play-mode screen models/components should receive the inner drawable bounds and place all components within them.
+   - `F12` toggles Play-mode debug presentation state; currently this changes only the border-buffer color.
+
 ## Glyph standards
 
 1. **Entity glyphs must identify the entity consistently.**

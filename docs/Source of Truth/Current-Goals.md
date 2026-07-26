@@ -40,11 +40,7 @@ Do not read when:
 
 ## Current strategic priority
 
-Alpha MVP is complete and Beta produced authored gameplay vignettes plus scenario/catalog tooling. Delta established the point-of-view foundation needed for arbitrary observer/current-place/bulk-aperture/adjective projection. The former Console frontend has been removed; command-line scenario scanning policy now lives in Content through `ScenarioCatalogScanService`.
-
 The active release direction is canonical action vertical slices: freeze the current broad Action Step catalog as legacy/prototype-compatible, then promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, componentized play-mode consumption, and Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
-
-The canonical `Move` slice is complete; the first Pickup/Drop interaction seam, componentized play-mode refactor, Enter/Exit policy/action-choice slice, canonical peer inventory Transfer sprint, and behavior-preserving Topology Service Phase 1 refactor are implemented. Transfer is one controller-agnostic atomic action with ActorToTarget and TargetToActor directions; legacy Give/Take remain compatibility/prototype behavior. Throw/Shove-style ranged transform variants and later topology overlays/rays/entanglement remain backlog until concrete scenario needs promote them. The next focused sprint should be selected from the active roadmap backlog.
 
 ## Active planning bridge
 

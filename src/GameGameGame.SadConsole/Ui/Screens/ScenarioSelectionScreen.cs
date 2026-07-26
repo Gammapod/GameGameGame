@@ -11,7 +11,8 @@ internal sealed class ScenarioSelectionScreen
     private readonly FocusRouter _focusRouter;
     private readonly List<SelectableListItem> _commandItems =
     [
-        new("play", "Play", "goto simulation/play mode"),
+        new("play", "Play", "goto new consumer play mode"),
+        new("debug", "Debug", "goto existing debug simulation mode"),
         new("edit", "Edit", "goto Scenario Edit screen")
     ];
 
@@ -35,7 +36,7 @@ internal sealed class ScenarioSelectionScreen
     }
 
     public string Title => "Scenario Selection";
-    public string Purpose => "Choose a scenario, then choose Play or Edit.";
+    public string Purpose => "Choose a scenario, then choose Play, Debug, or Edit.";
     public IReadOnlyList<string> Diagnostics { get; }
     public bool CommandPanelOpen => _commandPanelOpen;
     public int SelectedScenarioIndex => _selectedScenarioIndex;
@@ -90,12 +91,12 @@ internal sealed class ScenarioSelectionScreen
     {
         if (_commandPanelOpen)
         {
-            return "Command panel focused: Up/Down chooses Play/Edit. Enter activates. Esc closes command panel.";
+            return "Command panel focused: Up/Down chooses Play/Debug/Edit. Enter activates. Esc closes command panel.";
         }
 
         return _sections.Count > 0
-            ? "Scenario list focused: Left/Right changes curated section. Up/Down chooses scenario. Enter opens Play/Edit. Esc exits application."
-            : "Scenario list focused: Up/Down chooses scenario. Enter opens Play/Edit. Esc exits application.";
+            ? "Scenario list focused: Left/Right changes curated section. Up/Down chooses scenario. Enter opens Play/Debug/Edit. Esc exits application."
+            : "Scenario list focused: Up/Down chooses scenario. Enter opens Play/Debug/Edit. Esc exits application.";
     }
 
     public ScenarioSelectionResult Handle(UiComponentCommand command)
@@ -132,7 +133,7 @@ internal sealed class ScenarioSelectionScreen
                 _selectedCommandIndex = 0;
                 _focusRouter.Handle(UiComponentCommand.Right);
                 _focusRouter.Handle(UiComponentCommand.Select);
-                return ScenarioSelectionResult.Stay($"Choose Play/Edit for {SelectedScenario.Name}.");
+                return ScenarioSelectionResult.Stay($"Choose Play/Debug/Edit for {SelectedScenario.Name}.");
             case UiComponentCommand.Cancel:
                 return ScenarioSelectionResult.Exit("Scenario selection cancelled; exiting application.");
             default:
@@ -158,7 +159,7 @@ internal sealed class ScenarioSelectionScreen
             case UiComponentCommand.Select:
                 return ActivateCommand();
             default:
-                return ScenarioSelectionResult.Stay("Use Up/Down to choose Play/Edit, Enter to activate, Esc to close.");
+                return ScenarioSelectionResult.Stay("Use Up/Down to choose Play/Debug/Edit, Enter to activate, Esc to close.");
         }
     }
 
@@ -176,7 +177,8 @@ internal sealed class ScenarioSelectionScreen
 
         return commandId switch
         {
-            "play" => ScenarioSelectionResult.Play(scenario, $"Play selected: {scenario.Name}. Opening Play UX mock."),
+            "play" => ScenarioSelectionResult.Play(scenario, $"Play selected: {scenario.Name}. Opening new Play mode."),
+            "debug" => ScenarioSelectionResult.Debug(scenario, $"Debug selected: {scenario.Name}. Opening existing debug Simulation."),
             "edit" => ScenarioSelectionResult.Edit(scenario, $"Edit selected: {scenario.Name}. Scenario Edit screen is next screen work."),
             _ => ScenarioSelectionResult.Stay("Unknown scenario command.")
         };
@@ -276,7 +278,7 @@ internal sealed class ScenarioSelectionScreen
             new SadConsoleRect(76, 4, 41, 13),
             _commandItems,
             UiComponentState.Focused,
-            visibleRowCount: 2);
+            visibleRowCount: 3);
 
         for (var index = 0; index < _selectedCommandIndex; index++)
         {
@@ -294,6 +296,7 @@ internal sealed record ScenarioSelectionResult(
 {
     public static ScenarioSelectionResult Stay(string message) => new(ScenarioSelectionResultKind.Stay, null, message);
     public static ScenarioSelectionResult Play(ScenarioCatalogEntry scenario, string message) => new(ScenarioSelectionResultKind.Play, scenario, message);
+    public static ScenarioSelectionResult Debug(ScenarioCatalogEntry scenario, string message) => new(ScenarioSelectionResultKind.Debug, scenario, message);
     public static ScenarioSelectionResult Edit(ScenarioCatalogEntry scenario, string message) => new(ScenarioSelectionResultKind.Edit, scenario, message);
     public static ScenarioSelectionResult Exit(string message) => new(ScenarioSelectionResultKind.Exit, null, message);
 }
@@ -302,6 +305,7 @@ internal enum ScenarioSelectionResultKind
 {
     Stay,
     Play,
+    Debug,
     Edit,
     Exit
 }

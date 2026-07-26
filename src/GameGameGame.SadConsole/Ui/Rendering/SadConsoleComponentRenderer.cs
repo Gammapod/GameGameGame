@@ -1,3 +1,4 @@
+using GameGameGame.Content;
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
@@ -86,6 +87,12 @@ internal sealed class SadConsoleComponentRenderer
 
     private void DrawComponent(Console target, IUiComponent component, bool localBounds)
     {
+        if (component is InventorySpaceComponent inventorySpace)
+        {
+            DrawInventorySpaceComponent(target, inventorySpace, localBounds);
+            return;
+        }
+
         if (component is InventoryGridComponent inventoryGrid)
         {
             DrawInventoryGridComponent(target, inventoryGrid, localBounds);
@@ -192,6 +199,221 @@ internal sealed class SadConsoleComponentRenderer
                 SetCell(target, x + 2, gridTop + row, tileset.Blank, foreground, background);
             }
         }
+    }
+
+    private void DrawInventorySpaceComponent(Console target, InventorySpaceComponent component, bool localBounds)
+    {
+        var view = component.View;
+        var options = component.Options;
+        var border = options.ShowFrame
+            ? ColorForPresentation(view.Frame.Color)
+            : ColorFromToken(component.State.BorderColor(theme));
+        var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
+        FillRect(target, bounds, Color.Black);
+        if (options.ShowFrame)
+        {
+            DrawBox(target, bounds, border, tileset.Roles.PanelBorder);
+        }
+
+        var innerLeft = bounds.Left + (options.ShowFrame ? 1 : 0);
+        var innerTop = bounds.Top + (options.ShowFrame ? 1 : 0);
+        var innerRight = bounds.Left + bounds.Width - (options.ShowFrame ? 1 : 0);
+        var innerBottom = bounds.Bottom - (options.ShowFrame ? 1 : 0);
+        var yCursor = innerTop;
+
+        if (options.ShowTitle)
+        {
+            PrintClipped(target, innerLeft + (options.ShowFrame ? 1 : 0), bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
+            if (!options.ShowFrame)
+            {
+                yCursor++;
+            }
+        }
+
+        if (options.ShowDebugRows)
+        {
+            var rows = component.BodyRows.ToList();
+            var maxRows = Math.Min(rows.Count, Math.Max(0, innerBottom - yCursor - 1));
+            for (var index = 0; index < maxRows; index++)
+            {
+                PrintClipped(target, innerLeft, yCursor++, Math.Max(0, innerRight - innerLeft), rows[index], ColorForRow(rows[index], component.State));
+            }
+
+            if (yCursor < innerBottom)
+            {
+                PrintClipped(target, innerLeft, yCursor++, Math.Max(0, innerRight - innerLeft), "drawn grid:", Color.DarkGray);
+            }
+        }
+
+        var columnLabelY = yCursor;
+        if (options.ShowColumnLabels)
+        {
+            yCursor++;
+        }
+
+        var gridTop = yCursor;
+        var gridLeft = innerLeft + (options.ShowRowLabels ? 4 : 0);
+        var gridAreaBottom = innerBottom;
+        if (gridTop >= gridAreaBottom)
+        {
+            return;
+        }
+
+        var gridPixelWidth = view.Viewport.Width * view.CellMetrics.Width + Math.Max(0, view.Viewport.Width - 1) * view.CellMetrics.Gap;
+        if (gridLeft + gridPixelWidth >= innerRight)
+        {
+            gridLeft = innerLeft + (options.ShowRowLabels ? 4 : 0);
+        }
+
+        if (options.ShowColumnLabels)
+        {
+            DrawInventorySpaceColumnLabels(target, view, gridLeft, columnLabelY, bounds);
+        }
+
+        var entitiesByCoord = view.Entities
+            .Where(entity => view.IsVisible(entity.Coord))
+            .GroupBy(entity => entity.Coord)
+            .ToDictionary(group => group.Key, group => group.First());
+        var decoratorsByCoord = view.Decorators
+            .Where(decorator => view.IsVisible(decorator.Coord))
+            .GroupBy(decorator => decorator.Coord)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(decorator => decorator.Priority).ToList());
+
+        foreach (var coord in view.VisibleCoords())
+        {
+            var relative = view.CellBounds(coord);
+            var cellRect = SadConsoleRect.FromSize(gridLeft + relative.Left, gridTop + relative.Top, relative.Width, relative.Height);
+            if (cellRect.Left >= bounds.Left + bounds.Width - 1 || cellRect.Top >= gridAreaBottom)
+            {
+                continue;
+            }
+
+            var decorators = decoratorsByCoord.GetValueOrDefault(coord) ?? [];
+            var backdropSecondary = ColorForLayerBackground(view.Backdrop.Tile) ?? Color.Black;
+            if (options.ShowRowLabels && coord.X == view.Viewport.Origin.X)
+            {
+                PrintClipped(target, innerLeft, cellRect.Top, 3, $"{coord.Y,2}:", Color.DarkGray);
+            }
+
+            DrawInventorySpaceBackdrop(target, cellRect, view.Backdrop.Tile, backdropSecondary, bounds, gridAreaBottom);
+
+            if (entitiesByCoord.TryGetValue(coord, out var entity))
+            {
+                DrawInventorySpaceEntity(target, cellRect, entity, decorators, bounds, gridAreaBottom, backdropSecondary);
+            }
+            else
+            {
+                DrawInventorySpaceDecorators(target, cellRect, decorators, bounds, gridAreaBottom, entityPresent: false);
+            }
+        }
+    }
+
+    private void DrawInventorySpaceColumnLabels(Console target, InventorySpaceViewModel view, int gridLeft, int y, SadConsoleRect componentBounds)
+    {
+        if (y >= componentBounds.Bottom - 1)
+        {
+            return;
+        }
+
+        for (var x = view.Viewport.Origin.X; x < view.Viewport.Origin.X + view.Viewport.Width; x++)
+        {
+            if (x < 0 || x >= view.Width) continue;
+
+            var coord = new GameGameGame.Core.GridCoord(x, view.Viewport.Origin.Y);
+            var relative = view.CellBounds(coord);
+            var labelX = gridLeft + relative.Left + Math.Max(0, view.CellMetrics.Width / 2);
+            if (labelX >= componentBounds.Left + componentBounds.Width - 1) break;
+
+            SetCell(target, labelX, y, ColumnLabelGlyph(x), Color.DarkGray, Color.Black);
+        }
+    }
+
+    private void DrawInventorySpaceBackdrop(
+        Console target,
+        SadConsoleRect cellRect,
+        InventorySpaceVisualLayer backdropLayer,
+        Color backdropSecondary,
+        SadConsoleRect componentBounds,
+        int gridAreaBottom)
+    {
+        for (var y = cellRect.Top; y < cellRect.Bottom && y < gridAreaBottom; y++)
+        {
+            for (var x = cellRect.Left; x < cellRect.Left + cellRect.Width && x < componentBounds.Left + componentBounds.Width - 1; x++)
+            {
+                SetCell(target, x, y, backdropLayer.Glyph, ColorForLayerForeground(backdropLayer), backdropSecondary);
+            }
+        }
+    }
+
+    private void DrawInventorySpaceEntity(
+        Console target,
+        SadConsoleRect cellRect,
+        InventorySpaceEntityVisual entity,
+        IReadOnlyList<InventorySpaceDecorator> decorators,
+        SadConsoleRect componentBounds,
+        int gridAreaBottom,
+        Color backdropSecondary)
+    {
+        if (cellRect.Top >= gridAreaBottom)
+        {
+            return;
+        }
+
+        var entityX = cellRect.Left + Math.Max(0, cellRect.Width / 2);
+        var entityY = cellRect.Top + Math.Max(0, cellRect.Height / 2);
+        if (entityX < componentBounds.Left + componentBounds.Width - 1 && entityY < gridAreaBottom)
+        {
+            SetCell(
+                target,
+                entityX,
+                entityY,
+                entity.Primary.Glyph,
+                ColorForLayerForeground(entity.Primary),
+                ColorForLayerBackground(entity.Primary) ?? backdropSecondary);
+        }
+
+        DrawInventorySpaceDecorators(target, cellRect, decorators, componentBounds, gridAreaBottom, entityPresent: true);
+    }
+
+    private void DrawInventorySpaceDecorators(
+        Console target,
+        SadConsoleRect cellRect,
+        IReadOnlyList<InventorySpaceDecorator> decorators,
+        SadConsoleRect componentBounds,
+        int gridAreaBottom,
+        bool entityPresent)
+    {
+        if (decorators.Count == 0 || cellRect.Width < 3 || cellRect.Top >= gridAreaBottom)
+        {
+            return;
+        }
+
+        var leftDecorator = decorators.FirstOrDefault(decorator => decorator.Role == InventorySpaceDecoratorRole.Controlled);
+        if (leftDecorator is not null)
+        {
+            SetCell(target, cellRect.Left, cellRect.Top, leftDecorator.Style.Glyph, ColorForLayerForeground(leftDecorator.Style), ColorForLayerBackground(leftDecorator.Style) ?? Color.Black);
+        }
+
+        var rightDecorator = decorators.FirstOrDefault(decorator => decorator.Role != InventorySpaceDecoratorRole.Controlled);
+        if (rightDecorator is not null)
+        {
+            var x = cellRect.Left + cellRect.Width - 1;
+            if (x < componentBounds.Left + componentBounds.Width - 1)
+            {
+                SetCell(target, x, cellRect.Top, rightDecorator.Style.Glyph, ColorForLayerForeground(rightDecorator.Style), ColorForLayerBackground(rightDecorator.Style) ?? Color.Black);
+            }
+        }
+
+        if (!entityPresent && leftDecorator is null && rightDecorator is null && decorators[0] is { } decorator)
+        {
+            SetCell(target, cellRect.Left + cellRect.Width / 2, cellRect.Top, decorator.Style.Glyph, ColorForLayerForeground(decorator.Style), ColorForLayerBackground(decorator.Style) ?? Color.Black);
+        }
+    }
+
+    private static int ColumnLabelGlyph(int column)
+    {
+        var normalized = ((column % 26) + 26) % 26;
+        return 'A' + normalized;
     }
 
     private void DrawInventorySummaryComponent(Console target, InventorySummaryComponent component, bool localBounds)
@@ -339,6 +561,31 @@ internal sealed class SadConsoleComponentRenderer
         var clipped = text.Length <= width ? text : text[..Math.Max(0, width - 1)];
         textRenderer.Print(target, x, y, clipped.PadRight(Math.Max(0, width)), color, Color.Black);
     }
+
+    private static Color ColorForPresentation(PresentationColor color) => color switch
+    {
+        PresentationColor.Gray => Color.Gray,
+        PresentationColor.White => Color.White,
+        PresentationColor.Yellow => Color.Yellow,
+        PresentationColor.Cyan => Color.Cyan,
+        PresentationColor.Green => Color.Green,
+        PresentationColor.DarkGreen => Color.DarkGreen,
+        PresentationColor.Earth => Color.SaddleBrown,
+        PresentationColor.Default => Color.White,
+        _ => Color.White
+    };
+
+    private static Color ColorForLayerForeground(InventorySpaceVisualLayer layer) =>
+        layer.ForegroundRgb is { } rgb ? ColorFromRgb(rgb) : ColorForPresentation(layer.Foreground);
+
+    private static Color? ColorForLayerBackground(InventorySpaceVisualLayer layer) =>
+        layer.BackgroundRgb is { } rgb
+            ? ColorFromRgb(rgb)
+            : layer.Background is { } background
+                ? ColorForPresentation(background)
+                : null;
+
+    private static Color ColorFromRgb(int rgb) => new((byte)((rgb >> 16) & 0xFF), (byte)((rgb >> 8) & 0xFF), (byte)(rgb & 0xFF), byte.MaxValue);
 
     private void ClearSurface(Console target)
     {

@@ -18,6 +18,7 @@ related:
   - source.frontend-ux-decisions
   - plan.sadconsole-frontend-roadmap
   - plan.sadconsole-playmode-layout-pattern-sprint
+  - plan.new-play-mode-mvp-sprint
 ---
 
 # SadConsole UI Specification
@@ -66,6 +67,51 @@ This document records desired UI mechanics, current fit against project frontend
 | UI-N05 | Support mouse hit-testing and click interaction over resolved screen regions and cells, including click-to-focus, click-to-inspect, and click-to-select prompt targets where equivalent keyboard actions exist. | Fit as frontend-owned input, focus, hover, hit-testing, and selection behavior. It must submit through shared runtime/editor services and must not invent legality. | SadConsole supports mouse input on screen objects, exclusive mouse routing, focus events, relative/absolute positioning, and child-object hierarchy. A resolved region tree gives the project a natural hit-test index. | Overlapping layers require deterministic topmost-hit rules. Cell hit-testing must account for render scaling, pixel margins, and any `UsePixelPositioning` surfaces. Mouse behavior should remain a convenience path over the directional/Select/Cancel model. | Pure topmost-region hit-test and live hover diagnostics complete for mock play mode; click-to-act/focus remains future work. |
 | UI-N06 | Support collapsible, expandable, pinned, and focusable multi-panel layouts as presentation state over the same region system. | Fit as frontend-owned component state and layout policy. Useful for entity panel chains, editor panels, dense local activity, and inspection surfaces. | SadConsole child visibility, enabled state, and component focus hooks support hiding/collapsing and focus treatment. Existing project component focus/border patterns and panel-chain tests provide a foundation. | Collapse/pin state should not change underlying runtime/editor facts. Need min-size, overflow, and selection rules so collapsed panels remain discoverable and keyboard-operable. | Related but distinct from UI-M01/UI-M02; model as region/component state atop the resolver. |
 | UI-N07 | Support alternate render styles and configurable presentation themes/layout profiles for play/debug readability, including active-actor/focus cues, facing/target decorators, larger glyph tiles, 2x2 color-block experiments, and theme variants. | Fit as frontend-owned presentation styling. Must preserve entity glyph identity and consume shared state facts. | SadConsole supports custom fonts, multiple fonts, tile glyphs, cell foreground/background, effects, animated consoles, and surface tinting. Current project has theme-owned border/color/glyph styling and Candii glyph calibration. | Avoid replacing entity identity glyphs with state markers. Visual treatments promoted beyond experiments should be recorded in Frontend UX standards/decisions and demonstrated in the component gallery. Larger/mixed tile treatments must be reconciled with the square-cell baseline and relative layout resolver. | Keep as UI-spec note for roadmap items about active-actor/facing/target visualization and configurable themes/layouts. |
+
+## Inventory-space drawing standard candidate
+
+The new consumer-facing Play mode MVP should introduce a reusable inventory-space view model and renderer/component. This section records the planning standard until implementation evidence is stable enough to promote details into `Frontend-UX-Standards.md`.
+
+### MVP inventory-space model requirements
+
+Every drawn inventory space should be representable with:
+
+1. **Cell metrics**: cell width, cell height, and optional gap/spacing between cells. The first renderer may use a fixed profile, but geometry should not assume gapless cells forever.
+2. **Viewport**: an origin and visible width/height. The MVP can render the full space, but the model should not require full-space rendering.
+3. **Backdrop layer**: a repeated default tile/style per cell. Later polish may derive backdrop treatment from parent entity properties or authored/presentational patterns. Use “backdrop” for the inventory-space base layer so “background” can refer specifically to SadConsole's cell secondary color.
+4. **Entity visual layers**: a required primary identity layer and an optional accent layer. The MVP may render only the primary layer, but the model should not bake in one-glyph/one-color as the only future representation.
+5. **Decorator/overlay layers**: selected, focused, controlled, warning/error, and future target/hover/facing/next-action roles should be separate from identity visuals and must not replace entity glyph identity.
+6. **Optional frame/border**: a space-level border/title/status treatment. Future border styles may visualize parent-space facts such as topology, aperture, enter/exit policy, danger, or diagnostics.
+7. **Stable geometry**: a deterministic mapping from inventory coordinates to rendered cell bounds for future hit-testing, focus routing, and viewport work.
+
+### MVP rendering expectations
+
+The first accepted inventory-space renderer should draw:
+
+- optional border/title;
+- repeated backdrop cells;
+- occupant primary glyphs/tiles;
+- selected/focused/controlled markers;
+- basic warning/error markers if available;
+- footer/status text when useful.
+
+It should remain frontend-owned presentation over shared runtime/content facts. It must not own action legality, visibility semantics, containment rules, or simulation state.
+
+### Deferred inventory-space nice-to-haves
+
+The following should be designed-for where cheap but deferred from the MVP implementation:
+
+- parent-property-driven backdrop tile selection;
+- arbitrary per-cell backdrop patterns;
+- true two-layer entity sprites;
+- palette/accent rendering where each entity visual can draw primary and accent layers;
+- per-cell and per-entity scaling, including smaller entities centered inside larger cells;
+- partial viewport modes such as a focused entity plus its adjacent cells;
+- dynamic dim/recolor/tint for lighting or visibility;
+- raycast lines and vision-blocking overlays;
+- mouse hover and cell/entity hit-testing;
+- animation/blinking/pulsing decorators;
+- richer topology, enter/exit policy, aperture, or warning visualization through space borders.
 
 ## Research summary: SadConsole best-fit mechanics
 

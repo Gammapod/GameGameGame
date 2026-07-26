@@ -29,6 +29,7 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("confirm-overlay", component.Id),
             component => Assert.Equal("candii-tileset", component.Id),
             component => Assert.Equal("play-mode-components", component.Id),
+            component => Assert.Equal("inventory-space", component.Id),
             component => Assert.Equal("footer", component.Id));
     }
 
@@ -52,7 +53,7 @@ public sealed class SadConsoleComponentGalleryTests
 
         Assert.Contains(rows, row => row.Contains("Selectable lists"));
         Assert.Contains(rows, row => row.Contains("Scenario row"));
-        Assert.Contains(rows, row => row.Contains("opens Play/Edit; Esc cancels/back"));
+        Assert.Contains(rows, row => row.Contains("opens Play/Debug/Edit; Esc cancels/back"));
         Assert.Contains(rows, row => row.Contains("Editable fields"));
         Assert.Contains(rows, row => row.Contains("scenario root"));
         Assert.Contains(rows, row => row.Contains("range must be 0-10"));
@@ -65,6 +66,9 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("square 8x8 cells"));
         Assert.Contains(rows, row => row.Contains("Play mode component map"));
         Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
+        Assert.Contains(rows, row => row.Contains("Inventory-space component"));
+        Assert.Contains(rows, row => row.Contains("backdrop glyph 160"));
+        Assert.Contains(rows, row => row.Contains("layers: backdrop"));
         Assert.DoesNotContain(rows, row => row.Contains("Command palette overlay"));
         Assert.Contains(rows, row => row.Contains("Context footer"));
         Assert.Contains(rows, row => row.Contains("arrows select a component"));
@@ -206,6 +210,24 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Equal(158, profile.Roles.PanelBorder.Horizontal);
         Assert.Equal(141, profile.Roles.PanelBorder.Vertical);
         Assert.Empty(profile.Validate());
+    }
+
+    [Fact]
+    public void GalleryIncludesInventorySpaceComponentAsExecutablePatternReference()
+    {
+        var gallery = ComponentGalleryScreen.CreateDefault();
+
+        var inventorySpace = Assert.IsType<InventorySpaceComponent>(gallery.Components().Single(component => component.Id == "inventory-space"));
+
+        Assert.Equal(160, inventorySpace.View.Backdrop.Tile.Glyph);
+        Assert.Equal(0x808080, inventorySpace.View.Backdrop.Tile.ForegroundRgb);
+        Assert.Equal(0x404040, inventorySpace.View.Backdrop.Tile.BackgroundRgb);
+        Assert.Equal(5, inventorySpace.View.Viewport.Width);
+        Assert.Equal(4, inventorySpace.View.Viewport.Height);
+        Assert.Equal(2, inventorySpace.View.Entities.Count);
+        Assert.Contains(inventorySpace.View.Decorators, decorator => decorator.Role == InventorySpaceDecoratorRole.Controlled);
+        Assert.Same(InventorySpaceRenderOptions.FramedDebug, inventorySpace.Options);
+        Assert.True(inventorySpace.Bounds.Height >= inventorySpace.RequiredHeight);
     }
 
     [Fact]

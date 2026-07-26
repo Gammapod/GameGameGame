@@ -18,12 +18,14 @@ internal sealed class ScenarioSelectionConsole : Console
     private readonly SadConsoleTheme _theme;
     private readonly SadConsoleDisplaySettings _displaySettings;
     private readonly SadConsoleComponentRenderer _renderer;
+    private readonly IConsumerPlayModeDisplay _consumerPlayModeDisplay;
     private ScenarioEditScreen? _scenarioEditScreen;
     private EntityTemplateEditScreen? _entityTemplateEditScreen;
     private InventoryGridEditScreen? _inventoryGridEditScreen;
     private ActionPlanEditScreen? _actionPlanEditScreen;
     private GameplayMockConsole? _playMockConsole;
-    private string _message = "New Scenario Selection. Up/Down selects scenario. Enter opens Play/Edit. Esc exits.";
+    private ConsumerPlayModeConsole? _consumerPlayConsole;
+    private string _message = "New Scenario Selection. Up/Down selects scenario. Enter opens Play/Debug/Edit. Esc exits.";
 
     internal readonly record struct ScenarioSelectionKeyboardFocus(bool UseKeyboard, bool IsFocused, FocusBehavior FocusedMode);
 
@@ -34,6 +36,7 @@ internal sealed class ScenarioSelectionConsole : Console
         _theme = theme ?? SadConsoleTheme.Default;
         _displaySettings = displaySettings ?? startup.ActiveDisplaySettings;
         _renderer = new SadConsoleComponentRenderer(this, _theme, _displaySettings);
+        _consumerPlayModeDisplay = new SadConsoleConsumerPlayModeDisplay();
         _screen = ScenarioSelectionScreen.FromCatalog(startup.Catalog);
         UseKeyboard = true;
         IsFocused = true;
@@ -46,6 +49,11 @@ internal sealed class ScenarioSelectionConsole : Console
         if (_playMockConsole is not null)
         {
             return _playMockConsole.ProcessKeyboard(keyboard);
+        }
+
+        if (_consumerPlayConsole is not null)
+        {
+            return _consumerPlayConsole.ProcessKeyboard(keyboard);
         }
 
         if (_entityTemplateEditScreen?.IsTextEntryOverlayActive == true)
@@ -187,14 +195,18 @@ internal sealed class ScenarioSelectionConsole : Console
             return;
         }
 
-        // Play/Edit are intentionally visible routing results for this phase. The next
+        // Play/Debug/Edit are intentionally visible routing results for this phase. The next
         // screens will consume these results once rebuilt on the component API.
-        if (result.Kind is ScenarioSelectionResultKind.Play or ScenarioSelectionResultKind.Edit)
+        if (result.Kind is ScenarioSelectionResultKind.Play or ScenarioSelectionResultKind.Debug or ScenarioSelectionResultKind.Edit)
         {
             _message = result.Message;
             if (result.Kind == ScenarioSelectionResultKind.Play && result.Scenario is { } playScenario)
             {
-                LaunchPlayMock(playScenario);
+                LaunchConsumerPlay(playScenario);
+            }
+            else if (result.Kind == ScenarioSelectionResultKind.Debug && result.Scenario is { } debugScenario)
+            {
+                LaunchPlayMock(debugScenario);
             }
             else if (result.Kind == ScenarioSelectionResultKind.Edit && result.Scenario is { } scenario)
             {
@@ -213,6 +225,16 @@ internal sealed class ScenarioSelectionConsole : Console
         _message = $"Launched editor-connected Play UX mock for {scenario.Name}.";
     }
 
+    private void LaunchConsumerPlay(GameGameGame.Content.ScenarioCatalogEntry scenario)
+    {
+        _renderer.ClearOverlay();
+
+        var layout = _consumerPlayModeDisplay.EnterFullscreenAndResolveLayout(_displaySettings);
+        _consumerPlayConsole = new ConsumerPlayModeConsole(scenario, ReturnFromConsumerPlay, _theme, _displaySettings, layout);
+        SadConsole.Game.Instance.Screen = _consumerPlayConsole;
+        _message = $"Launched new Play mode for {scenario.Name}.";
+    }
+
     private void ReturnFromPlayMock()
     {
         if (_playMockConsole is not null)
@@ -225,6 +247,20 @@ internal sealed class ScenarioSelectionConsole : Console
         RestoreScenarioSelectionInputFocus();
         _message = "Returned from Play UX mock.";
         Redraw();
+    }
+
+    private void ReturnFromConsumerPlay()
+    {
+        if (_consumerPlayConsole is not null)
+        {
+            _consumerPlayConsole.IsFocused = false;
+            _consumerPlayConsole = null;
+        }
+
+        RestoreScenarioSelectionInputFocus();
+        _message = "Returned from new Play mode.";
+        Redraw();
+        SadConsole.Game.Instance.Screen = this;
     }
 
     private void RestoreScenarioSelectionInputFocus()
@@ -361,7 +397,7 @@ internal sealed class ScenarioSelectionConsole : Console
 
     private void Redraw()
     {
-        if (_playMockConsole is not null)
+        if (_playMockConsole is not null || _consumerPlayConsole is not null)
         {
             _renderer.ClearOverlay();
             Surface.IsDirty = true;

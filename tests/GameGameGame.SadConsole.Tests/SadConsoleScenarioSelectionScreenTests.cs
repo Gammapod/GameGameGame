@@ -20,7 +20,7 @@ public sealed class SadConsoleScenarioSelectionScreenTests
         Assert.Single(components);
         Assert.Equal("scenario-list", components[0].Id);
         Assert.Equal(UiComponentState.Focused, components[0].State);
-        Assert.Contains("Enter opens Play/Edit", screen.FooterText());
+        Assert.Contains("Enter opens Play/Debug/Edit", screen.FooterText());
     }
 
     [Fact]
@@ -59,11 +59,14 @@ public sealed class SadConsoleScenarioSelectionScreenTests
     }
 
     [Fact]
-    public void ScenarioSelectionCommandPanelRoutesPlayAndEditOnly()
+    public void ScenarioSelectionCommandPanelRoutesPlayDebugAndEdit()
     {
         var screen = ScenarioSelectionScreen.FromCatalog(DemoCatalog());
 
         screen.Handle(UiComponentCommand.Select);
+        var panel = Assert.IsType<SelectableListComponent>(screen.OverlayComponent());
+        Assert.Equal(["Play", "Debug", "Edit"], panel.Items.Select(item => item.Label).ToArray());
+
         var play = screen.Handle(UiComponentCommand.Select);
 
         Assert.Equal(ScenarioSelectionResultKind.Play, play.Kind);
@@ -71,6 +74,15 @@ public sealed class SadConsoleScenarioSelectionScreenTests
 
         screen = ScenarioSelectionScreen.FromCatalog(DemoCatalog());
         screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
+        var debug = screen.Handle(UiComponentCommand.Select);
+
+        Assert.Equal(ScenarioSelectionResultKind.Debug, debug.Kind);
+        Assert.Equal("scenario-one", debug.Scenario?.ScenarioId);
+
+        screen = ScenarioSelectionScreen.FromCatalog(DemoCatalog());
+        screen.Handle(UiComponentCommand.Select);
+        screen.Handle(UiComponentCommand.Down);
         screen.Handle(UiComponentCommand.Down);
         var edit = screen.Handle(UiComponentCommand.Select);
 
@@ -82,6 +94,8 @@ public sealed class SadConsoleScenarioSelectionScreenTests
         screen.Handle(UiComponentCommand.Select);
         screen.Handle(UiComponentCommand.Down);
         Assert.Equal(1, screen.SelectedCommandIndex);
+        screen.Handle(UiComponentCommand.Down);
+        Assert.Equal(2, screen.SelectedCommandIndex);
     }
 
     [Fact]
@@ -136,6 +150,7 @@ public sealed class SadConsoleScenarioSelectionScreenTests
         Assert.Equal("legacy", screen.SelectedSection?.Id);
         Assert.Equal("legacy-one", initialList.SelectedItem?.Id);
         Assert.Contains("Left/Right changes curated section", screen.FooterText());
+        Assert.Contains("Play/Debug/Edit", screen.FooterText());
 
         var moved = screen.Handle(UiComponentCommand.Right);
         var deltaList = Assert.IsType<SelectableListComponent>(screen.ScenarioListComponent());
