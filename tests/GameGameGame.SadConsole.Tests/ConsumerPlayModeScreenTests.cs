@@ -8,7 +8,7 @@ namespace GameGameGame.SadConsole.Tests;
 public sealed class ConsumerPlayModeScreenTests
 {
     [Fact]
-    public void ConsumerPlayModeBuildsStatusAndCurrentSpaceComponentsFromSession()
+    public void ConsumerPlayModeBuildsCenteredBareCurrentSpaceGridFromSession()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
         var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
@@ -19,22 +19,37 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.NotNull(screen.ControlledActorProjection);
         Assert.NotNull(screen.CurrentPlaceProjection);
         Assert.NotNull(screen.CurrentSpaceView);
-        Assert.Contains(components, component => component.Id == "0.1");
-        Assert.Contains(components, component => component.Id == "0.2");
-
-        var status = Assert.IsType<PanelComponent>(components.Single(component => component.Id == "0.1"));
-        Assert.Contains(status.BodyRows, row => row.Contains("Controlled actor:"));
-        Assert.Contains(status.BodyRows, row => row.Contains("Current space:"));
-
-        var currentSpace = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "0.2"));
+        var currentSpace = Assert.IsType<InventorySpaceComponent>(Assert.Single(components));
+        Assert.Equal("current-space-grid", currentSpace.Id);
         Assert.Equal(UiComponentState.Focused, currentSpace.State);
-        Assert.Contains("Current space", currentSpace.Title);
-        Assert.Contains(currentSpace.BodyRows, row => row.StartsWith("plane:", StringComparison.Ordinal));
-        Assert.Contains(currentSpace.BodyRows, row => row.StartsWith("size:", StringComparison.Ordinal));
-        Assert.Contains(currentSpace.BodyRows, row => row.StartsWith("view:", StringComparison.Ordinal));
-        Assert.Contains(currentSpace.BodyRows, row => row.StartsWith("layers:", StringComparison.Ordinal));
+        Assert.Same(InventorySpaceRenderOptions.Bare, currentSpace.Options);
+        Assert.Empty(currentSpace.BodyRows);
         Assert.Equal(1, currentSpace.View.CellMetrics.Width);
         Assert.True(currentSpace.Bounds.Height >= currentSpace.RequiredHeight);
+
+        var debugRows = screen.DebugRows();
+        Assert.Contains(debugRows, row => row.Contains("Controlled actor:"));
+        Assert.Contains(debugRows, row => row.Contains("Current space:"));
+        Assert.Contains(debugRows, row => row.StartsWith("plane:", StringComparison.Ordinal));
+        Assert.Contains(debugRows, row => row.StartsWith("size:", StringComparison.Ordinal));
+        Assert.Contains(debugRows, row => row.StartsWith("view:", StringComparison.Ordinal));
+        Assert.Contains(debugRows, row => row.StartsWith("layers:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ConsumerPlayModeCanOverlayDebugLabelsWithoutMovingGridCells()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        var bare = Assert.IsType<InventorySpaceComponent>(screen.CurrentSpaceGridComponent(drawable, showDebugLabels: false));
+        var labeled = Assert.IsType<InventorySpaceComponent>(screen.CurrentSpaceGridComponent(drawable, showDebugLabels: true));
+
+        Assert.Same(InventorySpaceRenderOptions.Bare, bare.Options);
+        Assert.Same(InventorySpaceRenderOptions.Labeled, labeled.Options);
+        Assert.Equal(bare.Bounds.Left, labeled.Bounds.Left + 4);
+        Assert.Equal(bare.Bounds.Top, labeled.Bounds.Top + 1);
     }
 
     [Fact]
@@ -87,16 +102,13 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
-    public void ConsumerPlayModeReportsLaunchFailureAsDiagnosticsComponent()
+    public void ConsumerPlayModeReportsLaunchFailureInDebugRows()
     {
         var screen = ConsumerPlayModeScreen.Open(new ScenarioCatalogEntry("missing-file.yaml", "missing", "Missing", "Missing file"));
 
-        var component = Assert.Single(screen.Components());
+        Assert.Empty(screen.Components());
 
-        var diagnostics = Assert.IsType<PanelComponent>(component);
-        Assert.Equal("0.diagnostics", diagnostics.Id);
-        Assert.Equal(UiComponentState.Error, diagnostics.State);
-        Assert.Contains(diagnostics.BodyRows, row => row.Contains("Could not launch scenario"));
+        Assert.Contains(screen.DebugRows(), row => row.Contains("Could not launch scenario"));
     }
 
     private static ScenarioCatalogEntry DemoEntry() => new("prototype", "prototype", "Prototype", "Prototype session");

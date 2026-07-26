@@ -61,19 +61,43 @@ internal sealed class ConsumerPlayModeConsole : Console
     private void Redraw()
     {
         _renderer.ClearSurface();
-        DrawBorderBuffer();
         var drawable = _layout.DrawableBounds;
-        _renderer.PrintClipped(drawable.Left, drawable.Top, drawable.Width, _screen.Title, Color.Yellow);
-        _renderer.PrintClipped(drawable.Left, drawable.Top + 1, drawable.Width, _screen.Purpose, Color.White);
-        _renderer.PrintClipped(drawable.Left, drawable.Top + 2, drawable.Width, $"Scenario: {_scenario.Name} ({_scenario.ScenarioId})", Color.LightGray);
-        foreach (var component in _screen.Components(drawable))
+
+        if (_screen.CurrentSpaceGridComponent(drawable, showDebugLabels: false) is { } currentSpaceGrid)
         {
-            _renderer.DrawComponent(component);
+            _renderer.DrawComponent(currentSpaceGrid);
         }
 
-        _renderer.PrintClipped(drawable.Left, drawable.Bottom - 2, drawable.Width, _screen.FooterText, Color.DarkGray);
-        _renderer.PrintClipped(drawable.Left, drawable.Bottom - 1, drawable.Width, $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {drawable.Width}x{drawable.Height}", Color.DarkGray);
+        if (_layout.DebugVisible)
+        {
+            DrawDebugOverlay(drawable);
+        }
+
+        DrawBorderBuffer();
         Surface.IsDirty = true;
+    }
+
+    private void DrawDebugOverlay(SadConsoleRect drawable)
+    {
+        if (_screen.CurrentSpaceGridComponent(drawable, showDebugLabels: true) is { } currentSpaceGrid)
+        {
+            _renderer.DrawComponent(currentSpaceGrid);
+        }
+
+        var rows = new List<string>
+        {
+            _screen.FooterText,
+            $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {drawable.Width}x{drawable.Height}",
+            $"Scenario: {_scenario.Name} ({_scenario.ScenarioId})"
+        };
+        rows.AddRange(_screen.DebugRows());
+
+        var maxRows = Math.Min(rows.Count, Math.Max(0, drawable.Height));
+        var startY = Math.Max(drawable.Top, drawable.Bottom - maxRows);
+        for (var index = 0; index < maxRows; index++)
+        {
+            _renderer.PrintClipped(drawable.Left, startY + index, drawable.Width, rows[index], Color.DarkGray);
+        }
     }
 
     private void DrawBorderBuffer()

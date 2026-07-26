@@ -253,6 +253,6 @@ Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items for
 
 ## Near-term selection recommendation
 
-Current selected focused frontend sprint: `docs/Plans/New-Play-Mode-MVP-Sprint-Plan.md`. It starts the consumer-facing Play mode as an isolated componentized route inside the existing SadConsole project, while relabeling the current play/debug path as `Debug` and introducing a reusable inventory-space renderer for the controlled actor's current space.
+Recently completed focused frontend sprint: `docs/Plans/New-Play-Mode-MVP-Sprint-Plan.md`. It started the consumer-facing Play mode as an isolated componentized route inside the existing SadConsole project, relabeled the previous play/debug path as `Debug`, introduced a reusable inventory-space renderer for the controlled actor's current space, and stabilized the fullscreen Play shell with a one-tile border buffer plus `F12` debug overlay.
 
 If a smaller SadConsole/frontend slice is selected before or around that sprint, use `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` as completed/reference layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a future active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.

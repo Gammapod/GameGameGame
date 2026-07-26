@@ -150,7 +150,9 @@ The SadConsole inventory-space component is the first reusable player-facing sta
 
 3. **Drawable bounds are the only content target.**
    - Play-mode screen models/components should receive the inner drawable bounds and place all components within them.
-   - `F12` toggles Play-mode debug presentation state; currently this changes only the border-buffer color.
+   - Normal Play mode should render only player-facing content; current MVP normal mode renders the centered bare inventory grid without title, frame, row labels, column labels, status panel, or diagnostics.
+   - `F12` toggles Play-mode debug presentation state; currently this changes the border-buffer color to red, overlays row/column labels around the grid, and draws controls/display/scenario/status/current-space diagnostics as topmost opaque debug text.
+   - Pixel-perfect centering of the final SadConsole tile surface within leftover monitor pixels is deferred render-rect/display-metrics work and should not be approximated by moving gameplay components.
 
 ## Glyph standards
 

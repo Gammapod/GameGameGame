@@ -60,63 +60,68 @@ internal sealed class ConsumerPlayModeScreen
     internal static ConsumerPlayModeScreen FromSession(ScenarioCatalogEntry catalogEntry, PlayableScenarioSession session) =>
         new(catalogEntry, session, launchFailure: null);
 
+    public InventorySpaceComponent? CurrentSpaceGridComponent(SadConsoleRect drawableBounds, bool showDebugLabels)
+    {
+        if (CurrentSpaceView is not { } currentSpaceView)
+        {
+            return null;
+        }
+
+        var bareSizing = new InventorySpaceComponent(
+            "current-space-grid-sizing",
+            currentSpaceView.Title,
+            SadConsoleRect.FromSize(0, 0, 1, 1),
+            currentSpaceView,
+            options: InventorySpaceRenderOptions.Bare);
+
+        var gridLeft = drawableBounds.Left + Math.Max(0, (drawableBounds.Width - bareSizing.RequiredWidth) / 2);
+        var gridTop = drawableBounds.Top + Math.Max(0, (drawableBounds.Height - bareSizing.RequiredHeight) / 2);
+        var bounds = SadConsoleRect.FromSize(
+            gridLeft,
+            gridTop,
+            Math.Min(drawableBounds.Width, bareSizing.RequiredWidth),
+            Math.Min(drawableBounds.Height, bareSizing.RequiredHeight));
+
+        if (showDebugLabels)
+        {
+            bounds = SadConsoleRect.FromSize(
+                Math.Max(drawableBounds.Left, bounds.Left - 4),
+                Math.Max(drawableBounds.Top, bounds.Top - 1),
+                Math.Min(drawableBounds.Width, bounds.Width + 4),
+                Math.Min(drawableBounds.Height, bounds.Height + 1));
+        }
+
+        return new InventorySpaceComponent(
+            "current-space-grid",
+            currentSpaceView.Title,
+            bounds,
+            currentSpaceView,
+            state: UiComponentState.Focused,
+            options: showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare);
+    }
+
+    public IReadOnlyList<string> DebugRows()
+    {
+        var rows = new List<string>();
+        rows.AddRange(BuildStatusRows());
+        rows.AddRange(BuildCurrentSpaceRows());
+        rows.AddRange(BuildDiagnosticsRows());
+        if (Session is null)
+        {
+            rows.Add($"Could not launch scenario: {LaunchFailure ?? "unknown"}");
+            rows.Add($"content: {CatalogEntry.ContentPath}");
+        }
+
+        return rows;
+    }
+
     public IReadOnlyList<IUiComponent> Components() => Components(SadConsoleRect.FromSize(1, 1, 118, 40));
 
     public IReadOnlyList<IUiComponent> Components(SadConsoleRect drawableBounds)
     {
-        if (Session is null)
-        {
-            return
-            [
-                new PanelComponent(
-                    "0.diagnostics",
-                    "Play launch diagnostics",
-                    SadConsoleRect.FromSize(drawableBounds.Left, drawableBounds.Top + 4, Math.Max(1, drawableBounds.Width), Math.Min(12, Math.Max(1, drawableBounds.Height - 6))),
-                    [$"Could not launch scenario: {LaunchFailure ?? "unknown"}", $"scenario: {CatalogEntry.Name}", $"content: {CatalogEntry.ContentPath}"],
-                    UiComponentState.Error)
-            ];
-        }
-
-        var components = new List<IUiComponent>
-        {
-            new PanelComponent(
-                "0.1",
-                "0.1 Play status",
-                SadConsoleRect.FromSize(drawableBounds.Left, drawableBounds.Top + 4, Math.Max(1, drawableBounds.Width), 8),
-                BuildStatusRows(),
-                UiComponentState.Selected)
-        };
-
-        components.Add(CurrentSpaceView is { } currentSpaceView
-            ? new InventorySpaceComponent(
-                "0.2",
-                $"0.2 Current space: {currentSpaceView.Title}",
-                CurrentSpaceBounds(drawableBounds, currentSpaceView, BuildCurrentSpaceRows()),
-                currentSpaceView,
-                BuildCurrentSpaceRows(),
-                UiComponentState.Focused,
-                InventorySpaceRenderOptions.FramedDebug)
-            : new PanelComponent(
-                "0.2",
-                CurrentPlaceProjection is null ? "0.2 Current space" : $"0.2 Current space: {CurrentPlaceProjection.Name}",
-                SadConsoleRect.FromSize(drawableBounds.Left, drawableBounds.Top + 12, Math.Max(1, drawableBounds.Width), Math.Min(10, Math.Max(1, drawableBounds.Height - 13))),
-                BuildCurrentSpaceRows(),
-                CurrentPlaceProjection is null ? UiComponentState.Error : UiComponentState.Focused));
-
-        var diagnostics = BuildDiagnosticsRows();
-        if (diagnostics.Count > 0)
-        {
-            var diagnosticsHeight = Math.Min(5, Math.Max(1, drawableBounds.Height - 1));
-            var diagnosticsTop = Math.Max(drawableBounds.Top, drawableBounds.Bottom - diagnosticsHeight);
-            components.Add(new PanelComponent(
-                "0.diagnostics",
-                "Play setup diagnostics",
-                SadConsoleRect.FromSize(drawableBounds.Left, diagnosticsTop, Math.Max(1, drawableBounds.Width), diagnosticsHeight),
-                diagnostics,
-                UiComponentState.Error));
-        }
-
-        return components;
+        return CurrentSpaceGridComponent(drawableBounds, showDebugLabels: false) is { } grid
+            ? [grid]
+            : [];
     }
 
     private IReadOnlyList<string> BuildStatusRows()

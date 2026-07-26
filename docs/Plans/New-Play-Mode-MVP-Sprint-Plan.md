@@ -3,7 +3,7 @@ id: plan.new-play-mode-mvp-sprint
 title: New Play Mode MVP Sprint Plan
 kind: plan
 subkind: sprint-plan
-status: active
+status: completed
 owners: [frontend-owner]
 audience: [frontend-owner, core-owner]
 lane: frontend-ux
@@ -23,7 +23,7 @@ related:
 
 # New Play Mode MVP Sprint Plan
 
-Status: Active focused sprint plan for the first consumer-facing SadConsole Play mode skeleton.
+Status: Completed focused sprint plan for the first consumer-facing SadConsole Play mode skeleton.
 
 ## Sprint goal
 
@@ -50,6 +50,14 @@ At the end of the sprint:
 6. The new Play mode launches the selected scenario through existing shared scenario/session services.
 7. The new Play mode renders the controlled actor's current inventory space using a reusable inventory-space view model and renderer/component.
 8. The new Play mode attempts fullscreen, calculates logical draw size from display pixels, reserves a one-tile glyph-181 border buffer, and confines gameplay UI to the inner drawable area.
+
+Completion note:
+
+- The route split is implemented: `Play` launches the new consumer Play mode, `Debug` launches the previous Simulation/play debug path, and `Edit` keeps the editor route.
+- The new Play mode launches scenarios through `PlayableScenarioLauncher`, resolves the controlled actor's current containing space through shared projection services, and renders only the centered bare inventory grid in normal mode.
+- The Play shell switches to fullscreen through SadConsole host APIs, resizes the SadConsole output surface with the host, calculates cell dimensions from active scaled tile size, and reserves the outer one-tile border buffer for presentation chrome only.
+- `F12` toggles debug presentation: border color changes to red, row/column labels are drawn around the centered grid, and bottom diagnostics show controls, display metrics, scenario/status/current-space facts, and launch/runtime diagnostics.
+- The inventory-space view model/component is accepted as stable for MVP reuse and demonstrated in the component gallery.
 
 ## Milestone 1: Route split — Play / Debug / Edit
 
@@ -241,3 +249,5 @@ These are intentionally deferred from the MVP but should remain visible in the U
 - mouse hover and cell/entity hit-testing;
 - animation/blinking/pulsing decorators;
 - richer topology, enter/exit policy, aperture, or warning visualization through space borders.
+- pixel-perfect centering of the final SadConsole tile surface within leftover monitor pixels when the display resolution is not evenly divisible by the active scaled tile size;
+- semi-transparent debug overlays; current debug text/glyphs are intentionally opaque and drawn topmost.
