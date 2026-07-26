@@ -255,6 +255,13 @@ internal sealed class FrontendEntityTemplateMutationService(
             $"Cleared exit policy for template {templateId}. Preview stale until P rematerializes.",
             $"Could not clear exit policy for template {templateId}");
 
+    public FrontendEditorMutationResult SetTemplateTopologyPolicy(string templateId, EntityTopologyPolicy topologyPolicy) =>
+        UpdateTemplatePolicy(
+            templateId,
+            template => template with { TopologyPolicy = topologyPolicy },
+            $"Set topology policy for template {templateId} to {topologyPolicy}. Preview stale until P rematerializes.",
+            $"Could not set topology policy for template {templateId}");
+
     private FrontendEditorMutationResult UpdateTemplatePolicy(
         string templateId,
         Func<EntityTemplate, EntityTemplate> update,

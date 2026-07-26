@@ -3,7 +3,8 @@ namespace GameGameGame.Core;
 public enum TopologyEdgeKind
 {
     DefaultGrid,
-    DirectedOverlay
+    DirectedOverlay,
+    EntityTopologyPolicy
 }
 
 public sealed record TopologyNeighbor(
@@ -216,6 +217,195 @@ public sealed class DirectedOverlayTopologyService : ITopologyService
 
         return inner.EvaluateAdjacency(world, first, second);
     }
+
+    private static bool TryCoordinateDirection(PlaneCoord first, PlaneCoord second, out Direction direction)
+    {
+        direction = default;
+        if (first.PlaneId != second.PlaneId)
+        {
+            return false;
+        }
+
+        var deltaX = second.Coord.X - first.Coord.X;
+        var deltaY = second.Coord.Y - first.Coord.Y;
+        var resolved = (deltaX, deltaY) switch
+        {
+            (0, -1) => (Direction?)Direction.North,
+            (1, -1) => Direction.NorthEast,
+            (1, 0) => Direction.East,
+            (1, 1) => Direction.SouthEast,
+            (0, 1) => Direction.South,
+            (-1, 1) => Direction.SouthWest,
+            (-1, 0) => Direction.West,
+            (-1, -1) => Direction.NorthWest,
+            _ => null
+        };
+        if (resolved is null)
+        {
+            return false;
+        }
+
+        direction = resolved.Value;
+        return true;
+    }
+}
+
+public sealed class EntityTopologyService(ITopologyService inner) : ITopologyService
+{
+    public bool TryGetNeighbor(WorldState world, PlaneCoord origin, Direction direction, out TopologyNeighbor neighbor)
+    {
+        if (TryGetOutwardNeighbor(world, origin, direction, out neighbor))
+        {
+            return !neighbor.IsBlocked;
+        }
+
+        if (TryGetInwardNeighbor(world, origin, direction, out neighbor))
+        {
+            return !neighbor.IsBlocked;
+        }
+
+        return inner.TryGetNeighbor(world, origin, direction, out neighbor);
+    }
+
+    public IReadOnlyList<TopologyNeighbor> GetNeighbors(WorldState world, PlaneCoord origin) =>
+        DirectionMath.AllDirections.Select(direction =>
+        {
+            TryGetNeighbor(world, origin, direction, out var neighbor);
+            return neighbor;
+        }).ToList();
+
+    public AdjacencyEvaluation EvaluateAdjacency(WorldState world, PlaneCoord first, PlaneCoord second)
+    {
+        foreach (var direction in DirectionMath.AllDirections)
+        {
+            TryGetNeighbor(world, first, direction, out var neighbor);
+            if (neighbor.Destination == second)
+            {
+                return neighbor.IsBlocked
+                    ? new AdjacencyEvaluation(
+                        AreAdjacent: false,
+                        Direction: direction,
+                        IsIntercardinal: DirectionMath.OrthogonalCorners(direction) is not null,
+                        FailureReason: neighbor.FailureReason,
+                        FailureDetail: neighbor.FailureDetail)
+                    : new AdjacencyEvaluation(
+                        AreAdjacent: true,
+                        Direction: direction,
+                        IsIntercardinal: DirectionMath.OrthogonalCorners(direction) is not null,
+                        FailureReason: null,
+                        FailureDetail: null);
+            }
+        }
+
+        if (TryCoordinateDirection(first, second, out var coordinateDirection) &&
+            TryGetNeighbor(world, first, coordinateDirection, out var coordinateNeighbor) &&
+            coordinateNeighbor.Kind == TopologyEdgeKind.EntityTopologyPolicy &&
+            coordinateNeighbor.Destination != second)
+        {
+            return new AdjacencyEvaluation(
+                AreAdjacent: false,
+                Direction: coordinateDirection,
+                IsIntercardinal: DirectionMath.OrthogonalCorners(coordinateDirection) is not null,
+                FailureReason.TargetNotAdjacent,
+                $"entity topology direction {coordinateDirection} from {first} resolves to {coordinateNeighbor.Destination}, not {second}");
+        }
+
+        return inner.EvaluateAdjacency(world, first, second);
+    }
+
+    private static bool TryGetOutwardNeighbor(WorldState world, PlaneCoord origin, Direction direction, out TopologyNeighbor neighbor)
+    {
+        neighbor = default!;
+        if (!InventoryPlaneOwnership.TryFindOwner(world, origin.PlaneId, out var ownerId) ||
+            !world.Entities.TryGetValue(ownerId, out var owner) ||
+            !ConnectsOutward(owner.TopologyPolicy) ||
+            !IsOnBoundary(origin.Coord, owner.InventoryWidth, owner.InventoryHeight, direction))
+        {
+            return false;
+        }
+
+        var ownerLocation = world.GetEntityLocation(ownerId);
+        var destination = new PlaneCoord(ownerLocation.PlaneId, ownerLocation.Coord.Offset(direction));
+        neighbor = CreateEntityTopologyNeighbor(world, destination, direction);
+        return true;
+    }
+
+    private static bool TryGetInwardNeighbor(WorldState world, PlaneCoord origin, Direction direction, out TopologyNeighbor neighbor)
+    {
+        neighbor = default!;
+        if (world.GetOccupant(new PlaneCoord(origin.PlaneId, origin.Coord.Offset(direction))) is not { } ownerId ||
+            !world.Entities.TryGetValue(ownerId, out var owner) ||
+            !ConnectsInward(owner.TopologyPolicy) ||
+            world.GetInventoryPlaneId(ownerId) is not { } inventoryPlaneId)
+        {
+            return false;
+        }
+
+        var boundaryDirection = DirectionMath.Reverse(direction);
+        var destination = new PlaneCoord(inventoryPlaneId, PreferredBoundaryCoord(owner.InventoryWidth, owner.InventoryHeight, boundaryDirection));
+        neighbor = CreateEntityTopologyNeighbor(world, destination, direction);
+        return true;
+    }
+
+    private static TopologyNeighbor CreateEntityTopologyNeighbor(WorldState world, PlaneCoord destination, Direction direction)
+    {
+        if (!world.Planes.TryGetValue(destination.PlaneId, out var plane) ||
+            !plane.Contains(destination.Coord) ||
+            !world.TryGetNodeId(destination, out _))
+        {
+            return new TopologyNeighbor(
+                destination,
+                direction,
+                TopologyEdgeKind.EntityTopologyPolicy,
+                IsBlocked: true,
+                FailureReason.MoveOutOfBounds,
+                $"entity topology destination {destination} is not a valid node");
+        }
+
+        return new TopologyNeighbor(
+            destination,
+            direction,
+            TopologyEdgeKind.EntityTopologyPolicy,
+            IsBlocked: false,
+            FailureReason: null,
+            FailureDetail: null);
+    }
+
+    private static bool ConnectsInward(EntityTopologyPolicy policy) =>
+        policy is EntityTopologyPolicy.ConnectsInward or EntityTopologyPolicy.ConnectsInwardAndOutward;
+
+    private static bool ConnectsOutward(EntityTopologyPolicy policy) =>
+        policy is EntityTopologyPolicy.ConnectsOutward or EntityTopologyPolicy.ConnectsInwardAndOutward;
+
+    private static bool IsOnBoundary(GridCoord coord, int width, int height, Direction direction) => direction switch
+    {
+        Direction.North => coord.Y == 0,
+        Direction.NorthEast => coord.Y == 0 && coord.X == width - 1,
+        Direction.East => coord.X == width - 1,
+        Direction.SouthEast => coord.Y == height - 1 && coord.X == width - 1,
+        Direction.South => coord.Y == height - 1,
+        Direction.SouthWest => coord.Y == height - 1 && coord.X == 0,
+        Direction.West => coord.X == 0,
+        Direction.NorthWest => coord.Y == 0 && coord.X == 0,
+        _ => false
+    };
+
+    private static GridCoord PreferredBoundaryCoord(int width, int height, Direction direction) => direction switch
+    {
+        Direction.North => new GridCoord(SecondFromLeft(width), 0),
+        Direction.NorthEast => new GridCoord(width - 1, 0),
+        Direction.East => new GridCoord(width - 1, SecondFromTop(height)),
+        Direction.SouthEast => new GridCoord(width - 1, height - 1),
+        Direction.South => new GridCoord(SecondFromLeft(width), height - 1),
+        Direction.SouthWest => new GridCoord(0, height - 1),
+        Direction.West => new GridCoord(0, SecondFromTop(height)),
+        Direction.NorthWest => new GridCoord(0, 0),
+        _ => new GridCoord(0, 0)
+    };
+
+    private static int SecondFromLeft(int width) => Math.Min(1, Math.Max(0, width - 1));
+
+    private static int SecondFromTop(int height) => Math.Min(1, Math.Max(0, height - 1));
 
     private static bool TryCoordinateDirection(PlaneCoord first, PlaneCoord second, out Direction direction)
     {

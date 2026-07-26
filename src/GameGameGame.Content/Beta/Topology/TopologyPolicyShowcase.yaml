@@ -1,0 +1,133 @@
+entityTemplates:
+  topologyPolicyShowcaseRoom:
+    name: Topology Policy Showcase Room
+    inventoryWidth: 8
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: topologyPolicyPlayer
+      templateId: topologyPolicyPlayer
+      coord:
+        x: 3
+        y: 3
+      controller: Player
+    - entityId: topologyPolicyNoneContainer
+      templateId: topologyPolicyNoneContainer
+      coord:
+        x: 4
+        y: 3
+    - entityId: topologyPolicyConnectsInwardContainer
+      templateId: topologyPolicyConnectsInwardContainer
+      coord:
+        x: 3
+        y: 2
+    - entityId: topologyPolicyConnectsOutwardContainer
+      templateId: topologyPolicyConnectsOutwardContainer
+      coord:
+        x: 3
+        y: 4
+    - entityId: topologyPolicyConnectsInwardAndOutwardContainer
+      templateId: topologyPolicyConnectsInwardAndOutwardContainer
+      coord:
+        x: 2
+        y: 3
+
+  topologyPolicyPlayer:
+    name: Topology Policy Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: topologyPolicyPlayerMoveEnterExit
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+
+  topologyPolicyNoneContainer:
+    name: Topology Policy None Container
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 10
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    topologyPolicy: None
+
+  topologyPolicyConnectsInwardContainer:
+    name: Topology Policy Connects Inward Container
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 10
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    topologyPolicy: ConnectsInward
+
+  topologyPolicyConnectsOutwardContainer:
+    name: Topology Policy Connects Outward Container
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 10
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    topologyPolicy: ConnectsOutward
+
+  topologyPolicyConnectsInwardAndOutwardContainer:
+    name: Topology Policy Connects Inward And Outward Container
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 10
+    carryingCapacity: 20
+    bulk: 3
+    aperture: 10
+    topologyPolicy: ConnectsInwardAndOutward
+
+presentations:
+  topologyPolicyShowcaseRoom:
+    glyph: '#'
+    color: Gray
+  topologyPolicyPlayer:
+    glyph: '@'
+    color: Yellow
+  topologyPolicyNoneContainer:
+    glyph: '0'
+    color: Gray
+  topologyPolicyConnectsInwardContainer:
+    glyph: 'I'
+    color: Cyan
+  topologyPolicyConnectsOutwardContainer:
+    glyph: 'O'
+    color: Green
+  topologyPolicyConnectsInwardAndOutwardContainer:
+    glyph: 'B'
+    color: White
+
+actionPlans:
+  topologyPolicyPlayerMoveEnterExit:
+    id: topologyPolicyPlayerMoveEnterExit
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Forward
+      - kind: EnterTarget
+        targetLabel: target
+      - kind: ExitFacing
+
+scenarios:
+  delta-topology-policy-showcase:
+    name: Delta Topology Policy Showcase
+    scenarioRootEntityTemplateId: topologyPolicyShowcaseRoom
+    playerControls:
+      player-1:
+      - topologyPolicyPlayer

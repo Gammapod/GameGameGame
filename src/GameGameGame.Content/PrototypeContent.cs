@@ -121,7 +121,8 @@ public static class PrototypeContent
             template.Bulk,
             template.Aperture,
             template.EnterPolicy,
-            template.ExitPolicy);
+            template.ExitPolicy,
+            template.TopologyPolicy);
 
         AddEntity(world, entity, options.InventoryPlaneId, options.InventoryPlaneName);
         IEntityActionPlan? actionPlan = null;

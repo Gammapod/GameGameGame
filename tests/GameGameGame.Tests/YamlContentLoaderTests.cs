@@ -108,6 +108,7 @@ public sealed class YamlContentLoaderTests
                 aperture: 10
                 enterPolicy: FarthestFromOccupied
                 exitPolicy: EdgeAlignedWithExitDirection
+                topologyPolicy: ConnectsInwardAndOutward
             presentations:
               room:
                 glyph: R
@@ -119,6 +120,7 @@ public sealed class YamlContentLoaderTests
 
         Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, template.EnterPolicy);
         Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, template.ExitPolicy);
+        Assert.Equal(EntityTopologyPolicy.ConnectsInwardAndOutward, template.TopologyPolicy);
     }
 
     [Fact]
@@ -146,6 +148,7 @@ public sealed class YamlContentLoaderTests
         Assert.Null(template.ExitPolicy);
         Assert.Equal(EntityEnterPolicy.FirstUnoccupiedRowMajor, template.EffectiveEnterPolicy);
         Assert.Equal(EntityExitPolicy.AnyCell, template.EffectiveExitPolicy);
+        Assert.Equal(EntityTopologyPolicy.None, template.TopologyPolicy);
     }
 
     [Fact]

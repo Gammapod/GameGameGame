@@ -1028,25 +1028,31 @@ public sealed class FrontendEditorServiceTests
 
             var setEnter = service.SetTemplateEnterPolicy("wall", EntityEnterPolicy.FarthestFromOccupied);
             var setExit = service.SetTemplateExitPolicy("wall", EntityExitPolicy.EdgeAlignedWithExitDirection);
+            var setTopology = service.SetTemplateTopologyPolicy("wall", EntityTopologyPolicy.ConnectsInward);
 
             Assert.True(setEnter.IsSuccess, setEnter.StatusMessage);
             Assert.True(setExit.IsSuccess, setExit.StatusMessage);
-            var wall = Assert.Single(setExit.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.True(setTopology.IsSuccess, setTopology.StatusMessage);
+            var wall = Assert.Single(setTopology.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
             Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, wall.EnterPolicy);
             Assert.Equal(EntityEnterPolicy.FarthestFromOccupied, wall.EffectiveEnterPolicy);
             Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, wall.ExitPolicy);
             Assert.Equal(EntityExitPolicy.EdgeAlignedWithExitDirection, wall.EffectiveExitPolicy);
+            Assert.Equal(EntityTopologyPolicy.ConnectsInward, wall.TopologyPolicy);
 
             var clearEnter = service.ClearTemplateEnterPolicy("wall");
             var clearExit = service.ClearTemplateExitPolicy("wall");
+            var clearTopology = service.SetTemplateTopologyPolicy("wall", EntityTopologyPolicy.None);
 
             Assert.True(clearEnter.IsSuccess, clearEnter.StatusMessage);
             Assert.True(clearExit.IsSuccess, clearExit.StatusMessage);
-            wall = Assert.Single(clearExit.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.True(clearTopology.IsSuccess, clearTopology.StatusMessage);
+            wall = Assert.Single(clearTopology.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
             Assert.Null(wall.EnterPolicy);
             Assert.Equal(EntityEnterPolicy.FirstUnoccupiedRowMajor, wall.EffectiveEnterPolicy);
             Assert.Null(wall.ExitPolicy);
             Assert.Equal(EntityExitPolicy.AnyCell, wall.EffectiveExitPolicy);
+            Assert.Equal(EntityTopologyPolicy.None, wall.TopologyPolicy);
         }
         finally
         {

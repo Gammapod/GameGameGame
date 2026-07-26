@@ -80,6 +80,10 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
             .ClearTemplateExitPolicy(templateId);
 
+    public FrontendEditorMutationResult SetTemplateTopologyPolicy(string templateId, EntityTopologyPolicy topologyPolicy)
+        => new FrontendEntityTemplateMutationService(Session, GetSnapshot)
+            .SetTemplateTopologyPolicy(templateId, topologyPolicy);
+
     public FrontendEditorMutationResult Save()
     {
         if (Session.FilePath is null)
@@ -285,6 +289,8 @@ public sealed record FrontendEditorEntityTemplateSummary(
     public EntityExitPolicy? ExitPolicy { get; init; }
 
     public EntityExitPolicy EffectiveExitPolicy { get; init; } = EntityExitPolicy.AnyCell;
+
+    public EntityTopologyPolicy TopologyPolicy { get; init; } = EntityTopologyPolicy.None;
 
     public IReadOnlyList<FrontendEditorTargetingRequirementSummary> TargetingRequirements { get; init; } = [];
 

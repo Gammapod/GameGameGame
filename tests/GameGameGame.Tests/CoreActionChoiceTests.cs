@@ -41,6 +41,26 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void ActionChoiceRequestMoveOptionsExposeEntityTopologyDestinations()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsOutward };
+        var movement = new MovementService();
+        var inventoryEastEdge = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, inventoryEastEdge));
+        world.SetActionControlSource(TestWorld.RockId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Move, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        var service = new ActionChoiceService(movement);
+
+        var request = service.CreateRequest(world, TestWorld.RockId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        var east = Assert.Single(choice.DirectionOptions, option => option.Direction == Direction.East);
+        Assert.True(east.CanExecute);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), east.Destination);
+    }
+
+    [Fact]
     public void ActionChoiceRequestExposesPickupTargetsAndInventoryDestinationsFromAuthoredPickupStep()
     {
         var world = TestWorld.CreateWorld();

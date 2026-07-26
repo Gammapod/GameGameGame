@@ -32,6 +32,8 @@ public sealed partial class EditableContentDocument
 
         public EntityExitPolicy? ExitPolicy { get; set; }
 
+        public EntityTopologyPolicy? TopologyPolicy { get; set; }
+
         public string? DefaultActionPlanId { get; set; }
 
         public Dictionary<string, PlanValueDescriptorDto>? DefaultPlanVariables { get; set; }
@@ -51,6 +53,7 @@ public sealed partial class EditableContentDocument
             Aperture = template.Aperture,
             EnterPolicy = template.EnterPolicy,
             ExitPolicy = template.ExitPolicy,
+            TopologyPolicy = template.TopologyPolicy == EntityTopologyPolicy.None ? null : template.TopologyPolicy,
             DefaultActionPlanId = template.DefaultActionPlanId?.Value,
             DefaultPlanVariables = template.DefaultPlanVariables?.ToDictionary(entry => entry.Key, entry => PlanValueDescriptorDto.From(entry.Value)),
             ActionStateDefaults = template.ActionStateDefaults is null ? null : ActorActionStateDefaultsDto.From(template.ActionStateDefaults),

@@ -68,6 +68,14 @@ public enum EntityExitPolicy
     EdgeAlignedWithExitDirection
 }
 
+public enum EntityTopologyPolicy
+{
+    None,
+    ConnectsInward,
+    ConnectsOutward,
+    ConnectsInwardAndOutward
+}
+
 public static class DirectionMath
 {
     public static Direction[] AllDirections { get; } =
@@ -115,7 +123,8 @@ public sealed record Entity(
     int Bulk,
     int Aperture,
     EntityEnterPolicy? EnterPolicy = null,
-    EntityExitPolicy? ExitPolicy = null)
+    EntityExitPolicy? ExitPolicy = null,
+    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None)
 {
     public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
 

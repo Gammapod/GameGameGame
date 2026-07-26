@@ -229,6 +229,75 @@ public sealed class TopologyServiceTests
         Assert.Single(flood, step => step.Coord == remote);
     }
 
+    [Fact]
+    public void EntityTopologyPolicyConnectsInventoryEdgeOutwardToExteriorAdjacency()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsOutward };
+        var movement = new MovementService();
+        var inventoryEastEdge = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, inventoryEastEdge));
+
+        var adjacency = movement.EvaluateAdjacency(world, inventoryEastEdge, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+        var moved = movement.TryMove(world, TestWorld.RockId, Direction.East);
+
+        Assert.True(adjacency.AreAdjacent);
+        Assert.Equal(Direction.East, adjacency.Direction);
+        Assert.True(moved);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void EntityTopologyPolicyConnectsExteriorAdjacencyInwardToPreferredInventoryEdgeCell()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsInward };
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+
+        var expectedInventoryCell = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1));
+        var adjacency = movement.EvaluateAdjacency(world, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), expectedInventoryCell);
+        var moved = movement.TryMove(world, TestWorld.RockId, Direction.West);
+
+        Assert.True(adjacency.AreAdjacent);
+        Assert.Equal(Direction.West, adjacency.Direction);
+        Assert.True(moved);
+        Assert.Equal(expectedInventoryCell, world.GetEntityLocation(TestWorld.RockId));
+        Assert.False(movement.EvaluateAdjacency(world, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), world.GetEntityLocation(TestWorld.PlayerId)).AreAdjacent);
+    }
+
+    [Fact]
+    public void EntityTopologyPolicyConnectsIntercardinalExteriorAdjacencyToInventoryCorners()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsInwardAndOutward };
+        var movement = new MovementService();
+        var topRightInventoryCorner = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0));
+        var northEastExterior = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, topRightInventoryCorner));
+
+        Assert.True(movement.EvaluateAdjacency(world, topRightInventoryCorner, northEastExterior).AreAdjacent);
+        Assert.True(movement.EvaluateAdjacency(world, northEastExterior, topRightInventoryCorner).AreAdjacent);
+    }
+
+    [Fact]
+    public void EntityTopologyPolicyOutwardAdjacencySupportsPickupAcrossInventoryBoundary()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsOutward };
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        var destination = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+        var pickup = new PickupAction(TestWorld.RockId, destination);
+
+        var evaluation = pickup.Evaluate(world, TestWorld.SlimeId, movement);
+        pickup.Execute(world, TestWorld.SlimeId, movement);
+
+        Assert.True(evaluation.CanExecute);
+        Assert.Equal(destination, world.GetEntityLocation(TestWorld.RockId));
+    }
+
     private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
     {
         var nodeId = world.GetNodeId(location);

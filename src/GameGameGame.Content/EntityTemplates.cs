@@ -30,7 +30,8 @@ public sealed record EntityTemplate(
     ActorActionStateDefaults? ActionStateDefaults = null,
     IReadOnlyList<EntityTargetingRule>? TargetingRules = null,
     EntityEnterPolicy? EnterPolicy = null,
-    EntityExitPolicy? ExitPolicy = null)
+    EntityExitPolicy? ExitPolicy = null,
+    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None)
 {
     public EntityEnterPolicy EffectiveEnterPolicy => EnterPolicy ?? EntityEnterPolicy.FirstUnoccupiedRowMajor;
 

@@ -52,7 +52,8 @@ public static class YamlContentLoader
                 ActionStateDefaults: MaterializeActionStateDefaults(template.ActionStateDefaults),
                 TargetingRules: MaterializeTargetingRules(template.TargetingRules),
                 EnterPolicy: template.EnterPolicy,
-                ExitPolicy: template.ExitPolicy);
+                ExitPolicy: template.ExitPolicy,
+                TopologyPolicy: template.TopologyPolicy ?? EntityTopologyPolicy.None);
         }
 
         return result;
@@ -314,6 +315,8 @@ public static class YamlContentLoader
         public EntityEnterPolicy? EnterPolicy { get; set; }
 
         public EntityExitPolicy? ExitPolicy { get; set; }
+
+        public EntityTopologyPolicy? TopologyPolicy { get; set; }
 
         public string? DefaultActionPlanId { get; set; }
 

@@ -336,7 +336,14 @@ sections:
     description: Delta-era reporting room with barely/easy success and failure examples for aperture-backed action success criteria and player-facing log projection.
     status: active-delta
     tags: [delta, reporting, success-criteria, logs, aperture]
-    source: Delta/Canonical action reporting groundwork
+    source: Delta/Canonical action reporting groundwork  
+  - contentPath: src\GameGameGame.Content\Beta\Topology\TopologyPolicyShowcase.yaml
+    scenarioId: delta-topology-policy-showcase
+    name: Topology Policy Showcase
+    description: Experimental topology-policy spike room with a player-controlled Move/Enter/Exit actor and four adjacent containers covering None, ConnectsInward, ConnectsOutward, and ConnectsInwardAndOutward topology policies.
+    status: active-delta
+    tags: [delta, topology, movement, containment, player-interaction, spike]
+    source: docs/Plans/Topology-Service-Plan.md
 - id: user
   name: User-Generated Scenarios
   description: Frontend-editor-authored scenarios should be registered here or in a user manifest rather than mixed with packaged Beta/Delta content.

@@ -118,6 +118,40 @@ public sealed class ControlledActorAffordanceServiceTests
         Assert.Equal(topologyDestination, southExit.Destination);
     }
 
+    [Fact]
+    public void ControlledActorAffordanceMovementReportsEntityTopologyOutwardDestination()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsOutward };
+        var movement = new MovementService();
+        var inventoryEastEdge = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, inventoryEastEdge));
+        var query = new ControlledActorAffordanceService(movement);
+
+        var affordances = query.Query(world, TestWorld.RockId);
+
+        var east = Assert.Single(affordances.MovementDirections, option => option.Direction == Direction.East);
+        Assert.True(east.CanExecute);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), east.Destination);
+    }
+
+    [Fact]
+    public void ControlledActorAffordanceMovementReportsEntityTopologyInwardDestinationInsteadOfContainerBump()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsInward };
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
+        var query = new ControlledActorAffordanceService(movement);
+
+        var affordances = query.Query(world, TestWorld.RockId);
+
+        var west = Assert.Single(affordances.MovementDirections, option => option.Direction == Direction.West);
+        Assert.True(west.CanExecute);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1)), west.Destination);
+        Assert.Null(west.BlockingEntityId);
+    }
+
     private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
     {
         var nodeId = world.GetNodeId(location);

@@ -113,6 +113,7 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     EffectiveEnterPolicy = model.Template.EffectiveEnterPolicy,
                     ExitPolicy = model.Template.ExitPolicy,
                     EffectiveExitPolicy = model.Template.EffectiveExitPolicy,
+                    TopologyPolicy = model.Template.TopologyPolicy,
                     TargetingRequirements = targetRequirements,
                     OrphanedTargetingRules = orphanedRules
                 };

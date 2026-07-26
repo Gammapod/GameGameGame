@@ -141,19 +141,22 @@ public sealed class AgentContentEditorApiTests
                 Bulk: 1,
                 Aperture: 10,
                 EnterPolicy: EntityEnterPolicy.FarthestFromOccupied,
-                ExitPolicy: EntityExitPolicy.EdgeAlignedWithExitDirection)));
+                ExitPolicy: EntityExitPolicy.EdgeAlignedWithExitDirection,
+                TopologyPolicy: EntityTopologyPolicy.ConnectsOutward)));
 
         var snapshot = api.GetDocumentSnapshot();
 
         Assert.Contains("enterPolicy: FarthestFromOccupied", snapshot.YamlPreview);
         Assert.Contains("exitPolicy: EdgeAlignedWithExitDirection", snapshot.YamlPreview);
+        Assert.Contains("topologyPolicy: ConnectsOutward", snapshot.YamlPreview);
         Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
 
-        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(ClearEnterPolicy: true, ClearExitPolicy: true)));
+        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(ClearEnterPolicy: true, ClearExitPolicy: true, TopologyPolicy: EntityTopologyPolicy.None)));
         snapshot = api.GetDocumentSnapshot();
 
         Assert.DoesNotContain("enterPolicy:", snapshot.YamlPreview);
         Assert.DoesNotContain("exitPolicy:", snapshot.YamlPreview);
+        Assert.DoesNotContain("topologyPolicy:", snapshot.YamlPreview);
     }
 
     [Fact]
