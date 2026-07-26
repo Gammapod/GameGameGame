@@ -552,11 +552,14 @@ actionPlans:
     behavior:
       steps:
       - kind: Move
+        directionMode: Forward
       - kind: PickupTarget
       - kind: DropFacing
       - kind: EnterTarget
       - kind: ExitFacing
       - kind: Transfer
+        directionMode: Forward
+        transferDirection: TargetToActor
     steps: []
 scenarios:
   beta-pocket-bazaar:

@@ -187,6 +187,26 @@ public sealed class ContentEditorAuthoringTests
     }
 
     [Fact]
+    public void ContentEditorDefaultsRequiredMoveAndTransferOptionsWhenAuthoringBehaviorSteps()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var planId = editor.CreateActionPlan("Player Debug");
+
+        editor.SetActionPlanBehavior(planId, [
+            ActionPlanBehaviorStepKind.Move,
+            ActionPlanBehaviorStepKind.Transfer]);
+
+        var yaml = document.SaveYaml();
+
+        Assert.True(editor.Validate().IsValid, string.Join(Environment.NewLine, editor.Validate().Errors));
+        Assert.Contains("kind: Move", yaml);
+        Assert.Contains("directionMode: Forward", yaml);
+        Assert.Contains("kind: Transfer", yaml);
+        Assert.Contains("transferDirection: TargetToActor", yaml);
+    }
+
+    [Fact]
     public void ContentEditorPreviewsCanonicalBehaviorPlan()
     {
         var editor = new ContentEditorService(new EditableContentDocument());

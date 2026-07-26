@@ -736,6 +736,32 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void ActionPlanStepMutationsDefaultRequiredMoveAndTransferOptions()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var move = service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.Move);
+            var transfer = service.InsertActionPlanStep("moveEast", 1, ActionPlanBehaviorStepKind.Transfer);
+
+            Assert.True(move.IsSuccess, move.StatusMessage);
+            Assert.True(transfer.IsSuccess, transfer.StatusMessage);
+            Assert.DoesNotContain(transfer.Snapshot.ValidationDiagnostics, diagnostic => diagnostic.Severity == ContentDiagnosticSeverity.Error);
+            Assert.Contains("kind: Move", transfer.Snapshot.YamlPreview);
+            Assert.Contains("directionMode: Forward", transfer.Snapshot.YamlPreview);
+            Assert.Contains("kind: Transfer", transfer.Snapshot.YamlPreview);
+            Assert.Contains("transferDirection: TargetToActor", transfer.Snapshot.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void RemoveActionPlanStepRemovesCanonicalStepThroughEditorServices()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());

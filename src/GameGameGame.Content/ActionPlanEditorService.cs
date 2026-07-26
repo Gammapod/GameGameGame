@@ -101,7 +101,8 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
 
     public void SetActionPlanBehavior(ActionPlanTemplateId planId, IReadOnlyList<ActionPlanBehaviorStepDescriptor> steps)
     {
-        foreach (var step in steps)
+        var normalizedSteps = steps.Select(ApplyRequiredAuthoredOptionDefaults).ToList();
+        foreach (var step in normalizedSteps)
         {
             EnsureStableAuthoringStep(step.Kind);
         }
@@ -115,7 +116,7 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
 
         plan.Primitive = null;
         plan.Steps = [];
-        plan.Behavior = EditableContentDocument.ActionPlanBehaviorDescriptorDto.From(new ActionPlanBehaviorDescriptor(steps));
+        plan.Behavior = EditableContentDocument.ActionPlanBehaviorDescriptorDto.From(new ActionPlanBehaviorDescriptor(normalizedSteps));
         MaterializeBehaviorDefaultsForAssignedTemplates(planId, plan.Behavior);
         onChanged?.Invoke();
     }
@@ -132,7 +133,8 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
     {
         EnsureStableAuthoringStep(kind);
         var steps = GetActionPlanBehaviorSteps(planId);
-        steps.Add(new EditableContentDocument.ActionPlanBehaviorStepDescriptorDto { Kind = kind });
+        var step = ApplyRequiredAuthoredOptionDefaults(new ActionPlanBehaviorStepDescriptor(kind));
+        steps.Add(EditableContentDocument.ActionPlanBehaviorStepDescriptorDto.From(step));
         MaterializeBehaviorDefaultsForAssignedTemplates(planId, GetActionPlanDto(planId).Behavior);
         onChanged?.Invoke();
     }
@@ -283,6 +285,21 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
             throw new InvalidOperationException($"Action step {kind} is legacy/advanced and is not available for canonical authoring.");
         }
     }
+
+    private static ActionPlanBehaviorStepDescriptor ApplyRequiredAuthoredOptionDefaults(ActionPlanBehaviorStepDescriptor step) =>
+        step.Kind switch
+        {
+            ActionPlanBehaviorStepKind.Move => step with
+            {
+                DirectionMode = step.DirectionMode ?? ActionPlanMoveDirectionMode.Forward
+            },
+            ActionPlanBehaviorStepKind.Transfer => step with
+            {
+                DirectionMode = step.DirectionMode ?? ActionPlanMoveDirectionMode.Forward,
+                TransferDirection = step.TransferDirection ?? TransferDirection.TargetToActor
+            },
+            _ => step
+        };
 
     private ActionPlanTemplateId GenerateActionPlanTemplateId(string name)
     {
