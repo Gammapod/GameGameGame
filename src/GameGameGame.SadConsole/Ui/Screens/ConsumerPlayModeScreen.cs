@@ -7,6 +7,8 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 internal sealed class ConsumerPlayModeScreen
 {
     private readonly EntityPanelProjectionService _panelProjection;
+    private readonly GameplaySessionController? _sessionController;
+    private readonly PlayModeIntentController _intentController;
 
     private ConsumerPlayModeScreen(ScenarioCatalogEntry catalogEntry, PlayableScenarioSession? session, string? launchFailure)
     {
@@ -14,36 +16,30 @@ internal sealed class ConsumerPlayModeScreen
         Session = session;
         LaunchFailure = launchFailure;
         _panelProjection = new EntityPanelProjectionService(ResolveInspectionAppearance, GetActionPlanDescriptorForEntity);
+        _sessionController = session is not null ? new GameplaySessionController(session) : null;
+        _intentController = new PlayModeIntentController(ResolveIntentCandidates);
 
         if (session is not null)
         {
-            ControlledActorProjection = _panelProjection.Project(
-                session.World,
-                session.PlayerEntityId,
-                session.ActionPlans,
-                session.PlayerEntityId);
-            CurrentPlaceProjection = ControlledActorProjection.PointOfView?.CurrentPlace is { } currentPlace
-                ? _panelProjection.Project(session.World, currentPlace.EntityId, session.ActionPlans, session.PlayerEntityId)
-                : null;
-            CurrentSpaceView = CurrentPlaceProjection?.InventoryGrid is not null
-                ? InventorySpaceViewModel.FromProjection(
-                    "0.2.inventory-space",
-                    CurrentPlaceProjection,
-                    session.PlayerEntityId,
-                    cellMetrics: InventorySpaceCellMetrics.Default)
-                : null;
+            RefreshProjections();
         }
     }
 
     public ScenarioCatalogEntry CatalogEntry { get; }
     public PlayableScenarioSession? Session { get; }
     public string? LaunchFailure { get; }
-    public EntityPanelProjection? ControlledActorProjection { get; }
-    public EntityPanelProjection? CurrentPlaceProjection { get; }
-    public InventorySpaceViewModel? CurrentSpaceView { get; }
+    public EntityPanelProjection? ControlledActorProjection { get; private set; }
+    public EntityPanelProjection? CurrentPlaceProjection { get; private set; }
+    public InventorySpaceViewModel? CurrentSpaceView { get; private set; }
+    public string LastActionStatus { get; private set; } = "Ready.";
+    public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
+    public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
+    public string? ActivePromptFocusedChoiceLabel => _intentController.CurrentPrompt?.FocusedChoice?.Label;
+    public IReadOnlyList<Direction> ActivePromptAcceptedDirections => _intentController.CurrentPrompt?.Choices.Select(choice => choice.ShortcutDirection).OfType<Direction>().ToList() ?? [];
+    public bool ActivePromptAcceptsDirection(Direction direction) => _intentController.CurrentPrompt?.Choices.Any(choice => choice.ShortcutDirection == direction) == true;
     public string Title => "New Play Mode";
     public string Purpose => "Consumer-facing Play mode skeleton. Current-space component is active.";
-    public string FooterText => "Esc: return to Scenario Selection | F12: toggle debug border";
+    public string FooterText => "Arrows/Numpad: move | Esc: return to Scenario Selection | F12: toggle debug border";
 
     public static ConsumerPlayModeScreen Open(ScenarioCatalogEntry catalogEntry)
     {
@@ -59,6 +55,119 @@ internal sealed class ConsumerPlayModeScreen
 
     internal static ConsumerPlayModeScreen FromSession(ScenarioCatalogEntry catalogEntry, PlayableScenarioSession session) =>
         new(catalogEntry, session, launchFailure: null);
+
+    public GameplayRuntimeSubmission SubmitMove(Direction direction)
+    {
+        if (_sessionController is null)
+        {
+            LastActionStatus = "Cannot move: session unavailable.";
+            return new GameplayRuntimeSubmission(false, LastActionStatus, UsedCoreActionChoice: false);
+        }
+
+        var outcome = _intentController.HandleIntent(PlayModeIntentSeed.Move(direction));
+        var result = outcome.Submission
+            ?? new GameplayRuntimeSubmission(false, outcome.Message, UsedCoreActionChoice: false);
+        if (!result.Succeeded)
+        {
+            var contextOutcome = _intentController.HandleIntent(new PlayModeIntentSeed(PlayModeIntentKind.ContextDirection, Direction: direction));
+            if (contextOutcome.Kind != PlayModeIntentOutcomeKind.Explained || contextOutcome.Submission?.Succeeded == true || HasActivePrompt)
+            {
+                result = contextOutcome.Submission
+                    ?? new GameplayRuntimeSubmission(false, contextOutcome.Message, UsedCoreActionChoice: true);
+                LastActionStatus = contextOutcome.Submission is { } submission
+                    ? submission.Succeeded ? contextOutcome.Message : $"{contextOutcome.Message}: {submission.FailureText ?? "failed"}"
+                    : contextOutcome.Message;
+            }
+        }
+
+        RefreshProjections();
+        return result;
+    }
+
+    public PlayModeIntentOutcome SubmitDefaultAction()
+    {
+        var outcome = _intentController.HandleIntent(new PlayModeIntentSeed(PlayModeIntentKind.DefaultAction));
+        if (outcome.Submission is not { Succeeded: true })
+        {
+            LastActionStatus = outcome.Submission is { } submission
+                ? $"{outcome.Message}: {submission.FailureText ?? "failed"}"
+                : outcome.Message;
+        }
+        RefreshProjections();
+        return outcome;
+    }
+
+    public PlayModeIntentOutcome HandlePromptCommand(UiComponentCommand command)
+    {
+        var outcome = command switch
+        {
+            UiComponentCommand.Up => _intentController.MoveFocus(-1),
+            UiComponentCommand.Down => _intentController.MoveFocus(1),
+            UiComponentCommand.Select => _intentController.SelectFocused(),
+            UiComponentCommand.Cancel => _intentController.Cancel(),
+            _ => new PlayModeIntentOutcome(PlayModeIntentOutcomeKind.Explained, "Prompt only supports Up, Down, Select, and Cancel.")
+        };
+
+        if (outcome.Submission is not { Succeeded: true })
+        {
+            LastActionStatus = outcome.Submission is { } submission
+                ? $"{outcome.Message}: {submission.FailureText ?? "failed"}"
+                : outcome.Message;
+        }
+        RefreshProjections();
+        return outcome;
+    }
+
+    public PlayModeIntentOutcome HandlePromptDirection(Direction direction)
+    {
+        var outcome = _intentController.SelectShortcutDirection(direction);
+        if (outcome.Submission is not { Succeeded: true })
+        {
+            LastActionStatus = outcome.Submission is { } submission
+                ? $"{outcome.Message}: {submission.FailureText ?? "failed"}"
+                : outcome.Message;
+        }
+        RefreshProjections();
+        return outcome;
+    }
+
+    public PlayModeIntentOutcome HandlePromptNavigationDirection(Direction direction)
+    {
+        var outcome = _intentController.MoveFocus(direction);
+        LastActionStatus = outcome.Message;
+        RefreshProjections();
+        return outcome;
+    }
+
+    public IUiComponent? PromptComponent(SadConsoleRect drawableBounds)
+    {
+        if (_intentController.CurrentPrompt is not { } prompt)
+        {
+            return null;
+        }
+
+        if (prompt.CustomComponent is { } customComponent)
+        {
+            return customComponent(prompt, drawableBounds);
+        }
+
+        var items = prompt.Choices.Select((choice, index) => new SelectableListItem(
+            $"prompt-choice-{index}",
+            choice.Label,
+            choice.Explanation ?? (choice.IsComplete ? "Enter: select" : "needs more information"),
+            IsEnabled: choice.IsValid));
+        var width = Math.Min(Math.Max(24, drawableBounds.Width), Math.Max(36, prompt.Choices.Max(choice => choice.Label.Length) + 6));
+        var height = Math.Min(Math.Max(5, prompt.Choices.Count + 4), Math.Max(5, drawableBounds.Height));
+        var component = new SelectableListComponent(
+            "0.2.1-action-prompt",
+            prompt.Title,
+            SadConsoleRect.FromSize(0, 0, width, height),
+            items,
+            UiComponentState.Focused,
+            visibleRowCount: Math.Max(1, height - 3));
+        component.MoveSelection(prompt.FocusedIndex);
+        return component;
+    }
 
     public InventorySpaceComponent? CurrentSpaceGridComponent(SadConsoleRect drawableBounds, bool showDebugLabels)
     {
@@ -104,6 +213,7 @@ internal sealed class ConsumerPlayModeScreen
     {
         var rows = new List<string>();
         rows.AddRange(BuildStatusRows());
+        rows.AddRange(BuildInteractionRows());
         rows.AddRange(BuildCurrentSpaceRows());
         rows.AddRange(BuildDiagnosticsRows());
         if (Session is null)
@@ -198,6 +308,115 @@ internal sealed class ConsumerPlayModeScreen
         return rows;
     }
 
+    private IReadOnlyList<string> BuildInteractionRows()
+    {
+        var candidates = _intentController.LastResolvedCandidates;
+        var validCount = candidates.Count(candidate => candidate.IsValid);
+        var completeCount = candidates.Count(candidate => candidate.IsValid && candidate.IsComplete);
+        var incompleteCount = candidates.Count(candidate => candidate.IsValid && !candidate.IsComplete);
+        var invalidCount = candidates.Count - validCount;
+        var prompt = _intentController.CurrentPrompt;
+        var outcome = _intentController.LastOutcome;
+        var rows = new List<string>
+        {
+            "Interaction:",
+            $"  input: {_intentController.LastInputDescription} | decision: {FormatOutcomeKind(outcome?.Kind)}{FormatOutcomeMessage(outcome)}",
+            $"  submission: {FormatSubmission(outcome)}",
+            $"  prompt stack[{_intentController.PromptStack.Count}]: {FormatPromptStack()}",
+            $"  focus: {FormatPromptFocus(prompt)} | shortcuts: {FormatPromptShortcuts(prompt)}",
+            $"  candidates: {validCount}/{candidates.Count} valid | {completeCount} complete, {incompleteCount} incomplete, {invalidCount} invalid",
+            $"  candidate sample: {FormatCandidateSample(candidates)}"
+        };
+
+        return rows;
+    }
+
+    private static string FormatCandidateSample(IReadOnlyList<PlayModeActionCandidate> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return "none";
+        }
+
+        var labels = candidates
+            .Take(3)
+            .Select(candidate => $"{candidate.Label} [{FormatCandidateState(candidate)}]");
+        return $"{string.Join("; ", labels)}{(candidates.Count > 3 ? "; ..." : string.Empty)}";
+    }
+
+    private static string FormatCandidateState(PlayModeActionCandidate candidate)
+    {
+        if (!candidate.IsValid)
+        {
+            return "invalid";
+        }
+
+        return candidate.IsComplete ? "complete" : "needs-refine";
+    }
+
+    private static string FormatOutcomeKind(PlayModeIntentOutcomeKind? kind) => kind switch
+    {
+        PlayModeIntentOutcomeKind.AutoSubmitted => "auto-submitted",
+        PlayModeIntentOutcomeKind.PromptOpened => "opened prompt",
+        PlayModeIntentOutcomeKind.Explained => "explained",
+        PlayModeIntentOutcomeKind.Cancelled => "cancelled",
+        PlayModeIntentOutcomeKind.SubmittedFromPrompt => "submitted from prompt",
+        _ => "none"
+    };
+
+    private static string FormatOutcomeMessage(PlayModeIntentOutcome? outcome) =>
+        string.IsNullOrWhiteSpace(outcome?.Message) ? string.Empty : $" | {outcome.Message}";
+
+    private string FormatPromptStack()
+    {
+        if (_intentController.PromptStack.Count == 0)
+        {
+            return "none";
+        }
+
+        return string.Join(" > ", _intentController.PromptStack.Select(layer => layer.Title));
+    }
+
+    private static string FormatPromptFocus(PlayModePromptLayer? prompt)
+    {
+        if (prompt is null)
+        {
+            return "none";
+        }
+
+        var focusedPosition = prompt.Choices.Count == 0 ? "0/0" : $"{prompt.FocusedIndex + 1}/{prompt.Choices.Count}";
+        var focusedLabel = prompt.FocusedChoice?.Label ?? "none";
+        return $"{focusedPosition} {focusedLabel}";
+    }
+
+    private static string FormatPromptShortcuts(PlayModePromptLayer? prompt)
+    {
+        if (prompt is null)
+        {
+            return "none";
+        }
+
+        var shortcuts = prompt.Choices
+            .Select(choice => choice.ShortcutDirection)
+            .OfType<Direction>()
+            .Distinct()
+            .ToList();
+        return shortcuts.Count == 0 ? "none" : string.Join(", ", shortcuts);
+    }
+
+    private static string FormatSubmission(PlayModeIntentOutcome? outcome)
+    {
+        if (outcome?.Submission is not { } submission)
+        {
+            return "none";
+        }
+
+        var path = submission.UsedCoreActionChoice ? "Core Action Choice" : "direct controlled command";
+        return submission.Succeeded
+            ? $"success | {path}"
+            : $"failed | {path} | {submission.FailureText ?? "failed"}";
+    }
+
     private IReadOnlyList<string> BuildDiagnosticsRows()
     {
         if (Session is null)
@@ -216,6 +435,493 @@ internal sealed class ConsumerPlayModeScreen
 
         return rows.Take(4).ToList();
     }
+
+    private void RefreshProjections()
+    {
+        if (Session is null)
+        {
+            ControlledActorProjection = null;
+            CurrentPlaceProjection = null;
+            CurrentSpaceView = null;
+            return;
+        }
+
+        var actorId = _sessionController?.PlayerEntityId ?? Session.PlayerEntityId;
+        var world = _sessionController?.World ?? Session.World;
+        ControlledActorProjection = _panelProjection.Project(
+            world,
+            actorId,
+            Session.ActionPlans,
+            actorId);
+        CurrentPlaceProjection = ControlledActorProjection.PointOfView?.CurrentPlace is { } currentPlace
+            ? _panelProjection.Project(world, currentPlace.EntityId, Session.ActionPlans, actorId)
+            : null;
+        CurrentSpaceView = CurrentPlaceProjection?.InventoryGrid is not null
+            ? InventorySpaceViewModel.FromProjection(
+                "0.2.inventory-space",
+                CurrentPlaceProjection,
+                actorId,
+                cellMetrics: InventorySpaceCellMetrics.Default)
+            : null;
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> ResolveIntentCandidates(PlayModeIntentSeed seed)
+    {
+        if (seed.Kind == PlayModeIntentKind.MoveDirection && seed.Direction is { } direction)
+        {
+            return
+            [
+                new PlayModeActionCandidate(
+                    $"Move {direction}",
+                    IsValid: _sessionController is not null,
+                    IsComplete: true,
+                    Submit: () => SubmitMoveDirect(direction),
+                    Explanation: _sessionController is null ? "Session unavailable." : null)
+            ];
+        }
+
+        if (seed.Kind == PlayModeIntentKind.DefaultAction)
+        {
+            return BuildDefaultActionCandidates();
+        }
+
+        if (seed.Kind == PlayModeIntentKind.ContextDirection && seed.Direction is { } contextDirection)
+        {
+            return BuildContextDirectionCandidates(contextDirection);
+        }
+
+        return [];
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> BuildContextDirectionCandidates(Direction direction)
+    {
+        if (_sessionController?.CurrentActionChoiceRequest is not { } request)
+        {
+            return [];
+        }
+
+        var actorLocation = _sessionController.World.GetEntityLocation(_sessionController.PlayerEntityId);
+        var contextCoord = new PlaneCoord(actorLocation.PlaneId, actorLocation.Coord.Offset(direction));
+        var candidates = new List<PlayModeActionCandidate>();
+
+        foreach (var choice in request.Choices.Where(choice => choice.Kind != ActionChoiceKind.Move))
+        {
+            candidates.AddRange(choice.Kind switch
+            {
+                ActionChoiceKind.Pickup => PickupCandidates(choice, option => option.Source == contextCoord),
+                ActionChoiceKind.Enter => EnterCandidates(choice, option => option.Source == contextCoord),
+                ActionChoiceKind.Exit => ExitCandidates(choice, option => option.Direction == direction),
+                ActionChoiceKind.Transfer => TransferCandidates(choice, counterparty => counterparty.Direction == direction),
+                _ => []
+            });
+        }
+
+        return candidates;
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> BuildDefaultActionCandidates()
+    {
+        if (_sessionController?.CurrentActionChoiceRequest is not { } request)
+        {
+            return [];
+        }
+
+        var candidates = new List<PlayModeActionCandidate>();
+        foreach (var choice in request.Choices.Where(choice => choice.Kind != ActionChoiceKind.Move))
+        {
+            candidates.AddRange(choice.Kind switch
+            {
+                ActionChoiceKind.Pickup => PickupCandidates(choice, _ => true),
+                ActionChoiceKind.Drop => DropCandidates(choice),
+                ActionChoiceKind.Enter => EnterCandidates(choice, _ => true),
+                ActionChoiceKind.Exit => ExitCandidates(choice, _ => true),
+                ActionChoiceKind.Transfer => TransferCandidates(choice, _ => true),
+                _ => []
+            });
+        }
+
+        return candidates;
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> PickupCandidates(ActionChoice choice, Func<ControlledActorEntityAffordance, bool> include)
+    {
+        var targets = choice.EntityOptions.Where(option => option.CanExecute && include(option)).ToList();
+        return targets.Select(target =>
+        {
+            var destinations = choice.Destinations(target.TargetId).Where(destination => destination.CanExecute).ToList();
+            return destinations.Count == 1
+                ? new PlayModeActionCandidate(
+                    $"Pick up {FormatEntityName(target.TargetId)}",
+                    IsValid: true,
+                    IsComplete: true,
+                    Submit: () => SubmitPickupDirect(target.TargetId, destinations[0].Destination))
+                : new PlayModeActionCandidate(
+                    $"Pick up {FormatEntityName(target.TargetId)}",
+                    IsValid: true,
+                    IsComplete: false,
+                    Explanation: destinations.Count == 0 ? "No valid destination." : "Choose destination.",
+                    Refine: destinations.Count == 0 ? null : () => PickupDestinationCandidates(target.TargetId, destinations),
+                    RefineTitle: $"Pick up {FormatEntityName(target.TargetId)}: choose destination",
+                    RefinedPromptComponent: destinations.Count == 0 ? null : (prompt, bounds) => PlayerInventoryDestinationPanel(prompt.Title, destinations, prompt, bounds));
+        }).ToList();
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> DropCandidates(ActionChoice choice)
+    {
+        var targets = choice.EntityOptions.Where(option => option.CanExecute).ToList();
+        if (targets.Count == 0)
+        {
+            return [];
+        }
+
+        return
+        [
+            new PlayModeActionCandidate(
+                "Drop item",
+                IsValid: true,
+                IsComplete: false,
+                Explanation: "Choose carried item.",
+                Refine: () => DropItemCandidates(choice, targets),
+                RefineTitle: "Drop: choose item",
+                RefinedPromptComponent: (prompt, bounds) => PlayerInventoryItemPanel(prompt.Title, targets, prompt, bounds))
+        ];
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> DropItemCandidates(ActionChoice choice, IReadOnlyList<ControlledActorEntityAffordance> targets)
+    {
+        return targets.Select(target =>
+        {
+            var destinations = choice.Destinations(target.TargetId).Where(destination => destination.CanExecute).ToList();
+            return destinations.Count == 1
+                ? new PlayModeActionCandidate(
+                    $"Drop {FormatEntityName(target.TargetId)}",
+                    IsValid: true,
+                    IsComplete: true,
+                    Submit: () => SubmitDropDirect(target.TargetId, destinations[0].Destination))
+                : new PlayModeActionCandidate(
+                    $"Drop {FormatEntityName(target.TargetId)}",
+                    IsValid: true,
+                    IsComplete: false,
+                    Explanation: destinations.Count == 0 ? "No valid destination." : "Choose destination.",
+                    Refine: destinations.Count == 0 ? null : () => DropDestinationCandidates(target.TargetId, destinations),
+                    RefineTitle: $"Drop {FormatEntityName(target.TargetId)}: choose destination",
+                    RefinedPromptComponent: destinations.Count == 0 ? null : (prompt, bounds) => CurrentPlaceDestinationPanel(prompt.Title, destinations, prompt, bounds));
+        }).ToList();
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> PickupDestinationCandidates(EntityId targetId, IReadOnlyList<ControlledActorDestinationAffordance> destinations) =>
+        destinations
+            .Where(destination => destination.CanExecute)
+            .Select(destination => new PlayModeActionCandidate(
+                $"to {FormatDestination(destination.Destination)}",
+                IsValid: true,
+                IsComplete: true,
+                Submit: () => SubmitPickupDirect(targetId, destination.Destination),
+                FocusCoord: destination.Destination.Coord))
+            .ToList();
+
+    private IReadOnlyList<PlayModeActionCandidate> DropDestinationCandidates(EntityId targetId, IReadOnlyList<ControlledActorDestinationAffordance> destinations) =>
+        destinations
+            .Where(destination => destination.CanExecute)
+            .Select(destination => new PlayModeActionCandidate(
+                $"to {FormatDestination(destination.Destination)}",
+                IsValid: true,
+                IsComplete: true,
+                Submit: () => SubmitDropDirect(targetId, destination.Destination),
+                ShortcutDirection: DirectionFromActorTo(destination.Destination),
+                FocusCoord: destination.Destination.Coord))
+            .ToList();
+
+    private IUiComponent PlayerInventoryDestinationPanel(string title, IReadOnlyList<ControlledActorDestinationAffordance> destinations, PlayModePromptLayer prompt, SadConsoleRect bounds)
+    {
+        var validDestinations = destinations.Where(destination => destination.CanExecute).ToList();
+        var selected = validDestinations.ElementAtOrDefault(Math.Clamp(prompt.FocusedIndex, 0, Math.Max(0, validDestinations.Count - 1)))?.Destination.Coord;
+        return PlayerInventoryPanel(title, bounds, selected, focused: selected, ["Choose empty destination cell."]);
+    }
+
+    private IUiComponent PlayerInventoryItemPanel(string title, IReadOnlyList<ControlledActorEntityAffordance> targets, PlayModePromptLayer prompt, SadConsoleRect bounds)
+    {
+        var validTargets = targets.Where(target => target.CanExecute).ToList();
+        var selected = validTargets.ElementAtOrDefault(Math.Clamp(prompt.FocusedIndex, 0, Math.Max(0, validTargets.Count - 1)))?.Source?.Coord;
+        return PlayerInventoryPanel(title, bounds, selected, focused: selected, ["Choose carried item to drop."]);
+    }
+
+    private IUiComponent CurrentPlaceDestinationPanel(string title, IReadOnlyList<ControlledActorDestinationAffordance> destinations, PlayModePromptLayer prompt, SadConsoleRect bounds)
+    {
+        var validDestinations = destinations.Where(destination => destination.CanExecute).ToList();
+        var selected = validDestinations.ElementAtOrDefault(Math.Clamp(prompt.FocusedIndex, 0, Math.Max(0, validDestinations.Count - 1)))?.Destination.Coord;
+        return CurrentPlaceInventoryPanel(title, bounds, selected, focused: selected, ["Choose drop destination. Direction keys submit matching adjacent cells."]);
+    }
+
+    private IUiComponent PlayerInventoryPanel(string title, SadConsoleRect bounds, GridCoord? selected, GridCoord? focused, IReadOnlyList<string> rows)
+    {
+        var actorId = _sessionController?.PlayerEntityId ?? Session!.PlayerEntityId;
+        var world = _sessionController?.World ?? Session!.World;
+        var projection = _panelProjection.Project(world, actorId, Session!.ActionPlans, actorId);
+        return InventoryPanelFromProjection("0.3-player-inventory-prompt", title, projection, bounds, selected, focused, rows);
+    }
+
+    private IUiComponent CurrentPlaceInventoryPanel(string title, SadConsoleRect bounds, GridCoord? selected, GridCoord? focused, IReadOnlyList<string> rows)
+    {
+        var actorId = _sessionController?.PlayerEntityId ?? Session!.PlayerEntityId;
+        if (CurrentPlaceProjection is not { } projection)
+        {
+            return new PanelComponent("0.3-current-place-prompt", title, SadConsoleRect.FromSize(0, 0, Math.Min(48, bounds.Width), 6), ["Current place unavailable."], UiComponentState.Error);
+        }
+
+        return InventoryPanelFromProjection("0.3-current-place-prompt", title, projection, bounds, selected, focused, rows);
+    }
+
+    private static IUiComponent InventoryPanelFromProjection(string id, string title, EntityPanelProjection projection, SadConsoleRect bounds, GridCoord? selected, GridCoord? focused, IReadOnlyList<string> rows)
+    {
+        if (projection.InventoryGrid is null)
+        {
+            return new PanelComponent(id, title, SadConsoleRect.FromSize(0, 0, Math.Min(48, bounds.Width), 6), ["Inventory unavailable."], UiComponentState.Error);
+        }
+
+        var view = InventorySpaceViewModel.FromProjection(
+            $"{id}-view",
+            projection,
+            selectedCoord: selected,
+            focusedCoord: focused,
+            cellMetrics: InventorySpaceCellMetrics.Default,
+            showFrame: true);
+        var sizing = new InventorySpaceComponent(id, title, SadConsoleRect.FromSize(0, 0, 1, 1), view, rows, UiComponentState.Focused, InventorySpaceRenderOptions.FramedDebug);
+        return new InventorySpaceComponent(
+            id,
+            title,
+            SadConsoleRect.FromSize(0, 0, Math.Min(bounds.Width, Math.Max(18, sizing.RequiredWidth)), Math.Min(bounds.Height, Math.Max(8, sizing.RequiredHeight))),
+            view,
+            rows,
+            UiComponentState.Focused,
+            InventorySpaceRenderOptions.FramedDebug);
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> EnterCandidates(ActionChoice choice, Func<ControlledActorEntityAffordance, bool> include) =>
+        choice.EntityOptions
+            .Where(option => option.CanExecute && include(option))
+            .Select(target => new PlayModeActionCandidate(
+                $"Enter {FormatEntityName(target.TargetId)}",
+                IsValid: true,
+                IsComplete: true,
+                Submit: () => SubmitEnterDirect(target.TargetId)))
+            .ToList();
+
+    private IReadOnlyList<PlayModeActionCandidate> ExitCandidates(ActionChoice choice, Func<ActionChoiceDirectionOption, bool> include) =>
+        choice.DirectionOptions
+            .Where(option => option.CanExecute && include(option))
+            .Select(option => new PlayModeActionCandidate(
+                $"Exit {option.Direction}",
+                IsValid: true,
+                IsComplete: true,
+                Submit: () => SubmitExitDirect(option.Direction)))
+            .ToList();
+
+    private IReadOnlyList<PlayModeActionCandidate> TransferCandidates(ActionChoice choice, Func<ActionChoiceTransferCounterpartyOption, bool> include)
+    {
+        var candidates = new List<PlayModeActionCandidate>();
+        foreach (var counterparty in choice.TransferCounterparties.Where(counterparty => counterparty.CanExecute && include(counterparty)))
+        {
+            var items = choice.TransferItems(counterparty.CounterpartyId).Where(item => item.CanExecute).ToList();
+            candidates.Add(new PlayModeActionCandidate(
+                $"Transfer with {FormatEntityName(counterparty.CounterpartyId)}",
+                IsValid: true,
+                IsComplete: false,
+                Explanation: items.Count == 0 ? "No transferable item." : "Choose transfer item.",
+                Refine: items.Count == 0 ? null : () => TransferItemCandidates(counterparty.CounterpartyId, items),
+                RefineTitle: $"Transfer with {FormatEntityName(counterparty.CounterpartyId)}",
+                RefinedPromptComponent: items.Count == 0 ? null : (prompt, bounds) => TransferPanel(counterparty.CounterpartyId, items, prompt, bounds)));
+        }
+
+        return candidates;
+    }
+
+    private IReadOnlyList<PlayModeActionCandidate> TransferItemCandidates(EntityId counterpartyId, IReadOnlyList<ActionChoiceTransferItemOption> items) =>
+        items
+            .Where(item => item.CanExecute)
+            .Select(item => new PlayModeActionCandidate(
+                $"{FormatTransferDirection(item)} {FormatEntityName(item.MovingEntityId)}",
+                IsValid: true,
+                IsComplete: true,
+                Submit: () => SubmitTransferDirect(counterpartyId, item.MovingEntityId)))
+            .ToList();
+
+    private IUiComponent TransferPanel(EntityId counterpartyId, IReadOnlyList<ActionChoiceTransferItemOption> items, PlayModePromptLayer prompt, SadConsoleRect drawableBounds)
+    {
+        var actorId = _sessionController?.PlayerEntityId ?? Session!.PlayerEntityId;
+        var world = _sessionController?.World ?? Session!.World;
+        var actorProjection = _panelProjection.Project(world, actorId, Session!.ActionPlans, actorId);
+        var counterpartyProjection = _panelProjection.Project(world, counterpartyId, Session.ActionPlans, actorId);
+        var validItems = items.Where(item => item.CanExecute).ToList();
+        var selectedItem = validItems[Math.Clamp(prompt.FocusedIndex, 0, Math.Max(0, validItems.Count - 1))];
+        var width = Math.Min(Math.Max(48, drawableBounds.Width), 78);
+        var height = Math.Min(Math.Max(12, drawableBounds.Height), 22);
+
+        return new TransferInventoryComparisonComponent(
+            "0.3.1-transfer-panel",
+            prompt.Title,
+            SadConsoleRect.FromSize(0, 0, width, height),
+            UiComponentState.Focused,
+            BuildTransferInventorySide(actorProjection, actorProjection.InventoryGrid, validItems, selectedItem, actorProjection.InventoryGrid?.PlaneId),
+            BuildTransferInventorySide(counterpartyProjection, counterpartyProjection.InventoryGrid, validItems, selectedItem, counterpartyProjection.InventoryGrid?.PlaneId),
+            $"Selected: {FormatTransferDirection(selectedItem)} {FormatEntityName(selectedItem.MovingEntityId)}",
+            "Controls: Up/Down choose item | Enter transfer | Esc back");
+    }
+
+    private static TransferInventorySideComponent BuildTransferInventorySide(
+        EntityPanelProjection projection,
+        InventoryInspectionGrid? grid,
+        IReadOnlyList<ActionChoiceTransferItemOption> validItems,
+        ActionChoiceTransferItemOption selectedItem,
+        PlaneId? planeId)
+    {
+        if (grid is null || planeId is null)
+        {
+            return new TransferInventorySideComponent(
+                $"{projection.Glyph} {projection.Name}",
+                ["inventory unavailable"],
+                0,
+                0,
+                [],
+                new HashSet<GridCoord>(),
+                null);
+        }
+
+        var validCoords = validItems
+            .Where(item => item.Source.PlaneId == planeId.Value)
+            .Select(item => item.Source.Coord)
+            .ToHashSet();
+        var selectedCoord = selectedItem.Source.PlaneId == planeId.Value ? selectedItem.Source.Coord : (GridCoord?)null;
+        return new TransferInventorySideComponent(
+            $"{projection.Glyph} {projection.Name}",
+            [$"inventory: {grid.Width}x{grid.Height} {grid.PlaneId}", $"valid items: {validCoords.Count}"],
+            grid.Width,
+            grid.Height,
+            grid.Cells.Select(cell => new InventoryGridCell(cell.Coord, cell.Glyph, cell.Color)).ToList(),
+            validCoords,
+            selectedCoord);
+    }
+
+    private GameplayRuntimeSubmission SubmitMoveDirect(Direction direction)
+    {
+        if (_sessionController is null)
+        {
+            LastActionStatus = "Cannot move: session unavailable.";
+            return new GameplayRuntimeSubmission(false, LastActionStatus, UsedCoreActionChoice: false);
+        }
+
+        var result = _sessionController.SubmitMove(direction);
+        LastActionStatus = result.Succeeded
+            ? $"Moved {direction}."
+            : $"Could not move {direction}: {result.FailureText ?? "blocked"}.";
+        return result;
+    }
+
+    private GameplayRuntimeSubmission SubmitPickupDirect(EntityId targetId, PlaneCoord destination)
+    {
+        var result = _sessionController!.SubmitPickupActionChoice(targetId, destination);
+        LastActionStatus = result.Succeeded
+            ? $"Picked up {FormatEntityName(targetId)}."
+            : $"Could not pick up {FormatEntityName(targetId)}: {result.FailureText ?? "failed"}.";
+        return result;
+    }
+
+    private GameplayRuntimeSubmission SubmitDropDirect(EntityId targetId, PlaneCoord destination)
+    {
+        var result = _sessionController!.SubmitDropActionChoice(targetId, destination);
+        LastActionStatus = result.Succeeded
+            ? $"Dropped {FormatEntityName(targetId)}."
+            : $"Could not drop {FormatEntityName(targetId)}: {result.FailureText ?? "failed"}.";
+        return result;
+    }
+
+    private GameplayRuntimeSubmission SubmitEnterDirect(EntityId targetId)
+    {
+        var result = _sessionController!.SubmitEnterActionChoice(targetId);
+        LastActionStatus = result.Succeeded
+            ? $"Entered {FormatEntityName(targetId)}."
+            : $"Could not enter {FormatEntityName(targetId)}: {result.FailureText ?? "failed"}.";
+        return result;
+    }
+
+    private GameplayRuntimeSubmission SubmitExitDirect(Direction direction)
+    {
+        var result = _sessionController!.SubmitExitActionChoice(direction);
+        LastActionStatus = result.Succeeded
+            ? $"Exited {direction}."
+            : $"Could not exit {direction}: {result.FailureText ?? "failed"}.";
+        return result;
+    }
+
+    private GameplayRuntimeSubmission SubmitTransferDirect(EntityId counterpartyId, EntityId movingEntityId)
+    {
+        var result = _sessionController!.SubmitTransferActionChoice(counterpartyId, movingEntityId);
+        LastActionStatus = result.Succeeded
+            ? $"Transferred {FormatEntityName(movingEntityId)} with {FormatEntityName(counterpartyId)}."
+            : $"Could not transfer {FormatEntityName(movingEntityId)} with {FormatEntityName(counterpartyId)}: {result.FailureText ?? "failed"}.";
+        return result;
+    }
+
+    private string FormatEntityName(EntityId entityId)
+    {
+        var world = _sessionController?.World ?? Session?.World;
+        return world is not null && world.Entities.TryGetValue(entityId, out var entity) ? entity.Name : entityId.Value;
+    }
+
+    private string FormatDestination(PlaneCoord destination)
+    {
+        if ((_sessionController?.PlayerEntityId ?? Session?.PlayerEntityId) is { } actorId)
+        {
+            var world = _sessionController?.World ?? Session?.World;
+            if (world?.GetInventoryPlaneId(actorId) == destination.PlaneId)
+            {
+                return $"player inventory ({destination.Coord.X},{destination.Coord.Y})";
+            }
+        }
+
+        if (CurrentPlaceProjection?.InventoryGrid?.PlaneId == destination.PlaneId)
+        {
+            return $"current space ({destination.Coord.X},{destination.Coord.Y})";
+        }
+
+        return $"{destination.PlaneId.Value}@({destination.Coord.X},{destination.Coord.Y})";
+    }
+
+    private Direction? DirectionFromActorTo(PlaneCoord destination)
+    {
+        if (_sessionController is null)
+        {
+            return null;
+        }
+
+        var actorLocation = _sessionController.World.GetEntityLocation(_sessionController.PlayerEntityId);
+        if (actorLocation.PlaneId != destination.PlaneId)
+        {
+            return null;
+        }
+
+        var dx = destination.Coord.X - actorLocation.Coord.X;
+        var dy = destination.Coord.Y - actorLocation.Coord.Y;
+        return (dx, dy) switch
+        {
+            (0, -1) => Direction.North,
+            (1, -1) => Direction.NorthEast,
+            (1, 0) => Direction.East,
+            (1, 1) => Direction.SouthEast,
+            (0, 1) => Direction.South,
+            (-1, 1) => Direction.SouthWest,
+            (-1, 0) => Direction.West,
+            (-1, -1) => Direction.NorthWest,
+            _ => null
+        };
+    }
+
+    private string FormatTransferDirection(ActionChoiceTransferItemOption item) => item.TransferDirection switch
+    {
+        TransferDirection.ActorToTarget => $"Give to {FormatEntityName(item.CounterpartyId)}",
+        TransferDirection.TargetToActor => $"Take from {FormatEntityName(item.CounterpartyId)}",
+        _ => "Transfer"
+    };
 
     private EntityInspectionAppearance ResolveInspectionAppearance(EntityId entityId)
     {

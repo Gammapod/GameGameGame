@@ -197,7 +197,7 @@ Each decision should include:
 - **Decision:** The first consumer-facing Play mode should start as a new isolated componentized mode inside `src/GameGameGame.SadConsole`, launched from a new `Play` scenario option. The existing debug Simulation/play path remains available but is relabeled `Debug`; `Edit` remains the editor route.
 - **Reasoning:** This creates a clean final-frontend growth path without duplicating SadConsole bootstrap, catalog/session wiring, component-gallery patterns, or shared-service consumption in a separate project too early. It also avoids extending the legacy debug play surface as the player-facing UX.
 - **Implications:** The MVP Play route renders only the controlled actor's current inventory space through a reusable layered inventory-space component in normal mode. Debug/editor workflows stay accessible but should not define the consumer Play UX. A separate frontend project can be reconsidered later if packaging, asset pipeline, final-engine choice, or product separation requires it.
-- **Status:** Active / implemented by `docs/Plans/New-Play-Mode-MVP-Sprint-Plan.md`.
+- **Status:** Active / implemented by `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`.
 
 ### FED-023: Consumer Play mode owns fullscreen display chrome and drawable bounds
 

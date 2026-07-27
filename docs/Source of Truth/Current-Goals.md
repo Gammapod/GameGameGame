@@ -46,7 +46,8 @@ The active release direction is canonical action vertical slices: freeze the cur
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
 - Active release plan: `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
-- Recently archived focused sprint plan: `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
+- Active focused sprint plan: none selected after completing the Play-mode interaction sprint.
+- Recently archived focused sprint plans: `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 - Content/scenario capability gaps: `docs/Plans/Beta-Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Plans/Sprint-Retrospective.md`.
@@ -56,7 +57,7 @@ The active release direction is canonical action vertical slices: freeze the cur
 
 Trust `docs/Plans/High-Level-Roadmap.md` for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Select the next canonical action vertical slice from the roadmap backlog using the completed Move, Pickup/Drop seam, Enter/Exit, and Transfer evidence.
+1. Select the next canonical action vertical slice from the roadmap backlog using the completed Move, Pickup/Drop seam, Enter/Exit, Transfer, and Play-mode interaction evidence.
 2. Canonical runtime control-source / Action Choice model follow-through.
 3. Componentized Gamma play-mode follow-through over canonical action/Action Choice/POV/log services.
 4. Delta point-of-view follow-through where needed by canonical actions.

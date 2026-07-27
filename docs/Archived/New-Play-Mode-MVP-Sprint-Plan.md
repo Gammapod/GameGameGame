@@ -3,7 +3,7 @@ id: plan.new-play-mode-mvp-sprint
 title: New Play Mode MVP Sprint Plan
 kind: plan
 subkind: sprint-plan
-status: completed
+status: archived
 owners: [frontend-owner]
 audience: [frontend-owner, core-owner]
 lane: frontend-ux

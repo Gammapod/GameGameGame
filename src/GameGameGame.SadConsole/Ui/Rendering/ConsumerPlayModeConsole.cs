@@ -1,4 +1,5 @@
 using GameGameGame.Content;
+using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 using GameGameGame.SadConsoleApp.Ui.Tiles;
@@ -6,6 +7,7 @@ using SadConsole;
 using SadConsole.Input;
 using SadRogue.Primitives;
 using Console = SadConsole.Console;
+using GggDirection = GameGameGame.Core.Direction;
 
 namespace GameGameGame.SadConsoleApp.Ui.Rendering;
 
@@ -42,6 +44,66 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
+        if (_screen.HasActivePrompt)
+        {
+            if (ReadDirection(keyboard) is { } promptDirection)
+            {
+                if (_screen.ActivePromptAcceptsDirection(promptDirection))
+                {
+                    _screen.HandlePromptDirection(promptDirection);
+                }
+                else
+                {
+                    _screen.HandlePromptNavigationDirection(promptDirection);
+                }
+
+                Redraw();
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Escape))
+            {
+                _screen.HandlePromptCommand(UiComponentCommand.Cancel);
+                Redraw();
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Enter))
+            {
+                _screen.HandlePromptCommand(UiComponentCommand.Select);
+                Redraw();
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Up))
+            {
+                _screen.HandlePromptCommand(UiComponentCommand.Up);
+                Redraw();
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Down))
+            {
+                _screen.HandlePromptCommand(UiComponentCommand.Down);
+                Redraw();
+                return true;
+            }
+        }
+
+        if (keyboard.IsKeyReleased(Keys.Enter))
+        {
+            _screen.SubmitDefaultAction();
+            Redraw();
+            return true;
+        }
+
+        if (ReadDirection(keyboard) is { } direction)
+        {
+            _screen.SubmitMove(direction);
+            Redraw();
+            return true;
+        }
+
         if (keyboard.IsKeyReleased(Keys.Escape))
         {
             _returnToScenarioSelection();
@@ -73,6 +135,15 @@ internal sealed class ConsumerPlayModeConsole : Console
             DrawDebugOverlay(drawable);
         }
 
+        if (_screen.PromptComponent(drawable) is { } prompt)
+        {
+            _renderer.RenderOverlay(prompt);
+        }
+        else
+        {
+            _renderer.ClearOverlay();
+        }
+
         DrawBorderBuffer();
         Surface.IsDirty = true;
     }
@@ -87,6 +158,7 @@ internal sealed class ConsumerPlayModeConsole : Console
         var rows = new List<string>
         {
             _screen.FooterText,
+            _screen.LastActionStatus,
             $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {drawable.Width}x{drawable.Height}",
             $"Scenario: {_scenario.Name} ({_scenario.ScenarioId})"
         };
@@ -117,4 +189,20 @@ internal sealed class ConsumerPlayModeConsole : Console
             }
         }
     }
+
+    private static GggDirection? ReadDirection(Keyboard keyboard) =>
+        keyboard.KeysReleased.Select(key => ReadDirectionKey(key.Key)).FirstOrDefault(direction => direction is not null);
+
+    internal static GggDirection? ReadDirectionKey(Keys key) => key switch
+    {
+        Keys.Up or Keys.NumPad8 => GggDirection.North,
+        Keys.Down or Keys.NumPad2 => GggDirection.South,
+        Keys.Left or Keys.NumPad4 => GggDirection.West,
+        Keys.Right or Keys.NumPad6 => GggDirection.East,
+        Keys.NumPad7 => GggDirection.NorthWest,
+        Keys.NumPad9 => GggDirection.NorthEast,
+        Keys.NumPad1 => GggDirection.SouthWest,
+        Keys.NumPad3 => GggDirection.SouthEast,
+        _ => null
+    };
 }

@@ -1,7 +1,10 @@
 using GameGameGame.Content;
+using GameGameGame.Core;
 using GameGameGame.SadConsoleApp;
 using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Rendering;
 using GameGameGame.SadConsoleApp.Ui.Screens;
+using SadConsole.Input;
 
 namespace GameGameGame.SadConsole.Tests;
 
@@ -111,5 +114,251 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Contains(screen.DebugRows(), row => row.Contains("Could not launch scenario"));
     }
 
+    [Fact]
+    public void ConsumerPlayModeSubmitMoveMovesControlledActorAndRefreshesCurrentSpace()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var before = session.World.GetEntityLocation(session.PlayerEntityId);
+
+        var result = screen.SubmitMove(Direction.South);
+
+        Assert.True(result.Succeeded, result.FailureText);
+        var after = session.World.GetEntityLocation(session.PlayerEntityId);
+        Assert.Equal(before.Coord.Offset(Direction.South), after.Coord);
+        Assert.Contains("Moved South", screen.LastActionStatus);
+        Assert.NotNull(screen.CurrentSpaceView);
+        Assert.Contains(screen.DebugRows(), row => row.Contains($"Actor location: {after}"));
+    }
+
+    [Fact]
+    public void ConsumerPlayModeDebugRowsIncludeInteractionDiagnostics()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+
+        screen.SubmitMove(Direction.South);
+        var rows = screen.DebugRows();
+
+        Assert.Contains(rows, row => row == "Interaction:");
+        Assert.Contains(rows, row => row.Contains("input: MoveDirection South | decision: auto-submitted", StringComparison.Ordinal));
+        Assert.Contains(rows, row => row == "  prompt stack[0]: none");
+        Assert.Contains(rows, row => row == "  focus: none | shortcuts: none");
+        Assert.Contains(rows, row => row == "  candidates: 1/1 valid | 1 complete, 0 incomplete, 0 invalid");
+        Assert.Contains(rows, row => row.Contains("submission: success | direct controlled command", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ConsumerPlayModeDirectionInputSupportsArrowsAndNumpadDiagonals()
+    {
+        Assert.Equal(Direction.North, ConsumerPlayModeConsole.ReadDirectionKey(Keys.Up));
+        Assert.Equal(Direction.South, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad2));
+        Assert.Equal(Direction.West, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad4));
+        Assert.Equal(Direction.East, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad6));
+        Assert.Equal(Direction.NorthWest, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad7));
+        Assert.Equal(Direction.NorthEast, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad9));
+        Assert.Equal(Direction.SouthWest, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad1));
+        Assert.Equal(Direction.SouthEast, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad3));
+        Assert.Null(ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad5));
+    }
+
+    [Fact]
+    public void ConsumerPlayModePromptComponentIsAbsentUntilPromptIsActive()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+
+        Assert.False(screen.HasActivePrompt);
+        Assert.Null(screen.PromptComponent(SadConsoleRect.FromSize(1, 1, 80, 25)));
+    }
+
+    [Fact]
+    public void ConsumerPlayModeDefaultActionExplainsWhenNoSharedChoiceIsAvailable()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+
+        var outcome = screen.SubmitDefaultAction();
+
+        Assert.Equal(PlayModeIntentOutcomeKind.Explained, outcome.Kind);
+        Assert.False(screen.HasActivePrompt);
+        Assert.Contains("No valid action", screen.LastActionStatus);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeDefaultActionUsesSharedChoicesInSizeCalibrationScenario()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        screen.SubmitMove(Direction.North);
+
+        var outcome = screen.SubmitDefaultAction();
+
+        Assert.NotEqual(PlayModeIntentOutcomeKind.Explained, outcome.Kind);
+        Assert.True(outcome.Submission?.Succeeded == true || screen.HasActivePrompt);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeBumpDirectionFallsBackToContextCandidates()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+
+        var result = screen.SubmitMove(Direction.North);
+
+        Assert.True(result.Succeeded || screen.HasActivePrompt, screen.LastActionStatus);
+        Assert.DoesNotContain("Could not move North", screen.LastActionStatus);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeOffEdgeMoveFallsBackToExitContext()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        var enterResult = screen.SubmitMove(Direction.North);
+        if (screen.HasActivePrompt)
+        {
+            screen.HandlePromptCommand(UiComponentCommand.Select);
+        }
+
+        Assert.True(enterResult.Succeeded || screen.LastActionStatus.Contains("Enter", StringComparison.OrdinalIgnoreCase), screen.LastActionStatus);
+
+        var exitResult = screen.SubmitMove(Direction.North);
+
+        Assert.True(exitResult.Succeeded || screen.HasActivePrompt, screen.LastActionStatus);
+        Assert.DoesNotContain("Could not move North", screen.LastActionStatus);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeSizeCalibrationCanReachPickupAndDropThroughPrompts()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        MoveAdjacentToWeightBulk0(screen);
+        var item = new EntityId("debugWeightBulk0");
+        var originalPlane = session.World.GetEntityLocation(item).PlaneId;
+
+        var pickup = screen.SubmitDefaultAction();
+        SelectPromptUntilClosed(screen);
+
+        Assert.True(pickup.Kind != PlayModeIntentOutcomeKind.Explained || session.World.GetEntityLocation(item).PlaneId != originalPlane, screen.LastActionStatus);
+        Assert.NotEqual(originalPlane, session.World.GetEntityLocation(item).PlaneId);
+
+        var drop = screen.SubmitDefaultAction();
+        MovePromptSelectionTo(screen, "Drop");
+        screen.HandlePromptCommand(UiComponentCommand.Select);
+        Assert.IsType<InventorySpaceComponent>(screen.PromptComponent(SadConsoleRect.FromSize(1, 1, 80, 25)));
+        screen.HandlePromptCommand(UiComponentCommand.Select);
+        if (screen.HasActivePrompt && screen.ActivePromptAcceptedDirections.FirstOrDefault() is { } direction)
+        {
+            screen.HandlePromptDirection(direction);
+        }
+        SelectPromptUntilClosed(screen);
+
+        Assert.NotEqual(PlayModeIntentOutcomeKind.Explained, drop.Kind);
+        Assert.Equal(originalPlane, session.World.GetEntityLocation(item).PlaneId);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeSizeCalibrationCanReachTransferPanelAndSubmitTransfer()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        MoveAdjacentToWeightBulk0(screen);
+        var item = new EntityId("debugWeightBulk0");
+        screen.SubmitDefaultAction();
+        SelectPromptUntilClosed(screen);
+        Assert.NotEqual("world", session.World.GetEntityLocation(item).PlaneId.Value);
+
+        var context = screen.SubmitMove(Direction.South);
+        MovePromptSelectionTo(screen, "Transfer");
+        screen.HandlePromptCommand(UiComponentCommand.Select);
+
+        Assert.True(screen.HasActivePrompt, screen.LastActionStatus);
+        Assert.IsType<TransferInventoryComparisonComponent>(screen.PromptComponent(SadConsoleRect.FromSize(1, 1, 80, 25)));
+        screen.HandlePromptCommand(UiComponentCommand.Select);
+
+        Assert.False(screen.HasActivePrompt);
+        Assert.Contains("Transferred", screen.LastActionStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("debugChestAperture0", session.World.GetEntityLocation(item).PlaneId.Value);
+    }
+
+    [Fact]
+    public void ConsumerPlayModePickupDestinationPromptUsesDirectionKeysForSelectionNotMovement()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        MoveAdjacentToWeightBulk0(screen);
+        var actorBefore = session.World.GetEntityLocation(session.PlayerEntityId);
+
+        screen.SubmitDefaultAction();
+        SelectPromptUntilTitleContains(screen, "choose destination");
+        var beforeLabel = screen.ActivePromptFocusedChoiceLabel;
+
+        screen.HandlePromptNavigationDirection(Direction.East);
+
+        Assert.Equal(actorBefore, session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.NotEqual(beforeLabel, screen.ActivePromptFocusedChoiceLabel);
+        Assert.IsType<InventorySpaceComponent>(screen.PromptComponent(SadConsoleRect.FromSize(1, 1, 80, 25)));
+    }
+
     private static ScenarioCatalogEntry DemoEntry() => new("prototype", "prototype", "Prototype", "Prototype session");
+
+    private static void MoveAdjacentToWeightBulk0(ConsumerPlayModeScreen screen)
+    {
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.East).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.West).Succeeded);
+    }
+
+    private static void SelectPromptUntilClosed(ConsumerPlayModeScreen screen, int maxSelections = 4)
+    {
+        for (var index = 0; index < maxSelections && screen.HasActivePrompt; index++)
+        {
+            screen.HandlePromptCommand(UiComponentCommand.Select);
+        }
+    }
+
+    private static void SelectPromptUntilTitleContains(ConsumerPlayModeScreen screen, string text, int maxSelections = 4)
+    {
+        for (var index = 0; index < maxSelections && screen.HasActivePrompt; index++)
+        {
+            if (screen.PromptComponent(SadConsoleRect.FromSize(1, 1, 80, 25))?.Title.Contains(text, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return;
+            }
+
+            screen.HandlePromptCommand(UiComponentCommand.Select);
+        }
+    }
+
+    private static void MovePromptSelectionTo(ConsumerPlayModeScreen screen, string labelPrefix)
+    {
+        for (var index = 0; index < screen.ActivePromptChoiceLabels.Count; index++)
+        {
+            if (screen.ActivePromptChoiceLabels.ElementAtOrDefault(index)?.StartsWith(labelPrefix, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return;
+            }
+
+            screen.HandlePromptCommand(UiComponentCommand.Down);
+        }
+    }
+
+    private static (string Path, PlayableScenarioSession Session) SizeCalibrationSession()
+    {
+        var path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Content",
+            "Beta",
+            "Debug",
+            "CanonicalDebugRooms.yaml");
+        return (path, PlayableScenarioLauncher.CreateFromFile(path, "canonical-debug-size-calibration-room"));
+    }
 }

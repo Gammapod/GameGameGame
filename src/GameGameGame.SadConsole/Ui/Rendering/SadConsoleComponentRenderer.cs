@@ -290,22 +290,38 @@ internal sealed class SadConsoleComponentRenderer
 
             var decorators = decoratorsByCoord.GetValueOrDefault(coord) ?? [];
             var backdropSecondary = ColorForLayerBackground(view.Backdrop.Tile) ?? Color.Black;
+            var cellSecondary = InventorySpaceHighlightBackground(decorators) ?? backdropSecondary;
             if (options.ShowRowLabels && coord.X == view.Viewport.Origin.X)
             {
                 PrintClipped(target, innerLeft, cellRect.Top, 3, $"{coord.Y,2}:", Color.DarkGray);
             }
 
-            DrawInventorySpaceBackdrop(target, cellRect, view.Backdrop.Tile, backdropSecondary, bounds, gridAreaBottom);
+            DrawInventorySpaceBackdrop(target, cellRect, view.Backdrop.Tile, cellSecondary, bounds, gridAreaBottom);
 
             if (entitiesByCoord.TryGetValue(coord, out var entity))
             {
-                DrawInventorySpaceEntity(target, cellRect, entity, decorators, bounds, gridAreaBottom, backdropSecondary);
+                DrawInventorySpaceEntity(target, cellRect, entity, decorators, bounds, gridAreaBottom, cellSecondary);
             }
             else
             {
                 DrawInventorySpaceDecorators(target, cellRect, decorators, bounds, gridAreaBottom, entityPresent: false);
             }
         }
+    }
+
+    private static Color? InventorySpaceHighlightBackground(IReadOnlyList<InventorySpaceDecorator> decorators)
+    {
+        if (decorators.Any(decorator => decorator.Role == InventorySpaceDecoratorRole.Focused))
+        {
+            return Color.DarkCyan;
+        }
+
+        if (decorators.Any(decorator => decorator.Role == InventorySpaceDecoratorRole.Selected))
+        {
+            return Color.DarkGoldenrod;
+        }
+
+        return null;
     }
 
     private void DrawInventorySpaceColumnLabels(Console target, InventorySpaceViewModel view, int gridLeft, int y, SadConsoleRect componentBounds)
