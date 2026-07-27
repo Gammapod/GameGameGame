@@ -276,6 +276,19 @@ internal sealed class InventorySpaceComponent : IUiComponent
     private int RowLabelColumns => Options.ShowRowLabels ? 4 : 0;
     private int GridWidth => View.Viewport.Width * View.CellMetrics.Width + Math.Max(0, View.Viewport.Width - 1) * View.CellMetrics.Gap;
 
+    public SadConsoleRect CellBounds(GridCoord coord)
+    {
+        var relative = View.CellBounds(coord);
+        return SadConsoleRect.FromSize(
+            Bounds.Left + FrameLeftColumns + RowLabelColumns + relative.Left,
+            Bounds.Top + FrameTopRows + TitleRows + DebugRows + ColumnLabelRows + relative.Top,
+            relative.Width,
+            relative.Height);
+    }
+
+    private int FrameTopRows => Options.ShowFrame ? 1 : 0;
+    private int FrameLeftColumns => Options.ShowFrame ? 1 : 0;
+
     public IReadOnlyList<string> RenderRows(SadConsoleTheme theme)
     {
         var rows = new List<string> { $"[{State.BorderColor(theme)}] {Title}" };

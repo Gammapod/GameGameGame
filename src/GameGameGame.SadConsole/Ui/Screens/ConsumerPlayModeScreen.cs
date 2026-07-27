@@ -30,7 +30,9 @@ internal sealed class ConsumerPlayModeScreen
     public string? LaunchFailure { get; }
     public EntityPanelProjection? ControlledActorProjection { get; private set; }
     public EntityPanelProjection? CurrentPlaceProjection { get; private set; }
+    public EntityPanelProjection? LinkedInspectedSpaceProjection { get; private set; }
     public InventorySpaceViewModel? CurrentSpaceView { get; private set; }
+    public InventorySpaceViewModel? LinkedInspectedSpaceView { get; private set; }
     public string LastActionStatus { get; private set; } = "Ready.";
     public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
     public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
@@ -209,12 +211,15 @@ internal sealed class ConsumerPlayModeScreen
             options: showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare);
     }
 
-    public IReadOnlyList<string> DebugRows()
+    public IReadOnlyList<string> DebugRows() => DebugRows(drawableBounds: null, promptOverlayActive: HasActivePrompt);
+
+    public IReadOnlyList<string> DebugRows(SadConsoleRect? drawableBounds, bool promptOverlayActive)
     {
         var rows = new List<string>();
         rows.AddRange(BuildStatusRows());
         rows.AddRange(BuildInteractionRows());
         rows.AddRange(BuildCurrentSpaceRows());
+        rows.AddRange(BuildLinkedLayoutRows(drawableBounds, promptOverlayActive));
         rows.AddRange(BuildDiagnosticsRows());
         if (Session is null)
         {
@@ -232,6 +237,58 @@ internal sealed class ConsumerPlayModeScreen
         return CurrentSpaceGridComponent(drawableBounds, showDebugLabels: false) is { } grid
             ? [grid]
             : [];
+    }
+
+    public LinkedPlaySpacePresentation? LinkedSpacePresentation(SadConsoleRect drawableBounds, bool showDebugLabels = false)
+    {
+        if (CurrentSpaceView is null)
+        {
+            return null;
+        }
+
+        var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
+        var parentSizing = new InventorySpaceComponent(
+            "current-space-grid-sizing",
+            CurrentSpaceView.Title,
+            SadConsoleRect.FromSize(0, 0, 1, 1),
+            CurrentSpaceView,
+            options: options);
+        var childSizing = LinkedInspectedSpaceView is { } childView
+            ? new InventorySpaceComponent(
+                "linked-inspected-space-grid-sizing",
+                childView.Title,
+                SadConsoleRect.FromSize(0, 0, 1, 1),
+                childView,
+                options: options)
+            : null;
+        var inspectedCoord = LinkedInspectedSpaceProjection?.Location.Coord;
+        var layout = LinkedInventorySpaceLayout.Resolve(drawableBounds, parentSizing, childSizing, inspectedCoord);
+        var nodes = new List<InventorySpaceComponent>();
+        foreach (var node in layout.Nodes)
+        {
+            if (node.Role == LinkedInventorySpaceNodeRole.CurrentPlace)
+            {
+                nodes.Add(new InventorySpaceComponent(
+                    "current-space-grid",
+                    CurrentSpaceView.Title,
+                    node.Bounds,
+                    CurrentSpaceView,
+                    state: UiComponentState.Focused,
+                    options: options));
+            }
+            else if (node.Role == LinkedInventorySpaceNodeRole.LinkedInspectedSpace && LinkedInspectedSpaceView is { } inspectedView)
+            {
+                nodes.Add(new InventorySpaceComponent(
+                    "linked-inspected-space-grid",
+                    inspectedView.Title,
+                    node.Bounds,
+                    inspectedView,
+                    state: UiComponentState.Selected,
+                    options: options));
+            }
+        }
+
+        return new LinkedPlaySpacePresentation(nodes, layout.Connector, layout);
     }
 
     private IReadOnlyList<string> BuildStatusRows()
@@ -305,8 +362,63 @@ internal sealed class ConsumerPlayModeScreen
             rows.Add($"layers: backdrop + {view.Entities.Count} primary visual(s) + {view.Decorators.Count} decorator(s)");
         }
 
+        if (LinkedInspectedSpaceProjection is { } child)
+        {
+            rows.Add($"linked inspected space: {child.Name} ({child.EntityId}) at {child.Location.Coord}");
+        }
+
         return rows;
     }
+
+    private IReadOnlyList<string> BuildLinkedLayoutRows(SadConsoleRect? drawableBounds, bool promptOverlayActive)
+    {
+        if (drawableBounds is not { } bounds)
+        {
+            return ["Linked layout: drawable bounds unavailable to screen-model diagnostics."];
+        }
+
+        if (LinkedSpacePresentation(bounds, showDebugLabels: false) is not { } presentation)
+        {
+            return ["Linked layout: unavailable; no current-space view."];
+        }
+
+        var rows = new List<string>
+        {
+            "Linked layout:",
+            $"  drawable: {FormatRect(bounds)} | status: {presentation.Layout.Status}",
+            $"  nodes: {presentation.Nodes.Count} | connector: {(presentation.Connector is null ? "none" : "smooth MonoGame preferred; tile fallback available")}",
+            $"  connector render: {(presentation.Connector is null ? "none" : promptOverlayActive ? "suppressed while prompt overlay is active" : "MonoGame DrawCallCustom")}",
+            $"  linked inspected space: {FormatLinkedInspectedSpace()}"
+        };
+
+        rows.AddRange(presentation.Layout.Nodes.Select(node => $"  node {node.Id}/{node.Role}: {FormatRect(node.Bounds)} clipped={node.IsClipped}"));
+        if (presentation.Layout.ParentCellBounds is { } parentCell)
+        {
+            rows.Add($"  parent cell bounds: {FormatRect(parentCell)}");
+        }
+
+        if (presentation.Connector is { } connector)
+        {
+            foreach (var segment in connector.Segments)
+            {
+                rows.Add($"  connector {segment.Id}: {FormatEndpoint(segment.Start)} -> {FormatEndpoint(segment.End)} color={segment.Color} layer={segment.Layer}");
+            }
+        }
+
+        var hitRegions = presentation.Layout.HitRegions.Take(4).Select(region => $"{region.Id}:{region.Kind}@{FormatRect(region.Bounds)}");
+        rows.Add($"  hit regions: {string.Join("; ", hitRegions)}{(presentation.Layout.HitRegions.Count > 4 ? "; ..." : string.Empty)}");
+        return rows;
+    }
+
+    private string FormatLinkedInspectedSpace() => LinkedInspectedSpaceProjection is { } child
+        ? $"{child.Name} ({child.EntityId}) plane={child.Location.PlaneId} coord={child.Location.Coord} grid={child.InventoryGrid?.Width}x{child.InventoryGrid?.Height}"
+        : "none";
+
+    private static string FormatEndpoint(ConnectorLineEndpoint endpoint) =>
+        $"{endpoint.Id}@({endpoint.CellX},{endpoint.CellY}) anchor=({endpoint.AnchorX:0.##},{endpoint.AnchorY:0.##})";
+
+    private static string FormatRect(SadConsoleRect rect) =>
+        $"L{rect.Left},T{rect.Top},W{rect.Width},H{rect.Height}";
 
     private IReadOnlyList<string> BuildInteractionRows()
     {
@@ -442,7 +554,9 @@ internal sealed class ConsumerPlayModeScreen
         {
             ControlledActorProjection = null;
             CurrentPlaceProjection = null;
+            LinkedInspectedSpaceProjection = null;
             CurrentSpaceView = null;
+            LinkedInspectedSpaceView = null;
             return;
         }
 
@@ -463,6 +577,34 @@ internal sealed class ConsumerPlayModeScreen
                 actorId,
                 cellMetrics: InventorySpaceCellMetrics.Default)
             : null;
+        LinkedInspectedSpaceProjection = ResolveFirstLinkedInspectedSpace(world, actorId);
+        LinkedInspectedSpaceView = LinkedInspectedSpaceProjection?.InventoryGrid is not null
+            ? InventorySpaceViewModel.FromProjection(
+                "0.3.linked-inspected-space.inventory-space",
+                LinkedInspectedSpaceProjection,
+                actorId,
+                cellMetrics: InventorySpaceCellMetrics.Default,
+                showFrame: false)
+            : null;
+    }
+
+    private EntityPanelProjection? ResolveFirstLinkedInspectedSpace(WorldState world, EntityId actorId)
+    {
+        if (CurrentPlaceProjection?.Contents.Count is not > 0)
+        {
+            return null;
+        }
+
+        foreach (var row in CurrentPlaceProjection.Contents.Where(row => row.EntityId != actorId))
+        {
+            var projection = _panelProjection.Project(world, row.EntityId, Session!.ActionPlans, actorId);
+            if (projection.InventoryGrid is not null)
+            {
+                return projection;
+            }
+        }
+
+        return null;
     }
 
     private IReadOnlyList<PlayModeActionCandidate> ResolveIntentCandidates(PlayModeIntentSeed seed)
@@ -949,3 +1091,8 @@ internal sealed class ConsumerPlayModeScreen
     }
 
 }
+
+internal sealed record LinkedPlaySpacePresentation(
+    IReadOnlyList<InventorySpaceComponent> Nodes,
+    ConnectorLineViewModel? Connector,
+    LinkedInventorySpaceLayout Layout);

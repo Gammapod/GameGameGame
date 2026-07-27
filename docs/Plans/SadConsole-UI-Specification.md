@@ -162,6 +162,8 @@ Related frontend-owned items that remain in broader roadmaps because they are wo
 
 Completed low-risk pattern sprint: `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md`.
 
+Completed linked containment proof-of-concept sprint: `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md` covered the first four slices below and left follow-ups for connector styling, explicit inspected-space selection, and POV-driven automatic inspection policy.
+
 Containment-tree rollout sequence:
 
 1. Promote the connector-line spike into a reusable presentation contract: endpoint geometry, line segment model, z-order, redraw timing, and a fallback tile-line strategy if smooth pixel lines prove fragile. Update the component gallery and focused tests around the accepted contract. Covers UI-M01, UI-M04, and UI-N03.

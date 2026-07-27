@@ -46,8 +46,8 @@ The active release direction is canonical action vertical slices: freeze the cur
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
 - Active release plan: `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
-- Active focused sprint plan: none selected after completing the Play-mode interaction sprint.
-- Recently archived focused sprint plans: `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
+- Active focused sprint plan: none selected after completing the linked containment Play-mode proof-of-concept sprint.
+- Recently archived focused sprint plans: `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 - Content/scenario capability gaps: `docs/Plans/Beta-Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Plans/Sprint-Retrospective.md`.

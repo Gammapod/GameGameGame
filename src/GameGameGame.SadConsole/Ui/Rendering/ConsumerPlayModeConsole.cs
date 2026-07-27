@@ -4,6 +4,7 @@ using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 using GameGameGame.SadConsoleApp.Ui.Tiles;
 using SadConsole;
+using SadConsole.DrawCalls;
 using SadConsole.Input;
 using SadRogue.Primitives;
 using Console = SadConsole.Console;
@@ -18,8 +19,10 @@ internal sealed class ConsumerPlayModeConsole : Console
     private readonly SadConsoleTheme _theme;
     private readonly SadConsoleDisplaySettings _displaySettings;
     private readonly SadConsoleComponentRenderer _renderer;
+    private readonly ConnectorLineDrawCallRenderer _connectorRenderer = new();
     private readonly ConsumerPlayModeScreen _screen;
     private ConsumerPlayModeLayout _layout;
+    private ConnectorLineViewModel? _lastConnector;
 
     public ConsumerPlayModeConsole(
         ScenarioCatalogEntry scenario,
@@ -120,14 +123,29 @@ internal sealed class ConsumerPlayModeConsole : Console
         return false;
     }
 
+    public override void Render(TimeSpan delta)
+    {
+        base.Render(delta);
+        if (_lastConnector is not null && !_screen.HasActivePrompt)
+        {
+            GameHost.Instance.DrawCalls.Enqueue(new DrawCallCustom(DrawLinkedConnector));
+        }
+    }
+
     private void Redraw()
     {
         _renderer.ClearSurface();
         var drawable = _layout.DrawableBounds;
 
-        if (_screen.CurrentSpaceGridComponent(drawable, showDebugLabels: false) is { } currentSpaceGrid)
+        _lastConnector = null;
+        if (_screen.LinkedSpacePresentation(drawable, showDebugLabels: false) is { } linkedSpace)
         {
-            _renderer.DrawComponent(currentSpaceGrid);
+            _lastConnector = linkedSpace.Connector;
+
+            foreach (var node in linkedSpace.Nodes)
+            {
+                _renderer.DrawComponent(node);
+            }
         }
 
         if (_layout.DebugVisible)
@@ -150,9 +168,14 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     private void DrawDebugOverlay(SadConsoleRect drawable)
     {
-        if (_screen.CurrentSpaceGridComponent(drawable, showDebugLabels: true) is { } currentSpaceGrid)
+        if (_screen.LinkedSpacePresentation(drawable, showDebugLabels: true) is { } linkedSpace)
         {
-            _renderer.DrawComponent(currentSpaceGrid);
+            _lastConnector = linkedSpace.Connector;
+
+            foreach (var node in linkedSpace.Nodes)
+            {
+                _renderer.DrawComponent(node);
+            }
         }
 
         var rows = new List<string>
@@ -162,7 +185,7 @@ internal sealed class ConsumerPlayModeConsole : Console
             $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {drawable.Width}x{drawable.Height}",
             $"Scenario: {_scenario.Name} ({_scenario.ScenarioId})"
         };
-        rows.AddRange(_screen.DebugRows());
+        rows.AddRange(_screen.DebugRows(drawable, _screen.HasActivePrompt));
 
         var maxRows = Math.Min(rows.Count, Math.Max(0, drawable.Height));
         var startY = Math.Max(drawable.Top, drawable.Bottom - maxRows);
@@ -170,6 +193,18 @@ internal sealed class ConsumerPlayModeConsole : Console
         {
             _renderer.PrintClipped(drawable.Left, startY + index, drawable.Width, rows[index], Color.DarkGray);
         }
+    }
+
+    private void DrawLinkedConnector()
+    {
+        if (_lastConnector is null)
+        {
+            return;
+        }
+
+        var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
+        var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
+        _connectorRenderer.Draw([_lastConnector], AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: false);
     }
 
     private void DrawBorderBuffer()

@@ -38,6 +38,7 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 - `docs/Plans/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
+- `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md` records the completed focused frontend sprint for the first linked containment-space Play-mode UI slices.
 - `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` records the proposed low-risk mock play-mode pattern sprint.
 - `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md` records the completed focused sprint plan for a new consumer-facing Play mode route and reusable inventory-space component.
 - `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md` records the completed focused sprint plan that made the new Play mode playable through abstract intent resolution, contextual prompt stacks, canonical Action Choice consumption, and F12 interaction diagnostics.
@@ -253,6 +254,8 @@ Promote or consider while planning SadConsole work:
 Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items formerly repeated in this bucket are consolidated in `docs/Plans/SadConsole-UI-Specification.md` and should be updated there instead of duplicated here.
 
 ## Near-term selection recommendation
+
+Recently completed focused frontend sprint: `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md` implemented the first linked containment-space Play-mode UI slices: connector-line contract, pure current-space-plus-linked-inspected-space layout, consumer Play inspection replacement, smooth connector rendering, and overlay/debug layering. Follow-ups are connector appearance controls, explicit inspected-space selection, and POV-driven automatic inspection policy.
 
 Recently completed focused frontend sprints: `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md` started the consumer-facing Play mode as an isolated componentized route inside the existing SadConsole project, relabeled the previous play/debug path as `Debug`, introduced a reusable inventory-space renderer for the controlled actor's current space, and stabilized the fullscreen Play shell with a one-tile border buffer plus `F12` debug overlay. `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md` followed through with playable input, contextual Select/Cancel prompts, canonical Action Choice coverage for Move/Pickup/Drop/Enter/Exit/Transfer in the size-calibration testbed, and developer-targeted F12 interaction diagnostics.
 

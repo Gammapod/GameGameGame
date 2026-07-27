@@ -3,15 +3,12 @@ using GameGameGame.SadConsoleApp.Ui.Navigation;
 using GameGameGame.SadConsoleApp.Ui.Screens;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 using GameGameGame.SadConsoleApp.Ui.Tiles;
-using Microsoft.Xna.Framework.Graphics;
 using SadConsole;
 using SadConsole.DrawCalls;
 using SadConsole.Host;
 using SadConsole.Input;
 using SadRogue.Primitives;
 using Console = SadConsole.Console;
-using XnaColor = Microsoft.Xna.Framework.Color;
-using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace GameGameGame.SadConsoleApp.Ui.Rendering;
 
@@ -24,9 +21,9 @@ internal sealed class ComponentGalleryConsole : Console
     private readonly ComponentGalleryScreen _gallery;
     private readonly SadConsoleTheme _theme;
     private readonly SadConsoleComponentRenderer _renderer;
+    private readonly ConnectorLineDrawCallRenderer _connectorRenderer = new();
     private readonly TilesetProfile _candiiProfile;
     private Console? _candiiPreviewLayer;
-    private Texture2D? _connectorLinePixel;
     private string _message = "Component gallery. Arrows select components. Enter focuses. Esc releases focus or exits.";
 
     public ComponentGalleryConsole(SadConsoleTheme? theme = null, TilesetProfile? candiiProfile = null, SadConsoleDisplaySettings? displaySettings = null) : base(ScreenWidth, ScreenHeight)
@@ -58,7 +55,7 @@ internal sealed class ComponentGalleryConsole : Console
     public override void Render(TimeSpan delta)
     {
         base.Render(delta);
-        QueueConnectorLineSpikeDrawCall();
+        QueueConnectorLineDrawCall();
     }
 
     private void Handle(UiComponentCommand command)
@@ -102,73 +99,27 @@ internal sealed class ComponentGalleryConsole : Console
         Surface.IsDirty = true;
     }
 
-    private void QueueConnectorLineSpikeDrawCall()
+    private void QueueConnectorLineDrawCall()
     {
-        if (_gallery.Components().All(component => component.Id != "connector-line-spike"))
+        if (_gallery.Components().OfType<ConnectorLineComponent>().Any() != true)
         {
             return;
         }
 
-        GameHost.Instance.DrawCalls.Enqueue(new DrawCallCustom(DrawConnectorLineSpike));
+        GameHost.Instance.DrawCalls.Enqueue(new DrawCallCustom(DrawConnectorLines));
     }
 
-    private void DrawConnectorLineSpike()
+    private void DrawConnectorLines()
     {
-        var component = _gallery.Components().FirstOrDefault(component => component.Id == "connector-line-spike");
-        if (component is null)
+        var components = _gallery.Components().OfType<ConnectorLineComponent>().ToList();
+        if (components.Count == 0)
         {
             return;
         }
 
-        var pixel = ConnectorLinePixel();
         var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
         var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
-        var originX = AbsoluteArea.X;
-        var originY = AbsoluteArea.Y;
-        var bounds = component.Bounds;
-
-        var start = CellCenter(originX, originY, cellWidth, cellHeight, bounds.Left + 3, bounds.Top + 4);
-        var middle = CellCenter(originX, originY, cellWidth, cellHeight, bounds.Left + 16, bounds.Top + 2);
-        var end = CellCenter(originX, originY, cellWidth, cellHeight, bounds.Left + 31, bounds.Top + 5);
-
-        DrawPixelLine(pixel, start, middle, XnaColor.Cyan, thickness: 2f);
-        DrawPixelLine(pixel, middle, end, XnaColor.Gold, thickness: 2f);
-        DrawEndpoint(pixel, start, XnaColor.White, radius: 3);
-        DrawEndpoint(pixel, middle, XnaColor.Cyan, radius: 3);
-        DrawEndpoint(pixel, end, XnaColor.Gold, radius: 3);
-    }
-
-    private Texture2D ConnectorLinePixel()
-    {
-        if (_connectorLinePixel is not null)
-        {
-            return _connectorLinePixel;
-        }
-
-        _connectorLinePixel = new Texture2D(Global.GraphicsDevice, 1, 1);
-        _connectorLinePixel.SetData([XnaColor.White]);
-        return _connectorLinePixel;
-    }
-
-    private static XnaVector2 CellCenter(int originX, int originY, int cellWidth, int cellHeight, int cellX, int cellY) =>
-        new(originX + (cellX * cellWidth) + (cellWidth / 2f), originY + (cellY * cellHeight) + (cellHeight / 2f));
-
-    private static void DrawPixelLine(Texture2D pixel, XnaVector2 start, XnaVector2 end, XnaColor color, float thickness)
-    {
-        var delta = end - start;
-        var length = delta.Length();
-        if (length <= 0.01f)
-        {
-            return;
-        }
-
-        var rotation = MathF.Atan2(delta.Y, delta.X);
-        Global.SharedSpriteBatch.Draw(pixel, start, null, color, rotation, new XnaVector2(0f, 0.5f), new XnaVector2(length, thickness), SpriteEffects.None, 0f);
-    }
-
-    private static void DrawEndpoint(Texture2D pixel, XnaVector2 center, XnaColor color, int radius)
-    {
-        Global.SharedSpriteBatch.Draw(pixel, new Microsoft.Xna.Framework.Rectangle((int)center.X - radius, (int)center.Y - radius, radius * 2, radius * 2), color);
+        _connectorRenderer.Draw(components.Select(component => component.View).ToList(), AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: true);
     }
 
     private void RenderCandiiPreview()

@@ -23,7 +23,7 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("choice-picker-overlay"),
             new FocusTarget("confirm-overlay"),
             new FocusTarget("candii-tileset"),
-            new FocusTarget("connector-line-spike"),
+            new FocusTarget("connector-line"),
             new FocusTarget("play-mode-components"),
             new FocusTarget("inventory-space"),
             new FocusTarget("footer")
@@ -50,7 +50,7 @@ internal sealed class ComponentGalleryScreen
             ChoicePickerOverlayExample(),
             ConfirmOverlayExample(),
             CandiiTilesetExample(),
-            ConnectorLineSpikeExample(),
+            ConnectorLineExample(),
             PlayModeComponentMapExample(),
             InventorySpaceExample(),
             FooterPanel()
@@ -168,19 +168,33 @@ internal sealed class ComponentGalleryScreen
             "Player action prompts consume Core choice facts; highlights are hints.");
     }
 
-    private PanelComponent ConnectorLineSpikeExample()
+    private ConnectorLineComponent ConnectorLineExample()
     {
-        return new PanelComponent(
-            "connector-line-spike",
-            "Connector-line spike",
-            SadConsoleRect.FromSize(79, 16, 38, 7),
+        var view = new ConnectorLineViewModel(
+            "gallery.connector-line.view",
+            "Accepted connector-line pattern",
             [
-                "MonoGame DrawCallCustom overlay.",
-                "Endpoints derive from SadConsole cells.",
-                "If fragile, fall back to tile lines."
+                new ConnectorLineSegment(
+                    "parent-to-bend",
+                    new ConnectorLineEndpoint("parent-cell", 82, 20),
+                    new ConnectorLineEndpoint("bend", 95, 18),
+                    PresentationColor.Cyan,
+                    Layer: 1),
+                new ConnectorLineSegment(
+                    "bend-to-child-node",
+                    new ConnectorLineEndpoint("bend", 95, 18),
+                    new ConnectorLineEndpoint("child-node", 110, 21),
+                    PresentationColor.Yellow,
+                    Layer: 1)
             ],
-            _focusRouter.StateFor("connector-line-spike"),
-            "Spike only: smooth connector lines over component surface.");
+            ConnectorLineFallbackGlyphs.Ascii);
+
+        return new ConnectorLineComponent(
+            "connector-line",
+            "Connector-line pattern",
+            SadConsoleRect.FromSize(79, 16, 38, 7),
+            view,
+            _focusRouter.StateFor("connector-line"));
     }
 
     private InventorySpaceComponent InventorySpaceExample()

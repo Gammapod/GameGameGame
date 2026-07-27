@@ -105,6 +105,98 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeLinkedSpaceFallsBackToSingleCurrentSpaceWhenChildCannotFit()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 8, 6);
+
+        var presentation = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
+
+        Assert.Single(presentation.Nodes);
+        Assert.Equal("current-space-grid", presentation.Nodes.Single().Id);
+        Assert.Null(presentation.Connector);
+        Assert.True(presentation.Layout.Status is LinkedInventorySpaceLayoutStatus.SingleNode or LinkedInventorySpaceLayoutStatus.ChildOmitted or LinkedInventorySpaceLayoutStatus.Clipped);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeLinkedSpaceCanPresentLinkedInspectedInventoryBesideCurrentSpace()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        var presentation = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
+
+        Assert.Equal(LinkedInventorySpaceLayoutStatus.LinkedTwoSpace, presentation.Layout.Status);
+        Assert.Collection(
+            presentation.Nodes,
+            current =>
+            {
+                Assert.Equal("current-space-grid", current.Id);
+                Assert.Same(InventorySpaceRenderOptions.Bare, current.Options);
+            },
+            inspected =>
+            {
+                Assert.Equal("linked-inspected-space-grid", inspected.Id);
+                Assert.Same(InventorySpaceRenderOptions.Bare, inspected.Options);
+            });
+        Assert.NotNull(presentation.Connector);
+        Assert.NotNull(screen.LinkedInspectedSpaceProjection);
+        Assert.Contains(screen.DebugRows(), row => row.Contains("linked inspected space:"));
+        Assert.All(presentation.Nodes, node =>
+        {
+            Assert.True(node.Bounds.Left >= drawable.Left);
+            Assert.True(node.Bounds.Top >= drawable.Top);
+            Assert.True(node.Bounds.Bottom <= drawable.Bottom);
+        });
+    }
+
+    [Fact]
+    public void ConsumerPlayModeDebugRowsIncludeLinkedLayoutDiagnosticsForDeveloperReview()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        var rows = screen.DebugRows(drawable, promptOverlayActive: false);
+
+        Assert.Contains(rows, row => row == "Linked layout:");
+        Assert.Contains(rows, row => row.Contains("status: LinkedTwoSpace"));
+        Assert.Contains(rows, row => row.Contains("connector: smooth MonoGame preferred; tile fallback available"));
+        Assert.Contains(rows, row => row.Contains("connector render: MonoGame DrawCallCustom"));
+        Assert.Contains(rows, row => row.Contains("node current-place/CurrentPlace"));
+        Assert.Contains(rows, row => row.Contains("node linked-inspected-space/LinkedInspectedSpace"));
+        Assert.Contains(rows, row => row.Contains("parent cell bounds:"));
+        Assert.Contains(rows, row => row.Contains("connector current-place-to-linked-inspected-space:"));
+        Assert.Contains(rows, row => row.Contains("hit regions:"));
+    }
+
+    [Fact]
+    public void ConsumerPlayModePromptOverlayDoesNotMoveLinkedLayoutAndSuppressesSmoothConnectorDiagnostic()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+        var before = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
+
+        MoveAdjacentToWeightBulk0(screen);
+        screen.SubmitDefaultAction();
+        if (!screen.HasActivePrompt)
+        {
+            SelectPromptUntilClosed(screen);
+            screen.SubmitDefaultAction();
+        }
+        var prompt = Assert.IsAssignableFrom<IUiComponent>(screen.PromptComponent(drawable));
+        var after = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
+        var rows = screen.DebugRows(drawable, promptOverlayActive: true);
+
+        Assert.DoesNotContain(prompt.Id, after.Nodes.Select(node => node.Id));
+        Assert.Equal(before.Nodes.Select(node => node.Bounds).ToList(), after.Nodes.Select(node => node.Bounds).ToList());
+        Assert.Contains(rows, row => row.Contains("connector render: suppressed while prompt overlay is active"));
+    }
+
+    [Fact]
     public void ConsumerPlayModeReportsLaunchFailureInDebugRows()
     {
         var screen = ConsumerPlayModeScreen.Open(new ScenarioCatalogEntry("missing-file.yaml", "missing", "Missing", "Missing file"));

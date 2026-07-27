@@ -28,7 +28,7 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("choice-picker-overlay", component.Id),
             component => Assert.Equal("confirm-overlay", component.Id),
             component => Assert.Equal("candii-tileset", component.Id),
-            component => Assert.Equal("connector-line-spike", component.Id),
+            component => Assert.Equal("connector-line", component.Id),
             component => Assert.Equal("play-mode-components", component.Id),
             component => Assert.Equal("inventory-space", component.Id),
             component => Assert.Equal("footer", component.Id));
@@ -65,8 +65,8 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Confirm overlay"));
         Assert.Contains(rows, row => row.Contains("Candii 8x8 tileset preview"));
         Assert.Contains(rows, row => row.Contains("square 8x8 cells"));
-        Assert.Contains(rows, row => row.Contains("Connector-line spike"));
-        Assert.Contains(rows, row => row.Contains("DrawCallCustom overlay"));
+        Assert.Contains(rows, row => row.Contains("Connector-line pattern"));
+        Assert.Contains(rows, row => row.Contains("Accepted connector-line pattern"));
         Assert.Contains(rows, row => row.Contains("Play mode component map"));
         Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
         Assert.Contains(rows, row => row.Contains("Inventory-space component"));
@@ -231,6 +231,22 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(inventorySpace.View.Decorators, decorator => decorator.Role == InventorySpaceDecoratorRole.Controlled);
         Assert.Same(InventorySpaceRenderOptions.FramedDebug, inventorySpace.Options);
         Assert.True(inventorySpace.Bounds.Height >= inventorySpace.RequiredHeight);
+    }
+
+    [Fact]
+    public void GalleryIncludesConnectorLinePatternAsExecutablePatternReference()
+    {
+        var gallery = ComponentGalleryScreen.CreateDefault();
+
+        var connector = Assert.IsType<ConnectorLineComponent>(gallery.Components().Single(component => component.Id == "connector-line"));
+
+        Assert.Equal("Connector-line pattern", connector.Title);
+        Assert.Equal(2, connector.View.Segments.Count);
+        Assert.All(connector.View.Segments, segment => Assert.Equal(1, segment.Layer));
+        Assert.Equal('-', connector.View.FallbackGlyphs.Horizontal);
+        Assert.Equal('|', connector.View.FallbackGlyphs.Vertical);
+        Assert.Equal('+', connector.View.FallbackGlyphs.Junction);
+        Assert.Contains(connector.RenderRows(SadConsoleTheme.Default), row => row.Contains("below prompts/debug"));
     }
 
     [Fact]

@@ -36,6 +36,32 @@ internal sealed class SadConsoleComponentRenderer
 
     public void DrawComponent(IUiComponent component) => DrawComponent(host, component, localBounds: false);
 
+    public void DrawConnectorFallback(ConnectorLineViewModel connector)
+    {
+        foreach (var segment in connector.FallbackTileSegments().OrderBy(segment => segment.Layer))
+        {
+            var color = ColorForPresentation(segment.Color);
+            if (segment.StartCellX == segment.EndCellX)
+            {
+                var minY = Math.Min(segment.StartCellY, segment.EndCellY);
+                var maxY = Math.Max(segment.StartCellY, segment.EndCellY);
+                for (var y = minY; y <= maxY; y++)
+                {
+                    SetCell(host, segment.StartCellX, y, segment.Glyph, color, Color.Black);
+                }
+            }
+            else if (segment.StartCellY == segment.EndCellY)
+            {
+                var minX = Math.Min(segment.StartCellX, segment.EndCellX);
+                var maxX = Math.Max(segment.StartCellX, segment.EndCellX);
+                for (var x = minX; x <= maxX; x++)
+                {
+                    SetCell(host, x, segment.StartCellY, segment.Glyph, color, Color.Black);
+                }
+            }
+        }
+    }
+
     public void ClearOverlay()
     {
         if (!_overlayAttached)
