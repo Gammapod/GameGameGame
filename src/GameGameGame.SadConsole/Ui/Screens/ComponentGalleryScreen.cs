@@ -23,6 +23,7 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("choice-picker-overlay"),
             new FocusTarget("confirm-overlay"),
             new FocusTarget("candii-tileset"),
+            new FocusTarget("connector-line-spike"),
             new FocusTarget("play-mode-components"),
             new FocusTarget("inventory-space"),
             new FocusTarget("footer")
@@ -49,6 +50,7 @@ internal sealed class ComponentGalleryScreen
             ChoicePickerOverlayExample(),
             ConfirmOverlayExample(),
             CandiiTilesetExample(),
+            ConnectorLineSpikeExample(),
             PlayModeComponentMapExample(),
             InventorySpaceExample(),
             FooterPanel()
@@ -164,6 +166,21 @@ internal sealed class ComponentGalleryScreen
             ],
             _focusRouter.StateFor("play-mode-components"),
             "Player action prompts consume Core choice facts; highlights are hints.");
+    }
+
+    private PanelComponent ConnectorLineSpikeExample()
+    {
+        return new PanelComponent(
+            "connector-line-spike",
+            "Connector-line spike",
+            SadConsoleRect.FromSize(79, 16, 38, 7),
+            [
+                "MonoGame DrawCallCustom overlay.",
+                "Endpoints derive from SadConsole cells.",
+                "If fragile, fall back to tile lines."
+            ],
+            _focusRouter.StateFor("connector-line-spike"),
+            "Spike only: smooth connector lines over component surface.");
     }
 
     private InventorySpaceComponent InventorySpaceExample()

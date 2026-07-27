@@ -28,6 +28,7 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("choice-picker-overlay", component.Id),
             component => Assert.Equal("confirm-overlay", component.Id),
             component => Assert.Equal("candii-tileset", component.Id),
+            component => Assert.Equal("connector-line-spike", component.Id),
             component => Assert.Equal("play-mode-components", component.Id),
             component => Assert.Equal("inventory-space", component.Id),
             component => Assert.Equal("footer", component.Id));
@@ -64,6 +65,8 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Confirm overlay"));
         Assert.Contains(rows, row => row.Contains("Candii 8x8 tileset preview"));
         Assert.Contains(rows, row => row.Contains("square 8x8 cells"));
+        Assert.Contains(rows, row => row.Contains("Connector-line spike"));
+        Assert.Contains(rows, row => row.Contains("DrawCallCustom overlay"));
         Assert.Contains(rows, row => row.Contains("Play mode component map"));
         Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
         Assert.Contains(rows, row => row.Contains("Inventory-space component"));
