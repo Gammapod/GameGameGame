@@ -82,6 +82,73 @@ internal sealed record LinkedInventorySpaceLayout(
             parentNode.IsClipped || childNode.IsClipped ? LinkedInventorySpaceLayoutStatus.Clipped : LinkedInventorySpaceLayoutStatus.LinkedTwoSpace);
     }
 
+    public static LinkedInventorySpaceLayout ResolveActorPovAnchored(
+        SadConsoleRect drawableBounds,
+        SadConsoleRect currentPovRegion,
+        SadConsoleRect inspectionChainRegion,
+        InventorySpaceComponent parentSizing,
+        InventorySpaceComponent? childSizing,
+        GridCoord? parentEntityCoord)
+    {
+        var parentWidth = Math.Min(parentSizing.RequiredWidth, currentPovRegion.Width);
+        var parentHeight = Math.Min(parentSizing.RequiredHeight, currentPovRegion.Height);
+        var parentBounds = Centered(currentPovRegion, parentWidth, parentHeight);
+        var parentNode = new LinkedInventorySpaceNode("current-place", LinkedInventorySpaceNodeRole.CurrentPlace, parentBounds, IsClipped(parentSizing, parentBounds));
+        var parentOnly = parentNode.IsClipped || childSizing is null || parentEntityCoord is null || inspectionChainRegion.Width <= 0 || inspectionChainRegion.Height <= 0;
+
+        if (parentOnly)
+        {
+            return new LinkedInventorySpaceLayout(
+                drawableBounds,
+                [parentNode],
+                Connector: null,
+                ParentCellBounds: null,
+                HitRegions: [LinkedInventorySpaceHitRegion.Node(parentNode)],
+                parentNode.IsClipped ? LinkedInventorySpaceLayoutStatus.Clipped : LinkedInventorySpaceLayoutStatus.SingleNode);
+        }
+
+        var child = childSizing!;
+        var childWidth = Math.Min(child.RequiredWidth, inspectionChainRegion.Width);
+        var childHeight = Math.Min(child.RequiredHeight, inspectionChainRegion.Height);
+        if (child.RequiredWidth > inspectionChainRegion.Width || child.RequiredHeight > inspectionChainRegion.Height)
+        {
+            return new LinkedInventorySpaceLayout(
+                drawableBounds,
+                [parentNode],
+                Connector: null,
+                ParentCellBounds: null,
+                HitRegions: [LinkedInventorySpaceHitRegion.Node(parentNode)],
+                parentNode.IsClipped ? LinkedInventorySpaceLayoutStatus.Clipped : LinkedInventorySpaceLayoutStatus.ChildOmitted);
+        }
+
+        var childBounds = SadConsoleRect.FromSize(
+            inspectionChainRegion.Left,
+            inspectionChainRegion.Top + Math.Max(0, (inspectionChainRegion.Height - childHeight) / 2),
+            childWidth,
+            childHeight);
+        var childNode = new LinkedInventorySpaceNode("linked-inspected-space", LinkedInventorySpaceNodeRole.LinkedInspectedSpace, childBounds, IsClipped(child, childBounds));
+        var parentComponent = Rebound(parentSizing, parentBounds);
+        var parentCell = parentComponent.CellBounds(parentEntityCoord!.Value);
+        var connector = new ConnectorLineViewModel(
+            "linked-inventory-space.connector",
+            "Current place to inspected child",
+            [new ConnectorLineSegment(
+                "current-place-to-linked-inspected-space",
+                CenterOf(parentCell),
+                new ConnectorLineEndpoint("linked-inspected-space-node-left-edge", childBounds.Left, childBounds.Top + (childBounds.Height / 2), AnchorX: 0f, AnchorY: 0.5f),
+                PresentationColor.Cyan,
+                Layer: 1)],
+            ConnectorLineFallbackGlyphs.Ascii);
+
+        return new LinkedInventorySpaceLayout(
+            drawableBounds,
+            [parentNode, childNode],
+            connector,
+            parentCell,
+            [LinkedInventorySpaceHitRegion.Node(parentNode), LinkedInventorySpaceHitRegion.Node(childNode), new LinkedInventorySpaceHitRegion("parent-cell", parentCell, LinkedInventorySpaceHitRegionKind.InventoryCell, parentNode.Id)],
+            parentNode.IsClipped || childNode.IsClipped ? LinkedInventorySpaceLayoutStatus.Clipped : LinkedInventorySpaceLayoutStatus.LinkedTwoSpace);
+    }
+
     private static SadConsoleRect Centered(SadConsoleRect bounds, int width, int height) =>
         SadConsoleRect.FromSize(
             bounds.Left + Math.Max(0, (bounds.Width - width) / 2),

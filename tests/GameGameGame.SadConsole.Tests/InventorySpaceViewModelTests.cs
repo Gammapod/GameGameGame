@@ -114,13 +114,13 @@ public sealed class InventorySpaceViewModelTests
         Assert.False(bare.Options.ShowFrame);
         Assert.False(bare.Options.ShowRowLabels);
         Assert.DoesNotContain(bare.RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default), row => row.Contains("plane"));
-        Assert.Equal(view.Viewport.Height, bare.RequiredHeight);
-        Assert.Equal(view.Viewport.Width, bare.RequiredWidth);
+        Assert.Equal(view.Viewport.Height * view.CellMetrics.Height, bare.RequiredHeight);
+        Assert.Equal(view.Viewport.Width * view.CellMetrics.Width, bare.RequiredWidth);
 
         Assert.True(labeled.Options.ShowRowLabels);
         Assert.True(labeled.Options.ShowColumnLabels);
-        Assert.Equal(view.Viewport.Height + 1, labeled.RequiredHeight);
-        Assert.Equal(view.Viewport.Width + 4, labeled.RequiredWidth);
+        Assert.Equal(view.Viewport.Height * view.CellMetrics.Height + 1, labeled.RequiredHeight);
+        Assert.Equal(view.Viewport.Width * view.CellMetrics.Width + 4, labeled.RequiredWidth);
 
         Assert.True(framedDebug.Options.ShowFrame);
         Assert.True(framedDebug.Options.ShowDebugRows);

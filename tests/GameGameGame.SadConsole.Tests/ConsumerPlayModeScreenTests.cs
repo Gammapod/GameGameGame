@@ -22,13 +22,17 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.NotNull(screen.ControlledActorProjection);
         Assert.NotNull(screen.CurrentPlaceProjection);
         Assert.NotNull(screen.CurrentSpaceView);
-        var currentSpace = Assert.IsType<InventorySpaceComponent>(Assert.Single(components));
+        var currentSpace = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "current-space-grid"));
         Assert.Equal("current-space-grid", currentSpace.Id);
         Assert.Equal(UiComponentState.Focused, currentSpace.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, currentSpace.Options);
         Assert.Empty(currentSpace.BodyRows);
-        Assert.Equal(1, currentSpace.View.CellMetrics.Width);
+        Assert.Equal(2, currentSpace.View.CellMetrics.Width);
+        Assert.Equal(2, currentSpace.View.CellMetrics.Height);
         Assert.True(currentSpace.Bounds.Height >= currentSpace.RequiredHeight);
+        var actorInventory = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "controlled-actor-inventory-grid"));
+        Assert.Equal(UiComponentState.Selected, actorInventory.State);
+        Assert.Same(InventorySpaceRenderOptions.Bare, actorInventory.Options);
 
         var debugRows = screen.DebugRows();
         Assert.Contains(debugRows, row => row.Contains("Controlled actor:"));
@@ -51,8 +55,10 @@ public sealed class ConsumerPlayModeScreenTests
 
         Assert.Same(InventorySpaceRenderOptions.Bare, bare.Options);
         Assert.Same(InventorySpaceRenderOptions.Labeled, labeled.Options);
-        Assert.Equal(bare.Bounds.Left, labeled.Bounds.Left + 4);
-        Assert.Equal(bare.Bounds.Top, labeled.Bounds.Top + 1);
+        var layout = ActorPovPlayLayout.Resolve(drawable);
+        Assert.True(labeled.Bounds.Left >= layout.CurrentPovRegion.Left);
+        Assert.True(labeled.Bounds.Top >= layout.CurrentPovRegion.Top);
+        Assert.True(labeled.Bounds.Bottom <= layout.CurrentPovRegion.Bottom);
     }
 
     [Fact]
@@ -105,6 +111,26 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeUsesActorPovRegionsForCurrentSpaceAndActorInventory()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 99, 36);
+        var layout = ActorPovPlayLayout.Resolve(drawable);
+
+        var current = Assert.IsType<InventorySpaceComponent>(screen.CurrentSpaceGridComponent(drawable, showDebugLabels: false));
+        var inventory = Assert.IsType<InventorySpaceComponent>(screen.ControlledActorInventoryComponent(drawable, showDebugLabels: false));
+
+        Assert.True(current.Bounds.Left >= layout.CurrentPovRegion.Left);
+        Assert.True(current.Bounds.Top >= layout.CurrentPovRegion.Top);
+        Assert.True(current.Bounds.Bottom <= layout.CurrentPovRegion.Bottom);
+        Assert.True(current.Bounds.Width <= layout.CurrentPovRegion.Width);
+        Assert.True(inventory.Bounds.Left >= layout.InventoryChainRegion.Left);
+        Assert.True(inventory.Bounds.Top >= layout.InventoryChainRegion.Top);
+        Assert.True(inventory.Bounds.Bottom <= layout.InventoryChainRegion.Bottom);
+    }
+
+    [Fact]
     public void ConsumerPlayModeLinkedSpaceFallsBackToSingleCurrentSpaceWhenChildCannotFit()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
@@ -113,9 +139,8 @@ public sealed class ConsumerPlayModeScreenTests
 
         var presentation = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
 
-        Assert.Single(presentation.Nodes);
-        Assert.Equal("current-space-grid", presentation.Nodes.Single().Id);
-        Assert.Null(presentation.Connector);
+        Assert.Contains(presentation.Nodes, node => node.Id == "current-space-grid");
+        Assert.DoesNotContain(presentation.Nodes, node => node.Id == "linked-inspected-space-grid");
         Assert.True(presentation.Layout.Status is LinkedInventorySpaceLayoutStatus.SingleNode or LinkedInventorySpaceLayoutStatus.ChildOmitted or LinkedInventorySpaceLayoutStatus.Clipped);
     }
 
@@ -129,27 +154,47 @@ public sealed class ConsumerPlayModeScreenTests
         var presentation = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
 
         Assert.Equal(LinkedInventorySpaceLayoutStatus.LinkedTwoSpace, presentation.Layout.Status);
-        Assert.Collection(
-            presentation.Nodes,
-            current =>
-            {
-                Assert.Equal("current-space-grid", current.Id);
-                Assert.Same(InventorySpaceRenderOptions.Bare, current.Options);
-            },
-            inspected =>
-            {
-                Assert.Equal("linked-inspected-space-grid", inspected.Id);
-                Assert.Same(InventorySpaceRenderOptions.Bare, inspected.Options);
-            });
+        var current = Assert.IsType<InventorySpaceComponent>(presentation.Nodes.Single(node => node.Id == "current-space-grid"));
+        var inspected = Assert.IsType<InventorySpaceComponent>(presentation.Nodes.Single(node => node.Id == "linked-inspected-space-grid"));
+        Assert.Same(InventorySpaceRenderOptions.Bare, current.Options);
+        Assert.Same(InventorySpaceRenderOptions.Bare, inspected.Options);
         Assert.NotNull(presentation.Connector);
         Assert.NotNull(screen.LinkedInspectedSpaceProjection);
         Assert.Contains(screen.DebugRows(), row => row.Contains("linked inspected space:"));
+        var actorPovLayout = ActorPovPlayLayout.Resolve(drawable);
+        Assert.True(presentation.Layout.Nodes[0].Bounds.Left >= actorPovLayout.CurrentPovRegion.Left);
+        Assert.True(presentation.Layout.Nodes[0].Bounds.Bottom <= actorPovLayout.CurrentPovRegion.Bottom);
+        Assert.True(presentation.Layout.Nodes[1].Bounds.Left >= actorPovLayout.InspectionChainRegion.Left);
         Assert.All(presentation.Nodes, node =>
         {
             Assert.True(node.Bounds.Left >= drawable.Left);
             Assert.True(node.Bounds.Top >= drawable.Top);
             Assert.True(node.Bounds.Bottom <= drawable.Bottom);
         });
+    }
+
+    [Fact]
+    public void ConsumerPlayModeRendersActorInventoryChainFromBottomInventoryRegion()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 120, 42);
+        var layout = ActorPovPlayLayout.Resolve(drawable);
+
+        var presentation = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
+
+        var actorInventory = Assert.IsType<InventorySpaceComponent>(presentation.Nodes.Single(node => node.Id == "controlled-actor-inventory-grid"));
+        Assert.True(actorInventory.Bounds.Left >= layout.InventoryChainRegion.Left);
+        Assert.True(actorInventory.Bounds.Top >= layout.InventoryChainRegion.Top);
+        Assert.True(actorInventory.Bounds.Bottom <= layout.InventoryChainRegion.Bottom);
+        if (screen.LinkedActorInventoryItemProjection is not null)
+        {
+            var linkedItem = Assert.IsType<InventorySpaceComponent>(presentation.Nodes.Single(node => node.Id == "actor-inventory-linked-item-grid"));
+            Assert.True(linkedItem.Bounds.Left > actorInventory.Bounds.Left);
+            Assert.True(linkedItem.Bounds.Bottom <= layout.InventoryChainRegion.Bottom);
+            Assert.NotNull(presentation.Connector);
+            Assert.Contains(presentation.Connector!.Segments, segment => segment.Id == "actor-inventory-chain-to-linked-item");
+        }
     }
 
     [Fact]
@@ -321,6 +366,32 @@ public sealed class ConsumerPlayModeScreenTests
 
         Assert.True(exitResult.Succeeded || screen.HasActivePrompt, screen.LastActionStatus);
         Assert.DoesNotContain("Could not move North", screen.LastActionStatus);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeRendersParentChainLeftOfCurrentPovWhenActorEntersNestedSpace()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        var enterResult = screen.SubmitMove(Direction.North);
+        if (screen.HasActivePrompt)
+        {
+            screen.HandlePromptCommand(UiComponentCommand.Select);
+        }
+
+        Assert.True(enterResult.Succeeded || screen.LastActionStatus.Contains("Enter", StringComparison.OrdinalIgnoreCase), screen.LastActionStatus);
+        var drawable = SadConsoleRect.FromSize(1, 1, 160, 60);
+        var layout = ActorPovPlayLayout.Resolve(drawable);
+
+        var presentation = Assert.IsType<LinkedPlaySpacePresentation>(screen.LinkedSpacePresentation(drawable));
+
+        var parent = Assert.IsType<InventorySpaceComponent>(presentation.Nodes.First(node => node.Id.StartsWith("parent-chain-", StringComparison.Ordinal)));
+        Assert.True(parent.Bounds.Left >= layout.ParentChainRegion.Left);
+        Assert.True(parent.Bounds.Bottom <= layout.ParentChainRegion.Bottom);
+        Assert.Equal(InventorySpaceCellMetrics.Default, parent.View.CellMetrics);
+        Assert.NotNull(presentation.Connector);
+        Assert.Contains(presentation.Connector!.Segments, segment => segment.Id.StartsWith("parent-chain-", StringComparison.Ordinal));
     }
 
     [Fact]

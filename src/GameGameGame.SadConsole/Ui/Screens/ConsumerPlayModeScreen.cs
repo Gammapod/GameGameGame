@@ -6,6 +6,8 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
 internal sealed class ConsumerPlayModeScreen
 {
+    private static readonly InventorySpaceCellMetrics MainCurrentLocationMetrics = new(2, 2, 0);
+
     private readonly EntityPanelProjectionService _panelProjection;
     private readonly GameplaySessionController? _sessionController;
     private readonly PlayModeIntentController _intentController;
@@ -32,7 +34,10 @@ internal sealed class ConsumerPlayModeScreen
     public EntityPanelProjection? CurrentPlaceProjection { get; private set; }
     public EntityPanelProjection? LinkedInspectedSpaceProjection { get; private set; }
     public InventorySpaceViewModel? CurrentSpaceView { get; private set; }
+    public InventorySpaceViewModel? ControlledActorInventoryView { get; private set; }
     public InventorySpaceViewModel? LinkedInspectedSpaceView { get; private set; }
+    public EntityPanelProjection? LinkedActorInventoryItemProjection { get; private set; }
+    public InventorySpaceViewModel? LinkedActorInventoryItemView { get; private set; }
     public string LastActionStatus { get; private set; } = "Ready.";
     public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
     public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
@@ -178,6 +183,9 @@ internal sealed class ConsumerPlayModeScreen
             return null;
         }
 
+        var playLayout = ActorPovPlayLayout.Resolve(drawableBounds);
+        var currentRegion = playLayout.CurrentPovRegion;
+        currentSpaceView = FitCurrentSpaceViewToRegion(currentSpaceView, currentRegion, showDebugLabels);
         var bareSizing = new InventorySpaceComponent(
             "current-space-grid-sizing",
             currentSpaceView.Title,
@@ -185,21 +193,21 @@ internal sealed class ConsumerPlayModeScreen
             currentSpaceView,
             options: InventorySpaceRenderOptions.Bare);
 
-        var gridLeft = drawableBounds.Left + Math.Max(0, (drawableBounds.Width - bareSizing.RequiredWidth) / 2);
-        var gridTop = drawableBounds.Top + Math.Max(0, (drawableBounds.Height - bareSizing.RequiredHeight) / 2);
+        var gridLeft = currentRegion.Left + Math.Max(0, (currentRegion.Width - bareSizing.RequiredWidth) / 2);
+        var gridTop = currentRegion.Top + Math.Max(0, (currentRegion.Height - bareSizing.RequiredHeight) / 2);
         var bounds = SadConsoleRect.FromSize(
             gridLeft,
             gridTop,
-            Math.Min(drawableBounds.Width, bareSizing.RequiredWidth),
-            Math.Min(drawableBounds.Height, bareSizing.RequiredHeight));
+            Math.Min(currentRegion.Width, bareSizing.RequiredWidth),
+            Math.Min(currentRegion.Height, bareSizing.RequiredHeight));
 
         if (showDebugLabels)
         {
             bounds = SadConsoleRect.FromSize(
-                Math.Max(drawableBounds.Left, bounds.Left - 4),
-                Math.Max(drawableBounds.Top, bounds.Top - 1),
-                Math.Min(drawableBounds.Width, bounds.Width + 4),
-                Math.Min(drawableBounds.Height, bounds.Height + 1));
+                Math.Max(currentRegion.Left, bounds.Left - 4),
+                Math.Max(currentRegion.Top, bounds.Top - 1),
+                Math.Min(currentRegion.Width, bounds.Width + 4),
+                Math.Min(currentRegion.Height, bounds.Height + 1));
         }
 
         return new InventorySpaceComponent(
@@ -234,9 +242,48 @@ internal sealed class ConsumerPlayModeScreen
 
     public IReadOnlyList<IUiComponent> Components(SadConsoleRect drawableBounds)
     {
-        return CurrentSpaceGridComponent(drawableBounds, showDebugLabels: false) is { } grid
-            ? [grid]
-            : [];
+        var components = new List<IUiComponent>();
+        if (CurrentSpaceGridComponent(drawableBounds, showDebugLabels: false) is { } grid)
+        {
+            components.Add(grid);
+        }
+
+        if (ControlledActorInventoryComponent(drawableBounds, showDebugLabels: false) is { } inventory)
+        {
+            components.Add(inventory);
+        }
+
+        return components;
+    }
+
+    public InventorySpaceComponent? ControlledActorInventoryComponent(SadConsoleRect drawableBounds, bool showDebugLabels)
+    {
+        if (ControlledActorInventoryView is not { } inventoryView)
+        {
+            return null;
+        }
+
+        var playLayout = ActorPovPlayLayout.Resolve(drawableBounds);
+        var region = playLayout.InventoryChainRegion;
+        var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
+        var sizing = new InventorySpaceComponent(
+            "controlled-actor-inventory-sizing",
+            inventoryView.Title,
+            SadConsoleRect.FromSize(0, 0, 1, 1),
+            inventoryView,
+            options: options);
+        var bounds = SadConsoleRect.FromSize(
+            region.Left,
+            region.Top + Math.Max(0, (region.Height - sizing.RequiredHeight) / 2),
+            Math.Min(region.Width, sizing.RequiredWidth),
+            Math.Min(region.Height, sizing.RequiredHeight));
+        return new InventorySpaceComponent(
+            "controlled-actor-inventory-grid",
+            inventoryView.Title,
+            bounds,
+            inventoryView,
+            state: UiComponentState.Selected,
+            options: options);
     }
 
     public LinkedPlaySpacePresentation? LinkedSpacePresentation(SadConsoleRect drawableBounds, bool showDebugLabels = false)
@@ -247,11 +294,13 @@ internal sealed class ConsumerPlayModeScreen
         }
 
         var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
+        var playLayout = ActorPovPlayLayout.Resolve(drawableBounds);
+        var currentSpaceView = FitCurrentSpaceViewToRegion(CurrentSpaceView, playLayout.CurrentPovRegion, showDebugLabels);
         var parentSizing = new InventorySpaceComponent(
             "current-space-grid-sizing",
-            CurrentSpaceView.Title,
+            currentSpaceView.Title,
             SadConsoleRect.FromSize(0, 0, 1, 1),
-            CurrentSpaceView,
+            currentSpaceView,
             options: options);
         var childSizing = LinkedInspectedSpaceView is { } childView
             ? new InventorySpaceComponent(
@@ -261,8 +310,16 @@ internal sealed class ConsumerPlayModeScreen
                 childView,
                 options: options)
             : null;
-        var inspectedCoord = LinkedInspectedSpaceProjection?.Location.Coord;
-        var layout = LinkedInventorySpaceLayout.Resolve(drawableBounds, parentSizing, childSizing, inspectedCoord);
+        var inspectedCoord = LinkedInspectedSpaceProjection?.Location.Coord is { } coord && currentSpaceView.IsVisible(coord)
+            ? coord
+            : (GridCoord?)null;
+        var layout = LinkedInventorySpaceLayout.ResolveActorPovAnchored(
+            drawableBounds,
+            playLayout.CurrentPovRegion,
+            playLayout.InspectionChainRegion,
+            parentSizing,
+            childSizing,
+            inspectedCoord);
         var nodes = new List<InventorySpaceComponent>();
         foreach (var node in layout.Nodes)
         {
@@ -270,9 +327,9 @@ internal sealed class ConsumerPlayModeScreen
             {
                 nodes.Add(new InventorySpaceComponent(
                     "current-space-grid",
-                    CurrentSpaceView.Title,
+                    currentSpaceView.Title,
                     node.Bounds,
-                    CurrentSpaceView,
+                    currentSpaceView,
                     state: UiComponentState.Focused,
                     options: options));
             }
@@ -288,7 +345,207 @@ internal sealed class ConsumerPlayModeScreen
             }
         }
 
-        return new LinkedPlaySpacePresentation(nodes, layout.Connector, layout);
+        var parentChain = BuildParentChainPresentation(playLayout, nodes.FirstOrDefault(node => node.Id == "current-space-grid"));
+        var actorInventoryChain = BuildActorInventoryChainPresentation(playLayout);
+        nodes.InsertRange(0, parentChain.Nodes);
+        nodes.AddRange(actorInventoryChain.Nodes);
+        var connector = CombineConnectors(parentChain.Connector, layout.Connector, actorInventoryChain.Connector);
+
+        return new LinkedPlaySpacePresentation(nodes, connector, layout);
+    }
+
+    private ParentChainPresentation BuildActorInventoryChainPresentation(ActorPovPlayLayout playLayout)
+    {
+        var actorInventory = ControlledActorInventoryComponent(playLayout.DrawableBounds, showDebugLabels: false);
+        if (actorInventory is null)
+        {
+            return ParentChainPresentation.Empty;
+        }
+
+        var nodes = new List<InventorySpaceComponent> { actorInventory };
+        if (LinkedActorInventoryItemView is null || LinkedActorInventoryItemProjection?.Location.Coord is not { } carriedCoord || !actorInventory.View.IsVisible(carriedCoord))
+        {
+            return new ParentChainPresentation(nodes, null);
+        }
+
+        const int gap = 3;
+        var region = playLayout.InventoryChainRegion;
+        var childSizing = new InventorySpaceComponent(
+            "actor-inventory-linked-item-sizing",
+            LinkedActorInventoryItemView.Title,
+            SadConsoleRect.FromSize(0, 0, 1, 1),
+            LinkedActorInventoryItemView,
+            options: InventorySpaceRenderOptions.Bare);
+        var childLeft = actorInventory.Bounds.Left + actorInventory.Bounds.Width + gap;
+        var remainingWidth = Math.Max(0, region.Left + region.Width - childLeft);
+        if (remainingWidth <= 0 || childSizing.RequiredWidth > remainingWidth || childSizing.RequiredHeight > region.Height)
+        {
+            return new ParentChainPresentation(nodes, null);
+        }
+
+        var childBounds = SadConsoleRect.FromSize(
+            childLeft,
+            region.Top + Math.Max(0, (region.Height - childSizing.RequiredHeight) / 2),
+            childSizing.RequiredWidth,
+            childSizing.RequiredHeight);
+        var child = new InventorySpaceComponent(
+            "actor-inventory-linked-item-grid",
+            LinkedActorInventoryItemView.Title,
+            childBounds,
+            LinkedActorInventoryItemView,
+            state: UiComponentState.Selected,
+            options: InventorySpaceRenderOptions.Bare);
+        nodes.Add(child);
+
+        var connector = new ConnectorLineViewModel(
+            "actor-inventory-chain.connector",
+            "Controlled actor inventory to inspected carried inventory",
+            [new ConnectorLineSegment(
+                "actor-inventory-chain-to-linked-item",
+                CenterOf(actorInventory.CellBounds(carriedCoord), "actor-inventory-carried-item-cell"),
+                LeftEdgeOf(child, "actor-inventory-linked-item-left-edge"),
+                PresentationColor.Cyan,
+                Layer: 1)],
+            ConnectorLineFallbackGlyphs.Ascii);
+        return new ParentChainPresentation(nodes, connector);
+    }
+
+    private ParentChainPresentation BuildParentChainPresentation(ActorPovPlayLayout playLayout, InventorySpaceComponent? currentNode)
+    {
+        if (Session is null || CurrentPlaceProjection?.Breadcrumb.Segments.Count is not > 1 || playLayout.ParentChainRegion.Width <= 0)
+        {
+            return ParentChainPresentation.Empty;
+        }
+
+        var actorId = _sessionController?.PlayerEntityId ?? Session.PlayerEntityId;
+        var world = _sessionController?.World ?? Session.World;
+        var breadcrumb = CurrentPlaceProjection.Breadcrumb.Segments;
+        var parentSegments = breadcrumb.Take(breadcrumb.Count - 1).ToList();
+        var componentsByEntityId = new Dictionary<EntityId, InventorySpaceComponent>();
+        var orderedComponents = new List<InventorySpaceComponent>();
+        var nextRight = playLayout.ParentChainRegion.Left + playLayout.ParentChainRegion.Width;
+        const int gap = 3;
+
+        foreach (var segment in parentSegments.AsEnumerable().Reverse())
+        {
+            var projection = _panelProjection.Project(world, segment.EntityId, Session.ActionPlans, actorId);
+            if (projection.InventoryGrid is null)
+            {
+                continue;
+            }
+
+            var view = InventorySpaceViewModel.FromProjection(
+                $"0.parent-chain.{segment.EntityId.Value}",
+                projection,
+                actorId,
+                cellMetrics: InventorySpaceCellMetrics.Default,
+                showFrame: false);
+            var sizing = new InventorySpaceComponent(
+                $"parent-chain-{segment.EntityId.Value}-sizing",
+                view.Title,
+                SadConsoleRect.FromSize(0, 0, 1, 1),
+                view,
+                options: InventorySpaceRenderOptions.Bare);
+            var width = Math.Min(sizing.RequiredWidth, playLayout.ParentChainRegion.Width);
+            var height = Math.Min(sizing.RequiredHeight, playLayout.ParentChainRegion.Height);
+            var left = nextRight - width;
+            if (left < playLayout.ParentChainRegion.Left)
+            {
+                break;
+            }
+
+            var bounds = SadConsoleRect.FromSize(
+                left,
+                playLayout.ParentChainRegion.Top + Math.Max(0, (playLayout.ParentChainRegion.Height - height) / 2),
+                width,
+                height);
+            var component = new InventorySpaceComponent(
+                $"parent-chain-{segment.EntityId.Value}",
+                view.Title,
+                bounds,
+                view,
+                state: UiComponentState.Unselected,
+                options: InventorySpaceRenderOptions.Bare);
+            componentsByEntityId[segment.EntityId] = component;
+            orderedComponents.Insert(0, component);
+            nextRight = left - gap;
+        }
+
+        var segments = new List<ConnectorLineSegment>();
+        for (var index = 0; index < breadcrumb.Count - 1; index++)
+        {
+            var parentSegment = breadcrumb[index];
+            var childSegment = breadcrumb[index + 1];
+            if (!componentsByEntityId.TryGetValue(parentSegment.EntityId, out var parentComponent))
+            {
+                continue;
+            }
+
+            ConnectorLineEndpoint? end = null;
+            if (componentsByEntityId.TryGetValue(childSegment.EntityId, out var childComponent))
+            {
+                end = LeftEdgeOf(childComponent, $"parent-chain-{childSegment.EntityId.Value}-left-edge");
+            }
+            else if (index == breadcrumb.Count - 2 && currentNode is not null)
+            {
+                end = LeftEdgeOf(currentNode, "current-place-left-edge");
+            }
+
+            if (end is null || childSegment.CoordinateInContainingPlane is not { } coord || !parentComponent.View.IsVisible(coord))
+            {
+                continue;
+            }
+
+            segments.Add(new ConnectorLineSegment(
+                $"parent-chain-{parentSegment.EntityId.Value}-to-{childSegment.EntityId.Value}",
+                CenterOf(parentComponent.CellBounds(coord), $"parent-chain-{parentSegment.EntityId.Value}-child-cell"),
+                end,
+                PresentationColor.Cyan,
+                Layer: 1));
+        }
+
+        var connector = segments.Count == 0
+            ? null
+            : new ConnectorLineViewModel(
+                "parent-chain.connector",
+                "Parent containment chain to current place",
+                segments,
+                ConnectorLineFallbackGlyphs.Ascii);
+
+        return new ParentChainPresentation(orderedComponents, connector);
+    }
+
+    private static ConnectorLineViewModel? CombineConnectors(params ConnectorLineViewModel?[] connectors)
+    {
+        var segments = connectors.Where(connector => connector is not null).SelectMany(connector => connector!.Segments).ToList();
+        return segments.Count == 0
+            ? null
+            : new ConnectorLineViewModel("actor-pov-play.connectors", "Actor POV containment and inspection connectors", segments, ConnectorLineFallbackGlyphs.Ascii);
+    }
+
+    private static ConnectorLineEndpoint LeftEdgeOf(InventorySpaceComponent component, string id) =>
+        new(id, component.Bounds.Left, component.Bounds.Top + component.Bounds.Height / 2, AnchorX: 0f, AnchorY: 0.5f);
+
+    private static ConnectorLineEndpoint CenterOf(SadConsoleRect bounds, string id) =>
+        new(id, bounds.Left + bounds.Width / 2, bounds.Top + bounds.Height / 2);
+
+    private static InventorySpaceViewModel FitCurrentSpaceViewToRegion(InventorySpaceViewModel view, SadConsoleRect region, bool showDebugLabels)
+    {
+        var rowLabelColumns = showDebugLabels ? 4 : 0;
+        var columnLabelRows = showDebugLabels ? 1 : 0;
+        var maxViewportWidth = Math.Max(1, (region.Width - rowLabelColumns) / Math.Max(1, view.CellMetrics.Width + view.CellMetrics.Gap));
+        var maxViewportHeight = Math.Max(1, (region.Height - columnLabelRows) / Math.Max(1, view.CellMetrics.Height + view.CellMetrics.Gap));
+        var viewportWidth = Math.Min(view.Width, maxViewportWidth);
+        var viewportHeight = Math.Min(view.Height, maxViewportHeight);
+        var focus = view.Decorators.FirstOrDefault(decorator => decorator.Role == InventorySpaceDecoratorRole.Controlled)?.Coord
+            ?? view.Entities.FirstOrDefault()?.Coord
+            ?? view.Viewport.Origin;
+        var originX = Math.Clamp(focus.X - viewportWidth / 2, 0, Math.Max(0, view.Width - viewportWidth));
+        var originY = Math.Clamp(focus.Y - viewportHeight / 2, 0, Math.Max(0, view.Height - viewportHeight));
+        return view with
+        {
+            Viewport = new InventorySpaceViewport(new GridCoord(originX, originY), viewportWidth, viewportHeight)
+        };
     }
 
     private IReadOnlyList<string> BuildStatusRows()
@@ -555,8 +812,11 @@ internal sealed class ConsumerPlayModeScreen
             ControlledActorProjection = null;
             CurrentPlaceProjection = null;
             LinkedInspectedSpaceProjection = null;
+            LinkedActorInventoryItemProjection = null;
             CurrentSpaceView = null;
+            ControlledActorInventoryView = null;
             LinkedInspectedSpaceView = null;
+            LinkedActorInventoryItemView = null;
             return;
         }
 
@@ -575,6 +835,13 @@ internal sealed class ConsumerPlayModeScreen
                 "0.2.inventory-space",
                 CurrentPlaceProjection,
                 actorId,
+                cellMetrics: MainCurrentLocationMetrics)
+            : null;
+        ControlledActorInventoryView = ControlledActorProjection.InventoryGrid is not null
+            ? InventorySpaceViewModel.FromProjection(
+                "0.inventory.controlled-actor",
+                ControlledActorProjection,
+                actorId,
                 cellMetrics: InventorySpaceCellMetrics.Default)
             : null;
         LinkedInspectedSpaceProjection = ResolveFirstLinkedInspectedSpace(world, actorId);
@@ -586,6 +853,35 @@ internal sealed class ConsumerPlayModeScreen
                 cellMetrics: InventorySpaceCellMetrics.Default,
                 showFrame: false)
             : null;
+        LinkedActorInventoryItemProjection = ResolveFirstCarriedInspectedSpace(world, actorId);
+        LinkedActorInventoryItemView = LinkedActorInventoryItemProjection?.InventoryGrid is not null
+            ? InventorySpaceViewModel.FromProjection(
+                "0.inventory.linked-carried-space.inventory-space",
+                LinkedActorInventoryItemProjection,
+                actorId,
+                cellMetrics: InventorySpaceCellMetrics.Default,
+                showFrame: false)
+            : null;
+    }
+
+    private EntityPanelProjection? ResolveFirstCarriedInspectedSpace(WorldState world, EntityId actorId)
+    {
+        if (ControlledActorProjection?.InventoryGrid?.Cells is not { } cells)
+        {
+            return null;
+        }
+
+        foreach (var cell in cells.Where(cell => cell.EntityId is not null).OrderBy(cell => cell.Coord.Y).ThenBy(cell => cell.Coord.X))
+        {
+            var carriedId = cell.EntityId!.Value;
+            var projection = _panelProjection.Project(world, carriedId, Session!.ActionPlans, actorId);
+            if (projection.InventoryGrid is not null)
+            {
+                return projection;
+            }
+        }
+
+        return null;
     }
 
     private EntityPanelProjection? ResolveFirstLinkedInspectedSpace(WorldState world, EntityId actorId)
@@ -1096,3 +1392,10 @@ internal sealed record LinkedPlaySpacePresentation(
     IReadOnlyList<InventorySpaceComponent> Nodes,
     ConnectorLineViewModel? Connector,
     LinkedInventorySpaceLayout Layout);
+
+internal sealed record ParentChainPresentation(
+    IReadOnlyList<InventorySpaceComponent> Nodes,
+    ConnectorLineViewModel? Connector)
+{
+    public static ParentChainPresentation Empty { get; } = new([], null);
+}

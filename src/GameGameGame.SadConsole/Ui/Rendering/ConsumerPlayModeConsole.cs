@@ -153,6 +153,8 @@ internal sealed class ConsumerPlayModeConsole : Console
             DrawDebugOverlay(drawable);
         }
 
+        DrawActorPovRegionChrome(drawable);
+
         if (_screen.PromptComponent(drawable) is { } prompt)
         {
             _renderer.RenderOverlay(prompt);
@@ -192,6 +194,21 @@ internal sealed class ConsumerPlayModeConsole : Console
         for (var index = 0; index < maxRows; index++)
         {
             _renderer.PrintClipped(drawable.Left, startY + index, drawable.Width, rows[index], Color.DarkGray);
+        }
+    }
+
+    private void DrawActorPovRegionChrome(SadConsoleRect drawable)
+    {
+        foreach (var cell in ActorPovPlayLayout.Resolve(drawable).ChromeCells())
+        {
+            if (cell.X < 0 || cell.Y < 0 || cell.X >= Width || cell.Y >= Height)
+            {
+                continue;
+            }
+
+            Surface[cell.X, cell.Y].Glyph = cell.Glyph;
+            Surface[cell.X, cell.Y].Foreground = Color.DarkGray;
+            Surface[cell.X, cell.Y].Background = Color.Black;
         }
     }
 

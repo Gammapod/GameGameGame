@@ -265,7 +265,7 @@ internal sealed class InventorySpaceComponent : IUiComponent
     public InventorySpaceViewModel View { get; }
     public IReadOnlyList<string> BodyRows { get; }
     public InventorySpaceRenderOptions Options { get; }
-    public int RequiredHeight => FrameRows + TitleRows + DebugRows + ColumnLabelRows + View.Viewport.Height;
+    public int RequiredHeight => FrameRows + TitleRows + DebugRows + ColumnLabelRows + GridHeight;
     public int RequiredWidth => FrameColumns + RowLabelColumns + GridWidth;
 
     private int FrameRows => Options.ShowFrame ? 2 : 0;
@@ -275,6 +275,7 @@ internal sealed class InventorySpaceComponent : IUiComponent
     private int ColumnLabelRows => Options.ShowColumnLabels ? 1 : 0;
     private int RowLabelColumns => Options.ShowRowLabels ? 4 : 0;
     private int GridWidth => View.Viewport.Width * View.CellMetrics.Width + Math.Max(0, View.Viewport.Width - 1) * View.CellMetrics.Gap;
+    private int GridHeight => View.Viewport.Height * View.CellMetrics.Height + Math.Max(0, View.Viewport.Height - 1) * View.CellMetrics.Gap;
 
     public SadConsoleRect CellBounds(GridCoord coord)
     {
