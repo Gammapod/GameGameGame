@@ -6,8 +6,13 @@ GameGameGame is a .NET game prototype with a shared engine, YAML-backed content 
 
 - `src/GameGameGame.Core` — engine/runtime model and gameplay services.
 - `src/GameGameGame.Content` — content loading, editable content documents, validation, prototype content, and editor service operations.
+- `src/GameGameGame.Content.Tools` — local content/editor tool host over shared content editor APIs.
+- `src/GameGameGame.Documentation` — compiled documentation graph and documentation discovery tooling.
+- `src/GameGameGame.Headless` — UI-agnostic scenario recording/rendering support for legacy debug artifacts.
 - `src/GameGameGame.SadConsole` — official SadConsole debug/browser frontend shell over shared scenario/action/panel contracts.
 - `tests/GameGameGame.Tests` — xUnit coverage for core behavior, content loading/validation, editor services, scenario tooling, and headless services.
+- `tests/GameGameGame.Documentation.Tests` — xUnit coverage for documentation graph tooling.
+- `tests/GameGameGame.SadConsole.Tests` — xUnit coverage for frontend-owned presentation and interaction-model logic.
 
 ## Current engine capabilities
 
@@ -78,16 +83,34 @@ Content is YAML-backed and primarily lives under `src/GameGameGame.Content`. Cur
 
 ## Build and test
 
-This repository targets .NET 10. Build the main runnable projects directly:
+This repository targets .NET 10 and pins the SDK through `global.json`. Build the main runnable project directly:
 
 ```bash
 dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
+```
+
+Build the full solution:
+
+```bash
+dotnet build GameGameGame.sln
+```
+
+Run all solution tests:
+
+```bash
+dotnet test GameGameGame.sln
 ```
 
 Run the normal non-Editor test project for Core, Content, scenario tooling, and Headless coverage:
 
 ```bash
 dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj
+```
+
+Run documentation graph tests separately:
+
+```bash
+dotnet test tests/GameGameGame.Documentation.Tests/GameGameGame.Documentation.Tests.csproj
 ```
 
 Run SadConsole frontend tests separately:

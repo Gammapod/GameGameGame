@@ -17,6 +17,8 @@
 *.ps1 text eol=lf
 *.sh text eol=lf
 *.gitignore text eol=lf
+*.gitattributes text eol=lf
+*.editorconfig text eol=lf
 *.font text eol=lf
 
 *.png binary
@@ -25,3 +27,7 @@
 *.jpeg binary
 *.ico binary
 *.zip binary
+*.tar.gz binary
+*.exe binary
+*.dll binary
+*.pdb binary

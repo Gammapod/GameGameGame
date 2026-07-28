@@ -8,6 +8,7 @@ build/
 # IDE/Editor files
 .vs/
 .idea/
+.vscode/
 *.user
 *.suo
 *.csproj.user
@@ -26,6 +27,8 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+.env
+.env.*
 
 # Test results and debug images
 TestResults/
