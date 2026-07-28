@@ -197,6 +197,7 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         var rows = screen.Components().SelectMany(component => component.RenderRows(SadConsoleTheme.Default)).ToList();
         Assert.Contains(rows, row => row.Contains("primary: Rock range 3"));
         Assert.Contains(rows, row => row.Contains("secondary: Slime range 4"));
+        Assert.Contains(rows, row => row.Contains("where Current place"));
         Assert.DoesNotContain(rows, row => row.Contains("slot 1"));
 
         var open = screen.Handle(UiComponentCommand.Select);
@@ -295,11 +296,13 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
 
         var toggle = screen.Handle(UiComponentCommand.Select);
 
-        Assert.Contains("Updated targeting rule", toggle.Message);
+        Assert.Contains("Updated targeting profile rule", toggle.Message);
         var rule = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == actorId).TargetingRules.Single();
         Assert.Equal("wants", rule.Label);
         Assert.Null(rule.TargetTemplateId);
         Assert.Equal([ActionPlanBehaviorStepKind.PickupTarget], rule.TargetCapabilities);
+        Assert.Equal(FrontendEditorTargetingSource.TargetingProfile, service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == actorId).TargetingSource);
+        Assert.Equal([TargetingLocalityOrigin.CurrentPlace], rule.EffectiveLocalityOrigins);
     }
 
     [Fact]
@@ -324,10 +327,12 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         screen.Handle(UiComponentCommand.Down);
         var result = screen.Handle(UiComponentCommand.Select);
 
-        Assert.Contains("Updated targeting rule", result.Message);
+        Assert.Contains("Updated targeting profile rule", result.Message);
         var rule = service.GetSnapshot().EntityTemplates.Single(template => template.TemplateId == actorId).TargetingRules.Single();
         Assert.Equal("loves", rule.Label);
         Assert.Equal("treasure", rule.TargetTemplateId);
+        Assert.Equal([TargetingLocalityOrigin.CurrentPlace], rule.EffectiveLocalityOrigins);
+        Assert.Contains("targeting:", service.GetSnapshot().YamlPreview);
     }
 
     [Fact]

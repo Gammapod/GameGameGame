@@ -173,6 +173,24 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
         onChanged?.Invoke();
     }
 
+    public void SetActionPlanBehaviorStepTargetSelf(ActionPlanTemplateId planId, int stepIndex, bool targetSelf)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        if (stepIndex < 0 || stepIndex >= steps.Count)
+        {
+            throw new InvalidOperationException($"Action plan {planId} has no behavior step {stepIndex}.");
+        }
+
+        steps[stepIndex].TargetSelf = targetSelf;
+        if (targetSelf)
+        {
+            steps[stepIndex].TargetSlot = null;
+            steps[stepIndex].TargetLabel = null;
+        }
+
+        onChanged?.Invoke();
+    }
+
     public void SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId)
     {
         var steps = GetActionPlanBehaviorSteps(planId);

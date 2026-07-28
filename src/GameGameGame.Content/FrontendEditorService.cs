@@ -113,6 +113,18 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         => new FrontendTargetingRuleMutationService(Session, GetSnapshot)
             .SetTemplateTargetingRule(templateId, update);
 
+    public FrontendEditorMutationResult SetTemplateTargetingProfileRule(
+        string templateId,
+        FrontendEditorTargetingProfileRuleUpdate update)
+        => new FrontendTargetingRuleMutationService(Session, GetSnapshot)
+            .SetTemplateTargetingProfileRule(templateId, update);
+
+    public FrontendEditorMutationResult SetTemplateTargetingDefaultLocality(
+        string templateId,
+        IReadOnlyList<TargetingLocalityOrigin> origins)
+        => new FrontendTargetingRuleMutationService(Session, GetSnapshot)
+            .SetTemplateTargetingDefaultLocality(templateId, origins);
+
     public FrontendEditorMutationResult ClearTemplateTargetingRule(string templateId, int slot)
         => new FrontendTargetingRuleMutationService(Session, GetSnapshot)
             .ClearTemplateTargetingRule(templateId, slot);
@@ -232,6 +244,24 @@ public sealed record FrontendEditorTargetingRuleUpdate(
     public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
 }
 
+public sealed record FrontendEditorTargetingProfileRuleUpdate(
+    int Range,
+    int Slot,
+    string Label,
+    string? TargetTemplateId,
+    IReadOnlyList<TargetingLocalityOrigin>? LocalityOrigins = null,
+    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null)
+{
+    public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
+}
+
+public enum FrontendEditorTargetingSource
+{
+    None,
+    TargetingProfile,
+    LegacyTargetingRules
+}
+
 public sealed record FrontendEditorMutationResult(
     bool IsSuccess,
     string StatusMessage,
@@ -295,6 +325,10 @@ public sealed record FrontendEditorEntityTemplateSummary(
     public IReadOnlyList<FrontendEditorTargetingRequirementSummary> TargetingRequirements { get; init; } = [];
 
     public IReadOnlyList<FrontendEditorTargetingRuleSummary> OrphanedTargetingRules { get; init; } = [];
+
+    public FrontendEditorTargetingSource TargetingSource { get; init; } = FrontendEditorTargetingSource.None;
+
+    public FrontendEditorTargetingProfileSummary? TargetingProfile { get; init; }
 }
 
 public sealed record FrontendEditorActionStateDefaultsSummary(
@@ -308,10 +342,20 @@ public sealed record FrontendEditorTargetingRuleSummary(
     string? TargetTemplateId,
     string? TargetTemplateName,
     int Range,
-    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null)
+    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null,
+    IReadOnlyList<TargetingLocalityOrigin>? LocalityOrigins = null,
+    IReadOnlyList<TargetingLocalityOrigin>? EffectiveLocalityOrigins = null)
 {
     public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
+
+    public IReadOnlyList<TargetingLocalityOrigin>? LocalityOrigins { get; } = LocalityOrigins;
+
+    public IReadOnlyList<TargetingLocalityOrigin> EffectiveLocalityOrigins { get; } = EffectiveLocalityOrigins ?? [TargetingLocalityOrigin.CurrentPlace];
 }
+
+public sealed record FrontendEditorTargetingProfileSummary(
+    int Range,
+    IReadOnlyList<TargetingLocalityOrigin> DefaultLocalityOrigins);
 
 public sealed record FrontendEditorTargetingRequirementSummary(
     string Label,
@@ -350,6 +394,7 @@ public sealed record FrontendEditorActionPlanStepSummary(
     string DisplayName,
     string? TargetLabel = null,
     int? TargetSlot = null,
+    bool TargetSelf = false,
     bool ConsumesTargetReference = false);
 
 public sealed record FrontendEditorAvailableActionStepSummary(

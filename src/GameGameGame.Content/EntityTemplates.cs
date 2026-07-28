@@ -28,6 +28,7 @@ public sealed record EntityTemplate(
     ActionPlanTemplateId? DefaultActionPlanId = null,
     IReadOnlyDictionary<string, PlanValueDescriptor>? DefaultPlanVariables = null,
     ActorActionStateDefaults? ActionStateDefaults = null,
+    EntityTargetingProfile? Targeting = null,
     IReadOnlyList<EntityTargetingRule>? TargetingRules = null,
     EntityEnterPolicy? EnterPolicy = null,
     EntityExitPolicy? ExitPolicy = null,
@@ -41,12 +42,21 @@ public sealed record EntityTemplate(
 public sealed record EntityTargetingRule(
     int Slot,
     EntityTemplateId? TargetTemplateId,
-    int Range,
+    int Range = 0,
     string? Hint = null,
     string? Label = null,
-    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null)
+    IReadOnlyList<ActionPlanBehaviorStepKind>? TargetCapabilities = null,
+    TargetingLocalityQuery? Locality = null)
 {
     public IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities { get; } = TargetCapabilities ?? [];
+}
+
+public sealed record EntityTargetingProfile(
+    int Range,
+    TargetingLocalityQuery? DefaultLocality = null,
+    IReadOnlyList<EntityTargetingRule>? Rules = null)
+{
+    public IReadOnlyList<EntityTargetingRule> Rules { get; } = Rules ?? [];
 }
 
 public sealed record ActorActionStateDefaults(

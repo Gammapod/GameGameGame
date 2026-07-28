@@ -96,6 +96,36 @@ public sealed class PlanOverrideActionStepTests
         Assert.True(TraceContains(result.Trace, "Primitive ApplyPrePlan"));
     }
 
+    [Fact]
+    public void TargetConsumingBehaviorCanReferenceSelfWithoutTargetSlot()
+    {
+        var world = TestWorld.CreateWorld();
+        var selfPlan = new ActionPlanDefinition(
+            new ActionPlanId("selfOverride"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Backstep)
+            ]));
+        var casterPlan = new ActionPlanDefinition(
+            new ActionPlanId("caster"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.ApplyPrePlan, TargetSelf: true, PlanId: selfPlan.Id)
+            ]));
+
+        var result = new ActionPlanInterpreter(
+            new MovementService(),
+            new Dictionary<ActionPlanId, ActionPlanDefinition>
+            {
+                [selfPlan.Id] = selfPlan,
+                [casterPlan.Id] = casterPlan
+            }).Execute(world, TestWorld.PlayerId, casterPlan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(world.GetActionPlanOverride(TestWorld.PlayerId, ActionPlanOverrideSlot.Pre));
+        Assert.Null(world.GetActionTarget(TestWorld.PlayerId));
+    }
+
     private static bool TraceContains(TraceNode trace, string label)
     {
         return trace.Label == label || trace.Children.Any(child => TraceContains(child, label));

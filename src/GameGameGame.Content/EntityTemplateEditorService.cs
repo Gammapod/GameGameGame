@@ -164,6 +164,36 @@ internal sealed class EntityTemplateEditorService(EditableContentDocument docume
         onChanged?.Invoke();
     }
 
+    public void SetTargetingProfileRule(EntityTemplateId templateId, int range, EntityTargetingRule rule)
+    {
+        if (range < 0)
+        {
+            throw new InvalidOperationException($"Entity template {templateId} targeting range must be zero or greater.");
+        }
+
+        if (rule.Slot <= 0)
+        {
+            throw new InvalidOperationException($"Entity template {templateId} targeting rule slot must be greater than zero.");
+        }
+
+        var template = GetTemplateDto(templateId);
+        template.Targeting ??= new EditableContentDocument.EntityTargetingProfileDto();
+        template.Targeting.Range = range;
+        template.Targeting.Rules ??= [];
+        template.Targeting.Rules.RemoveAll(existing => existing.Slot == rule.Slot);
+        template.Targeting.Rules.Add(EditableContentDocument.EntityTargetingRuleDto.From(rule));
+        template.Targeting.Rules = template.Targeting.Rules.OrderBy(existing => existing.Slot).ToList();
+        onChanged?.Invoke();
+    }
+
+    public void SetTargetingDefaultLocality(EntityTemplateId templateId, TargetingLocalityQuery locality)
+    {
+        var template = GetTemplateDto(templateId);
+        template.Targeting ??= new EditableContentDocument.EntityTargetingProfileDto();
+        template.Targeting.DefaultLocality = EditableContentDocument.TargetingLocalityDto.From(locality);
+        onChanged?.Invoke();
+    }
+
     public void RemoveTargetingRule(EntityTemplateId templateId, int slot)
     {
         var template = GetTemplateDto(templateId);

@@ -21,7 +21,11 @@ public sealed partial class ActionPlanInterpreter
         for (var index = 0; index < steps.Count; index++)
         {
             var step = steps[index];
-            if (!string.IsNullOrWhiteSpace(step.TargetLabel))
+            if (step.TargetSelf)
+            {
+                context.UseSelfTarget();
+            }
+            else if (!string.IsNullOrWhiteSpace(step.TargetLabel))
             {
                 context.UseTargetLabel(step.TargetLabel);
             }

@@ -120,6 +120,7 @@ public sealed record ActionPlanBehaviorStepDescriptor(
     ActionPlanBehaviorStepKind Kind,
     int? TargetSlot = null,
     string? TargetLabel = null,
+    bool TargetSelf = false,
     ActionPlanId? PlanId = null,
     ActionPlanMoveDirectionMode? DirectionMode = null,
     TransferDirection? TransferDirection = null);

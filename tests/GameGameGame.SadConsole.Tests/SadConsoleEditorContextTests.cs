@@ -991,6 +991,7 @@ public sealed class SadConsoleEditorContextTests
             Assert.Equal(1, context.TargetingRuleEdit!.Slot);
             Assert.Contains(view.DetailRows, row => row.Contains("Targeting rule editor active", StringComparison.Ordinal));
             Assert.Contains(view.DetailRows, row => row.Contains("slot 1", StringComparison.Ordinal));
+            Assert.Contains(view.DetailRows, row => row.Contains("where Current place", StringComparison.Ordinal));
             Assert.Contains(view.DetailRows, row => row.Contains("slot 2: <empty>", StringComparison.Ordinal));
             Assert.Contains(view.DetailRows, row => row.Contains("slot 3: <empty>", StringComparison.Ordinal));
             Assert.Contains(view.DetailRows, row => row.Contains("slot 4: <empty>", StringComparison.Ordinal));
@@ -1138,6 +1139,65 @@ public sealed class SadConsoleEditorContextTests
     }
 
     [Fact]
+    public void TargetingRuleSemanticFieldFocusCyclesLocalityAndAppliesImmediately()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+            context.BeginTemplateTargetingRuleEditor();
+            context.MoveSelection(1);
+            SetPendingTargetingLabel(context, "focus2");
+            context.MoveTargetingRuleField(3);
+
+            Assert.Equal(SadConsoleEditorTargetingRuleField.Locality, context.TargetingRuleEdit!.ActiveField);
+            var result = context.ActivateTargetingRuleField();
+
+            var rule = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex].TargetingRules.Single(rule => rule.Slot == 2);
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal([TargetingLocalityOrigin.OwnInventory], rule.LocalityOrigins);
+            Assert.Equal([TargetingLocalityOrigin.OwnInventory], context.TargetingRuleEdit!.LocalityOrigins);
+            Assert.Contains("targeting profile rule", result.Message);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void TargetingRuleEditorShowsAndCyclesTemplateDefaultLocality()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var context = SadConsoleEditorContext.Open(path, "editor-smoke").Context!;
+            context.SelectSection(SadConsoleEditorSection.Templates);
+            SelectTemplate(context, "editorRoom");
+            context.BeginTemplateTargetingRuleEditor();
+            var initialView = SadConsoleEditorViewBuilder.Build(context, "targeting");
+
+            var result = context.CycleTemplateTargetingDefaultLocality();
+            var template = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex];
+            var view = SadConsoleEditorViewBuilder.Build(context, result.Message);
+
+            Assert.Contains(initialView.DetailRows, row => row.Contains("Template targeting default where Current place", StringComparison.Ordinal));
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Equal([TargetingLocalityOrigin.OwnInventory], template.TargetingProfile!.DefaultLocalityOrigins);
+            Assert.Contains(view.DetailRows, row => row.Contains("Template targeting default where Own inventory", StringComparison.Ordinal));
+            Assert.Contains("default locality", context.PreviewInvalidationReason, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void ApplyingValidTargetingRuleUpdatesSnapshotDirtyStatusAndStalesPreview()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());
@@ -1163,6 +1223,9 @@ public sealed class SadConsoleEditorContextTests
             Assert.Equal("focus1", rule.Label);
             Assert.Equal("editorRoom", rule.TargetTemplateId);
             Assert.Equal(3, rule.Range);
+            Assert.Equal(FrontendEditorTargetingSource.TargetingProfile, selected.TargetingSource);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace], rule.LocalityOrigins);
+            Assert.Contains("targeting:", context.Snapshot().YamlPreview);
             Assert.True(context.Snapshot().IsDirty);
             Assert.Null(context.CachedPreview);
             Assert.Contains("targeting rules changed", context.PreviewInvalidationReason);
@@ -1197,7 +1260,9 @@ public sealed class SadConsoleEditorContextTests
             var selected = context.Snapshot().EntityTemplates[context.SelectedTemplateIndex];
             Assert.False(duplicate.Succeeded);
             Assert.Contains("Duplicate targeting rule label focus1", duplicate.Message);
+            Assert.Equal(FrontendEditorTargetingSource.TargetingProfile, selected.TargetingSource);
             Assert.DoesNotContain(selected.TargetingRules, rule => rule.Slot == 3);
+            Assert.Contains("targeting:", context.Snapshot().YamlPreview);
         }
         finally
         {

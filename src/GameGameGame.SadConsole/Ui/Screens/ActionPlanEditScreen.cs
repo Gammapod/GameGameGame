@@ -362,6 +362,11 @@ internal sealed class ActionPlanEditScreen
             return ActionPlanEditResult.Stay($"Step {_selectedStepIndex + 1} ({step.DisplayName}) does not consume a target reference; label editing is disabled.");
         }
 
+        if (step.TargetSelf)
+        {
+            return ActionPlanEditResult.Stay($"Step {_selectedStepIndex + 1} ({step.DisplayName}) targets self; label editing is disabled.");
+        }
+
         _overlay = new TextEntryOverlayComponent(
             "action-step-label-editor",
             "4.1.2 Edit action label",
@@ -546,7 +551,7 @@ internal sealed class ActionPlanEditScreen
             foreach (var step in _actionPlan.ActionSteps)
             {
                 var selected = step.Index == _selectedStepIndex;
-                rows.Add($"{(selected ? ">" : " ")} Step {step.Index + 1}: {step.DisplayName} {FormatTargetLabelInline(step)}");
+                rows.Add($"{(selected ? ">" : " ")} Step {step.Index + 1}: {step.DisplayName} {FormatTargetReferenceInline(step)}");
             }
         }
 
@@ -581,6 +586,7 @@ internal sealed class ActionPlanEditScreen
             rows.Add($"kind: {step.Kind}");
             rows.Add($"name: {step.DisplayName}");
             rows.Add($"target label: {FormatTargetLabel(step)}");
+            rows.Add($"target self: {(step.TargetSelf ? "yes" : "no")}");
             rows.Add($"target-consuming: {(step.ConsumesTargetReference ? "yes" : "no")}");
             rows.Add(_moveMode ? "move mode active" : "Enter opens 4.1.2 details. I inserts. Delete removes. Space moves.");
         }
@@ -611,12 +617,19 @@ internal sealed class ActionPlanEditScreen
     }
 
     private static string FormatTargetLabel(FrontendEditorActionPlanStepSummary step) =>
+        step.TargetSelf
+            ? "self"
+            : string.IsNullOrWhiteSpace(step.TargetLabel)
+                ? "(none)"
+                : step.TargetLabel;
+
+    private static string FormatTargetReferenceInline(FrontendEditorActionPlanStepSummary step) =>
+        step.TargetSelf ? "(self)" : FormatTargetLabelInline(step);
+
+    private static string FormatTargetLabelInline(FrontendEditorActionPlanStepSummary step) =>
         string.IsNullOrWhiteSpace(step.TargetLabel)
             ? "(none)"
             : step.TargetLabel;
-
-    private static string FormatTargetLabelInline(FrontendEditorActionPlanStepSummary step) =>
-        string.IsNullOrWhiteSpace(step.TargetLabel) ? "(none)" : step.TargetLabel;
 
     private IUiComponent? StepDetailComponent()
     {
@@ -640,8 +653,8 @@ internal sealed class ActionPlanEditScreen
                     "action-step-label",
                     _selectedStepDetailFieldIndex == 1 ? "> label" : "label",
                     FormatTargetLabel(step),
-                    step.ConsumesTargetReference ? EditableFieldMode.Editable : EditableFieldMode.ReadOnly,
-                    ValidationMessage: step.ConsumesTargetReference ? null : "step does not consume target")
+                    step.ConsumesTargetReference && !step.TargetSelf ? EditableFieldMode.Editable : EditableFieldMode.ReadOnly,
+                    ValidationMessage: step.TargetSelf ? "step targets self" : step.ConsumesTargetReference ? null : "step does not consume target")
             ],
             UiComponentState.Focused);
     }

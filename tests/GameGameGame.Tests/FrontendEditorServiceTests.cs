@@ -409,6 +409,186 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void SnapshotProjectsTargetingProfileRangeAndRuleLocality()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              goblin:
+                name: Goblin
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                targeting:
+                  range: 8
+                  defaultLocality:
+                    origins:
+                      - CurrentPlace
+                  rules:
+                    - slot: 1
+                      label: hates
+                      targetTemplateId: slime
+                    - slot: 2
+                      label: wants
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - CurrentPlace
+                          - PeerInventories
+              slime:
+                name: Slime
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations:
+              goblin:
+                glyph: g
+                color: Gray
+              slime:
+                glyph: s
+                color: Green
+              gold:
+                glyph: '$'
+                color: Yellow
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var goblin = Assert.Single(service.GetSnapshot().EntityTemplates, template => template.TemplateId == "goblin");
+
+            Assert.NotNull(goblin.TargetingProfile);
+            Assert.Equal(FrontendEditorTargetingSource.TargetingProfile, goblin.TargetingSource);
+            Assert.Equal(8, goblin.TargetingProfile!.Range);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace], goblin.TargetingProfile.DefaultLocalityOrigins);
+            Assert.Equal(["hates", "wants"], goblin.TargetingRules.Select(rule => rule.Label).ToArray());
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace], goblin.TargetingRules[0].EffectiveLocalityOrigins);
+            Assert.Null(goblin.TargetingRules[0].LocalityOrigins);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], goblin.TargetingRules[1].LocalityOrigins);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], goblin.TargetingRules[1].EffectiveLocalityOrigins);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateTargetingProfileRuleWritesCanonicalProfileShape()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetTemplateTargetingProfileRule(
+                "wall",
+                new FrontendEditorTargetingProfileRuleUpdate(
+                    Range: 6,
+                    Slot: 1,
+                    Label: "fears",
+                    TargetTemplateId: "editorPlayer",
+                    LocalityOrigins: [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories]));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal(FrontendEditorTargetingSource.TargetingProfile, wall.TargetingSource);
+            Assert.Equal(6, wall.TargetingProfile!.Range);
+            var rule = Assert.Single(wall.TargetingRules);
+            Assert.Equal("fears", rule.Label);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], rule.LocalityOrigins);
+            Assert.Contains("targeting:", result.Snapshot.YamlPreview);
+            Assert.Contains("range: 6", result.Snapshot.YamlPreview);
+            Assert.Contains("PeerInventories", result.Snapshot.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateTargetingProfileRuleRejectsDuplicateLabelOnSameTemplateProfile()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+            var first = service.SetTemplateTargetingProfileRule(
+                "wall",
+                new FrontendEditorTargetingProfileRuleUpdate(
+                    Range: 6,
+                    Slot: 1,
+                    Label: "fears",
+                    TargetTemplateId: "editorPlayer",
+                    LocalityOrigins: [TargetingLocalityOrigin.CurrentPlace]));
+            Assert.True(first.IsSuccess, first.StatusMessage);
+
+            var duplicate = service.SetTemplateTargetingProfileRule(
+                "wall",
+                new FrontendEditorTargetingProfileRuleUpdate(
+                    Range: 6,
+                    Slot: 2,
+                    Label: "fears",
+                    TargetTemplateId: "editorPlayer",
+                    LocalityOrigins: [TargetingLocalityOrigin.CurrentPlace]));
+
+            Assert.False(duplicate.IsSuccess);
+            Assert.Contains("duplicate", duplicate.StatusMessage, StringComparison.OrdinalIgnoreCase);
+            var wall = Assert.Single(duplicate.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Single(wall.TargetingRules);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void SetTemplateTargetingDefaultLocalityUpdatesProfileAndNewRuleDefaults()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var locality = service.SetTemplateTargetingDefaultLocality(
+                "wall",
+                [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories]);
+            Assert.True(locality.IsSuccess, locality.StatusMessage);
+
+            var result = service.SetTemplateTargetingProfileRule(
+                "wall",
+                new FrontendEditorTargetingProfileRuleUpdate(5, 1, "fears", "editorPlayer"));
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], wall.TargetingProfile!.DefaultLocalityOrigins);
+            var rule = Assert.Single(wall.TargetingRules);
+            Assert.Null(rule.LocalityOrigins);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], rule.EffectiveLocalityOrigins);
+            Assert.Contains("defaultLocality:", result.Snapshot.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void SnapshotProjectsDefaultActionPlanTargetLabelRequirementsAndOrphanedRules()
     {
         var path = WriteTempContentFile(

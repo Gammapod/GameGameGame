@@ -50,6 +50,7 @@ public static class YamlContentLoader
                 DefaultActionPlanId: template.DefaultActionPlanId is null ? null : new ActionPlanTemplateId(template.DefaultActionPlanId),
                 DefaultPlanVariables: MaterializePlanVariables(template.DefaultPlanVariables),
                 ActionStateDefaults: MaterializeActionStateDefaults(template.ActionStateDefaults),
+                Targeting: MaterializeTargetingProfile(template.Targeting),
                 TargetingRules: MaterializeTargetingRules(template.TargetingRules),
                 EnterPolicy: template.EnterPolicy,
                 ExitPolicy: template.ExitPolicy,
@@ -73,9 +74,28 @@ public static class YamlContentLoader
                 rule.Range,
                 rule.Hint,
                 rule.Label,
-                rule.TargetCapabilities))
+                rule.TargetCapabilities,
+                MaterializeLocality(rule.Locality)))
             .ToList();
     }
+
+    private static EntityTargetingProfile? MaterializeTargetingProfile(EntityTargetingProfileDto? targeting)
+    {
+        if (targeting is null)
+        {
+            return null;
+        }
+
+        return new EntityTargetingProfile(
+            targeting.Range,
+            MaterializeLocality(targeting.DefaultLocality ?? targeting.Locality),
+            MaterializeTargetingRules(targeting.Rules) ?? []);
+    }
+
+    private static TargetingLocalityQuery? MaterializeLocality(TargetingLocalityDto? locality) =>
+        locality?.Origins is { Count: > 0 } origins
+            ? new TargetingLocalityQuery(origins)
+            : null;
 
     private static IReadOnlyList<CarriedEntityTemplate>? MaterializeCarriedEntities(List<CarriedEntityTemplateDto>? carriedEntities)
     {
@@ -171,6 +191,7 @@ public static class YamlContentLoader
             step.Kind,
             step.TargetSlot,
             step.TargetLabel,
+            step.TargetSelf,
             step.PlanId is null ? null : new ActionPlanId(step.PlanId),
             step.DirectionMode is null ? null : Enum.Parse<ActionPlanMoveDirectionMode>(step.DirectionMode, ignoreCase: true),
             step.TransferDirection is null ? null : Enum.Parse<TransferDirection>(step.TransferDirection, ignoreCase: true));
@@ -324,6 +345,8 @@ public static class YamlContentLoader
 
         public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
 
+        public EntityTargetingProfileDto? Targeting { get; set; }
+
         public List<EntityTargetingRuleDto>? TargetingRules { get; set; }
 
         public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
@@ -342,6 +365,24 @@ public static class YamlContentLoader
         public List<ActionPlanBehaviorStepKind>? TargetCapabilities { get; set; }
 
         public int Range { get; set; }
+
+        public TargetingLocalityDto? Locality { get; set; }
+    }
+
+    private sealed class EntityTargetingProfileDto
+    {
+        public int Range { get; set; }
+
+        public TargetingLocalityDto? Locality { get; set; }
+
+        public TargetingLocalityDto? DefaultLocality { get; set; }
+
+        public List<EntityTargetingRuleDto>? Rules { get; set; }
+    }
+
+    private sealed class TargetingLocalityDto
+    {
+        public List<TargetingLocalityOrigin>? Origins { get; set; }
     }
 
     private sealed class ActorActionStateDefaultsDto
@@ -392,6 +433,8 @@ public static class YamlContentLoader
         public int? TargetSlot { get; set; }
 
         public string? TargetLabel { get; set; }
+
+        public bool TargetSelf { get; set; }
 
         public string? PlanId { get; set; }
 

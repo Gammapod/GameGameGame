@@ -180,6 +180,222 @@ public sealed class TargetingServiceTests
         Assert.Equal(new EntityId("portableGem"), world.GetActionTarget(thief, label: "loves"));
     }
 
+    [Fact]
+    public void RefreshTargetsUsesTemplateLevelRangeForAllTargetingRules()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              mouse:
+                name: Mouse
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                targeting:
+                  range: 3
+                  rules:
+                    - slot: 1
+                      label: danger
+                      targetTemplateId: cat
+              cat:
+                name: Cat
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateTargetingWorld();
+        var mouse = new EntityId("mouse");
+        Spawn(registry, world, "mouse", mouse.Value, new GridCoord(2, 2));
+        Spawn(registry, world, "cat", "nearCat", new GridCoord(2, 4));
+        Spawn(registry, world, "cat", "farCat", new GridCoord(4, 4));
+
+        TargetingService.RefreshTargets(world, registry, mouse);
+
+        Assert.Equal(new EntityId("nearCat"), world.GetActionTarget(mouse, label: "danger"));
+    }
+
+    [Fact]
+    public void RefreshTargetsCurrentPlaceLocalityIgnoresPeersInDifferentContainingPlacesOnSamePlane()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 5
+                inventoryHeight: 5
+                bulk: 100
+                aperture: 100
+              goblin:
+                name: Goblin
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                targeting:
+                  range: 10
+                  rules:
+                    - slot: 1
+                      label: hates
+                      targetTemplateId: slime
+                      locality:
+                        origins:
+                          - CurrentPlace
+              slime:
+                name: Slime
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateContainmentWorld();
+        var roomAInventory = SpawnRoom(registry, world, "roomA", new GridCoord(0, 0));
+        var roomBInventory = SpawnRoom(registry, world, "roomB", new GridCoord(1, 0));
+        var goblin = SpawnInPlane(registry, world, "goblin", "goblin", roomAInventory, new GridCoord(1, 1));
+        SpawnInPlane(registry, world, "slime", "sameRoomSlime", roomAInventory, new GridCoord(1, 2));
+        SpawnInPlane(registry, world, "slime", "otherRoomSlime", roomBInventory, new GridCoord(1, 1));
+
+        TargetingService.RefreshTargets(world, registry, goblin);
+
+        Assert.Equal(new EntityId("sameRoomSlime"), world.GetActionTarget(goblin, label: "hates"));
+    }
+
+    [Fact]
+    public void RefreshTargetsRuleLocalityCanSearchCurrentPlaceAndPeerInventories()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 5
+                inventoryHeight: 5
+                bulk: 100
+                aperture: 100
+              goblin:
+                name: Goblin
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                targeting:
+                  range: 10
+                  rules:
+                    - slot: 1
+                      label: hates
+                      targetTemplateId: slime
+                      locality:
+                        origins:
+                          - CurrentPlace
+                    - slot: 2
+                      label: wants
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - CurrentPlace
+                          - PeerInventories
+              slime:
+                name: Slime
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+              chest:
+                name: Chest
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 3
+                aperture: 3
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateContainmentWorld();
+        var roomInventory = SpawnRoom(registry, world, "room", new GridCoord(0, 0));
+        var goblin = SpawnInPlane(registry, world, "goblin", "goblin", roomInventory, new GridCoord(1, 1));
+        SpawnInPlane(registry, world, "slime", "slime", roomInventory, new GridCoord(1, 2));
+        var chest = SpawnInPlane(registry, world, "chest", "chest", roomInventory, new GridCoord(3, 1));
+        var chestInventory = world.GetInventoryPlaneId(chest) ?? throw new InvalidOperationException("Chest inventory missing.");
+        SpawnInPlane(registry, world, "gold", "hiddenGold", chestInventory, new GridCoord(0, 0));
+
+        TargetingService.RefreshTargets(world, registry, goblin);
+
+        Assert.Equal(new EntityId("slime"), world.GetActionTarget(goblin, label: "hates"));
+        Assert.Equal(new EntityId("hiddenGold"), world.GetActionTarget(goblin, label: "wants"));
+    }
+
+    [Fact]
+    public void TargetingCandidatePreviewReportsRuleCandidatesWithoutMutatingTargets()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 5
+                inventoryHeight: 5
+                bulk: 100
+                aperture: 100
+              goblin:
+                name: Goblin
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                targeting:
+                  range: 10
+                  rules:
+                    - slot: 1
+                      label: wants
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - CurrentPlace
+                          - PeerInventories
+              chest:
+                name: Chest
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 3
+                aperture: 3
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateContainmentWorld();
+        var roomInventory = SpawnRoom(registry, world, "room", new GridCoord(0, 0));
+        var goblin = SpawnInPlane(registry, world, "goblin", "goblin", roomInventory, new GridCoord(1, 1));
+        var chest = SpawnInPlane(registry, world, "chest", "chest", roomInventory, new GridCoord(3, 1));
+        var chestInventory = world.GetInventoryPlaneId(chest) ?? throw new InvalidOperationException("Chest inventory missing.");
+        SpawnInPlane(registry, world, "gold", "hiddenGold", chestInventory, new GridCoord(0, 0));
+
+        var preview = TargetingCandidatePreviewService.Preview(world, registry, goblin);
+
+        var rule = Assert.Single(preview.Rules);
+        Assert.Equal("wants", rule.Label);
+        var candidate = Assert.Single(rule.Candidates);
+        Assert.Equal(new EntityId("hiddenGold"), candidate.EntityId);
+        Assert.Equal(TargetingLocalityOrigin.PeerInventories, candidate.Origin);
+        Assert.Equal(chest, candidate.ReferenceEntityId);
+        Assert.Null(world.GetActionTarget(goblin, label: "wants"));
+    }
+
     private static PrototypeContentRegistry CreateTargetingRegistry() =>
         YamlContentLoader.LoadRegistry(
             """
@@ -235,6 +451,33 @@ public sealed class TargetingServiceTests
         }
 
         return world;
+    }
+
+    private static WorldState CreateContainmentWorld()
+    {
+        var world = new WorldState();
+        var plane = new Plane(new PlaneId("root"), "Root", 3, 1);
+        world.Planes.Add(plane.Id, plane);
+        for (var x = 0; x < plane.Width; x++)
+        {
+            world.AddNode(plane.Id, new GridCoord(x, 0));
+        }
+
+        return world;
+    }
+
+    private static PlaneId SpawnRoom(PrototypeContentRegistry registry, WorldState world, string entityId, GridCoord coord)
+    {
+        var roomId = new EntityId(entityId);
+        registry.SpawnEntity(world, new EntityTemplateId("room"), new EntitySpawnOptions(roomId, new PlaneCoord(new PlaneId("root"), coord)));
+        return world.GetInventoryPlaneId(roomId) ?? throw new InvalidOperationException($"Room {entityId} inventory missing.");
+    }
+
+    private static EntityId SpawnInPlane(PrototypeContentRegistry registry, WorldState world, string templateId, string entityId, PlaneId planeId, GridCoord coord)
+    {
+        var id = new EntityId(entityId);
+        registry.SpawnEntity(world, new EntityTemplateId(templateId), new EntitySpawnOptions(id, new PlaneCoord(planeId, coord)));
+        return id;
     }
 
     private static void Spawn(PrototypeContentRegistry registry, WorldState world, string templateId, string entityId, GridCoord coord, EntityTemplateId? spawnTemplateId = null) =>

@@ -42,15 +42,25 @@ public sealed class ActionPlanContext
 
     private string? _activeTargetLabel;
 
+    private bool _activeTargetSelf;
+
     public void UseTargetSlot(int targetSlot)
     {
         _activeTargetSlot = targetSlot <= 0 ? 1 : targetSlot;
         _activeTargetLabel = null;
+        _activeTargetSelf = false;
     }
 
     public void UseTargetLabel(string targetLabel)
     {
         _activeTargetLabel = string.IsNullOrWhiteSpace(targetLabel) ? null : targetLabel;
+        _activeTargetSelf = false;
+    }
+
+    public void UseSelfTarget()
+    {
+        _activeTargetSelf = true;
+        _activeTargetLabel = null;
     }
 
     public void AttachEntityActionState(WorldState world, EntityId actorId)
@@ -165,6 +175,9 @@ public sealed class ActionPlanContext
                     return true;
                 case ActionPlanSlot.Target when _activeTargetLabel is { } label && _attachedWorld.GetActionTarget(actorId, label) is { } labeledTarget:
                     value = new EntityPlanValue(labeledTarget);
+                    return true;
+                case ActionPlanSlot.Target when _activeTargetSelf:
+                    value = new EntityPlanValue(actorId);
                     return true;
                 case ActionPlanSlot.Target when _activeTargetLabel is null && _attachedWorld.GetActionTarget(actorId, _activeTargetSlot) is { } target:
                     value = new EntityPlanValue(target);

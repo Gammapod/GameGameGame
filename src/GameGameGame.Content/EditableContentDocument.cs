@@ -40,6 +40,8 @@ public sealed partial class EditableContentDocument
 
         public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
 
+        public EntityTargetingProfileDto? Targeting { get; set; }
+
         public List<EntityTargetingRuleDto>? TargetingRules { get; set; }
 
         public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
@@ -57,6 +59,7 @@ public sealed partial class EditableContentDocument
             DefaultActionPlanId = template.DefaultActionPlanId?.Value,
             DefaultPlanVariables = template.DefaultPlanVariables?.ToDictionary(entry => entry.Key, entry => PlanValueDescriptorDto.From(entry.Value)),
             ActionStateDefaults = template.ActionStateDefaults is null ? null : ActorActionStateDefaultsDto.From(template.ActionStateDefaults),
+            Targeting = template.Targeting is null ? null : EntityTargetingProfileDto.From(template.Targeting),
             TargetingRules = template.TargetingRules?.Select(EntityTargetingRuleDto.From).ToList(),
             CarriedEntities = template.CarriedEntities?.Select(CarriedEntityTemplateDto.From).ToList()
         };
@@ -76,6 +79,8 @@ public sealed partial class EditableContentDocument
 
         public int Range { get; set; }
 
+        public TargetingLocalityDto? Locality { get; set; }
+
         public static EntityTargetingRuleDto From(EntityTargetingRule rule) => new()
         {
             Slot = rule.Slot,
@@ -83,7 +88,34 @@ public sealed partial class EditableContentDocument
             Label = rule.Label,
             TargetTemplateId = rule.TargetTemplateId?.Value,
             TargetCapabilities = rule.TargetCapabilities.Count == 0 ? null : rule.TargetCapabilities.ToList(),
-            Range = rule.Range
+            Range = rule.Range,
+            Locality = rule.Locality is null ? null : TargetingLocalityDto.From(rule.Locality)
+        };
+    }
+
+    public sealed class EntityTargetingProfileDto
+    {
+        public int Range { get; set; }
+
+        public TargetingLocalityDto? DefaultLocality { get; set; }
+
+        public List<EntityTargetingRuleDto>? Rules { get; set; }
+
+        public static EntityTargetingProfileDto From(EntityTargetingProfile profile) => new()
+        {
+            Range = profile.Range,
+            DefaultLocality = profile.DefaultLocality is null ? null : TargetingLocalityDto.From(profile.DefaultLocality),
+            Rules = profile.Rules.Count == 0 ? null : profile.Rules.Select(EntityTargetingRuleDto.From).ToList()
+        };
+    }
+
+    public sealed class TargetingLocalityDto
+    {
+        public List<TargetingLocalityOrigin>? Origins { get; set; }
+
+        public static TargetingLocalityDto From(TargetingLocalityQuery locality) => new()
+        {
+            Origins = locality.Origins.ToList()
         };
     }
 
@@ -223,6 +255,8 @@ public sealed partial class EditableContentDocument
 
         public string? TargetLabel { get; set; }
 
+        public bool TargetSelf { get; set; }
+
         public string? PlanId { get; set; }
 
         public string? DirectionMode { get; set; }
@@ -234,6 +268,7 @@ public sealed partial class EditableContentDocument
             Kind = descriptor.Kind,
             TargetSlot = descriptor.TargetSlot,
             TargetLabel = descriptor.TargetLabel,
+            TargetSelf = descriptor.TargetSelf,
             PlanId = descriptor.PlanId?.Value,
             DirectionMode = descriptor.DirectionMode?.ToString(),
             TransferDirection = descriptor.TransferDirection?.ToString()
@@ -244,6 +279,7 @@ public sealed partial class EditableContentDocument
                 Kind,
                 TargetSlot,
                 TargetLabel,
+                TargetSelf,
                 PlanId is null ? null : new ActionPlanId(PlanId),
                 DirectionMode is { } mode ? Enum.Parse<ActionPlanMoveDirectionMode>(mode, ignoreCase: true) : null,
                 TransferDirection is { } transferDirection ? Enum.Parse<TransferDirection>(transferDirection, ignoreCase: true) : null);

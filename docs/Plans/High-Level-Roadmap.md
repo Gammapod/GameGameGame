@@ -371,11 +371,13 @@ Priority order:
 4. Explicit failure/turn-consumption policy for exhausted behavior chains, if scenario reports reveal author confusion beyond observational reporting.
 5. Consistent blocker/target-slot writing rules for failed directional steps, including whether `DropFacing` and `Backstep` should write blockers.
 6. Relationship/category targeting or target priority policies if template-targeting rules become too limited.
-7. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
-8. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
-9. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity target slots.
-10. `BumpTarget` or generic interaction fallback steps.
-11. Player/screen messages if scenarios need action feedback beyond traces.
+7. Reaction/memory-backed targeting slots: allow authored slots to resolve from structured action stimuli such as last actor/damager/interactor against this actor, without folding memory into POV. Promotion criteria: a scenario needs retaliation/fear/follow-up behavior that cannot be represented by local search alone; Core has a typed stimulus/memory fact model with clone/history coverage; target refresh defines visibility/range/decay policy explicitly; Content YAML/editor/API can author the memory source; and scenario/report tests prove deterministic replacement/clearing behavior.
+8. Recursive or N-step containment locality for targeting: extend locality origins beyond direct current place/own inventory/peer inventories to authored containment-depth searches. Promotion criteria: authored scenarios need targets in nested inventories or nearby containment branches; traversal is cycle-safe and depth-limited; range/distance reference rules are documented; candidate preview reports provenance; Content validation rejects unsupported/ambiguous scope shapes; and frontend/editor display does not imply line-of-sight/visibility beyond Core facts.
+9. Patterned target movement such as rook/bishop/knight-like pursuit after basic `SeekTarget` is proven.
+10. Wall-following helpers or sensory/conditional primitives after relative direction transforms and scenario reports show the useful abstraction level.
+11. `TeleportTo`, likely requiring a new `TargetLocation`/destination state slot rather than overloading entity target slots.
+12. `BumpTarget` or generic interaction fallback steps.
+13. Player/screen messages if scenarios need action feedback beyond traces.
 
 Dependencies:
 
@@ -388,6 +390,8 @@ Promotion trigger:
 
 - Promote `Give`/`Take` when generated scenarios need peer inventory transfer between adjacent or targeted entities.
 - Promote richer targeting policy only when template-scoped targeting rules and numeric target slots are too limited for authored scenarios.
+- Promote reaction/memory targeting only after a concrete authored behavior needs previous-action causality and the memory lifetime/visibility policy can be tested.
+- Promote recursive containment targeting only after direct current-place/own-inventory/peer-inventory locality fails a concrete scenario and cycle-safe depth semantics are ready to expose in candidate previews.
 
 Likely decision artifact:
 

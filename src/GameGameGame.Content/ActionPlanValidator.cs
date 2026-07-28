@@ -99,11 +99,14 @@ internal static class ActionPlanValidator
                     stepIndex: index));
             }
 
-            if (step.TargetSlot is not null && !string.IsNullOrWhiteSpace(step.TargetLabel))
+            var targetReferenceCount = (step.TargetSlot is not null ? 1 : 0)
+                + (!string.IsNullOrWhiteSpace(step.TargetLabel) ? 1 : 0)
+                + (step.TargetSelf ? 1 : 0);
+            if (targetReferenceCount > 1)
             {
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionStepTargetReference,
-                    $"Action plan {descriptor.Id} action step {step.Kind} must use either targetLabel or targetSlot, not both.",
+                    $"Action plan {descriptor.Id} action step {step.Kind} must use only one of targetLabel, targetSlot, or targetSelf.",
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: descriptor.Id,
                     stepIndex: index));

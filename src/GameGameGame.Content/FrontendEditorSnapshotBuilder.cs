@@ -52,17 +52,26 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
         session.Editor.ListEntityPresets()
             .Select(model =>
             {
-                var targetingRules = (model.Template.TargetingRules ?? [])
-                    .OrderBy(rule => rule.Slot)
-                    .ThenBy(rule => rule.Label ?? string.Empty, StringComparer.Ordinal)
-                    .Select(rule => new FrontendEditorTargetingRuleSummary(
-                        rule.Slot,
-                        rule.Label,
-                        rule.Hint,
-                        rule.TargetTemplateId?.Value,
-                        rule.TargetTemplateId is { } targetTemplateId ? TryGetTemplateName(targetTemplateId.Value) : null,
-                        rule.Range,
-                        rule.TargetCapabilities))
+                var targetingSource = model.Template.Targeting is not null
+                    ? FrontendEditorTargetingSource.TargetingProfile
+                    : (model.Template.TargetingRules is { Count: > 0 } ? FrontendEditorTargetingSource.LegacyTargetingRules : FrontendEditorTargetingSource.None);
+                var profileDefaultLocality = model.Template.Targeting?.DefaultLocality?.Origins ?? [TargetingLocalityOrigin.CurrentPlace];
+                var effectiveRules = model.Template.Targeting is { } profile
+                    ? profile.Rules.Select(rule => (Rule: rule, Range: profile.Range, EffectiveLocality: rule.Locality?.Origins ?? profileDefaultLocality))
+                    : (model.Template.TargetingRules ?? []).Select(rule => (Rule: rule, Range: rule.Range, EffectiveLocality: rule.Locality?.Origins ?? (IReadOnlyList<TargetingLocalityOrigin>)[TargetingLocalityOrigin.CurrentPlace]));
+                var targetingRules = effectiveRules
+                    .OrderBy(entry => entry.Rule.Slot)
+                    .ThenBy(entry => entry.Rule.Label ?? string.Empty, StringComparer.Ordinal)
+                    .Select(entry => new FrontendEditorTargetingRuleSummary(
+                        entry.Rule.Slot,
+                        entry.Rule.Label,
+                        entry.Rule.Hint,
+                        entry.Rule.TargetTemplateId?.Value,
+                        entry.Rule.TargetTemplateId is { } targetTemplateId ? TryGetTemplateName(targetTemplateId.Value) : null,
+                        entry.Range,
+                        entry.Rule.TargetCapabilities,
+                        entry.Rule.Locality?.Origins,
+                        entry.EffectiveLocality))
                     .ToList();
                 var targetRequirements = GetTargetingRequirements(model.Template.DefaultActionPlanId, targetingRules);
                 var requirementLabels = targetRequirements
@@ -115,7 +124,11 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     EffectiveExitPolicy = model.Template.EffectiveExitPolicy,
                     TopologyPolicy = model.Template.TopologyPolicy,
                     TargetingRequirements = targetRequirements,
-                    OrphanedTargetingRules = orphanedRules
+                    OrphanedTargetingRules = orphanedRules,
+                    TargetingSource = targetingSource,
+                    TargetingProfile = model.Template.Targeting is null
+                        ? null
+                        : new FrontendEditorTargetingProfileSummary(model.Template.Targeting.Range, profileDefaultLocality)
                 };
             })
             .ToList();
@@ -206,6 +219,7 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                         metadata.DisplayName,
                         step.TargetLabel,
                         step.TargetSlot,
+                        step.TargetSelf,
                         consumesTargetReference);
                 })
                 .ToList();

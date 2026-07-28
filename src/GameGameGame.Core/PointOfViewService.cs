@@ -44,6 +44,106 @@ public sealed record PointOfViewResult(
     IReadOnlyList<PointOfViewTargetAdjective> ReciprocalAdjectives,
     IReadOnlyList<PointOfViewDiagnostic> Diagnostics);
 
+public enum TargetingLocalityOrigin
+{
+    CurrentPlace,
+    OwnInventory,
+    PeerInventories
+}
+
+public sealed record TargetingLocalityQuery(
+    IReadOnlyList<TargetingLocalityOrigin>? Origins = null)
+{
+    public IReadOnlyList<TargetingLocalityOrigin> Origins { get; } = Origins is { Count: > 0 } ? Origins : [TargetingLocalityOrigin.CurrentPlace];
+}
+
+public sealed record TargetingLocalityCandidate(
+    EntityId EntityId,
+    PlaneCoord DistanceReferenceLocation,
+    TargetingLocalityOrigin Origin,
+    EntityId? ReferenceEntityId = null);
+
+public sealed class TargetingLocalityCandidateService(EntityContainmentPathService? containmentPaths = null)
+{
+    private readonly EntityContainmentPathService _containmentPaths = containmentPaths ?? new EntityContainmentPathService();
+
+    public IReadOnlyList<TargetingLocalityCandidate> Query(WorldState world, EntityId observerEntityId, TargetingLocalityQuery? query = null)
+    {
+        if (!world.Entities.ContainsKey(observerEntityId)) return [];
+        var origins = (query ?? new TargetingLocalityQuery()).Origins;
+        var result = new Dictionary<EntityId, TargetingLocalityCandidate>();
+
+        var observerLocation = world.GetEntityLocation(observerEntityId);
+        var breadcrumb = _containmentPaths.GetUpwardPath(world, observerEntityId);
+        var observerSegment = breadcrumb.Segments.LastOrDefault(segment => segment.EntityId == observerEntityId);
+        var currentPlacePlane = observerSegment?.ContainingPlaneId;
+
+        foreach (var origin in origins)
+        {
+            switch (origin)
+            {
+                case TargetingLocalityOrigin.CurrentPlace:
+                    if (currentPlacePlane is { } planeId)
+                    {
+                        AddPlaneContents(world, result, observerEntityId, planeId, useOccupantLocation: true, observerLocation, origin);
+                    }
+                    else
+                    {
+                        AddPlaneContents(world, result, observerEntityId, observerLocation.PlaneId, useOccupantLocation: true, observerLocation, origin);
+                    }
+                    break;
+                case TargetingLocalityOrigin.OwnInventory:
+                    if (world.GetRegisteredInventoryPlaneId(observerEntityId) is { } ownPlaneId)
+                    {
+                        AddPlaneContents(world, result, observerEntityId, ownPlaneId, useOccupantLocation: true, observerLocation, origin, observerEntityId);
+                    }
+                    break;
+                case TargetingLocalityOrigin.PeerInventories:
+                    if (currentPlacePlane is { } peerPlaneId)
+                    {
+                        foreach (var peer in OccupantsOnPlane(world, peerPlaneId).Where(entry => entry.EntityId != observerEntityId))
+                        {
+                            if (world.GetRegisteredInventoryPlaneId(peer.EntityId) is { } inventoryPlaneId)
+                            {
+                                AddPlaneContents(world, result, observerEntityId, inventoryPlaneId, useOccupantLocation: false, new PlaneCoord(peerPlaneId, peer.Coord), origin, peer.EntityId);
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return result
+            .Select(entry => entry.Value)
+            .OrderBy(candidate => candidate.DistanceReferenceLocation.Coord.Y)
+            .ThenBy(candidate => candidate.DistanceReferenceLocation.Coord.X)
+            .ThenBy(candidate => candidate.EntityId.Value, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static void AddPlaneContents(
+        WorldState world,
+        Dictionary<EntityId, TargetingLocalityCandidate> result,
+        EntityId observerEntityId,
+        PlaneId planeId,
+        bool useOccupantLocation,
+        PlaneCoord referenceLocation,
+        TargetingLocalityOrigin origin = TargetingLocalityOrigin.CurrentPlace,
+        EntityId? referenceEntityId = null)
+    {
+        foreach (var occupant in OccupantsOnPlane(world, planeId).Where(entry => entry.EntityId != observerEntityId))
+        {
+            var distanceReferenceLocation = useOccupantLocation ? new PlaneCoord(planeId, occupant.Coord) : referenceLocation;
+            result.TryAdd(occupant.EntityId, new TargetingLocalityCandidate(occupant.EntityId, distanceReferenceLocation, origin, referenceEntityId));
+        }
+    }
+
+    private static IEnumerable<(EntityId EntityId, GridCoord Coord)> OccupantsOnPlane(WorldState world, PlaneId planeId) =>
+        world.Occupancy
+            .Where(entry => world.Nodes.TryGetValue(entry.Key, out var node) && node.PlaneId == planeId)
+            .Select(entry => (entry.Value, world.Nodes[entry.Key].Coord));
+}
+
 public sealed class PointOfViewService(EntityContainmentPathService? containmentPaths = null)
 {
     private readonly EntityContainmentPathService _containmentPaths = containmentPaths ?? new EntityContainmentPathService();

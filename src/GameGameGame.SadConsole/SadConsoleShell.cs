@@ -491,6 +491,11 @@ internal sealed class SadConsoleShell : Console
             var result = _editorContext.CycleTargetingRuleTarget();
             _message = result.Message;
         }
+        else if (keyboard.IsKeyReleased(Keys.D))
+        {
+            var result = _editorContext.CycleTemplateTargetingDefaultLocality();
+            _message = result.Message;
+        }
         else if (keyboard.IsKeyReleased(Keys.Enter))
         {
             var result = _editorContext.ActivateTargetingRuleField();

@@ -133,6 +133,30 @@ public sealed class SadConsoleActionPlanEditScreenTests
     }
 
     [Fact]
+    public void ActionPlanEditDisplaysTargetSelfSteps()
+    {
+        var snapshot = DemoSnapshot() with
+        {
+            ActionPlans =
+            [
+                new FrontendEditorActionPlanSummary(
+                    "wander",
+                    "canonical",
+                    [new FrontendEditorActionPlanStepSummary(0, ActionPlanBehaviorStepKind.PickupTarget, "Pickup Target", TargetSelf: true, ConsumesTargetReference: true)],
+                    ["Pickup Target"])
+            ]
+        };
+        var screen = ActionPlanEditScreen.FromSnapshot(snapshot, "wander", ActionPlanEditReturnDestination.ScenarioEdit);
+
+        var listRows = screen.Components().Single(component => component.Id == "action-plan-steps").RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default);
+        var detailRows = screen.Components().Single(component => component.Id == "highlighted-action-step").RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default);
+
+        Assert.Contains(listRows, row => row.Contains("Pickup Target (self)", StringComparison.Ordinal));
+        Assert.Contains(detailRows, row => row.Contains("target self: yes", StringComparison.Ordinal));
+        Assert.Contains(detailRows, row => row.Contains("target label: self", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ActionPlanEditReplaceDeleteInsertAndMoveMutateThroughEditorService()
     {
         var snapshot = ServiceSnapshotWithPlan(out var service, out var planId);

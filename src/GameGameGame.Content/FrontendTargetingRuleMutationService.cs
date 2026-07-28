@@ -10,7 +10,7 @@ internal sealed class FrontendTargetingRuleMutationService(
         string templateId,
         FrontendEditorTargetingRuleUpdate update)
     {
-        var validationError = ValidateTargetingRuleUpdate(templateId, update);
+        var validationError = ValidateTargetingRuleUpdate(templateId, update, includeTargetingProfileRules: false);
         if (validationError is not null)
         {
             return FrontendEditorMutationResult.Failure(validationError, getSnapshot());
@@ -67,7 +67,84 @@ internal sealed class FrontendTargetingRuleMutationService(
         }
     }
 
-    private string? ValidateTargetingRuleUpdate(string templateId, FrontendEditorTargetingRuleUpdate update)
+    public FrontendEditorMutationResult SetTemplateTargetingProfileRule(
+        string templateId,
+        FrontendEditorTargetingProfileRuleUpdate update)
+    {
+        var legacyUpdate = new FrontendEditorTargetingRuleUpdate(
+            update.Slot,
+            update.Label,
+            update.TargetTemplateId,
+            update.Range,
+            update.TargetCapabilities);
+        var validationError = ValidateTargetingRuleUpdate(templateId, legacyUpdate, includeTargetingProfileRules: true);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, getSnapshot());
+        }
+
+        try
+        {
+            session.Editor.SetTargetingProfileRule(
+                new EntityTemplateId(templateId),
+                update.Range,
+                new EntityTargetingRule(
+                    update.Slot,
+                    string.IsNullOrWhiteSpace(update.TargetTemplateId) ? null : new EntityTemplateId(update.TargetTemplateId),
+                    Hint: null,
+                    Label: update.Label,
+                    TargetCapabilities: update.TargetCapabilities,
+                    Locality: update.LocalityOrigins is null ? null : new TargetingLocalityQuery(update.LocalityOrigins)));
+            return FrontendEditorMutationResult.Success(
+                $"Updated targeting profile rule slot {update.Slot} on template {templateId}. Preview stale until P rematerializes.",
+                getSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not update targeting profile rule slot {update.Slot} on template {templateId}: {ex.Message}",
+                getSnapshot());
+        }
+    }
+
+    public FrontendEditorMutationResult SetTemplateTargetingDefaultLocality(
+        string templateId,
+        IReadOnlyList<TargetingLocalityOrigin> origins)
+    {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            return FrontendEditorMutationResult.Failure("Template id is required.", getSnapshot());
+        }
+
+        if (session.Document.EntityTemplates.ContainsKey(templateId) is false)
+        {
+            return FrontendEditorMutationResult.Failure($"Template {templateId} does not exist.", getSnapshot());
+        }
+
+        if (origins.Count == 0)
+        {
+            return FrontendEditorMutationResult.Failure("Targeting default locality requires at least one origin.", getSnapshot());
+        }
+
+        try
+        {
+            session.Editor.SetTargetingDefaultLocality(new EntityTemplateId(templateId), new TargetingLocalityQuery(origins));
+            return FrontendEditorMutationResult.Success(
+                $"Updated targeting default locality on template {templateId}.",
+                getSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not update targeting default locality on template {templateId}: {ex.Message}",
+                getSnapshot());
+        }
+    }
+
+    private string? ValidateTargetingRuleUpdate(
+        string templateId,
+        FrontendEditorTargetingRuleUpdate update,
+        bool includeTargetingProfileRules)
     {
         if (string.IsNullOrWhiteSpace(templateId))
         {
@@ -118,7 +195,7 @@ internal sealed class FrontendTargetingRuleMutationService(
             return "Targeting rule range must be between 0 and 10.";
         }
 
-        var duplicate = session.Editor.ListTargetingRules(new EntityTemplateId(templateId))
+        var duplicate = ExistingTargetingRuleLabels(templateId, includeTargetingProfileRules)
             .Any(rule => rule.Slot != update.Slot && string.Equals(rule.Label, update.Label, StringComparison.Ordinal));
         if (duplicate)
         {
@@ -126,5 +203,33 @@ internal sealed class FrontendTargetingRuleMutationService(
         }
 
         return null;
+    }
+
+    private IEnumerable<(int Slot, string Label)> ExistingTargetingRuleLabels(
+        string templateId,
+        bool includeTargetingProfileRules)
+    {
+        var template = session.Document.EntityTemplates[templateId];
+
+        foreach (var rule in template.TargetingRules ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(rule.Label))
+            {
+                yield return (rule.Slot, rule.Label);
+            }
+        }
+
+        if (!includeTargetingProfileRules)
+        {
+            yield break;
+        }
+
+        foreach (var rule in template.Targeting?.Rules ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(rule.Label))
+            {
+                yield return (rule.Slot, rule.Label);
+            }
+        }
     }
 }

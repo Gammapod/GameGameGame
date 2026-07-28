@@ -1220,7 +1220,7 @@ internal sealed class SadConsoleEditorContext
         Section = SadConsoleEditorSection.Templates;
         var slot = template.TargetingRules.OrderBy(rule => rule.Slot).FirstOrDefault()?.Slot ?? 1;
         LoadTargetingRuleSlot(slot, TargetingFieldFromTemplateFocus(initialField));
-        return SadConsoleEditorMutationUiResult.Success($"Editing targeting rules for {template.TemplateId}. Up/Down selects slot; Left/Right selects label/target/range; Enter activates focused field; X/Delete clears; Esc exits.");
+        return SadConsoleEditorMutationUiResult.Success($"Editing targeting rules for {template.TemplateId}. Up/Down selects slot; Left/Right selects label/target/range/locality; Enter activates focused field; X/Delete clears; Esc exits.");
     }
 
     public IReadOnlyList<SadConsoleEditorTargetTemplatePickerOption> TargetTemplatePickerOptions() =>
@@ -1326,8 +1326,49 @@ internal sealed class SadConsoleEditorContext
             SadConsoleEditorTargetingRuleField.Label => BeginTargetingRuleLabelEdit(),
             SadConsoleEditorTargetingRuleField.Target => ApplyTargetingRuleTargetCycle(),
             SadConsoleEditorTargetingRuleField.Range => ApplyTargetingRuleRangeIncrement(),
+            SadConsoleEditorTargetingRuleField.Locality => ApplyTargetingRuleLocalityCycle(),
             _ => SadConsoleEditorMutationUiResult.Failure("Focused targeting rule field is not implemented.")
         };
+    }
+
+    public SadConsoleEditorMutationUiResult CycleTargetingRuleLocality()
+    {
+        if (_targetingRuleEdit is not { } edit)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No targeting rule editor is active.");
+        }
+
+        var presets = TargetingLocalityPresets();
+        var current = NormalizeLocalityOrigins(edit.LocalityOrigins);
+        var index = presets.FindIndex(preset => preset.SequenceEqual(current));
+        var next = presets[(index + 1) % presets.Count];
+        _targetingRuleEdit = edit with { LocalityOrigins = next };
+        return SadConsoleEditorMutationUiResult.Success(TargetingRuleStatusMessage());
+    }
+
+    public SadConsoleEditorMutationUiResult CycleTemplateTargetingDefaultLocality()
+    {
+        if (SelectedTemplate() is not { } template)
+        {
+            return SadConsoleEditorMutationUiResult.Failure("No authored template is selected for targeting default locality edit.");
+        }
+
+        var presets = TargetingLocalityPresets();
+        var current = NormalizeLocalityOrigins(template.TargetingProfile?.DefaultLocalityOrigins);
+        var index = presets.FindIndex(preset => preset.SequenceEqual(current));
+        var next = presets[(index + 1) % presets.Count];
+        var result = _service.SetTemplateTargetingDefaultLocality(template.TemplateId, next);
+        ReplaceSnapshotAfterMutation(
+            result.Snapshot,
+            template.TemplateId,
+            markPreviewStale: result.IsSuccess,
+            previewStaleReason: "Preview marked stale because authored template targeting default locality changed. Press P to rematerialize.");
+        if (result.IsSuccess && _targetingRuleEdit is { } edit)
+        {
+            LoadTargetingRuleSlot(edit.Slot, edit.ActiveField);
+        }
+
+        return new SadConsoleEditorMutationUiResult(result.IsSuccess, result.StatusMessage);
     }
 
     private SadConsoleEditorMutationUiResult ApplyTargetingRuleTargetCycle()
@@ -1340,6 +1381,12 @@ internal sealed class SadConsoleEditorContext
     {
         var adjust = AdjustTargetingRuleRange(1);
         return adjust.Succeeded ? ConfirmTemplateTargetingRuleEditor() : adjust;
+    }
+
+    private SadConsoleEditorMutationUiResult ApplyTargetingRuleLocalityCycle()
+    {
+        var cycle = CycleTargetingRuleLocality();
+        return cycle.Succeeded ? ConfirmTemplateTargetingRuleEditor() : cycle;
     }
 
     public SadConsoleEditorMutationUiResult ConfirmTemplateTargetingRuleEditor()
@@ -1355,7 +1402,15 @@ internal sealed class SadConsoleEditorContext
             return SadConsoleEditorMutationUiResult.Failure("No authored template is selected; targeting rule edit cancelled.");
         }
 
-        var result = _service.SetTemplateTargetingRule(template.TemplateId, new FrontendEditorTargetingRuleUpdate(edit.Slot, edit.Label, edit.TargetTemplateId, edit.Range, edit.TargetCapabilities));
+        var result = _service.SetTemplateTargetingProfileRule(
+            template.TemplateId,
+            new FrontendEditorTargetingProfileRuleUpdate(
+                edit.Range,
+                edit.Slot,
+                edit.Label,
+                edit.TargetTemplateId,
+                NormalizeLocalityOrigins(edit.LocalityOrigins),
+                edit.TargetCapabilities));
         ReplaceSnapshotAfterMutation(
             result.Snapshot,
             template.TemplateId,
@@ -1566,6 +1621,7 @@ internal sealed class SadConsoleEditorContext
             targetIndex,
             existing?.Range ?? 0,
             existing?.TargetCapabilities ?? [],
+            NormalizeLocalityOrigins(existing?.LocalityOrigins ?? existing?.EffectiveLocalityOrigins ?? template.TargetingProfile?.DefaultLocalityOrigins),
             activeField,
             IsEditingLabel: false,
             LabelBuffer: existing?.Label ?? string.Empty,
@@ -1578,6 +1634,25 @@ internal sealed class SadConsoleEditorContext
         SadConsoleEditorTemplateFocus.TargetingRange => SadConsoleEditorTargetingRuleField.Range,
         _ => SadConsoleEditorTargetingRuleField.Label
     };
+
+    private static List<IReadOnlyList<TargetingLocalityOrigin>> TargetingLocalityPresets() =>
+    [
+        [TargetingLocalityOrigin.CurrentPlace],
+        [TargetingLocalityOrigin.OwnInventory],
+        [TargetingLocalityOrigin.PeerInventories],
+        [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.OwnInventory],
+        [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories],
+        [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.OwnInventory, TargetingLocalityOrigin.PeerInventories]
+    ];
+
+    private static IReadOnlyList<TargetingLocalityOrigin> NormalizeLocalityOrigins(IReadOnlyList<TargetingLocalityOrigin>? origins)
+    {
+        var normalized = (origins is null || origins.Count == 0 ? [TargetingLocalityOrigin.CurrentPlace] : origins)
+            .Distinct()
+            .OrderBy(origin => origin)
+            .ToList();
+        return normalized.Count == 0 ? [TargetingLocalityOrigin.CurrentPlace] : normalized;
+    }
 
     private SadConsoleEditorMutationUiResult ApplyTemplatePresentationUpdate(string templateId, FrontendEditorTemplatePresentationUpdate update)
     {
@@ -1813,8 +1888,19 @@ internal sealed class SadConsoleEditorContext
         }
 
         var label = edit.IsEditingLabel ? edit.LabelBuffer : edit.Label;
-        return $"Targeting slot {edit.Slot}: focused {edit.ActiveField}; label '{(string.IsNullOrEmpty(label) ? "<blank>" : label)}' target {edit.TargetTemplateId} range {edit.Range}.";
+        return $"Targeting slot {edit.Slot}: focused {edit.ActiveField}; label '{(string.IsNullOrEmpty(label) ? "<blank>" : label)}' target {edit.TargetTemplateId} range {edit.Range} where {FormatTargetingLocalityText(edit.LocalityOrigins)}.";
     }
+
+    private static string FormatTargetingLocalityText(IReadOnlyList<TargetingLocalityOrigin> origins) =>
+        origins.Count == 0 ? "Current place" : string.Join(", ", origins.Select(FormatTargetingLocalityOriginText));
+
+    private static string FormatTargetingLocalityOriginText(TargetingLocalityOrigin origin) => origin switch
+    {
+        TargetingLocalityOrigin.CurrentPlace => "Current place",
+        TargetingLocalityOrigin.OwnInventory => "Own inventory",
+        TargetingLocalityOrigin.PeerInventories => "Peer inventories",
+        _ => origin.ToString()
+    };
 
     private static string FirstGlyphText(string text) =>
         string.IsNullOrEmpty(text) ? string.Empty : text[0].ToString();
@@ -1942,6 +2028,7 @@ internal sealed record SadConsoleEditorTargetingRuleEditState(
     int TargetTemplateIndex,
     int Range,
     IReadOnlyList<ActionPlanBehaviorStepKind> TargetCapabilities,
+    IReadOnlyList<TargetingLocalityOrigin> LocalityOrigins,
     SadConsoleEditorTargetingRuleField ActiveField,
     bool IsEditingLabel,
     string LabelBuffer,
@@ -1951,7 +2038,8 @@ internal enum SadConsoleEditorTargetingRuleField
 {
     Label,
     Target,
-    Range
+    Range,
+    Locality
 }
 
 internal sealed record SadConsoleEditorRefreshResult(
@@ -2271,8 +2359,8 @@ internal static class SadConsoleEditorViewBuilder
             : $"Authored starting inventory/carried layout ({template.CarriedEntities.Count}): {string.Join("; ", template.CarriedEntities.Take(4).Select(FormatCarriedDetail))}{(template.CarriedEntities.Count > 4 ? "; ..." : string.Empty)}");
 
         rows.Add(template.TargetingRules.Count == 0
-            ? $"Targeting rules/fields: {FocusField(context, SadConsoleEditorTemplateFocus.TargetingLabel, "label <empty>")} | {FocusField(context, SadConsoleEditorTemplateFocus.TargetingTarget, "target <empty>")} | {FocusField(context, SadConsoleEditorTemplateFocus.TargetingRange, "range <empty>")}"
-            : $"Targeting rules/fields: {FocusField(context, SadConsoleEditorTemplateFocus.TargetingLabel, "label")}/{FocusField(context, SadConsoleEditorTemplateFocus.TargetingTarget, "target")}/{FocusField(context, SadConsoleEditorTemplateFocus.TargetingRange, "range")} -> {string.Join("; ", template.TargetingRules.Take(3).Select(FormatTargetingRule))}{(template.TargetingRules.Count > 3 ? "; ..." : string.Empty)}");
+            ? $"Targeting rules/fields: default where {FormatTargetingLocality(template.TargetingProfile?.DefaultLocalityOrigins ?? [TargetingLocalityOrigin.CurrentPlace])}; {FocusField(context, SadConsoleEditorTemplateFocus.TargetingLabel, "label <empty>")} | {FocusField(context, SadConsoleEditorTemplateFocus.TargetingTarget, "target <empty>")} | {FocusField(context, SadConsoleEditorTemplateFocus.TargetingRange, "range <empty>")}"
+            : $"Targeting rules/fields: default where {FormatTargetingLocality(template.TargetingProfile?.DefaultLocalityOrigins ?? [TargetingLocalityOrigin.CurrentPlace])}; {FocusField(context, SadConsoleEditorTemplateFocus.TargetingLabel, "label")}/{FocusField(context, SadConsoleEditorTemplateFocus.TargetingTarget, "target")}/{FocusField(context, SadConsoleEditorTemplateFocus.TargetingRange, "range")} -> {string.Join("; ", template.TargetingRules.Take(3).Select(FormatTargetingRule))}{(template.TargetingRules.Count > 3 ? "; ..." : string.Empty)}");
 
         rows.Add($"Inventory edit entry: {FocusField(context, SadConsoleEditorTemplateFocus.InventoryBrush, "brush / authored inventory grid")} (layout mutation remains a later slice beyond place-only prototype). ");
 
@@ -2399,10 +2487,11 @@ internal static class SadConsoleEditorViewBuilder
 
         var rows = new List<string>
         {
-            "Targeting rule editor active: Up/Down slot, Left/Right field, Enter activates focused label/target/range, X/Delete clears slot, Esc exits.",
+            "Targeting rule editor active: Up/Down slot, Left/Right field, Enter activates focused label/target/range/locality, D cycles template default locality, X/Delete clears slot, Esc exits.",
+            $"Template targeting default where {FormatTargetingLocality(template.TargetingProfile?.DefaultLocalityOrigins ?? [TargetingLocalityOrigin.CurrentPlace])}",
             edit.IsEditingLabel
                 ? $"Editing slot {edit.Slot} label buffer: '{edit.LabelBuffer}' (lowercase alphanumeric required by service; Enter applies label through editor service; Esc cancels label edit)."
-                : $"Pending slot {edit.Slot}: {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Label, $"label '{(string.IsNullOrWhiteSpace(edit.Label) ? "<blank>" : edit.Label)}'")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Target, $"target {FormatTargetTemplate(snapshot, edit.TargetTemplateId)}")} | adjectives {FormatTargetCapabilities(edit.TargetCapabilities)} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Range, $"range {edit.Range}")} | {(edit.ExistingRulePresent ? "existing rule" : "empty slot/new rule")}",
+                : $"Pending slot {edit.Slot}: {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Label, $"label '{(string.IsNullOrWhiteSpace(edit.Label) ? "<blank>" : edit.Label)}'")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Target, $"target {FormatTargetTemplate(snapshot, edit.TargetTemplateId)}")} | adjectives {FormatTargetCapabilities(edit.TargetCapabilities)} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Range, $"range {edit.Range}")} | {FocusTargetingField(edit, SadConsoleEditorTargetingRuleField.Locality, $"where {FormatTargetingLocality(edit.LocalityOrigins)}")} | {(edit.ExistingRulePresent ? "existing rule" : "empty slot/new rule")}",
             "Slots 1-4:"
         };
 
@@ -2412,7 +2501,7 @@ internal static class SadConsoleEditorViewBuilder
             var rule = template.TargetingRules.FirstOrDefault(candidate => candidate.Slot == slot);
             rows.Add(rule is null
                 ? $"{marker} slot {slot}: <empty>"
-                : $"{marker} {FormatTargetingRule(rule)}");
+                : $"{marker} {FormatTargetingRule(rule)} where {FormatTargetingLocality(rule.EffectiveLocalityOrigins)}{(rule.LocalityOrigins is null ? " (default)" : string.Empty)}");
         }
 
         var options = context.TargetTemplatePickerOptions();
@@ -2445,6 +2534,17 @@ internal static class SadConsoleEditorViewBuilder
 
     private static string FormatTargetCapabilities(IReadOnlyList<ActionPlanBehaviorStepKind> capabilities) =>
         capabilities.Count == 0 ? "(none)" : string.Join(", ", capabilities);
+
+    private static string FormatTargetingLocality(IReadOnlyList<TargetingLocalityOrigin> origins) =>
+        origins.Count == 0 ? "Current place" : string.Join(", ", origins.Select(FormatTargetingLocalityOrigin));
+
+    private static string FormatTargetingLocalityOrigin(TargetingLocalityOrigin origin) => origin switch
+    {
+        TargetingLocalityOrigin.CurrentPlace => "Current place",
+        TargetingLocalityOrigin.OwnInventory => "Own inventory",
+        TargetingLocalityOrigin.PeerInventories => "Peer inventories",
+        _ => origin.ToString()
+    };
 
     private static string FormatAssignedActionPlanSummary(FrontendEditorSnapshot snapshot, string? actionPlanId)
     {
@@ -2584,7 +2684,7 @@ internal static class SadConsoleEditorViewBuilder
         plan.ActionSteps.Count == 0 ? "steps:none" : $"steps:{string.Join(" -> ", plan.ActionSteps.Select(step => step.DisplayName))}";
 
     private static string FormatActionPlanStep(FrontendEditorActionPlanStepSummary step) =>
-        $"step {step.Index}: {step.DisplayName} ({step.Kind})";
+        $"step {step.Index}: {step.DisplayName} ({step.Kind}){(step.TargetSelf ? " target:self" : string.Empty)}";
 
     private static IReadOnlyList<string> BuildGroupedDiagnosticRows(SadConsoleEditorContext context, FrontendEditorSnapshot snapshot, int count)
     {

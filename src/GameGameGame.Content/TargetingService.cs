@@ -6,6 +6,7 @@ public static class TargetingService
 {
     private static readonly MovementService Movement = new();
     private static readonly EntityInteractionAffordanceService Affordances = new(Movement);
+    private static readonly TargetingLocalityCandidateService LocalityCandidates = new();
 
     public static void RefreshTargets(WorldState world, PrototypeContentRegistry registry, EntityId actorId)
     {
@@ -16,15 +17,16 @@ public static class TargetingService
         }
 
         var template = registry.GetEntityTemplate(actorTemplateId);
-        if (template.TargetingRules is null || template.TargetingRules.Count == 0)
+        var rules = GetRules(template);
+        if (rules.Count == 0)
         {
             return;
         }
 
         var actorLocation = world.GetEntityLocation(actorId);
-        foreach (var rule in template.TargetingRules)
+        foreach (var (rule, range, locality) in rules)
         {
-            var selected = FindNearestMatchingTarget(world, registry, actorId, actorLocation, rule);
+            var selected = FindNearestMatchingTarget(world, registry, actorId, actorLocation, rule, range, locality);
             if (selected is { } targetId)
             {
                 world.SetActionTarget(actorId, rule.Slot, targetId);
@@ -49,26 +51,41 @@ public static class TargetingService
         PrototypeContentRegistry registry,
         EntityId actorId,
         PlaneCoord actorLocation,
-        EntityTargetingRule rule) =>
-        world.Occupancy
-            .Select(entry => (EntityId: entry.Value, Node: world.Nodes[entry.Key]))
-            .Where(entry => entry.EntityId != actorId)
-            .Where(entry => entry.Node.PlaneId == actorLocation.PlaneId)
+        EntityTargetingRule rule,
+        int range,
+        TargetingLocalityQuery locality) =>
+        LocalityCandidates.Query(world, actorId, locality)
             .Where(entry => MatchesTargetTemplate(registry, entry.EntityId, rule.TargetTemplateId))
             .Where(entry => MatchesTargetCapabilities(world, actorId, entry.EntityId, rule.TargetCapabilities))
             .Select(entry => new
             {
                 entry.EntityId,
-                entry.Node.Coord,
-                Distance = ManhattanDistance(actorLocation.Coord, entry.Node.Coord)
+                entry.DistanceReferenceLocation.Coord,
+                Distance = entry.DistanceReferenceLocation.PlaneId == actorLocation.PlaneId
+                    ? ManhattanDistance(actorLocation.Coord, entry.DistanceReferenceLocation.Coord)
+                    : int.MaxValue
             })
-            .Where(entry => entry.Distance <= rule.Range)
+            .Where(entry => entry.Distance <= range)
             .OrderBy(entry => entry.Distance)
             .ThenBy(entry => entry.Coord.Y)
             .ThenBy(entry => entry.Coord.X)
             .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
             .Select(entry => (EntityId?)entry.EntityId)
             .FirstOrDefault();
+
+    private static IReadOnlyList<(EntityTargetingRule Rule, int Range, TargetingLocalityQuery Locality)> GetRules(EntityTemplate template)
+    {
+        if (template.Targeting is { } profile && profile.Rules.Count > 0)
+        {
+            return profile.Rules
+                .Select(rule => (rule, profile.Range, rule.Locality ?? profile.DefaultLocality ?? new TargetingLocalityQuery()))
+                .ToList();
+        }
+
+        return (template.TargetingRules ?? [])
+            .Select(rule => (rule, rule.Range, rule.Locality ?? new TargetingLocalityQuery()))
+            .ToList();
+    }
 
     private static int ManhattanDistance(GridCoord first, GridCoord second) =>
         Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);

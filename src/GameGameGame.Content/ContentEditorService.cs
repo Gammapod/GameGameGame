@@ -155,6 +155,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanBehaviorStepTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetLabel(planId, stepIndex, targetLabel);
 
+    public void SetActionPlanBehaviorStepTargetSelf(ActionPlanTemplateId planId, int stepIndex, bool targetSelf)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetSelf(planId, stepIndex, targetSelf);
+
     public void SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId);
 
@@ -345,6 +348,12 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public void SetTargetingRule(EntityTemplateId templateId, EntityTargetingRule rule)
         => new EntityTemplateEditorService(Document, onChanged).SetTargetingRule(templateId, rule);
+
+    public void SetTargetingProfileRule(EntityTemplateId templateId, int range, EntityTargetingRule rule)
+        => new EntityTemplateEditorService(Document, onChanged).SetTargetingProfileRule(templateId, range, rule);
+
+    public void SetTargetingDefaultLocality(EntityTemplateId templateId, TargetingLocalityQuery locality)
+        => new EntityTemplateEditorService(Document, onChanged).SetTargetingDefaultLocality(templateId, locality);
 
     public void RemoveTargetingRule(EntityTemplateId templateId, int slot)
         => new EntityTemplateEditorService(Document, onChanged).RemoveTargetingRule(templateId, slot);

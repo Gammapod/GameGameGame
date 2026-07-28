@@ -649,9 +649,13 @@ internal sealed class EntityTemplateEditScreen
 
         var requirement = SelectedTargetingRequirement();
         var slot = requirement.Rule?.Slot ?? _selectedTargetingSlotIndex + 1;
-        var result = _service.SetTemplateTargetingRule(
+        var locality = requirement.Rule?.LocalityOrigins
+            ?? requirement.Rule?.EffectiveLocalityOrigins
+            ?? _template.TargetingProfile?.DefaultLocalityOrigins
+            ?? [TargetingLocalityOrigin.CurrentPlace];
+        var result = _service.SetTemplateTargetingProfileRule(
             _template.TemplateId,
-            new FrontendEditorTargetingRuleUpdate(slot, requirement.Label, targetTemplateId, range, targetCapabilities ?? requirement.Rule?.TargetCapabilities));
+            new FrontendEditorTargetingProfileRuleUpdate(range, slot, requirement.Label, targetTemplateId, locality, targetCapabilities ?? requirement.Rule?.TargetCapabilities));
         ReplaceAfterMutation(result.Snapshot);
         _selectedTargetingSlotIndex = Math.Clamp(_selectedTargetingSlotIndex, 0, Math.Max(0, _template.TargetingRequirements.Count - 1));
         _targetingSlotPanelOpen = true;
@@ -788,7 +792,7 @@ internal sealed class EntityTemplateEditScreen
         {
             rows.Add("unused authored targeting rules:");
             rows.AddRange(_template.OrphanedTargetingRules.Select(rule =>
-                $"  {rule.Label ?? $"slot {DisplaySlotNumber(rule)}"}: {FormatTargetingRuleCriteria(rule)} range {rule.Range}"));
+                $"  {rule.Label ?? $"slot {DisplaySlotNumber(rule)}"}: {FormatTargetingRuleCriteria(rule)} range {rule.Range} where {FormatTargetingLocality(rule.EffectiveLocalityOrigins)}"));
         }
 
         return new PanelComponent(
@@ -835,7 +839,7 @@ internal sealed class EntityTemplateEditScreen
             return "(unset) range 0";
         }
 
-        return $"{FormatTargetingRuleCriteria(rule)} range {rule.Range}";
+        return $"{FormatTargetingRuleCriteria(rule)} range {rule.Range} where {FormatTargetingLocality(rule.EffectiveLocalityOrigins)}";
     }
 
     private const string NullTargetTemplateChoiceId = "__no_target_template__";
@@ -898,6 +902,17 @@ internal sealed class EntityTemplateEditScreen
         var capabilities = rule.TargetCapabilities.Count == 0 ? string.Empty : $" [{string.Join(", ", rule.TargetCapabilities)}]";
         return $"{target}{capabilities}";
     }
+
+    private static string FormatTargetingLocality(IReadOnlyList<TargetingLocalityOrigin> origins) =>
+        origins.Count == 0 ? "Current place" : string.Join(", ", origins.Select(FormatTargetingLocalityOrigin));
+
+    private static string FormatTargetingLocalityOrigin(TargetingLocalityOrigin origin) => origin switch
+    {
+        TargetingLocalityOrigin.CurrentPlace => "Current place",
+        TargetingLocalityOrigin.OwnInventory => "Own inventory",
+        TargetingLocalityOrigin.PeerInventories => "Peer inventories",
+        _ => origin.ToString()
+    };
 
     private static int DisplaySlotNumber(FrontendEditorTargetingRuleSummary slot) => slot.Slot + 1;
 
