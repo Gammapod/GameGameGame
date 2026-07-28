@@ -22,13 +22,26 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.NotNull(screen.ControlledActorProjection);
         Assert.NotNull(screen.CurrentPlaceProjection);
         Assert.NotNull(screen.CurrentSpaceView);
-        var currentSpace = Assert.IsType<InventorySpaceComponent>(Assert.Single(components));
-        Assert.Equal("current-space-grid", currentSpace.Id);
+        Assert.Equal(5, components.Count);
+        var parentChain = Assert.IsType<PanelComponent>(components.Single(component => component.Id == "actor-pov-parent-chain"));
+        var currentSpace = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "actor-pov-current-place-grid"));
+        Assert.Equal("actor-pov-current-place-grid", currentSpace.Id);
         Assert.Equal(UiComponentState.Focused, currentSpace.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, currentSpace.Options);
         Assert.Empty(currentSpace.BodyRows);
         Assert.Equal(1, currentSpace.View.CellMetrics.Width);
         Assert.True(currentSpace.Bounds.Height >= currentSpace.RequiredHeight);
+        var actorInventory = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "actor-pov-actor-inventory-grid"));
+        var worldInspection = components.Single(component => component.Id is "actor-pov-world-inspection-grid" or "actor-pov-world-inspection-empty");
+        var carriedInspection = components.Single(component => component.Id is "actor-pov-actor-inventory-inspection-grid" or "actor-pov-actor-inventory-inspection-empty");
+        var actorPovModel = screen.ActorPovModel(SadConsoleRect.FromSize(1, 1, 118, 40))!;
+        AssertInside(actorPovModel.Layout.ParentChain.Bounds, parentChain.Bounds);
+        Assert.Equal(UiComponentState.Selected, actorInventory.State);
+        Assert.Same(InventorySpaceRenderOptions.Bare, actorInventory.Options);
+        AssertInside(actorPovModel.Layout.CurrentPlace.Bounds, currentSpace.Bounds);
+        AssertInside(actorPovModel.Layout.WorldInspection.Bounds, worldInspection.Bounds);
+        AssertInside(actorPovModel.Layout.ActorInventory.Bounds, actorInventory.Bounds);
+        AssertInside(actorPovModel.Layout.ActorInventoryInspection.Bounds, carriedInspection.Bounds);
 
         var debugRows = screen.DebugRows();
         Assert.Contains(debugRows, row => row.Contains("Controlled actor:"));
@@ -102,6 +115,20 @@ public sealed class ConsumerPlayModeScreenTests
             Assert.True(component.Bounds.Bottom <= drawable.Bottom);
             Assert.True(component.Bounds.Width <= drawable.Width);
         });
+    }
+
+    [Fact]
+    public void ConsumerPlayModeExposesActorPovDiagnosticsChromeForDebugRendering()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        var chrome = Assert.IsType<PanelComponent>(screen.ActorPovDiagnosticsChromeComponent(drawable));
+
+        Assert.Equal("actor-pov-diagnostics-chrome", chrome.Id);
+        AssertInside(screen.ActorPovModel(drawable)!.Layout.DiagnosticsRegion.Bounds, chrome.Bounds);
+        Assert.Contains(chrome.BodyRows, row => row.Contains("focused:", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -452,5 +479,13 @@ public sealed class ConsumerPlayModeScreenTests
             "Debug",
             "CanonicalDebugRooms.yaml");
         return (path, PlayableScenarioLauncher.CreateFromFile(path, "canonical-debug-size-calibration-room"));
+    }
+
+    private static void AssertInside(SadConsoleRect outer, SadConsoleRect inner)
+    {
+        Assert.True(inner.Left >= outer.Left);
+        Assert.True(inner.Top >= outer.Top);
+        Assert.True(inner.Left + inner.Width <= outer.Left + outer.Width);
+        Assert.True(inner.Bottom <= outer.Bottom);
     }
 }

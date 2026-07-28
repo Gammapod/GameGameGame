@@ -14,6 +14,7 @@ read_when:
   - deciding how actor POV, parent locations, peer inspection, and actor inventory inspection should compose on screen
   - replacing the actor-POV layout spike with clean architecture in main
 related:
+  - plan.actor-pov-play-layout-foundation-sprint
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
@@ -25,6 +26,8 @@ related:
 # Actor POV Inventory-Chain Play Layout Plan
 
 Status: Active plan and findings record. This document records the user-facing semantics proven by the actor-POV inventory-chain spike and the recommended cleaner architecture for rebuilding the UX in main.
+
+Completed focused implementation sprint: `docs/Archived/Actor-POV-Play-Layout-Foundation-Sprint-Plan.md` records the first componentized layout sprint over the MVP `ActorPovPlayProjection` layer.
 
 ## Decision
 

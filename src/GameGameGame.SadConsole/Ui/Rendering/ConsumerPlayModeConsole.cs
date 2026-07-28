@@ -138,14 +138,9 @@ internal sealed class ConsumerPlayModeConsole : Console
         var drawable = _layout.DrawableBounds;
 
         _lastConnector = null;
-        if (_screen.LinkedSpacePresentation(drawable, showDebugLabels: false) is { } linkedSpace)
+        foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: false))
         {
-            _lastConnector = linkedSpace.Connector;
-
-            foreach (var node in linkedSpace.Nodes)
-            {
-                _renderer.DrawComponent(node);
-            }
+            _renderer.DrawComponent(component);
         }
 
         if (_layout.DebugVisible)
@@ -168,14 +163,14 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     private void DrawDebugOverlay(SadConsoleRect drawable)
     {
-        if (_screen.LinkedSpacePresentation(drawable, showDebugLabels: true) is { } linkedSpace)
+        foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: true))
         {
-            _lastConnector = linkedSpace.Connector;
+            _renderer.DrawComponent(component);
+        }
 
-            foreach (var node in linkedSpace.Nodes)
-            {
-                _renderer.DrawComponent(node);
-            }
+        if (_screen.ActorPovDiagnosticsChromeComponent(drawable) is { } diagnosticsChrome)
+        {
+            _renderer.DrawComponent(diagnosticsChrome);
         }
 
         var rows = new List<string>

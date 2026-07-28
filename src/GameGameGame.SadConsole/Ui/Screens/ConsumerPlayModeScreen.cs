@@ -234,9 +234,47 @@ internal sealed class ConsumerPlayModeScreen
 
     public IReadOnlyList<IUiComponent> Components(SadConsoleRect drawableBounds)
     {
-        return CurrentSpaceGridComponent(drawableBounds, showDebugLabels: false) is { } grid
-            ? [grid]
+        return ActorPovComponents(drawableBounds, showDebugLabels: false);
+    }
+
+    public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels)
+    {
+        return ActorPovModel(drawableBounds) is { } model
+            ? ActorPovPlayComponentFactory.MainComponents(model, showDebugLabels)
             : [];
+    }
+
+    public ActorPovPlayScreenModel? ActorPovModel(SadConsoleRect drawableBounds)
+    {
+        if (Session is null)
+        {
+            return null;
+        }
+
+        var actorId = _sessionController?.PlayerEntityId ?? Session.PlayerEntityId;
+        var world = _sessionController?.World ?? Session.World;
+        return ActorPovPlayScreenModelBuilder.Build(
+            world,
+            actorId,
+            Session.ActionPlans,
+            drawableBounds,
+            ResolveInspectionAppearance,
+            GetActionPlanDescriptorForEntity,
+            actionLog: _sessionController?.ActionLog);
+    }
+
+    public IUiComponent? ActorPovCurrentPlaceComponent(SadConsoleRect drawableBounds, bool showDebugLabels)
+    {
+        return ActorPovModel(drawableBounds) is { } model
+            ? ActorPovPlayComponentFactory.CurrentPlaceComponent(model, showDebugLabels)
+            : null;
+    }
+
+    public IUiComponent? ActorPovDiagnosticsChromeComponent(SadConsoleRect drawableBounds)
+    {
+        return ActorPovModel(drawableBounds) is { } model
+            ? ActorPovPlayComponentFactory.DiagnosticsChromeComponent(model)
+            : null;
     }
 
     public LinkedPlaySpacePresentation? LinkedSpacePresentation(SadConsoleRect drawableBounds, bool showDebugLabels = false)
