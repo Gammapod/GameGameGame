@@ -1,0 +1,338 @@
+entityTemplates:
+  deltaMothLifecycleRoom:
+    name: Delta Moth Lifecycle Room
+    inventoryWidth: 18
+    inventoryHeight: 10
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: lifecycleFlower
+      templateId: deltaLifecycleFlower
+      coord:
+        x: 15
+        y: 1
+    - entityId: lifecycleFlame
+      templateId: deltaLifecycleFlame
+      coord:
+        x: 15
+        y: 8
+    - entityId: lifecycleMoth
+      templateId: deltaLifecycleMoth
+      coord:
+        x: 8
+        y: 5
+    - entityId: lifecycleFlowerHedgeNorthWest
+      templateId: deltaLifecycleFlowerHedge
+      coord:
+        x: 13
+        y: 0
+    - entityId: lifecycleFlowerHedgeNorth
+      templateId: deltaLifecycleFlowerHedge
+      coord:
+        x: 14
+        y: 0
+    - entityId: lifecycleFlowerHedgeNorthEast
+      templateId: deltaLifecycleFlowerHedge
+      coord:
+        x: 15
+        y: 0
+    - entityId: lifecycleFlowerHedgeWest
+      templateId: deltaLifecycleFlowerHedge
+      coord:
+        x: 13
+        y: 1
+    - entityId: lifecycleFlowerHedgeSouthWest
+      templateId: deltaLifecycleFlowerHedge
+      coord:
+        x: 13
+        y: 2
+    - entityId: lifecycleFlowerHedgeSouthEast
+      templateId: deltaLifecycleFlowerHedge
+      coord:
+        x: 15
+        y: 2
+    - entityId: deltaMothLifecycleRoomLeafTree
+      templateId: deltaLifecycleTree
+      coord:
+        x: 1
+        y: 5
+    - entityId: deltaMothLifecycleRoomPlayer
+      templateId: player
+      coord:
+        x: 2
+        y: 7
+      controller: Player
+  deltaLifecycleTree:
+    name: Leaf Tree
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 0
+    defaultActionPlanId: deltaLifecycleTreeCreatesLeaves
+  deltaLifecycleLeaf:
+    name: Leaf
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  deltaLifecycleFlower:
+    name: Flower
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  deltaLifecycleFlowerHedge:
+    name: Flower Hedge
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 0
+  deltaLifecycleFlame:
+    name: Flame
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: deltaLifecycleFlameDestroysMoths
+    targeting:
+      range: 1
+      rules:
+      - slot: 1
+        label: moth
+        targetTemplateId: deltaLifecycleMoth
+        targetCapabilities:
+        - DestroyTarget
+        range: 0
+      - slot: 2
+        label: spentMoth
+        targetTemplateId: deltaLifecycleSpentMoth
+        targetCapabilities:
+        - DestroyTarget
+        range: 0
+  deltaLifecycleMoth:
+    name: Moth
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: deltaLifecycleMothFlowerEggThenFlame
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: flower
+        targetTemplateId: deltaLifecycleFlower
+        range: 0
+      - slot: 2
+        label: flame
+        targetTemplateId: deltaLifecycleFlame
+        range: 0
+  deltaLifecycleSpentMoth:
+    name: Moth
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: deltaLifecycleSpentMothSeeksFlame
+    actionStateDefaults:
+      facing: South
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: flame
+        targetTemplateId: deltaLifecycleFlame
+        range: 0
+  deltaLifecycleEgg:
+    name: Egg
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: deltaLifecycleEggHatches
+  deltaLifecycleSilkworm:
+    name: Silkworm
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: deltaLifecycleSilkwormEatsLeafThenCocoons
+    actionStateDefaults:
+      facing: West
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: leaf
+        targetTemplateId: deltaLifecycleLeaf
+        targetCapabilities:
+        - PickupTarget
+        range: 0
+  deltaLifecycleCocoon:
+    name: Cocoon
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: deltaLifecycleCocoonEmerges
+  player:
+    name: Player
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 0
+    carryingCapacity: 0
+    bulk: 0
+    aperture: 75
+    defaultActionPlanId: player
+    actionStateDefaults:
+      facing: West
+presentations:
+  deltaMothLifecycleRoom:
+    glyph: '#'
+    color: Gray
+  deltaLifecycleTree:
+    glyph: T
+    color: Green
+  deltaLifecycleLeaf:
+    glyph: ','
+    color: DarkGreen
+  deltaLifecycleFlower:
+    glyph: F
+    color: Cyan
+  deltaLifecycleFlowerHedge:
+    glyph: H
+    color: Green
+  deltaLifecycleFlame:
+    glyph: '*'
+    color: Yellow
+  deltaLifecycleMoth:
+    glyph: m
+    color: Cyan
+  deltaLifecycleSpentMoth:
+    glyph: m
+    color: Cyan
+  deltaLifecycleEgg:
+    glyph: e
+    color: Yellow
+  deltaLifecycleSilkworm:
+    glyph: s
+    color: Green
+  deltaLifecycleCocoon:
+    glyph: o
+    color: Earth
+  player:
+    glyph: '@'
+    color: Yellow
+actionPlans:
+  deltaLifecycleTreeCreatesLeaves:
+    id: deltaLifecycleTreeCreatesLeaves
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: deltaLifecycleLeaf
+        createPlacement: AdjacentOpen
+  deltaLifecycleFlameDestroysMoths:
+    id: deltaLifecycleFlameDestroysMoths
+    behavior:
+      steps:
+      - kind: DestroyTarget
+        targetLabel: moth
+        targetSelf: false
+      - kind: DestroyTarget
+        targetLabel: spentMoth
+        targetSelf: false
+  deltaLifecycleMothFlowerEggThenFlame:
+    id: deltaLifecycleMothFlowerEggThenFlame
+    behavior:
+      steps:
+      - kind: SeekTarget
+        targetLabel: flower
+        targetSelf: false
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: deltaLifecycleEgg
+        createPlacement: AdjacentOpen
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: deltaLifecycleSpentMoth
+      - kind: SeekTarget
+        targetLabel: flame
+        targetSelf: false
+  deltaLifecycleSpentMothSeeksFlame:
+    id: deltaLifecycleSpentMothSeeksFlame
+    behavior:
+      steps:
+      - kind: SeekTarget
+        targetLabel: flame
+        targetSelf: false
+  deltaLifecycleEggHatches:
+    id: deltaLifecycleEggHatches
+    behavior:
+      steps:
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: deltaLifecycleSilkworm
+  deltaLifecycleSilkwormEatsLeafThenCocoons:
+    id: deltaLifecycleSilkwormEatsLeafThenCocoons
+    behavior:
+      steps:
+      - kind: SeekTarget
+        targetLabel: leaf
+        targetSelf: false
+      - kind: PickupTarget
+        targetLabel: leaf
+        targetSelf: false
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: deltaLifecycleCocoon
+        costs:
+        - templateId: deltaLifecycleLeaf
+          quantity: 1
+  deltaLifecycleCocoonEmerges:
+    id: deltaLifecycleCocoonEmerges
+    behavior:
+      steps:
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: deltaLifecycleMoth
+  player:
+    id: player
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: PickupTarget
+        targetSelf: false
+      - kind: DropFacing
+        targetSelf: false
+    steps: []
+scenarios:
+  delta-moth-lifecycle-showcase:
+    name: Delta Moth Lifecycle Showcase
+    scenarioRootEntityTemplateId: deltaMothLifecycleRoom

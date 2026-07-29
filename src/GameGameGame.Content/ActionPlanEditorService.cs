@@ -225,6 +225,36 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
         onChanged?.Invoke();
     }
 
+    public void SetActionPlanBehaviorStepCosts(ActionPlanTemplateId planId, int stepIndex, IReadOnlyList<ActionStepCostDescriptor> costs)
+    {
+        foreach (var cost in costs)
+        {
+            if (cost.Quantity <= 0)
+            {
+                throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} cost quantity must be greater than zero; found {cost.Quantity}.");
+            }
+        }
+
+        var duplicate = costs
+            .GroupBy(cost => cost.TemplateId, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} has duplicate cost template {duplicate.Key}; combine duplicate costs into one entry with a summed quantity.");
+        }
+
+        var steps = GetActionPlanBehaviorSteps(planId);
+        if (stepIndex < 0 || stepIndex >= steps.Count)
+        {
+            throw new InvalidOperationException($"Action plan {planId} has no behavior step {stepIndex}.");
+        }
+
+        steps[stepIndex].Costs = costs.Count == 0
+            ? null
+            : costs.Select(EditableContentDocument.ActionStepCostDescriptorDto.From).ToList();
+        onChanged?.Invoke();
+    }
+
     public void MoveActionPlanBehaviorStep(ActionPlanTemplateId planId, int fromIndex, int toIndex)
     {
         var steps = GetActionPlanBehaviorSteps(planId);

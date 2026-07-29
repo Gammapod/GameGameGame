@@ -303,6 +303,41 @@ internal sealed class FrontendActionPlanMutationService(
         }
     }
 
+    public FrontendEditorMutationResult SetActionPlanStepCosts(
+        string actionPlanId,
+        int stepIndex,
+        IReadOnlyList<ActionStepCostDescriptor> costs)
+    {
+        var validationError = ValidateActionPlanMutation(actionPlanId);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, getSnapshot());
+        }
+
+        try
+        {
+            var planId = new ActionPlanTemplateId(actionPlanId);
+            var steps = GetEditableBehaviorSteps(planId);
+            if (stepIndex < 0 || stepIndex >= steps.Count)
+            {
+                return FrontendEditorMutationResult.Failure(
+                    $"Action plan {actionPlanId} step index {stepIndex} is outside editable step range 0..{Math.Max(steps.Count - 1, 0)}.",
+                    getSnapshot());
+            }
+
+            session.Editor.SetActionPlanBehaviorStepCosts(planId, stepIndex, costs);
+            return FrontendEditorMutationResult.Success(
+                $"Action plan {actionPlanId} step {stepIndex} costs updated. Preview stale until P rematerializes.",
+                getSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not set action plan {actionPlanId} step {stepIndex} costs: {ex.Message}",
+                getSnapshot());
+        }
+    }
+
     private string? ValidateActionPlanStepMutation(string actionPlanId, ActionPlanBehaviorStepKind kind)
     {
         var validationError = ValidateActionPlanMutation(actionPlanId);

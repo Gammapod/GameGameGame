@@ -229,6 +229,84 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsUnknownCostTemplate()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("unknownCostTemplate"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing)
+                        {
+                            Costs = [new ActionStepCostDescriptor("missingScrap", 1)]
+                        }
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingTargetTemplateReference);
+        Assert.Equal(new ActionPlanId("unknownCostTemplate"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("missingScrap", diagnostic.Message);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsNonPositiveCostQuantity()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("nonPositiveCostQuantity"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing)
+                        {
+                            Costs = [new ActionStepCostDescriptor(PrototypeContent.RockTemplateId.Value, 0)]
+                        }
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField);
+        Assert.Equal(new ActionPlanId("nonPositiveCostQuantity"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("quantity", diagnostic.Message);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsDuplicateCostTemplateEntries()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("duplicateCostTemplate"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing)
+                        {
+                            Costs = [
+                                new ActionStepCostDescriptor(PrototypeContent.RockTemplateId.Value, 1),
+                                new ActionStepCostDescriptor(PrototypeContent.RockTemplateId.Value, 2)
+                            ]
+                        }
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField);
+        Assert.Equal(new ActionPlanId("duplicateCostTemplate"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("duplicate cost", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingApplyPrePlanReference()
     {
         var missingPlanId = new ActionPlanId("missingFear");

@@ -99,11 +99,41 @@ public sealed class ActionPlanDescriptorAndCatalogTests
     }
 
     [Fact]
+    public void ActionStepCostDescriptorPreservesNoCostAsEmptyList()
+    {
+        var step = new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing);
+
+        Assert.Empty(step.Costs);
+    }
+
+    [Fact]
+    public void ActionStepCostDescriptorKeepsAuthoredCostAsData()
+    {
+        var step = new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.CreateEntity)
+        {
+            Costs = [new ActionStepCostDescriptor("Scrap", 3)]
+        };
+
+        var cost = Assert.Single(step.Costs);
+        Assert.Equal("Scrap", cost.TemplateId);
+        Assert.Equal(3, cost.Quantity);
+    }
+
+    [Fact]
     public void PlanPrimitiveCatalogExposesAllCheckEffectAndValueKinds()
     {
         Assert.Equal(Enum.GetValues<PlanCheckKind>().Order(), PlanPrimitiveCatalog.Checks.Select(check => check.Kind).Order());
         Assert.Equal(Enum.GetValues<PlanEffectKind>().Order(), PlanPrimitiveCatalog.Effects.Select(effect => effect.Kind).Order());
         Assert.Equal(Enum.GetValues<PlanValueKind>().Order(), PlanPrimitiveCatalog.ValueKinds.Select(value => value.Kind).Order());
+    }
+
+    [Fact]
+    public void ActionStepCatalogDescribesBehaviorStepCostField()
+    {
+        var metadata = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.MoveFacing);
+
+        Assert.Contains("cost", metadata.CostFieldDescription, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("actor inventory", metadata.CostFieldDescription, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

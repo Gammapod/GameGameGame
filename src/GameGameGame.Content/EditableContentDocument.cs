@@ -267,6 +267,8 @@ public sealed partial class EditableContentDocument
 
         public string? CreatePlacement { get; set; }
 
+        public List<ActionStepCostDescriptorDto>? Costs { get; set; }
+
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
         {
             Kind = descriptor.Kind,
@@ -277,7 +279,8 @@ public sealed partial class EditableContentDocument
             DirectionMode = descriptor.DirectionMode?.ToString(),
             TransferDirection = descriptor.TransferDirection?.ToString(),
             TemplateId = descriptor.TemplateId,
-            CreatePlacement = descriptor.CreatePlacement?.ToString()
+            CreatePlacement = descriptor.CreatePlacement?.ToString(),
+            Costs = descriptor.Costs.Count == 0 ? null : descriptor.Costs.Select(ActionStepCostDescriptorDto.From).ToList()
         };
 
         public ActionPlanBehaviorStepDescriptor ToDescriptor() =>
@@ -290,7 +293,25 @@ public sealed partial class EditableContentDocument
                 DirectionMode is { } mode ? Enum.Parse<ActionPlanMoveDirectionMode>(mode, ignoreCase: true) : null,
                 TransferDirection is { } transferDirection ? Enum.Parse<TransferDirection>(transferDirection, ignoreCase: true) : null,
                 TemplateId,
-                CreatePlacement is { } placement ? Enum.Parse<CreateEntityPlacement>(placement, ignoreCase: true) : null);
+                CreatePlacement is { } placement ? Enum.Parse<CreateEntityPlacement>(placement, ignoreCase: true) : null)
+            {
+                Costs = (Costs ?? [])
+                    .Select(cost => new ActionStepCostDescriptor(cost.TemplateId ?? string.Empty, cost.Quantity))
+                    .ToList()
+            };
+    }
+
+    public sealed class ActionStepCostDescriptorDto
+    {
+        public string? TemplateId { get; set; }
+
+        public int Quantity { get; set; }
+
+        public static ActionStepCostDescriptorDto From(ActionStepCostDescriptor descriptor) => new()
+        {
+            TemplateId = descriptor.TemplateId,
+            Quantity = descriptor.Quantity
+        };
     }
 
     public sealed class ActionPlanPrimitiveDescriptorDto

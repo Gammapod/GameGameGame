@@ -27,6 +27,7 @@ public static class ContentToolNames
     public const string SetBehaviorStepTargetSlot = "ggg_content_set_behavior_step_target_slot";
     public const string SetBehaviorStepPlanId = "ggg_content_set_behavior_step_plan_id";
     public const string SetBehaviorStepDirectionMode = "ggg_content_set_behavior_step_direction_mode";
+    public const string SetBehaviorStepCosts = "ggg_content_set_behavior_step_costs";
     public const string ListActionSteps = "ggg_content_list_action_steps";
     public const string PreviewActionPlan = "ggg_content_preview_action_plan";
     public const string ListScenarios = "ggg_content_list_scenarios";

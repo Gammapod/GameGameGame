@@ -159,6 +159,42 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentRoundTripsBehaviorStepCosts()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              scrap:
+                name: Scrap
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              scrap:
+                glyph: s
+                color: Gray
+            actionPlans:
+              costlyMove:
+                id: costlyMove
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                      costs:
+                        - templateId: scrap
+                          quantity: 3
+            """);
+
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+        var cost = Assert.Single(reloaded.ActionPlanDescriptors[new ActionPlanTemplateId("costlyMove")].Behavior!.Steps.Single().Costs);
+
+        Assert.Contains("costs:", saved);
+        Assert.Equal("scrap", cost.TemplateId);
+        Assert.Equal(3, cost.Quantity);
+    }
+
+    [Fact]
     public void EditableContentDocumentCanonicalizesLegacyActionPlanVariableFieldsOnSave()
     {
         var document = EditableContentDocument.LoadYaml(

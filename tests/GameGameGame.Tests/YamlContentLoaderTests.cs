@@ -202,6 +202,39 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsBehaviorStepCostEntries()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              scrap:
+                name: Scrap
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              scrap:
+                glyph: s
+                color: Gray
+            actionPlans:
+              costlyMove:
+                id: costlyMove
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                      costs:
+                        - templateId: scrap
+                          quantity: 3
+            """);
+
+        var step = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("costlyMove")).Behavior!.Steps.Single();
+        var cost = Assert.Single(step.Costs);
+        Assert.Equal("scrap", cost.TemplateId);
+        Assert.Equal(3, cost.Quantity);
+    }
+
+    [Fact]
     public void YamlContentLoaderMaterializesBulkAndApertureMetadata()
     {
         var registry = YamlContentLoader.LoadRegistry(

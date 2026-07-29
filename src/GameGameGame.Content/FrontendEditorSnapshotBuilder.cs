@@ -203,7 +203,7 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                 step.Description))
             .ToList();
 
-    private static IReadOnlyList<FrontendEditorActionPlanStepSummary> GetActionSteps(ActionPlanDescriptor descriptor)
+    private IReadOnlyList<FrontendEditorActionPlanStepSummary> GetActionSteps(ActionPlanDescriptor descriptor)
     {
         if (descriptor.Behavior?.Steps.Count > 0)
         {
@@ -220,12 +220,24 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                         step.TargetLabel,
                         step.TargetSlot,
                         step.TargetSelf,
-                        consumesTargetReference);
+                        consumesTargetReference,
+                        step.Costs,
+                        FormatCostSummary(step.Costs));
                 })
                 .ToList();
         }
 
         return [];
+    }
+
+    private string? FormatCostSummary(IReadOnlyList<ActionStepCostDescriptor> costs)
+    {
+        if (costs.Count == 0)
+        {
+            return null;
+        }
+
+        return "Cost: " + string.Join(", ", costs.Select(cost => $"{cost.Quantity}× {TryGetTemplateName(cost.TemplateId) ?? cost.TemplateId}"));
     }
 
     private static IReadOnlyList<string> GetActionStepNames(ActionPlanDescriptor descriptor)

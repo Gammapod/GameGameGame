@@ -95,6 +95,30 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
+    public void ContentToolDispatcherAuthorsBehaviorStepCosts()
+    {
+        var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
+        var sessionId = Assert.IsType<ContentToolSessionOpened>(
+            dispatcher.Invoke(ContentToolNames.CreateNew, new ContentToolCreateNewRequest()).Data).SessionId;
+        var scrapId = Assert.IsType<ContentToolCreatedEntityTemplate>(
+            dispatcher.Invoke(ContentToolNames.CreateEntityTemplate, new ContentToolCreateEntityTemplateRequest(sessionId, "Scrap")).Data).EntityTemplateId;
+        var planId = Assert.IsType<ContentToolCreatedActionPlan>(
+            dispatcher.Invoke(ContentToolNames.CreateActionPlan, new ContentToolCreateActionPlanRequest(sessionId, "Costly Move")).Data).ActionPlanTemplateId;
+
+        Assert.True(dispatcher.Invoke(ContentToolNames.AddActionPlanBehaviorStep, new ContentToolAddActionPlanBehaviorStepRequest(sessionId, planId, ActionPlanBehaviorStepKind.MoveFacing)).Ok);
+        var setCosts = dispatcher.Invoke(ContentToolNames.SetBehaviorStepCosts, new ContentToolSetBehaviorStepCostsRequest(
+            sessionId,
+            planId,
+            0,
+            [new ActionStepCostDescriptor(scrapId.Value, 3)]));
+        var preview = dispatcher.Invoke(ContentToolNames.PreviewActionPlan, new ContentToolPreviewActionPlanRequest(sessionId, planId));
+
+        Assert.True(setCosts.Ok, setCosts.Error?.Message);
+        var previewData = Assert.IsType<ActionPlanPreview>(preview.Data);
+        Assert.Equal("Cost: 3× Scrap", Assert.Single(previewData.ActionSteps).CostSummary);
+    }
+
+    [Fact]
     public void ContentToolDispatcherPreviewAndRunScenarioOmitsRepeatedYamlPreviews()
     {
         var sessions = new ContentToolSessionRegistry();

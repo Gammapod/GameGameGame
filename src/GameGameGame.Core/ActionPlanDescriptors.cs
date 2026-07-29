@@ -133,7 +133,14 @@ public sealed record ActionPlanBehaviorStepDescriptor(
     ActionPlanMoveDirectionMode? DirectionMode = null,
     TransferDirection? TransferDirection = null,
     string? TemplateId = null,
-    CreateEntityPlacement? CreatePlacement = null);
+    CreateEntityPlacement? CreatePlacement = null)
+{
+    public IReadOnlyList<ActionStepCostDescriptor> Costs { get; init; } = [];
+}
+
+public sealed record ActionStepCostDescriptor(
+    string TemplateId,
+    int Quantity);
 
 public enum ActionPlanPrimitiveKind
 {

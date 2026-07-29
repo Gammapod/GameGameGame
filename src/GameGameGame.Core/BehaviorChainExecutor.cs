@@ -37,8 +37,28 @@ public sealed partial class ActionPlanInterpreter
             var stepTrace = new TraceNode($"Action Step {step.Kind}", TraceStatus.Info);
             root.Add(stepTrace);
 
+            var costEvaluation = EvaluateBehaviorStepCost(world, actorId, step);
+            if (costEvaluation is { CanExecute: false })
+            {
+                stepTrace.Add(costEvaluation.Trace);
+                stepTrace.Status = TraceStatus.Failure;
+                stepTrace.Reason = costEvaluation.Trace.Reason;
+                stepTrace.Detail = costEvaluation.Trace.Detail;
+                continue;
+            }
+
+            if (costEvaluation is not null)
+            {
+                stepTrace.Add(costEvaluation.Trace);
+            }
+
             var stepResult = ApplyBehaviorStep(world, actorId, context, step);
             stepTrace.Add(stepResult.Trace);
+            if (stepResult.Succeeded && stepResult.ConsumesTurn && costEvaluation is not null)
+            {
+                ConsumeBehaviorStepCost(world, costEvaluation, stepTrace);
+            }
+
             stepTrace.Status = stepResult.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
             stepTrace.Reason = stepResult.Trace.Reason;
             stepTrace.Detail = stepResult.Trace.Detail;

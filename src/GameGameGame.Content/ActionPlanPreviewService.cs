@@ -54,7 +54,7 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
             _ => ["Unknown action-plan shape. Validate before saving."]
         };
 
-    private static IReadOnlyList<ActionPlanPreviewStep> GetActionPlanPreviewSteps(ActionPlanDescriptor descriptor)
+    private IReadOnlyList<ActionPlanPreviewStep> GetActionPlanPreviewSteps(ActionPlanDescriptor descriptor)
     {
         if (descriptor.Behavior?.Steps.Count > 0)
         {
@@ -73,13 +73,30 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
                         step.TargetLabel,
                         step.PlanId,
                         step.DirectionMode,
-                        step.TransferDirection);
+                        step.TransferDirection,
+                        step.Costs,
+                        FormatCostSummary(step.Costs));
                 })
                 .ToList();
         }
 
         return [];
     }
+
+    private string? FormatCostSummary(IReadOnlyList<ActionStepCostDescriptor> costs)
+    {
+        if (costs.Count == 0)
+        {
+            return null;
+        }
+
+        return "Cost: " + string.Join(", ", costs.Select(cost => $"{cost.Quantity}× {FormatTemplateName(cost.TemplateId)}"));
+    }
+
+    private string FormatTemplateName(string templateId) =>
+        document.EntityTemplates.TryGetValue(templateId, out var template) && !string.IsNullOrWhiteSpace(template.Name)
+            ? template.Name
+            : templateId;
 
     private IReadOnlyList<string> GetActionPlanStateHints(ActionPlanDescriptor descriptor, EntityTemplateId? entityTemplateId)
     {

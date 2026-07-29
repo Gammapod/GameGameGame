@@ -1050,6 +1050,72 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void FrontendEditorSnapshotIncludesBehaviorStepCosts()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              scrap:
+                name: Scrap
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              scrap:
+                glyph: s
+                color: Gray
+            actionPlans:
+              costlyMove:
+                id: costlyMove
+                behavior:
+                  steps:
+                  - kind: MoveFacing
+                    costs:
+                    - templateId: scrap
+                      quantity: 3
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var step = Assert.Single(Assert.Single(service.GetSnapshot().ActionPlans).ActionSteps);
+
+            Assert.Equal("Cost: 3× Scrap", step.CostSummary);
+            var cost = Assert.Single(step.Costs);
+            Assert.Equal("scrap", cost.TemplateId);
+            Assert.Equal(3, cost.Quantity);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
+    public void FrontendEditorServiceSetsActionPlanStepCosts()
+    {
+        var path = WriteTempContentFile(EditorFixtureYaml());
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var result = service.SetActionPlanStepCosts("moveEast", 0, [new ActionStepCostDescriptor("wall", 1)]);
+
+            Assert.True(result.IsSuccess, result.StatusMessage);
+            var step = Assert.Single(Assert.Single(result.Snapshot.ActionPlans, plan => plan.ActionPlanId == "moveEast").ActionSteps);
+            Assert.Equal("Cost: 1× Wall", step.CostSummary);
+            Assert.Contains("costs:", result.Snapshot.YamlPreview);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void SetActionPlanStepTargetLabelUpdatesAndClearsTargetLabelRequirements()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());

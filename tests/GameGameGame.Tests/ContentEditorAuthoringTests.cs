@@ -228,6 +228,72 @@ public sealed class ContentEditorAuthoringTests
     }
 
     [Fact]
+    public void ActionPlanPreviewSummarizesBehaviorStepCosts()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scrapId = editor.CreateEntityPreset("Scrap");
+        editor.UpdateEntityPreset(
+            scrapId,
+            new EntityTemplate("Scrap", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
+            new EntityPresentation('s', PresentationColor.Gray));
+        var planId = editor.CreateActionPlan("Costly Move");
+        editor.SetActionPlanBehavior(planId, [
+            new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.MoveFacing)
+            {
+                Costs = [new ActionStepCostDescriptor(scrapId.Value, 3)]
+            }
+        ]);
+
+        var preview = editor.PreviewActionPlan(planId);
+        var step = Assert.Single(preview.ActionSteps);
+
+        Assert.Equal("Cost: 3× Scrap", step.CostSummary);
+        var cost = Assert.Single(step.Costs);
+        Assert.Equal(scrapId.Value, cost.TemplateId);
+        Assert.Equal(3, cost.Quantity);
+    }
+
+    [Fact]
+    public void ContentEditorServiceSetsAndClearsBehaviorStepCosts()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scrapId = editor.CreateEntityPreset("Scrap");
+        editor.UpdateEntityPreset(
+            scrapId,
+            new EntityTemplate("Scrap", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
+            new EntityPresentation('s', PresentationColor.Gray));
+        var planId = editor.CreateActionPlan("Costly Move");
+        editor.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]);
+
+        editor.SetActionPlanBehaviorStepCosts(planId, 0, [new ActionStepCostDescriptor(scrapId.Value, 3)]);
+
+        var cost = Assert.Single(document.ToRegistry().GetActionPlanDescriptor(planId).Behavior!.Steps.Single().Costs);
+        Assert.Equal(scrapId.Value, cost.TemplateId);
+        Assert.Equal(3, cost.Quantity);
+        Assert.Contains("costs:", document.SaveYaml());
+
+        editor.SetActionPlanBehaviorStepCosts(planId, 0, []);
+
+        Assert.Empty(document.ToRegistry().GetActionPlanDescriptor(planId).Behavior!.Steps.Single().Costs);
+        Assert.DoesNotContain("costs:", document.SaveYaml());
+    }
+
+    [Fact]
+    public void BehaviorStepCostMutationRejectsInvalidStepIndexAndInvalidQuantities()
+    {
+        var editor = new ContentEditorService(new EditableContentDocument());
+        var planId = editor.CreateActionPlan("Costly Move");
+        editor.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            editor.SetActionPlanBehaviorStepCosts(planId, 4, [new ActionStepCostDescriptor("scrap", 1)]));
+        Assert.Throws<InvalidOperationException>(() =>
+            editor.SetActionPlanBehaviorStepCosts(planId, 0, [new ActionStepCostDescriptor("scrap", 0)]));
+    }
+
+    [Fact]
     public void ContentEditorAuthorsCanonicalBehaviorChainWithHelper()
     {
         var document = new EditableContentDocument();

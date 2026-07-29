@@ -15,7 +15,8 @@ public sealed record ActionStepDescriptor(
     IReadOnlyList<PlanPrimitiveSlotDescriptor>? DefaultableState = null,
     IReadOnlyList<PlanPrimitiveSlotDescriptor>? StateWrites = null,
     ActionStepAuthoringTier Tier = ActionStepAuthoringTier.Stable,
-    ActionPlanBehaviorStepKind? TargetCapability = null)
+    ActionPlanBehaviorStepKind? TargetCapability = null,
+    string CostFieldDescription = "Optional costs paid from actor inventory recursively by runtime template ID; consumed only after this step succeeds, while missing cost causes normal fallthrough.")
 {
     public IReadOnlyList<PlanPrimitiveSlotDescriptor> RequiredState { get; } = RequiredState ?? [];
 

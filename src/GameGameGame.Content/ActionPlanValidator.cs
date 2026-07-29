@@ -202,6 +202,64 @@ internal static class ActionPlanValidator
                     actionPlanId: descriptor.Id,
                     stepIndex: index));
             }
+
+            ValidateBehaviorStepCosts(diagnostics, actionPlanTemplateId, descriptor, step, index, entityTemplateIds);
+        }
+    }
+
+    private static void ValidateBehaviorStepCosts(
+        List<ContentDiagnostic> diagnostics,
+        ActionPlanTemplateId actionPlanTemplateId,
+        ActionPlanDescriptor descriptor,
+        ActionPlanBehaviorStepDescriptor step,
+        int stepIndex,
+        HashSet<EntityTemplateId> entityTemplateIds)
+    {
+        var seenTemplateIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var costIndex = 0; costIndex < step.Costs.Count; costIndex++)
+        {
+            var cost = step.Costs[costIndex];
+            if (string.IsNullOrWhiteSpace(cost.TemplateId))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.MissingTargetTemplateReference,
+                    $"Action plan {descriptor.Id} action step {step.Kind} cost {costIndex} requires templateId.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: stepIndex));
+            }
+            else
+            {
+                if (!entityTemplateIds.Contains(new EntityTemplateId(cost.TemplateId)))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingTargetTemplateReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} cost {costIndex} references missing template {cost.TemplateId}.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: stepIndex));
+                }
+
+                if (!seenTemplateIds.Add(cost.TemplateId))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidActionStepField,
+                        $"Action plan {descriptor.Id} action step {step.Kind} has duplicate cost template {cost.TemplateId}; combine duplicate costs into one entry with a summed quantity.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: stepIndex));
+                }
+            }
+
+            if (cost.Quantity <= 0)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepField,
+                    $"Action plan {descriptor.Id} action step {step.Kind} cost {costIndex} quantity must be greater than zero; found {cost.Quantity}.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: stepIndex));
+            }
         }
     }
 

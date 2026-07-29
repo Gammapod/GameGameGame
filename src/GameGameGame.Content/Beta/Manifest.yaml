@@ -351,6 +351,13 @@ sections:
     status: active-delta
     tags: [delta, entity-lifecycle, create, destroy, polymorph, flagship]
     source: docs/Plans/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\MothLifecycleShowcase.yaml
+    scenarioId: delta-moth-lifecycle-showcase
+    name: Moth Lifecycle Showcase
+    description: Delta multi-phase lifecycle room with tree/leaves on the west side, flower on the northeast side, and flame on the southeast side; reviewers should observe a moth seek the flower, create one adjacent egg without an egg-laying cost, then seek the flame while the flame destroys adjacent moths, and the egg/silkworm/cocoon chain continues through leaf pickup and leaf-costed cocooning back into a moth.
+    status: active-delta
+    tags: [delta, entity-lifecycle, create, destroy, polymorph, costs, targeting]
+    source: User-requested Delta lifecycle showcase
 - id: user
   name: User-Generated Scenarios
   description: Frontend-editor-authored scenarios should be registered here or in a user manifest rather than mixed with packaged Beta/Delta content.

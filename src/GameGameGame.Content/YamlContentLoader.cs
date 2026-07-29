@@ -196,7 +196,12 @@ public static class YamlContentLoader
             step.DirectionMode is null ? null : Enum.Parse<ActionPlanMoveDirectionMode>(step.DirectionMode, ignoreCase: true),
             step.TransferDirection is null ? null : Enum.Parse<TransferDirection>(step.TransferDirection, ignoreCase: true),
             step.TemplateId,
-            step.CreatePlacement is null ? null : Enum.Parse<CreateEntityPlacement>(step.CreatePlacement, ignoreCase: true));
+            step.CreatePlacement is null ? null : Enum.Parse<CreateEntityPlacement>(step.CreatePlacement, ignoreCase: true))
+        {
+            Costs = (step.Costs ?? [])
+                .Select(cost => new ActionStepCostDescriptor(cost.TemplateId ?? string.Empty, cost.Quantity))
+                .ToList()
+        };
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -447,6 +452,15 @@ public static class YamlContentLoader
         public string? TemplateId { get; set; }
 
         public string? CreatePlacement { get; set; }
+
+        public List<ActionStepCostDescriptorDto>? Costs { get; set; }
+    }
+
+    private sealed class ActionStepCostDescriptorDto
+    {
+        public string? TemplateId { get; set; }
+
+        public int Quantity { get; set; }
     }
 
     private sealed class ActionPlanPrimitiveDescriptorDto

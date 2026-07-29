@@ -194,6 +194,13 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         => new FrontendActionPlanMutationService(Session, GetSnapshot)
             .SetActionPlanStepTargetLabel(actionPlanId, stepIndex, targetLabel);
 
+    public FrontendEditorMutationResult SetActionPlanStepCosts(
+        string actionPlanId,
+        int stepIndex,
+        IReadOnlyList<ActionStepCostDescriptor> costs)
+        => new FrontendActionPlanMutationService(Session, GetSnapshot)
+            .SetActionPlanStepCosts(actionPlanId, stepIndex, costs);
+
     public FrontendEditorSnapshot GetSnapshot()
         => new FrontendEditorSnapshotBuilder(Session).Build();
 
@@ -395,7 +402,12 @@ public sealed record FrontendEditorActionPlanStepSummary(
     string? TargetLabel = null,
     int? TargetSlot = null,
     bool TargetSelf = false,
-    bool ConsumesTargetReference = false);
+    bool ConsumesTargetReference = false,
+    IReadOnlyList<ActionStepCostDescriptor>? Costs = null,
+    string? CostSummary = null)
+{
+    public IReadOnlyList<ActionStepCostDescriptor> Costs { get; } = Costs ?? [];
+}
 
 public sealed record FrontendEditorAvailableActionStepSummary(
     ActionPlanBehaviorStepKind Kind,

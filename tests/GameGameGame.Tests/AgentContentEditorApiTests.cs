@@ -128,6 +128,30 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsBehaviorStepCosts()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var scrapId = AssertSuccess(api.CreateEntityTemplate("Scrap"));
+        AssertSuccess(api.UpdateEntityTemplate(
+            scrapId,
+            new AgentEntityTemplateUpdate(InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1, Glyph: 's', Color: PresentationColor.Gray)));
+        var planId = AssertSuccess(api.CreateActionPlan("Costly Move"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.MoveFacing));
+        AssertSuccess(api.SetActionPlanBehaviorStepCosts(planId, 0, [new ActionStepCostDescriptor(scrapId.Value, 3)]));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId));
+        var step = Assert.Single(preview.ActionSteps);
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Equal("Cost: 3× Scrap", step.CostSummary);
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains("costs:", snapshot.YamlPreview);
+        Assert.Contains("templateId: scrap", snapshot.YamlPreview);
+        Assert.Contains("quantity: 3", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsInventoryBoundaryPolicies()
     {
         var api = AgentContentEditorApi.CreateNew();

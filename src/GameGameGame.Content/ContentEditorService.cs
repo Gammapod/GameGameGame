@@ -167,6 +167,9 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanBehaviorStepTransferDirection(ActionPlanTemplateId planId, int stepIndex, TransferDirection? transferDirection)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTransferDirection(planId, stepIndex, transferDirection);
 
+    public void SetActionPlanBehaviorStepCosts(ActionPlanTemplateId planId, int stepIndex, IReadOnlyList<ActionStepCostDescriptor> costs)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepCosts(planId, stepIndex, costs);
+
     private static void EnsureStableAuthoringStep(ActionPlanBehaviorStepKind kind)
     {
         _ = ActionStepCatalog.Get(kind);
@@ -421,7 +424,12 @@ public sealed record ActionPlanPreviewStep(
     string? TargetLabel = null,
     ActionPlanId? PlanId = null,
     ActionPlanMoveDirectionMode? DirectionMode = null,
-    TransferDirection? TransferDirection = null);
+    TransferDirection? TransferDirection = null,
+    IReadOnlyList<ActionStepCostDescriptor>? Costs = null,
+    string? CostSummary = null)
+{
+    public IReadOnlyList<ActionStepCostDescriptor> Costs { get; } = Costs ?? [];
+}
 
 public sealed record EntityTemplateReference(EntityTemplateId SourceTemplateId, EntityId? CarriedEntityId);
 

@@ -26,7 +26,8 @@ public enum FailureReason
     MoveOutOfBounds,
     TargetHasNoInventory,
     TargetInventoryUnusable,
-    InventoryPolicyBlocked
+    InventoryPolicyBlocked,
+    MissingCost
 }
 
 public enum ActionSuccessCriterionKind
