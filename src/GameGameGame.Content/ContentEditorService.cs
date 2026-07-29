@@ -167,6 +167,15 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanBehaviorStepTransferDirection(ActionPlanTemplateId planId, int stepIndex, TransferDirection? transferDirection)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTransferDirection(planId, stepIndex, transferDirection);
 
+    public void SetActionPlanBehaviorStepTargetPathMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanTargetPathMode? pathMode)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetPathMode(planId, stepIndex, pathMode);
+
+    public void SetActionPlanBehaviorStepDesiredDistance(ActionPlanTemplateId planId, int stepIndex, int? desiredDistance)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepDesiredDistance(planId, stepIndex, desiredDistance);
+
+    public void SetActionPlanBehaviorStepOrbitDirection(ActionPlanTemplateId planId, int stepIndex, ActionPlanOrbitDirection? orbitDirection)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepOrbitDirection(planId, stepIndex, orbitDirection);
+
     public void SetActionPlanBehaviorStepCosts(ActionPlanTemplateId planId, int stepIndex, IReadOnlyList<ActionStepCostDescriptor> costs)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepCosts(planId, stepIndex, costs);
 
@@ -426,7 +435,11 @@ public sealed record ActionPlanPreviewStep(
     ActionPlanMoveDirectionMode? DirectionMode = null,
     TransferDirection? TransferDirection = null,
     IReadOnlyList<ActionStepCostDescriptor>? Costs = null,
-    string? CostSummary = null)
+    string? CostSummary = null,
+    ActionPlanTargetPathMode? PathMode = null,
+    int? DesiredDistance = null,
+    ActionPlanOrbitDirection? OrbitDirection = null,
+    string? TargetPathSummary = null)
 {
     public IReadOnlyList<ActionStepCostDescriptor> Costs { get; } = Costs ?? [];
 }

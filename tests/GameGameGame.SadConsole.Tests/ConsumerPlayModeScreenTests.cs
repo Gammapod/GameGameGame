@@ -269,6 +269,34 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeSubmitWaitAdvancesTurnAndRefreshesStatus()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+
+        var result = screen.SubmitWait();
+
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Equal("Waited.", screen.LastActionStatus);
+        Assert.True(screen.UndoPreviousFrame());
+    }
+
+    [Fact]
+    public void ConsumerPlayModeUndoPreviousFrameRollsBackPlayerAction()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var before = session.World.GetEntityLocation(session.PlayerEntityId);
+        screen.SubmitMove(Direction.South);
+
+        var undone = screen.UndoPreviousFrame();
+
+        Assert.True(undone);
+        Assert.Equal(before, session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.Equal("Undid previous frame.", screen.LastActionStatus);
+    }
+
+    [Fact]
     public void ConsumerPlayModeDebugRowsIncludeInteractionDiagnostics()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
@@ -297,6 +325,9 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Equal(Direction.SouthWest, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad1));
         Assert.Equal(Direction.SouthEast, ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad3));
         Assert.Null(ConsumerPlayModeConsole.ReadDirectionKey(Keys.NumPad5));
+        Assert.True(ConsumerPlayModeConsole.IsWaitKey(Keys.Space));
+        Assert.True(ConsumerPlayModeConsole.IsWaitKey(Keys.D5));
+        Assert.True(ConsumerPlayModeConsole.IsWaitKey(Keys.NumPad5));
     }
 
     [Fact]

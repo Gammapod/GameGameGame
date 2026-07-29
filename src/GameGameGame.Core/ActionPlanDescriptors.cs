@@ -95,7 +95,22 @@ public enum ActionPlanBehaviorStepKind
     TransformInventoryToAdjacent,
     Transfer,
     CreateEntity,
-    PolymorphTarget
+    PolymorphTarget,
+    TargetPathMove
+}
+
+public enum ActionPlanTargetPathMode
+{
+    SeekAdjacency,
+    FleeAdjacency,
+    MaintainDistance,
+    Orbit
+}
+
+public enum ActionPlanOrbitDirection
+{
+    Clockwise,
+    Anticlockwise
 }
 
 public enum CreateEntityPlacement
@@ -133,7 +148,10 @@ public sealed record ActionPlanBehaviorStepDescriptor(
     ActionPlanMoveDirectionMode? DirectionMode = null,
     TransferDirection? TransferDirection = null,
     string? TemplateId = null,
-    CreateEntityPlacement? CreatePlacement = null)
+    CreateEntityPlacement? CreatePlacement = null,
+    ActionPlanTargetPathMode? PathMode = null,
+    int? DesiredDistance = null,
+    ActionPlanOrbitDirection? OrbitDirection = null)
 {
     public IReadOnlyList<ActionStepCostDescriptor> Costs { get; init; } = [];
 }

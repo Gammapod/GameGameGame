@@ -267,6 +267,12 @@ public sealed partial class EditableContentDocument
 
         public string? CreatePlacement { get; set; }
 
+        public string? PathMode { get; set; }
+
+        public int? DesiredDistance { get; set; }
+
+        public string? OrbitDirection { get; set; }
+
         public List<ActionStepCostDescriptorDto>? Costs { get; set; }
 
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
@@ -280,6 +286,9 @@ public sealed partial class EditableContentDocument
             TransferDirection = descriptor.TransferDirection?.ToString(),
             TemplateId = descriptor.TemplateId,
             CreatePlacement = descriptor.CreatePlacement?.ToString(),
+            PathMode = descriptor.PathMode?.ToString(),
+            DesiredDistance = descriptor.DesiredDistance,
+            OrbitDirection = descriptor.OrbitDirection?.ToString(),
             Costs = descriptor.Costs.Count == 0 ? null : descriptor.Costs.Select(ActionStepCostDescriptorDto.From).ToList()
         };
 
@@ -293,7 +302,10 @@ public sealed partial class EditableContentDocument
                 DirectionMode is { } mode ? Enum.Parse<ActionPlanMoveDirectionMode>(mode, ignoreCase: true) : null,
                 TransferDirection is { } transferDirection ? Enum.Parse<TransferDirection>(transferDirection, ignoreCase: true) : null,
                 TemplateId,
-                CreatePlacement is { } placement ? Enum.Parse<CreateEntityPlacement>(placement, ignoreCase: true) : null)
+                CreatePlacement is { } placement ? Enum.Parse<CreateEntityPlacement>(placement, ignoreCase: true) : null,
+                PathMode is { } pathMode ? Enum.Parse<ActionPlanTargetPathMode>(pathMode, ignoreCase: true) : null,
+                DesiredDistance,
+                OrbitDirection is { } orbitDirection ? Enum.Parse<ActionPlanOrbitDirection>(orbitDirection, ignoreCase: true) : null)
             {
                 Costs = (Costs ?? [])
                     .Select(cost => new ActionStepCostDescriptor(cost.TemplateId ?? string.Empty, cost.Quantity))

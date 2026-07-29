@@ -195,6 +195,37 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentRoundTripsTargetPathMoveFields()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              orbitPlan:
+                id: orbitPlan
+                behavior:
+                  steps:
+                    - kind: TargetPathMove
+                      targetLabel: enemy
+                      pathMode: Orbit
+                      desiredDistance: 6
+                      orbitDirection: Anticlockwise
+            """);
+
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+        var step = reloaded.ActionPlanDescriptors[new ActionPlanTemplateId("orbitPlan")].Behavior!.Steps.Single();
+
+        Assert.Contains("pathMode: Orbit", saved);
+        Assert.Contains("desiredDistance: 6", saved);
+        Assert.Contains("orbitDirection: Anticlockwise", saved);
+        Assert.Equal(ActionPlanTargetPathMode.Orbit, step.PathMode);
+        Assert.Equal(6, step.DesiredDistance);
+        Assert.Equal(ActionPlanOrbitDirection.Anticlockwise, step.OrbitDirection);
+    }
+
+    [Fact]
     public void EditableContentDocumentCanonicalizesLegacyActionPlanVariableFieldsOnSave()
     {
         var document = EditableContentDocument.LoadYaml(

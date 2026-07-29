@@ -222,7 +222,10 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                         step.TargetSelf,
                         consumesTargetReference,
                         step.Costs,
-                        FormatCostSummary(step.Costs));
+                        FormatCostSummary(step.Costs),
+                        step.PathMode,
+                        step.DesiredDistance,
+                        step.OrbitDirection);
                 })
                 .ToList();
         }

@@ -338,6 +338,77 @@ internal sealed class FrontendActionPlanMutationService(
         }
     }
 
+    public FrontendEditorMutationResult SetActionPlanStepTargetPathMode(
+        string actionPlanId,
+        int stepIndex,
+        ActionPlanTargetPathMode? pathMode)
+    {
+        return MutateTargetPathField(
+            actionPlanId,
+            stepIndex,
+            "path mode",
+            editor => editor.SetActionPlanBehaviorStepTargetPathMode(new ActionPlanTemplateId(actionPlanId), stepIndex, pathMode));
+    }
+
+    public FrontendEditorMutationResult SetActionPlanStepDesiredDistance(
+        string actionPlanId,
+        int stepIndex,
+        int? desiredDistance)
+    {
+        return MutateTargetPathField(
+            actionPlanId,
+            stepIndex,
+            "desired distance",
+            editor => editor.SetActionPlanBehaviorStepDesiredDistance(new ActionPlanTemplateId(actionPlanId), stepIndex, desiredDistance));
+    }
+
+    public FrontendEditorMutationResult SetActionPlanStepOrbitDirection(
+        string actionPlanId,
+        int stepIndex,
+        ActionPlanOrbitDirection? orbitDirection)
+    {
+        return MutateTargetPathField(
+            actionPlanId,
+            stepIndex,
+            "orbit direction",
+            editor => editor.SetActionPlanBehaviorStepOrbitDirection(new ActionPlanTemplateId(actionPlanId), stepIndex, orbitDirection));
+    }
+
+    private FrontendEditorMutationResult MutateTargetPathField(
+        string actionPlanId,
+        int stepIndex,
+        string fieldName,
+        Action<ContentEditorService> mutate)
+    {
+        var validationError = ValidateActionPlanMutation(actionPlanId);
+        if (validationError is not null)
+        {
+            return FrontendEditorMutationResult.Failure(validationError, getSnapshot());
+        }
+
+        try
+        {
+            var steps = GetEditableBehaviorSteps(new ActionPlanTemplateId(actionPlanId));
+            if (stepIndex < 0 || stepIndex >= steps.Count)
+            {
+                return FrontendEditorMutationResult.Failure(
+                    $"Action plan {actionPlanId} step index {stepIndex} is outside editable step range 0..{Math.Max(steps.Count - 1, 0)}.",
+                    getSnapshot());
+            }
+
+            mutate(session.Editor);
+            return FrontendEditorMutationResult.Success(
+                $"Action plan {actionPlanId} step {stepIndex} target-path {fieldName} updated. Preview stale until P rematerializes.",
+                getSnapshot());
+        }
+        catch (Exception ex)
+        {
+            return FrontendEditorMutationResult.Failure(
+                $"Could not set action plan {actionPlanId} step {stepIndex} target-path {fieldName}: {ex.Message}",
+                getSnapshot());
+        }
+    }
+
     private string? ValidateActionPlanStepMutation(string actionPlanId, ActionPlanBehaviorStepKind kind)
     {
         var validationError = ValidateActionPlanMutation(actionPlanId);

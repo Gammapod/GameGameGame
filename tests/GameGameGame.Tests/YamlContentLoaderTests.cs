@@ -499,6 +499,34 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsTargetPathMoveBehavior()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              orbitPlan:
+                id: orbitPlan
+                behavior:
+                  steps:
+                    - kind: TargetPathMove
+                      targetLabel: enemy
+                      pathMode: Orbit
+                      desiredDistance: 6
+                      orbitDirection: Clockwise
+            """);
+
+        var step = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("orbitPlan")).Behavior!.Steps.Single();
+
+        Assert.Equal(ActionPlanBehaviorStepKind.TargetPathMove, step.Kind);
+        Assert.Equal("enemy", step.TargetLabel);
+        Assert.Equal(ActionPlanTargetPathMode.Orbit, step.PathMode);
+        Assert.Equal(6, step.DesiredDistance);
+        Assert.Equal(ActionPlanOrbitDirection.Clockwise, step.OrbitDirection);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsTemplateTargetingRules()
     {
         var registry = YamlContentLoader.LoadRegistry(

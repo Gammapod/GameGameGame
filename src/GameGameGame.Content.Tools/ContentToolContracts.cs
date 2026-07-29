@@ -43,6 +43,9 @@ public sealed record ContentToolSetBehaviorStepTargetSlotRequest(string SessionI
 public sealed record ContentToolSetBehaviorStepPlanIdRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanId? PlanId) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepDirectionModeRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanMoveDirectionMode? DirectionMode) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepCostsRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, IReadOnlyList<ActionStepCostDescriptor> Costs) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepTargetPathModeRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanTargetPathMode? PathMode) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepDesiredDistanceRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, int? DesiredDistance) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepOrbitDirectionRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanOrbitDirection? OrbitDirection) : IContentToolSessionRequest;
 public sealed record ContentToolPreviewActionPlanRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, EntityTemplateId? EntityTemplateId = null) : IContentToolSessionRequest;
 public sealed record ContentToolScenarioRequest(string SessionId, string ScenarioId) : IContentToolSessionRequest;
 public sealed record ContentToolUpsertScenarioRequest(string SessionId, AgentAlphaScenarioDefinition Scenario) : IContentToolSessionRequest;

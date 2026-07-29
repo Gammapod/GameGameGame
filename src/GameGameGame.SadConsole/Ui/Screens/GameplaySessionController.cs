@@ -78,7 +78,7 @@ internal sealed class GameplaySessionController
 
     public GameplayRuntimeSubmission SubmitWait()
     {
-        if (CurrentActionChoiceRequest is null)
+        if (CurrentActionChoiceRequest is null && !World.Entities.ContainsKey(_activeControlledActorId))
         {
             AdvanceUntilPlayerChoice(_initiativeCursor);
             _frameIndex++;
@@ -90,6 +90,31 @@ internal sealed class GameplaySessionController
         var result = _history.SubmitControlledCommand(_commands, ControlledActorCommand.Wait());
         RefreshAfterControlledSubmission(result.Succeeded);
         return new GameplayRuntimeSubmission(result.Succeeded, FailureText(result), UsedCoreActionChoice: false);
+    }
+
+    public bool UndoPreviousFrame()
+    {
+        var targetFrameIndex = _history.Intervals
+            .Where(interval => interval.ControlledResult is not null && interval.ToFrameIndex <= _history.CurrentFrameIndex)
+            .Select(interval => (int?)interval.FromFrameIndex)
+            .LastOrDefault();
+        if (targetFrameIndex is null)
+        {
+            return false;
+        }
+
+        _history.RollbackToFrame(targetFrameIndex.Value);
+        _activeControlledActorId = _history.CurrentFrame.ControlledEntityId;
+        _frameIndex = _history.CurrentFrameIndex;
+        RefreshRuntimeActorFacts();
+        var actorIndex = _actorOrder.ToList().IndexOf(_activeControlledActorId);
+        if (actorIndex >= 0)
+        {
+            _initiativeCursor = actorIndex;
+        }
+
+        RefreshAfterRuntimeSubmission();
+        return true;
     }
 
     public GameplayRuntimeSubmission SubmitMove(Direction direction)

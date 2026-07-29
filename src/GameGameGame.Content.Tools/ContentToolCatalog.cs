@@ -31,6 +31,10 @@ public static class ContentToolCatalog
         ContentToolNames.SetBehaviorStepTargetSlot,
         ContentToolNames.SetBehaviorStepPlanId,
         ContentToolNames.SetBehaviorStepDirectionMode,
+        ContentToolNames.SetBehaviorStepCosts,
+        ContentToolNames.SetBehaviorStepTargetPathMode,
+        ContentToolNames.SetBehaviorStepDesiredDistance,
+        ContentToolNames.SetBehaviorStepOrbitDirection,
         ContentToolNames.ListActionSteps,
         ContentToolNames.PreviewActionPlan,
         ContentToolNames.ListScenarios,
@@ -72,6 +76,10 @@ public static class ContentToolCatalog
         ContentToolNames.SetBehaviorStepTargetSlot => "Set or clear a compatibility numeric Action Step target slot.",
         ContentToolNames.SetBehaviorStepPlanId => "Set or clear a referenced Action Plan ID on an apply-plan Action Step.",
         ContentToolNames.SetBehaviorStepDirectionMode => "Set or clear a canonical Move Action Step directionMode.",
+        ContentToolNames.SetBehaviorStepCosts => "Set or clear optional behavior Action Step costs.",
+        ContentToolNames.SetBehaviorStepTargetPathMode => "Set or clear a TargetPathMove pathMode.",
+        ContentToolNames.SetBehaviorStepDesiredDistance => "Set or clear a TargetPathMove desiredDistance.",
+        ContentToolNames.SetBehaviorStepOrbitDirection => "Set or clear a TargetPathMove orbitDirection.",
         ContentToolNames.ListActionSteps => "List stable canonical Action Step descriptors.",
         ContentToolNames.PreviewActionPlan => "Preview an action plan through ContentEditorService.",
         ContentToolNames.ListScenarios => "List persisted scenario definitions.",
@@ -145,6 +153,9 @@ public static class ContentToolCatalog
             case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false); break;
             case ContentToolNames.SetBehaviorStepDirectionMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("directionMode", isRequired: false); break;
             case ContentToolNames.SetBehaviorStepCosts: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddArray("costs"); break;
+            case ContentToolNames.SetBehaviorStepTargetPathMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("pathMode", isRequired: false); break;
+            case ContentToolNames.SetBehaviorStepDesiredDistance: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("desiredDistance", isRequired: false); break;
+            case ContentToolNames.SetBehaviorStepOrbitDirection: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("orbitDirection", isRequired: false); break;
             case ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario: AddString("scenarioId"); break;
             case ContentToolNames.UpsertScenario: AddObject("scenario"); break;
             case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById: AddString("scenarioId"); AddInteger("turnCount"); if (name is ContentToolNames.RunScenarioPlayerLogById) AddString("observerEntityId", isRequired: false); break;

@@ -119,6 +119,26 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
+    public void ContentToolDispatcherAuthorsTargetPathMoveFields()
+    {
+        var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
+        var sessionId = Assert.IsType<ContentToolSessionOpened>(
+            dispatcher.Invoke(ContentToolNames.CreateNew, new ContentToolCreateNewRequest()).Data).SessionId;
+        var planId = Assert.IsType<ContentToolCreatedActionPlan>(
+            dispatcher.Invoke(ContentToolNames.CreateActionPlan, new ContentToolCreateActionPlanRequest(sessionId, "Orbit Target")).Data).ActionPlanTemplateId;
+
+        Assert.True(dispatcher.Invoke(ContentToolNames.AddActionPlanBehaviorStep, new ContentToolAddActionPlanBehaviorStepRequest(sessionId, planId, ActionPlanBehaviorStepKind.TargetPathMove)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepTargetPathMode, new ContentToolSetBehaviorStepTargetPathModeRequest(sessionId, planId, 0, ActionPlanTargetPathMode.Orbit)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepDesiredDistance, new ContentToolSetBehaviorStepDesiredDistanceRequest(sessionId, planId, 0, 6)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepOrbitDirection, new ContentToolSetBehaviorStepOrbitDirectionRequest(sessionId, planId, 0, ActionPlanOrbitDirection.Clockwise)).Ok);
+        var preview = dispatcher.Invoke(ContentToolNames.PreviewActionPlan, new ContentToolPreviewActionPlanRequest(sessionId, planId));
+
+        Assert.True(preview.Ok, preview.Error?.Message);
+        var step = Assert.Single(Assert.IsType<ActionPlanPreview>(preview.Data).ActionSteps);
+        Assert.Equal("Path: Orbit; desiredDistance=6; orbitDirection=Clockwise", step.TargetPathSummary);
+    }
+
+    [Fact]
     public void ContentToolDispatcherPreviewAndRunScenarioOmitsRepeatedYamlPreviews()
     {
         var sessions = new ContentToolSessionRegistry();

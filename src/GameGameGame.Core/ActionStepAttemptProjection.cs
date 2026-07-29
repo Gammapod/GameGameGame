@@ -81,6 +81,7 @@ public static class ActionStepAttemptProjection
             or "Primitive MaintainChebyshevDistanceTwo"
             or "Primitive StrafeClockwise"
             or "Primitive StrafeAnticlockwise"
+            or "Primitive TargetPathMove"
             or "Primitive GiveTarget"
             or "Primitive TakeTarget"
             or "Primitive EnterTarget"

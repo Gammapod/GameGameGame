@@ -152,6 +152,187 @@ public sealed class ScenarioRunReportTests
             });
     }
 
+    [Fact]
+    public void TargetPathMovementFailureScenarioEmitsDistinctStructuredLogs()
+    {
+        var document = CreateTargetPathFailureScenarioDocument();
+        var validation = new ContentEditorService(document).Validate();
+        var canonicalValidation = document.ValidateCanonicalAuthoring();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.True(canonicalValidation.IsValid, string.Join(Environment.NewLine, canonicalValidation.Errors));
+
+        var report = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-target-path-failure-logs", TurnCount: 1));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        AssertTargetPathTurnContains(report, "Missing Target Actor", "missing target label target");
+        AssertTargetPathTurnContains(report, "Off Plane Actor", "missing Target slot");
+        AssertTargetPathTurnContains(report, "Unreachable Adjacency Actor", "no reachable target-adjacent");
+        AssertTargetPathTurnContains(report, "No Flee Actor", "no valid distance-increasing flee step");
+        AssertTargetPathTurnContains(report, "Blocked Orbit Actor", "orbit Clockwise step East blocked");
+        AssertTargetPathTurnContains(report, "Already Adjacent Actor", "already at target adjacency");
+        Assert.Contains("No Flee Actor: scenarioRoot(0,0), facing West, target noFleeTarget", report.FinalStateLines);
+        Assert.Contains("Blocked Orbit Actor: scenarioRoot(13,3), facing West, target blockedOrbitTarget", report.FinalStateLines);
+        Assert.Empty(report.RuntimeFailures);
+    }
+
+    [Fact]
+    public void TargetPathMovementMazeScenarioDemonstratesSeekAndFleePathfinding()
+    {
+        var document = CreateTargetPathMazeScenarioDocument();
+        var report = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-target-path-maze", TurnCount: 1));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Contains(report.Turns, turn => turn.ActorName == "Maze Seeking Actor" && turn.TraceLines.Any(line => line.Contains("moved South toward target adjacency", StringComparison.Ordinal)));
+        Assert.Contains(report.Turns, turn => turn.ActorName == "Maze Fleeing Actor" && turn.TraceLines.Any(line => line.Contains("away from target adjacency", StringComparison.Ordinal)));
+        Assert.Contains("Maze Seeking Actor: scenarioRoot(1,2), facing South, target mazeSeekBeacon", report.FinalStateLines);
+        Assert.Contains("Maze Fleeing Actor: scenarioRoot(11,1), facing East, target mazeFleeBeacon", report.FinalStateLines);
+        Assert.Empty(report.RuntimeFailures);
+        Assert.Empty(report.CapabilityGaps);
+    }
+
+    [Fact]
+    public void TargetPathMovementOrbitScenarioDemonstratesOppositeDirectionOrbiters()
+    {
+        var document = CreateTargetPathOrbitScenarioDocument();
+        var report = ScenarioRunService.Run(document, new PersistedScenarioRunRequest("beta-canonical-target-path-dual-orbit", TurnCount: 1));
+
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Contains(report.Turns, turn => turn.ActorName == "Clockwise Close Orbiter" && turn.TraceLines.Any(line => line.Contains("orbit Clockwise", StringComparison.Ordinal) && line.Contains("desiredDistance=2", StringComparison.Ordinal)));
+        Assert.Contains(report.Turns, turn => turn.ActorName == "Anticlockwise Far Orbiter" && turn.TraceLines.Any(line => line.Contains("orbit Anticlockwise", StringComparison.Ordinal) && line.Contains("desiredDistance=4", StringComparison.Ordinal)));
+        Assert.Contains("Clockwise Close Orbiter: scenarioRoot(6,3), facing East, target orbitPlayer", report.FinalStateLines);
+        Assert.Contains("Anticlockwise Far Orbiter: scenarioRoot(4,1), facing West, target orbitPlayer", report.FinalStateLines);
+        Assert.Contains("Orbit Player: scenarioRoot(6,6), facing none, target none", report.FinalStateLines);
+        Assert.Empty(report.RuntimeFailures);
+    }
+
+    private static void AssertTargetPathTurnContains(GameGameGame.Content.ScenarioRunReport report, string actorName, string expectedDetail)
+    {
+        var turn = Assert.Single(report.Turns, turn => turn.ActorName == actorName);
+        Assert.Contains(turn.TraceLines, line => line.Contains("1. TargetPathMove: Failure", StringComparison.Ordinal));
+        Assert.Contains(turn.TraceLines, line => line.Contains(expectedDetail, StringComparison.Ordinal));
+    }
+
+    private static EditableContentDocument CreateTargetPathFailureScenarioDocument()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var root = CreateTemplate(editor, "Target Path Failure Log Room", '#', 22, 10, bulk: 100, aperture: 100);
+        var blocker = CreateTemplate(editor, "Target Path Blocker", 'x');
+        var missingCandidate = CreateTemplate(editor, "Missing Candidate Beacon", '?');
+
+        var seekPlan = CreateTargetPathPlan(editor, "Failure Seek Target", ActionPlanTargetPathMode.SeekAdjacency);
+        var offPlanePlan = CreateTargetPathPlan(editor, "Failure Off Plane Target", ActionPlanTargetPathMode.SeekAdjacency, targetLabel: null);
+        var fleePlan = CreateTargetPathPlan(editor, "Failure Flee Target", ActionPlanTargetPathMode.FleeAdjacency);
+        var orbitPlan = CreateTargetPathPlan(editor, "Failure Orbit Target", ActionPlanTargetPathMode.Orbit, desiredDistance: 2, orbitDirection: ActionPlanOrbitDirection.Clockwise);
+
+        var missingActor = CreateTargetPathActor(editor, "Missing Target Actor", 'm', seekPlan, missingCandidate, range: 1);
+        editor.PlaceCarriedEntity(root, new EntityId("missingTargetActor"), missingActor, new GridCoord(4, 0));
+
+        var offPlaneBeacon = CreateTemplate(editor, "Off Plane Beacon", 'b');
+        var offPlaneActor = CreateTargetPathActor(editor, "Off Plane Actor", 'o', offPlanePlan, offPlaneBeacon, range: 4, inventoryWidth: 1, inventoryHeight: 1, locality: new TargetingLocalityQuery([TargetingLocalityOrigin.OwnInventory]));
+        editor.PlaceCarriedEntity(offPlaneActor, new EntityId("offPlaneBeacon"), offPlaneBeacon, new GridCoord(0, 0));
+        var offPlaneActorModel = editor.GetEntityPreset(offPlaneActor);
+        editor.UpdateEntityPreset(
+            offPlaneActor,
+            offPlaneActorModel.Template with { ActionStateDefaults = new ActorActionStateDefaults(Direction.West, new EntityId("offPlaneBeacon")) },
+            offPlaneActorModel.Presentation);
+        editor.PlaceCarriedEntity(root, new EntityId("offPlaneActor"), offPlaneActor, new GridCoord(7, 0));
+
+        var unreachableBeacon = CreateTemplate(editor, "Unreachable Beacon", 'u');
+        var unreachableActor = CreateTargetPathActor(editor, "Unreachable Adjacency Actor", 'u', seekPlan, unreachableBeacon, range: 10);
+        editor.PlaceCarriedEntity(root, new EntityId("unreachableActor"), unreachableActor, new GridCoord(1, 6));
+        editor.PlaceCarriedEntity(root, new EntityId("unreachableTarget"), unreachableBeacon, new GridCoord(4, 6));
+        foreach (var coord in Around(new GridCoord(4, 6))) editor.PlaceCarriedEntity(root, new EntityId($"unreachableBlocker{coord.X}_{coord.Y}"), blocker, coord);
+
+        var noFleeBeacon = CreateTemplate(editor, "No Flee Beacon", 'f');
+        var noFleeActor = CreateTargetPathActor(editor, "No Flee Actor", 'f', fleePlan, noFleeBeacon, range: 3);
+        editor.PlaceCarriedEntity(root, new EntityId("noFleeActor"), noFleeActor, new GridCoord(0, 0));
+        editor.PlaceCarriedEntity(root, new EntityId("noFleeTarget"), noFleeBeacon, new GridCoord(1, 1));
+
+        var blockedOrbitBeacon = CreateTemplate(editor, "Blocked Orbit Beacon", 'q');
+        var blockedOrbitActor = CreateTargetPathActor(editor, "Blocked Orbit Actor", 'q', orbitPlan, blockedOrbitBeacon, range: 10);
+        editor.PlaceCarriedEntity(root, new EntityId("blockedOrbitActor"), blockedOrbitActor, new GridCoord(13, 3));
+        editor.PlaceCarriedEntity(root, new EntityId("blockedOrbitTarget"), blockedOrbitBeacon, new GridCoord(14, 6));
+        editor.PlaceCarriedEntity(root, new EntityId("blockedOrbitBlocker"), blocker, new GridCoord(14, 3));
+
+        var adjacentBeacon = CreateTemplate(editor, "Already Adjacent Beacon", 'a');
+        var adjacentActor = CreateTargetPathActor(editor, "Already Adjacent Actor", 'a', seekPlan, adjacentBeacon, range: 3);
+        editor.PlaceCarriedEntity(root, new EntityId("alreadyAdjacentActor"), adjacentActor, new GridCoord(18, 5));
+        editor.PlaceCarriedEntity(root, new EntityId("alreadyAdjacentTarget"), adjacentBeacon, new GridCoord(19, 5));
+
+        editor.UpsertScenario(new ScenarioDefinition("beta-canonical-target-path-failure-logs", "Canonical Target Path Failure Logs", root, null, null, null));
+        return document;
+    }
+
+    private static EditableContentDocument CreateTargetPathMazeScenarioDocument()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var root = CreateTemplate(editor, "Target Path Maze Room", '#', 16, 8, bulk: 100, aperture: 100);
+        var blocker = CreateTemplate(editor, "Maze Wall", 'x');
+        var seekBeacon = CreateTemplate(editor, "Maze Seek Beacon", 's');
+        var fleeBeacon = CreateTemplate(editor, "Maze Flee Beacon", 'f');
+        var seekPlan = CreateTargetPathPlan(editor, "Maze Seek", ActionPlanTargetPathMode.SeekAdjacency);
+        var fleePlan = CreateTargetPathPlan(editor, "Maze Flee", ActionPlanTargetPathMode.FleeAdjacency);
+        var seeker = CreateTargetPathActor(editor, "Maze Seeking Actor", 'S', seekPlan, seekBeacon, range: 12);
+        var fleer = CreateTargetPathActor(editor, "Maze Fleeing Actor", 'F', fleePlan, fleeBeacon, range: 12);
+
+        editor.PlaceCarriedEntity(root, new EntityId("mazeSeekingActor"), seeker, new GridCoord(1, 1));
+        editor.PlaceCarriedEntity(root, new EntityId("mazeSeekBeacon"), seekBeacon, new GridCoord(5, 1));
+        foreach (var coord in new[] { new GridCoord(2, 0), new GridCoord(2, 1), new GridCoord(2, 2) }) editor.PlaceCarriedEntity(root, new EntityId($"seekWall{coord.X}_{coord.Y}"), blocker, coord);
+
+        editor.PlaceCarriedEntity(root, new EntityId("mazeFleeingActor"), fleer, new GridCoord(10, 1));
+        editor.PlaceCarriedEntity(root, new EntityId("mazeFleeBeacon"), fleeBeacon, new GridCoord(9, 1));
+        foreach (var coord in new[] { new GridCoord(10, 0), new GridCoord(10, 2), new GridCoord(9, 0), new GridCoord(9, 2), new GridCoord(11, 0), new GridCoord(11, 2) }) editor.PlaceCarriedEntity(root, new EntityId($"fleeWall{coord.X}_{coord.Y}"), blocker, coord);
+
+        editor.UpsertScenario(new ScenarioDefinition("beta-canonical-target-path-maze", "Canonical Target Path Maze", root, null, null, null));
+        return document;
+    }
+
+    private static EditableContentDocument CreateTargetPathOrbitScenarioDocument()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var root = CreateTemplate(editor, "Target Path Dual Orbit Room", '#', 13, 13, bulk: 100, aperture: 100);
+        var player = CreateTemplate(editor, "Orbit Player", '@');
+        var clockwisePlan = CreateTargetPathPlan(editor, "Orbit Clockwise Distance Two", ActionPlanTargetPathMode.Orbit, desiredDistance: 2, orbitDirection: ActionPlanOrbitDirection.Clockwise, targetLabel: "player");
+        var anticlockwisePlan = CreateTargetPathPlan(editor, "Orbit Anticlockwise Distance Four", ActionPlanTargetPathMode.Orbit, desiredDistance: 4, orbitDirection: ActionPlanOrbitDirection.Anticlockwise, targetLabel: "player");
+        var clockwise = CreateTargetPathActor(editor, "Clockwise Close Orbiter", 'c', clockwisePlan, player, range: 12, targetLabel: "player");
+        var anticlockwise = CreateTargetPathActor(editor, "Anticlockwise Far Orbiter", 'a', anticlockwisePlan, player, range: 12, targetLabel: "player");
+
+        editor.PlaceCarriedEntity(root, new EntityId("clockwiseCloseOrbiter"), clockwise, new GridCoord(5, 3));
+        editor.PlaceCarriedEntity(root, new EntityId("anticlockwiseFarOrbiter"), anticlockwise, new GridCoord(5, 1));
+        editor.PlaceCarriedEntity(root, new EntityId("orbitPlayer"), player, new GridCoord(6, 6));
+        editor.UpsertScenario(new ScenarioDefinition("beta-canonical-target-path-dual-orbit", "Canonical Target Path Dual Orbit", root, null, null, null));
+        return document;
+    }
+
+    private static EntityTemplateId CreateTemplate(ContentEditorService editor, string name, char glyph, int width = 0, int height = 0, int bulk = 1, int aperture = 1)
+    {
+        var id = editor.CreateEntityPreset(name);
+        editor.UpdateEntityPreset(id, new EntityTemplate(name, width, height, bulk, aperture), new EntityPresentation(glyph, PresentationColor.White));
+        return id;
+    }
+
+    private static ActionPlanTemplateId CreateTargetPathPlan(ContentEditorService editor, string name, ActionPlanTargetPathMode mode, int? desiredDistance = null, ActionPlanOrbitDirection? orbitDirection = null, string? targetLabel = "target")
+    {
+        var plan = editor.CreateActionPlan(name);
+        editor.SetActionPlanBehavior(plan, [new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove, TargetLabel: targetLabel, PathMode: mode, DesiredDistance: desiredDistance, OrbitDirection: orbitDirection)]);
+        return plan;
+    }
+
+    private static EntityTemplateId CreateTargetPathActor(ContentEditorService editor, string name, char glyph, ActionPlanTemplateId plan, EntityTemplateId targetTemplate, int range, int inventoryWidth = 0, int inventoryHeight = 0, TargetingLocalityQuery? locality = null, string targetLabel = "target")
+    {
+        var actor = CreateTemplate(editor, name, glyph, inventoryWidth, inventoryHeight, bulk: 1, aperture: 10);
+        editor.SetInitialFacing(actor, Direction.West);
+        editor.SetDefaultActionPlan(actor, plan);
+        editor.SetTargetingRule(actor, new EntityTargetingRule(1, targetTemplate, range, Hint: targetLabel, Label: targetLabel, Locality: locality));
+        return actor;
+    }
+
+    private static IEnumerable<GridCoord> Around(GridCoord center) => DirectionMath.AllDirections.Select(direction => center.Offset(direction));
+
     private static string FindRepositoryFile(string relativePath, [CallerFilePath] string sourceFilePath = "")
     {
         var directory = new DirectoryInfo(Path.GetDirectoryName(sourceFilePath) ?? AppContext.BaseDirectory);

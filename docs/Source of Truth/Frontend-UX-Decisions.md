@@ -205,3 +205,10 @@ Each decision should include:
 - **Reasoning:** The player-facing mode needs a stable screen bootstrap boundary before adding more gameplay UX. Treating fullscreen metrics, the solid border buffer, and `F12` debug visibility as Play-mode presentation state keeps gameplay/content semantics out of the display shell and makes drawable-area assumptions testable.
 - **Implications:** New Play-mode components must be placed inside the resolved drawable bounds and must not use the outer border for gameplay. Normal Play mode should remain visually clean and render only player-facing content; scaffold/status/display facts belong behind `F12`. Pixel-perfect centering of the final tile surface inside leftover monitor pixels and semi-transparent debug overlays remain deferred display/render-layer work.
 - **Status:** Active.
+
+### FED-024: Play-mode gameplay capture is frontend-owned debug tooling
+
+- **Decision:** Consumer Play mode may expose `F10` as a debug recording toggle. Starting capture saves the current player-control frame; while recording, each successful player-control submission queues another frontend screenshot after redraw; stopping capture keeps a single still or writes `gameplay.gif` when multiple frames were captured.
+- **Reasoning:** Screenshot/GIF capture records presentation output and does not create gameplay, authoring, materialization, or action semantics. Capturing only player-control frames matches the current user need without requiring Core to expose intermediate autonomous-turn render snapshots.
+- **Implications:** Capture belongs in SadConsole/MonoGame rendering code and should stay debug-labeled. If future UX needs every initiative/autonomous step, coordinate with Core/Content for shared history/render snapshot support rather than inferring hidden turns in the frontend.
+- **Status:** Active / initial implementation.

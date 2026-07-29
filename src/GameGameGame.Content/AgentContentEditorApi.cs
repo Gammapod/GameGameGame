@@ -217,6 +217,15 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
     public AgentApiResult SetActionPlanBehaviorStepTransferDirection(ActionPlanTemplateId planId, int stepIndex, TransferDirection? transferDirection) =>
         Try("SetActionPlanBehaviorStepTransferDirectionFailed", () => Session.Editor.SetActionPlanBehaviorStepTransferDirection(planId, stepIndex, transferDirection));
 
+    public AgentApiResult SetActionPlanBehaviorStepTargetPathMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanTargetPathMode? pathMode) =>
+        Try("SetActionPlanBehaviorStepTargetPathModeFailed", () => Session.Editor.SetActionPlanBehaviorStepTargetPathMode(planId, stepIndex, pathMode));
+
+    public AgentApiResult SetActionPlanBehaviorStepDesiredDistance(ActionPlanTemplateId planId, int stepIndex, int? desiredDistance) =>
+        Try("SetActionPlanBehaviorStepDesiredDistanceFailed", () => Session.Editor.SetActionPlanBehaviorStepDesiredDistance(planId, stepIndex, desiredDistance));
+
+    public AgentApiResult SetActionPlanBehaviorStepOrbitDirection(ActionPlanTemplateId planId, int stepIndex, ActionPlanOrbitDirection? orbitDirection) =>
+        Try("SetActionPlanBehaviorStepOrbitDirectionFailed", () => Session.Editor.SetActionPlanBehaviorStepOrbitDirection(planId, stepIndex, orbitDirection));
+
     public AgentApiResult SetActionPlanBehaviorStepCosts(ActionPlanTemplateId planId, int stepIndex, IReadOnlyList<ActionStepCostDescriptor> costs) =>
         Try("SetActionPlanBehaviorStepCostsFailed", () => Session.Editor.SetActionPlanBehaviorStepCosts(planId, stepIndex, costs));
 

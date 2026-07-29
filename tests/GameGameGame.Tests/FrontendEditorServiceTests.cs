@@ -1123,7 +1123,7 @@ public sealed class FrontendEditorServiceTests
         try
         {
             var service = FrontendEditorService.OpenFile(path).Service!;
-            Assert.True(service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.SeekTarget).IsSuccess);
+            Assert.True(service.ReplaceActionPlanStep("moveEast", 0, ActionPlanBehaviorStepKind.TargetPathMove).IsSuccess);
 
             var set = service.SetActionPlanStepTargetLabel("moveEast", 0, "loves");
 
@@ -1147,6 +1147,27 @@ public sealed class FrontendEditorServiceTests
         {
             DeleteIfExists(path);
         }
+    }
+
+    [Fact]
+    public void FrontendEditorServiceAuthorsTargetPathMoveFields()
+    {
+        var service = FrontendEditorService.CreateNew();
+        var planId = service.CreatePassiveActionPlan("Orbit Plan").Snapshot.ActionPlans.Single().ActionPlanId;
+
+        var insert = service.InsertActionPlanStep(planId, 0, ActionPlanBehaviorStepKind.TargetPathMove);
+        Assert.True(insert.IsSuccess, insert.StatusMessage);
+        var pathMode = service.SetActionPlanStepTargetPathMode(planId, 0, ActionPlanTargetPathMode.Orbit);
+        Assert.True(pathMode.IsSuccess, pathMode.StatusMessage);
+        var distance = service.SetActionPlanStepDesiredDistance(planId, 0, 6);
+        Assert.True(distance.IsSuccess, distance.StatusMessage);
+        var orbit = service.SetActionPlanStepOrbitDirection(planId, 0, ActionPlanOrbitDirection.Clockwise);
+        Assert.True(orbit.IsSuccess, orbit.StatusMessage);
+
+        var step = Assert.Single(orbit.Snapshot.ActionPlans.Single(plan => plan.ActionPlanId == planId).ActionSteps);
+        Assert.Equal(ActionPlanTargetPathMode.Orbit, step.PathMode);
+        Assert.Equal(6, step.DesiredDistance);
+        Assert.Equal(ActionPlanOrbitDirection.Clockwise, step.OrbitDirection);
     }
 
     [Theory]

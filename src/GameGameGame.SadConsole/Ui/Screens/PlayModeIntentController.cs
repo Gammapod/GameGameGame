@@ -225,6 +225,11 @@ internal sealed class PlayModeIntentController
         return Remember(new PlayModeIntentOutcome(PlayModeIntentOutcomeKind.Cancelled, "Prompt cancelled."));
     }
 
+    public void ClearPrompts()
+    {
+        _promptStack.Clear();
+    }
+
     private PlayModeIntentOutcome Remember(PlayModeIntentOutcome outcome)
     {
         LastOutcome = outcome;

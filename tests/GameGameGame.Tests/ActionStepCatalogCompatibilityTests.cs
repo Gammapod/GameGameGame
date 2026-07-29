@@ -20,6 +20,22 @@ public sealed class ActionStepCatalogCompatibilityTests
     }
 
     [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target")]
+    [InlineData(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target")]
+    [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, "Maintain Chebyshev Distance Two")]
+    [InlineData(ActionPlanBehaviorStepKind.StrafeClockwise, "Strafe Clockwise")]
+    [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise, "Strafe Anticlockwise")]
+    public void ExistingTargetMovementStepsRemainRuntimeCompatible(ActionPlanBehaviorStepKind kind, string displayName)
+    {
+        var step = ActionStepCatalog.Get(kind);
+
+        Assert.Equal(displayName, step.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Legacy, step.Tier);
+        Assert.Contains(step.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(step.DefaultableState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+    }
+
+    [Theory]
     [InlineData(ActionPlanBehaviorStepKind.TurnLeft, Direction.North, Direction.West)]
     [InlineData(ActionPlanBehaviorStepKind.TurnLeft, Direction.West, Direction.South)]
     [InlineData(ActionPlanBehaviorStepKind.TurnRight, Direction.North, Direction.East)]

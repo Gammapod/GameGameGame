@@ -203,7 +203,83 @@ internal static class ActionPlanValidator
                     stepIndex: index));
             }
 
+            ValidateTargetPathMoveFields(diagnostics, actionPlanTemplateId, descriptor, step, index);
+
             ValidateBehaviorStepCosts(diagnostics, actionPlanTemplateId, descriptor, step, index, entityTemplateIds);
+        }
+    }
+
+    private static void ValidateTargetPathMoveFields(
+        List<ContentDiagnostic> diagnostics,
+        ActionPlanTemplateId actionPlanTemplateId,
+        ActionPlanDescriptor descriptor,
+        ActionPlanBehaviorStepDescriptor step,
+        int stepIndex)
+    {
+        if (step.Kind != ActionPlanBehaviorStepKind.TargetPathMove)
+        {
+            return;
+        }
+
+        if (step.PathMode is null)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionStepField,
+                $"Action plan {descriptor.Id} action step {step.Kind} requires pathMode.",
+                actionPlanTemplateId: actionPlanTemplateId,
+                actionPlanId: descriptor.Id,
+                stepIndex: stepIndex));
+            return;
+        }
+
+        if (step.DesiredDistance is < 0)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionStepField,
+                $"Action plan {descriptor.Id} action step {step.Kind} desiredDistance must be non-negative; found {step.DesiredDistance}.",
+                actionPlanTemplateId: actionPlanTemplateId,
+                actionPlanId: descriptor.Id,
+                stepIndex: stepIndex));
+        }
+
+        if (step.PathMode is ActionPlanTargetPathMode.MaintainDistance or ActionPlanTargetPathMode.Orbit && step.DesiredDistance is null)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionStepField,
+                $"Action plan {descriptor.Id} action step {step.Kind} pathMode {step.PathMode} requires desiredDistance.",
+                actionPlanTemplateId: actionPlanTemplateId,
+                actionPlanId: descriptor.Id,
+                stepIndex: stepIndex));
+        }
+
+        if (step.PathMode is ActionPlanTargetPathMode.SeekAdjacency or ActionPlanTargetPathMode.FleeAdjacency && step.DesiredDistance is not null)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionStepField,
+                $"Action plan {descriptor.Id} action step {step.Kind} pathMode {step.PathMode} does not support desiredDistance.",
+                actionPlanTemplateId: actionPlanTemplateId,
+                actionPlanId: descriptor.Id,
+                stepIndex: stepIndex));
+        }
+
+        if (step.PathMode == ActionPlanTargetPathMode.Orbit && step.OrbitDirection is null)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionStepField,
+                $"Action plan {descriptor.Id} action step {step.Kind} pathMode Orbit requires orbitDirection.",
+                actionPlanTemplateId: actionPlanTemplateId,
+                actionPlanId: descriptor.Id,
+                stepIndex: stepIndex));
+        }
+
+        if (step.PathMode != ActionPlanTargetPathMode.Orbit && step.OrbitDirection is not null)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidActionStepField,
+                $"Action plan {descriptor.Id} action step {step.Kind} orbitDirection is only supported by pathMode Orbit.",
+                actionPlanTemplateId: actionPlanTemplateId,
+                actionPlanId: descriptor.Id,
+                stepIndex: stepIndex));
         }
     }
 

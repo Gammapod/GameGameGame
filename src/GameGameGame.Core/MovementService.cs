@@ -165,6 +165,21 @@ public sealed class MovementService
         return world.GetOccupant(destination);
     }
 
+    public IReadOnlyList<TopologyNeighbor> GetLegalMovementNeighbors(WorldState world, EntityId movingEntityId, PlaneCoord origin)
+    {
+        return topology.GetNeighbors(world, origin)
+            .Where(neighbor => !neighbor.IsBlocked && CanOccupyForPath(world, movingEntityId, neighbor.Destination))
+            .ToList();
+    }
+
+    public bool CanOccupyForPath(WorldState world, EntityId movingEntityId, PlaneCoord destination)
+    {
+        return world.Planes.TryGetValue(destination.PlaneId, out var plane)
+            && plane.Contains(destination.Coord)
+            && world.TryGetNodeId(destination, out var nodeId)
+            && (!world.Occupancy.TryGetValue(nodeId, out var occupant) || occupant == movingEntityId);
+    }
+
     private bool TryResolveDestination(
         WorldState world,
         MovementDestination destination,

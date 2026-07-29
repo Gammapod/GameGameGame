@@ -68,9 +68,12 @@ public sealed class ContentEditorAuthoringTests
         Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnLeft);
         Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.TurnRight);
         Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.ReverseFacing);
-        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo && step.DisplayName == "Maintain Chebyshev Distance Two");
-        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeClockwise && step.DisplayName == "Strafe Clockwise");
-        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeAnticlockwise && step.DisplayName == "Strafe Anticlockwise");
+        Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TargetPathMove && step.DisplayName == "Target Path Move");
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.SeekTarget);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.FleeTarget);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeClockwise);
+        Assert.DoesNotContain(steps, step => step.Kind == ActionPlanBehaviorStepKind.StrafeAnticlockwise);
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.GiveTarget && step.DisplayName == "Give Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.TakeTarget && step.DisplayName == "Take Target");
         Assert.Contains(steps, step => step.Kind == ActionPlanBehaviorStepKind.EnterTarget && step.DisplayName == "Enter Target");
@@ -252,6 +255,48 @@ public sealed class ContentEditorAuthoringTests
         var cost = Assert.Single(step.Costs);
         Assert.Equal(scrapId.Value, cost.TemplateId);
         Assert.Equal(3, cost.Quantity);
+    }
+
+    [Fact]
+    public void ActionPlanPreviewSummarizesTargetPathMoveFields()
+    {
+        var editor = new ContentEditorService(new EditableContentDocument());
+        var planId = editor.CreateActionPlan("Orbit Target");
+        editor.SetActionPlanBehavior(planId, [
+            new ActionPlanBehaviorStepDescriptor(
+                ActionPlanBehaviorStepKind.TargetPathMove,
+                TargetLabel: "enemy",
+                PathMode: ActionPlanTargetPathMode.Orbit,
+                DesiredDistance: 6,
+                OrbitDirection: ActionPlanOrbitDirection.Clockwise)
+        ]);
+
+        var preview = editor.PreviewActionPlan(planId);
+        var step = Assert.Single(preview.ActionSteps);
+
+        Assert.Equal(ActionPlanTargetPathMode.Orbit, step.PathMode);
+        Assert.Equal(6, step.DesiredDistance);
+        Assert.Equal(ActionPlanOrbitDirection.Clockwise, step.OrbitDirection);
+        Assert.Equal("Path: Orbit; desiredDistance=6; orbitDirection=Clockwise", step.TargetPathSummary);
+    }
+
+    [Fact]
+    public void ContentEditorServiceSetsTargetPathMoveFields()
+    {
+        var editor = new ContentEditorService(new EditableContentDocument());
+        var planId = editor.CreateActionPlan("Maintain Target");
+        editor.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.TargetPathMove]);
+
+        editor.SetActionPlanBehaviorStepTargetPathMode(planId, 0, ActionPlanTargetPathMode.MaintainDistance);
+        editor.SetActionPlanBehaviorStepDesiredDistance(planId, 0, 3);
+        editor.SetActionPlanBehaviorStepOrbitDirection(planId, 0, null);
+
+        var step = editor.ListActionPlans().Single(plan => plan.TemplateId == planId).Descriptor.Behavior!.Steps.Single();
+        Assert.Equal(ActionPlanTargetPathMode.MaintainDistance, step.PathMode);
+        Assert.Equal(3, step.DesiredDistance);
+        Assert.Null(step.OrbitDirection);
+        Assert.Contains("pathMode: MaintainDistance", editor.Document.SaveYaml());
+        Assert.Contains("desiredDistance: 3", editor.Document.SaveYaml());
     }
 
     [Fact]

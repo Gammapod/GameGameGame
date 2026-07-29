@@ -16,14 +16,22 @@ public sealed record ActionStepDescriptor(
     IReadOnlyList<PlanPrimitiveSlotDescriptor>? StateWrites = null,
     ActionStepAuthoringTier Tier = ActionStepAuthoringTier.Stable,
     ActionPlanBehaviorStepKind? TargetCapability = null,
-    string CostFieldDescription = "Optional costs paid from actor inventory recursively by runtime template ID; consumed only after this step succeeds, while missing cost causes normal fallthrough.")
+    string CostFieldDescription = "Optional costs paid from actor inventory recursively by runtime template ID; consumed only after this step succeeds, while missing cost causes normal fallthrough.",
+    IReadOnlyList<ActionStepFieldDescriptor>? Fields = null)
 {
     public IReadOnlyList<PlanPrimitiveSlotDescriptor> RequiredState { get; } = RequiredState ?? [];
 
     public IReadOnlyList<PlanPrimitiveSlotDescriptor> DefaultableState { get; } = DefaultableState ?? [];
 
     public IReadOnlyList<PlanPrimitiveSlotDescriptor> StateWrites { get; } = StateWrites ?? [];
+
+    public IReadOnlyList<ActionStepFieldDescriptor> Fields { get; } = Fields ?? [];
 }
+
+public sealed record ActionStepFieldDescriptor(
+    string Name,
+    string Description,
+    bool IsRequired = true);
 
 public static class ActionStepCatalog
 {
@@ -130,31 +138,36 @@ public static class ActionStepCatalog
             "Seek Target",
             "Reads the persistent Target and greedily moves one cardinal step that reduces Manhattan distance, breaking ties North, South, West, East; preserves Target on failure/contact.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.FleeTarget,
             "Flee Target",
             "Reads the persistent Target and greedily moves one cardinal step that increases Manhattan distance, breaking ties North, South, West, East; preserves Target on success/failure.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo,
             "Maintain Chebyshev Distance Two",
             "Reads the persistent Target and moves one cardinal step toward Chebyshev distance 2, backing away when too close and closing when too far; falls through at exact distance 2 and preserves Target.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.StrafeClockwise,
             "Strafe Clockwise",
             "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the clockwise perpendicular cardinal move; preserves Target on success/failure.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.StrafeAnticlockwise,
             "Strafe Anticlockwise",
             "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the anticlockwise perpendicular cardinal move; preserves Target on success/failure.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Tier: ActionStepAuthoringTier.Legacy),
         new(
             ActionPlanBehaviorStepKind.GiveTarget,
             "Give Target",
@@ -201,6 +214,18 @@ public static class ActionStepCatalog
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
         new(
+            ActionPlanBehaviorStepKind.TargetPathMove,
+            "Target Path Move",
+            "Canonical target-aware path movement. Reads Target and moves one step using pathMode relative to legal adjacent spaces around that target; future runtime support will pathfind for seek, flee, maintain-distance, and orbit modes.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            Fields:
+            [
+                Field("pathMode", "Required target-path mode: SeekAdjacency, FleeAdjacency, MaintainDistance, or Orbit."),
+                Field("desiredDistance", "Optional non-negative graph distance to target adjacency; required by MaintainDistance and Orbit.", IsRequired: false),
+                Field("orbitDirection", "Optional orbit direction; required by Orbit and rejected by non-orbit modes.", IsRequired: false)
+            ]),
+        new(
             ActionPlanBehaviorStepKind.ApplyPrePlan,
             "Apply Pre-Plan",
             "Reads the persistent Target and applies the referenced Action Plan as that target's one-turn Pre override, replacing any existing Pre override on the target.",
@@ -224,8 +249,18 @@ public static class ActionStepCatalog
         Steps.Single(step => step.Kind == kind);
 
     public static bool IsStableAuthoringStep(ActionPlanBehaviorStepKind kind) =>
-        Get(kind).Tier == ActionStepAuthoringTier.Stable;
+        Get(kind).Tier == ActionStepAuthoringTier.Stable || IsTargetMovementCompatibilityStep(kind);
+
+    private static bool IsTargetMovementCompatibilityStep(ActionPlanBehaviorStepKind kind) =>
+        kind is ActionPlanBehaviorStepKind.SeekTarget
+            or ActionPlanBehaviorStepKind.FleeTarget
+            or ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo
+            or ActionPlanBehaviorStepKind.StrafeClockwise
+            or ActionPlanBehaviorStepKind.StrafeAnticlockwise;
 
     private static PlanPrimitiveSlotDescriptor State(ActionPlanSlot slot, PlanValueKind valueKind) =>
         new(slot, valueKind);
+
+    private static ActionStepFieldDescriptor Field(string name, string description, bool IsRequired = true) =>
+        new(name, description, IsRequired);
 }

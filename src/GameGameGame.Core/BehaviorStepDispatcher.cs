@@ -39,6 +39,7 @@ public sealed partial class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.ApplyPostPlan => null,
             ActionPlanBehaviorStepKind.CreateEntity => null,
             ActionPlanBehaviorStepKind.PolymorphTarget => null,
+            ActionPlanBehaviorStepKind.TargetPathMove => null,
             _ => throw new InvalidOperationException($"Unsupported behavior action step kind {step.Kind}.")
         };
 
@@ -61,6 +62,7 @@ public sealed partial class ActionPlanInterpreter
             ActionPlanBehaviorStepKind.ApplyPostPlan => ApplyPlanOverride(world, context, step, ActionPlanOverrideSlot.Post),
             ActionPlanBehaviorStepKind.CreateEntity => ApplyCreateEntity(world, actorId, context, step),
             ActionPlanBehaviorStepKind.PolymorphTarget => ApplyPolymorphTarget(world, context, step),
+            ActionPlanBehaviorStepKind.TargetPathMove => ApplyTargetPathMove(world, actorId, context, step),
             _ => ApplyPrimitive(world, actorId, context, primitive!)
         };
     }

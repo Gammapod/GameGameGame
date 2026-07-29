@@ -120,6 +120,23 @@ public sealed class ActionPlanDescriptorAndCatalogTests
     }
 
     [Fact]
+    public void ActionPlanDescriptorPreservesTargetPathMoveInputsAsData()
+    {
+        var step = new ActionPlanBehaviorStepDescriptor(
+            ActionPlanBehaviorStepKind.TargetPathMove,
+            TargetLabel: "enemy",
+            PathMode: ActionPlanTargetPathMode.Orbit,
+            DesiredDistance: 6,
+            OrbitDirection: ActionPlanOrbitDirection.Clockwise);
+
+        Assert.Equal(ActionPlanBehaviorStepKind.TargetPathMove, step.Kind);
+        Assert.Equal("enemy", step.TargetLabel);
+        Assert.Equal(ActionPlanTargetPathMode.Orbit, step.PathMode);
+        Assert.Equal(6, step.DesiredDistance);
+        Assert.Equal(ActionPlanOrbitDirection.Clockwise, step.OrbitDirection);
+    }
+
+    [Fact]
     public void PlanPrimitiveCatalogExposesAllCheckEffectAndValueKinds()
     {
         Assert.Equal(Enum.GetValues<PlanCheckKind>().Order(), PlanPrimitiveCatalog.Checks.Select(check => check.Kind).Order());
@@ -221,6 +238,22 @@ public sealed class ActionPlanDescriptorAndCatalogTests
     }
 
     [Fact]
+    public void ActionStepCatalogExposesTargetPathMoveFieldContracts()
+    {
+        var targetPathMove = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.TargetPathMove);
+
+        Assert.Equal("Target Path Move", targetPathMove.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Stable, targetPathMove.Tier);
+        Assert.Contains("path", targetPathMove.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("adjacent", targetPathMove.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(targetPathMove.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(targetPathMove.DefaultableState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(targetPathMove.Fields, field => field.Name == "pathMode" && field.IsRequired);
+        Assert.Contains(targetPathMove.Fields, field => field.Name == "desiredDistance" && !field.IsRequired);
+        Assert.Contains(targetPathMove.Fields, field => field.Name == "orbitDirection" && !field.IsRequired);
+    }
+
+    [Fact]
     public void ActionStepCatalogDescribesBackstepMetadata()
     {
         var backstep = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.Backstep);
@@ -288,11 +321,7 @@ public sealed class ActionPlanDescriptorAndCatalogTests
     [InlineData(ActionPlanBehaviorStepKind.PushFacing, "Push Facing")]
     [InlineData(ActionPlanBehaviorStepKind.DestroyTarget, "Destroy Target")]
     [InlineData(ActionPlanBehaviorStepKind.CreateFacing, "Create Facing")]
-    [InlineData(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target")]
-    [InlineData(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target")]
-    [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, "Maintain Chebyshev Distance Two")]
-    [InlineData(ActionPlanBehaviorStepKind.StrafeClockwise, "Strafe Clockwise")]
-    [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise, "Strafe Anticlockwise")]
+    [InlineData(ActionPlanBehaviorStepKind.TargetPathMove, "Target Path Move")]
     [InlineData(ActionPlanBehaviorStepKind.GiveTarget, "Give Target")]
     [InlineData(ActionPlanBehaviorStepKind.TakeTarget, "Take Target")]
     [InlineData(ActionPlanBehaviorStepKind.EnterTarget, "Enter Target")]

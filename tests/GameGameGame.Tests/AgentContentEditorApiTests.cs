@@ -65,7 +65,7 @@ public sealed class AgentContentEditorApiTests
         AssertSuccess(api.SetTargetingRule(mouseId, new EntityTargetingRule(2, catId, Range: 4, Hint: "Danger", Label: "danger")));
         var planId = AssertSuccess(api.CreateActionPlan("Mouse Behavior"));
         AssertSuccess(api.ClearActionPlanBehavior(planId));
-        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.FleeTarget));
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.TargetPathMove));
         AssertSuccess(api.SetActionPlanBehaviorStepTargetLabel(planId, stepIndex: 0, targetLabel: "danger"));
         AssertSuccess(api.SetDefaultActionPlan(mouseId, planId));
 
@@ -149,6 +149,30 @@ public sealed class AgentContentEditorApiTests
         Assert.Contains("costs:", snapshot.YamlPreview);
         Assert.Contains("templateId: scrap", snapshot.YamlPreview);
         Assert.Contains("quantity: 3", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsTargetPathMoveBehavior()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var planId = AssertSuccess(api.CreateActionPlan("Orbit Target"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.TargetPathMove));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetLabel(planId, 0, "enemy"));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetPathMode(planId, 0, ActionPlanTargetPathMode.Orbit));
+        AssertSuccess(api.SetActionPlanBehaviorStepDesiredDistance(planId, 0, 6));
+        AssertSuccess(api.SetActionPlanBehaviorStepOrbitDirection(planId, 0, ActionPlanOrbitDirection.Anticlockwise));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId));
+        var step = Assert.Single(preview.ActionSteps);
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.Equal(ActionPlanTargetPathMode.Orbit, step.PathMode);
+        Assert.Equal(6, step.DesiredDistance);
+        Assert.Equal(ActionPlanOrbitDirection.Anticlockwise, step.OrbitDirection);
+        Assert.Contains("pathMode: Orbit", snapshot.YamlPreview);
+        Assert.Contains("desiredDistance: 6", snapshot.YamlPreview);
+        Assert.Contains("orbitDirection: Anticlockwise", snapshot.YamlPreview);
     }
 
     [Fact]

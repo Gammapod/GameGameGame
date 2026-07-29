@@ -201,6 +201,27 @@ public sealed class FrontendEditorService(ContentEditorSession session)
         => new FrontendActionPlanMutationService(Session, GetSnapshot)
             .SetActionPlanStepCosts(actionPlanId, stepIndex, costs);
 
+    public FrontendEditorMutationResult SetActionPlanStepTargetPathMode(
+        string actionPlanId,
+        int stepIndex,
+        ActionPlanTargetPathMode? pathMode)
+        => new FrontendActionPlanMutationService(Session, GetSnapshot)
+            .SetActionPlanStepTargetPathMode(actionPlanId, stepIndex, pathMode);
+
+    public FrontendEditorMutationResult SetActionPlanStepDesiredDistance(
+        string actionPlanId,
+        int stepIndex,
+        int? desiredDistance)
+        => new FrontendActionPlanMutationService(Session, GetSnapshot)
+            .SetActionPlanStepDesiredDistance(actionPlanId, stepIndex, desiredDistance);
+
+    public FrontendEditorMutationResult SetActionPlanStepOrbitDirection(
+        string actionPlanId,
+        int stepIndex,
+        ActionPlanOrbitDirection? orbitDirection)
+        => new FrontendActionPlanMutationService(Session, GetSnapshot)
+            .SetActionPlanStepOrbitDirection(actionPlanId, stepIndex, orbitDirection);
+
     public FrontendEditorSnapshot GetSnapshot()
         => new FrontendEditorSnapshotBuilder(Session).Build();
 
@@ -404,7 +425,10 @@ public sealed record FrontendEditorActionPlanStepSummary(
     bool TargetSelf = false,
     bool ConsumesTargetReference = false,
     IReadOnlyList<ActionStepCostDescriptor>? Costs = null,
-    string? CostSummary = null)
+    string? CostSummary = null,
+    ActionPlanTargetPathMode? PathMode = null,
+    int? DesiredDistance = null,
+    ActionPlanOrbitDirection? OrbitDirection = null)
 {
     public IReadOnlyList<ActionStepCostDescriptor> Costs { get; } = Costs ?? [];
 }

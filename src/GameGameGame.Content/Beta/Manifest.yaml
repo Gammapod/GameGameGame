@@ -330,6 +330,27 @@ sections:
     status: active-delta
     tags: [delta, canonical-action, transfer, give, take, inventory, player-interaction, vertical-slice]
     source: docs/Plans/Give-Take-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
+    scenarioId: beta-canonical-target-path-failure-logs
+    name: Canonical Target Path Failure Logs
+    description: Delta/canonical action failure-log room proving TargetPathMove reports distinct target-path failure and fallthrough reasons for missing target data, unreachable adjacency, blocked flee, blocked orbit, and already-adjacent seek behavior.
+    status: active-delta
+    tags: [delta, canonical-action, target-path-movement, movement, targeting, logs, vertical-slice]
+    source: docs/Plans/Target-Path-Movement-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
+    scenarioId: beta-canonical-target-path-maze
+    name: Canonical Target Path Maze
+    description: Delta/canonical action maze room where TargetPathMove seeking and fleeing actors navigate around authored walls using pathfinding-backed target-adjacent distance behavior.
+    status: active-delta
+    tags: [delta, canonical-action, target-path-movement, movement, targeting, pathfinding, maze, vertical-slice]
+    source: docs/Plans/Target-Path-Movement-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
+    scenarioId: beta-canonical-target-path-dual-orbit
+    name: Canonical Target Path Dual Orbit
+    description: Delta/canonical action orbit room with two TargetPathMove orbiters circling the player in opposite directions at different desired distances.
+    status: active-delta
+    tags: [delta, canonical-action, target-path-movement, movement, targeting, orbit, vertical-slice]
+    source: docs/Plans/Target-Path-Movement-Vertical-Slice-Sprint-Plan.md
   - contentPath: src\GameGameGame.Content\Beta\Logging\SuccessCriteriaLogShowcase.yaml
     scenarioId: beta-success-criteria-log-room
     name: Success Criteria Log Room

@@ -39,9 +39,10 @@ internal sealed class ConsumerPlayModeScreen
     public string? ActivePromptFocusedChoiceLabel => _intentController.CurrentPrompt?.FocusedChoice?.Label;
     public IReadOnlyList<Direction> ActivePromptAcceptedDirections => _intentController.CurrentPrompt?.Choices.Select(choice => choice.ShortcutDirection).OfType<Direction>().ToList() ?? [];
     public bool ActivePromptAcceptsDirection(Direction direction) => _intentController.CurrentPrompt?.Choices.Any(choice => choice.ShortcutDirection == direction) == true;
+    public int WorldTurnNumber => (_sessionController?.World ?? Session?.World)?.TurnNumber ?? 0;
     public string Title => "New Play Mode";
     public string Purpose => "Consumer-facing Play mode skeleton. Current-space component is active.";
-    public string FooterText => "Arrows/Numpad: move | Esc: return to Scenario Selection | F12: toggle debug border";
+    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | U: undo | F10: capture | F12: debug | Esc: return";
 
     public static ConsumerPlayModeScreen Open(ScenarioCatalogEntry catalogEntry)
     {
@@ -57,6 +58,11 @@ internal sealed class ConsumerPlayModeScreen
 
     internal static ConsumerPlayModeScreen FromSession(ScenarioCatalogEntry catalogEntry, PlayableScenarioSession session) =>
         new(catalogEntry, session, launchFailure: null);
+
+    public void SetDebugStatus(string message)
+    {
+        LastActionStatus = message;
+    }
 
     public GameplayRuntimeSubmission SubmitMove(Direction direction)
     {
@@ -84,6 +90,44 @@ internal sealed class ConsumerPlayModeScreen
 
         RefreshProjections();
         return result;
+    }
+
+    public GameplayRuntimeSubmission SubmitWait()
+    {
+        if (_sessionController is null)
+        {
+            LastActionStatus = "Cannot wait: session unavailable.";
+            return new GameplayRuntimeSubmission(false, LastActionStatus, UsedCoreActionChoice: false);
+        }
+
+        _intentController.ClearPrompts();
+        var result = _sessionController.SubmitWait();
+        LastActionStatus = result.Succeeded
+            ? "Waited."
+            : $"Could not wait: {result.FailureText ?? "failed"}";
+        RefreshProjections();
+        return result;
+    }
+
+    public bool UndoPreviousFrame()
+    {
+        if (_sessionController is null)
+        {
+            LastActionStatus = "Cannot undo: session unavailable.";
+            return false;
+        }
+
+        _intentController.ClearPrompts();
+        if (!_sessionController.UndoPreviousFrame())
+        {
+            LastActionStatus = "Nothing to undo.";
+            RefreshProjections();
+            return false;
+        }
+
+        LastActionStatus = "Undid previous frame.";
+        RefreshProjections();
+        return true;
     }
 
     public PlayModeIntentOutcome SubmitDefaultAction()

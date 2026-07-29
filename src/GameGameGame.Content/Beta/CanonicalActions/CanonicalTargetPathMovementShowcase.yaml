@@ -1,0 +1,746 @@
+entityTemplates:
+  targetPathFailureLogRoom:
+    name: Target Path Failure Log Room
+    inventoryWidth: 22
+    inventoryHeight: 10
+    weight: 0
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 100
+    carriedEntities:
+    - entityId: missingTargetActor
+      templateId: missingTargetActorTemplate
+      coord:
+        x: 4
+        y: 0
+    - entityId: offPlaneActor
+      templateId: offPlaneActorTemplate
+      coord:
+        x: 7
+        y: 0
+    - entityId: unreachableActor
+      templateId: unreachableActorTemplate
+      coord:
+        x: 1
+        y: 6
+    - entityId: unreachableTarget
+      templateId: unreachableBeacon
+      coord:
+        x: 4
+        y: 6
+    - entityId: unreachableBlocker4_5
+      templateId: targetPathBlocker
+      coord:
+        x: 4
+        y: 5
+    - entityId: unreachableBlocker5_5
+      templateId: targetPathBlocker
+      coord:
+        x: 5
+        y: 5
+    - entityId: unreachableBlocker5_6
+      templateId: targetPathBlocker
+      coord:
+        x: 5
+        y: 6
+    - entityId: unreachableBlocker5_7
+      templateId: targetPathBlocker
+      coord:
+        x: 5
+        y: 7
+    - entityId: unreachableBlocker4_7
+      templateId: targetPathBlocker
+      coord:
+        x: 4
+        y: 7
+    - entityId: unreachableBlocker3_7
+      templateId: targetPathBlocker
+      coord:
+        x: 3
+        y: 7
+    - entityId: unreachableBlocker3_6
+      templateId: targetPathBlocker
+      coord:
+        x: 3
+        y: 6
+    - entityId: unreachableBlocker3_5
+      templateId: targetPathBlocker
+      coord:
+        x: 3
+        y: 5
+    - entityId: noFleeActor
+      templateId: noFleeActorTemplate
+      coord:
+        x: 0
+        y: 0
+    - entityId: noFleeTarget
+      templateId: noFleeBeacon
+      coord:
+        x: 1
+        y: 1
+    - entityId: blockedOrbitActor
+      templateId: blockedOrbitActorTemplate
+      coord:
+        x: 13
+        y: 3
+    - entityId: blockedOrbitTarget
+      templateId: blockedOrbitBeacon
+      coord:
+        x: 14
+        y: 6
+    - entityId: blockedOrbitBlocker
+      templateId: targetPathBlocker
+      coord:
+        x: 14
+        y: 3
+    - entityId: alreadyAdjacentActor
+      templateId: alreadyAdjacentActorTemplate
+      coord:
+        x: 18
+        y: 5
+    - entityId: alreadyAdjacentTarget
+      templateId: alreadyAdjacentBeacon
+      coord:
+        x: 19
+        y: 5
+  targetPathMazeRoom:
+    name: Target Path Maze Room
+    inventoryWidth: 16
+    inventoryHeight: 8
+    weight: 0
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 100
+    carriedEntities:
+    - entityId: mazeSeekingActor
+      templateId: mazeSeekingActorTemplate
+      coord:
+        x: 1
+        y: 1
+    - entityId: mazeSeekBeacon
+      templateId: mazeSeekBeaconTemplate
+      coord:
+        x: 5
+        y: 1
+    - entityId: seekWall2_0
+      templateId: mazeWall
+      coord:
+        x: 2
+        y: 0
+    - entityId: seekWall2_1
+      templateId: mazeWall
+      coord:
+        x: 2
+        y: 1
+    - entityId: seekWall2_2
+      templateId: mazeWall
+      coord:
+        x: 2
+        y: 2
+    - entityId: mazeFleeingActor
+      templateId: mazeFleeingActorTemplate
+      coord:
+        x: 10
+        y: 1
+    - entityId: mazeFleeBeacon
+      templateId: mazeFleeBeaconTemplate
+      coord:
+        x: 9
+        y: 1
+    - entityId: fleeWall10_0
+      templateId: mazeWall
+      coord:
+        x: 10
+        y: 0
+    - entityId: fleeWall10_2
+      templateId: mazeWall
+      coord:
+        x: 10
+        y: 2
+    - entityId: fleeWall9_0
+      templateId: mazeWall
+      coord:
+        x: 9
+        y: 0
+    - entityId: fleeWall9_2
+      templateId: mazeWall
+      coord:
+        x: 9
+        y: 2
+    - entityId: fleeWall11_0
+      templateId: mazeWall
+      coord:
+        x: 11
+        y: 0
+    - entityId: fleeWall11_2
+      templateId: mazeWall
+      coord:
+        x: 11
+        y: 2
+    - entityId: targetPathMazeRoomMazeWall
+      templateId: mazeWall
+      coord:
+        x: 1
+        y: 3
+    - entityId: targetPathMazeRoomMazeWall2
+      templateId: mazeWall
+      coord:
+        x: 1
+        y: 5
+    - entityId: targetPathMazeRoomMazeWall3
+      templateId: mazeWall
+      coord:
+        x: 2
+        y: 5
+    - entityId: targetPathMazeRoomMazeWall4
+      templateId: mazeWall
+      coord:
+        x: 0
+        y: 5
+    - entityId: targetPathMazeRoomMazeWall5
+      templateId: mazeWall
+      coord:
+        x: 4
+        y: 6
+    - entityId: targetPathMazeRoomMazeWall6
+      templateId: mazeWall
+      coord:
+        x: 4
+        y: 5
+    - entityId: targetPathMazeRoomMazeWall7
+      templateId: mazeWall
+      coord:
+        x: 4
+        y: 4
+    - entityId: targetPathMazeRoomMazeWall8
+      templateId: mazeWall
+      coord:
+        x: 4
+        y: 3
+    - entityId: targetPathMazeRoomMazeWall9
+      templateId: mazeWall
+      coord:
+        x: 4
+        y: 2
+    - entityId: targetPathMazeRoomMazeWall10
+      templateId: mazeWall
+      coord:
+        x: 3
+        y: 2
+    - entityId: targetPathMazeRoomMazeWall11
+      templateId: mazeWall
+      coord:
+        x: 5
+        y: 5
+    - entityId: targetPathMazeRoomMazeWall12
+      templateId: mazeWall
+      coord:
+        x: 6
+        y: 7
+    - entityId: targetPathMazeRoomMazeWall13
+      templateId: mazeWall
+      coord:
+        x: 7
+        y: 5
+    - entityId: targetPathMazeRoomMazeWall14
+      templateId: mazeWall
+      coord:
+        x: 7
+        y: 4
+    - entityId: targetPathMazeRoomMazeWall15
+      templateId: mazeWall
+      coord:
+        x: 7
+        y: 3
+    - entityId: targetPathMazeRoomMazeWall16
+      templateId: mazeWall
+      coord:
+        x: 6
+        y: 3
+    - entityId: targetPathMazeRoomMazeWall17
+      templateId: mazeWall
+      coord:
+        x: 13
+        y: 0
+    - entityId: targetPathMazeRoomMazeWall18
+      templateId: mazeWall
+      coord:
+        x: 13
+        y: 1
+    - entityId: targetPathMazeRoomMazeWall19
+      templateId: mazeWall
+      coord:
+        x: 13
+        y: 2
+    - entityId: targetPathMazeRoomMazeWall20
+      templateId: mazeWall
+      coord:
+        x: 13
+        y: 3
+    - entityId: targetPathMazeRoomMazeWall21
+      templateId: mazeWall
+      coord:
+        x: 13
+        y: 4
+    - entityId: targetPathMazeRoomMazeWall22
+      templateId: mazeWall
+      coord:
+        x: 12
+        y: 4
+    - entityId: targetPathMazeRoomOrbitPlayer
+      templateId: orbitPlayerTemplate
+      coord:
+        x: 9
+        y: 7
+      controller: Player
+    - entityId: targetPathMazeRoomMazeWall23
+      templateId: mazeWall
+      coord:
+        x: 12
+        y: 0
+  targetPathDualOrbitRoom:
+    name: Target Path Dual Orbit Room
+    inventoryWidth: 13
+    inventoryHeight: 13
+    weight: 0
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 100
+    carriedEntities:
+    - entityId: clockwiseCloseOrbiter
+      templateId: clockwiseCloseOrbiterTemplate
+      coord:
+        x: 5
+        y: 3
+    - entityId: anticlockwiseFarOrbiter
+      templateId: anticlockwiseFarOrbiterTemplate
+      coord:
+        x: 5
+        y: 1
+    - entityId: orbitPlayer
+      templateId: orbitPlayerTemplate
+      coord:
+        x: 6
+        y: 6
+      controller: Player
+  targetPathBlocker:
+    name: Target Path Blocker
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  missingCandidateBeacon:
+    name: Missing Candidate Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  offPlaneBeacon:
+    name: Off Plane Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  unreachableBeacon:
+    name: Unreachable Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  noFleeBeacon:
+    name: No Flee Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  blockedOrbitBeacon:
+    name: Blocked Orbit Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  alreadyAdjacentBeacon:
+    name: Already Adjacent Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  mazeWall:
+    name: Maze Wall
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  mazeSeekBeaconTemplate:
+    name: Maze Seek Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  mazeFleeBeaconTemplate:
+    name: Maze Flee Beacon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  orbitPlayerTemplate:
+    name: Orbit Player
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  missingTargetActorTemplate:
+    name: Missing Target Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathFailureSeekTarget
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: missingCandidateBeacon
+      range: 1
+  offPlaneActorTemplate:
+    name: Off Plane Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathFailureOffPlaneTarget
+    actionStateDefaults:
+      facing: West
+      target: offPlaneBeacon
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: offPlaneBeacon
+      range: 4
+      locality:
+        origins:
+        - OwnInventory
+    carriedEntities:
+    - entityId: offPlaneBeacon
+      templateId: offPlaneBeacon
+      coord:
+        x: 0
+        y: 0
+  unreachableActorTemplate:
+    name: Unreachable Adjacency Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathFailureSeekTarget
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: unreachableBeacon
+      range: 10
+  noFleeActorTemplate:
+    name: No Flee Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathFailureFleeTarget
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: noFleeBeacon
+      range: 3
+  blockedOrbitActorTemplate:
+    name: Blocked Orbit Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathFailureOrbitTarget
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: blockedOrbitBeacon
+      range: 10
+  alreadyAdjacentActorTemplate:
+    name: Already Adjacent Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathFailureSeekTarget
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: alreadyAdjacentBeacon
+      range: 3
+  mazeSeekingActorTemplate:
+    name: Maze Seeking Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathMazeSeek
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: mazeSeekBeaconTemplate
+      range: 12
+  mazeFleeingActorTemplate:
+    name: Maze Fleeing Actor
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathMazeFlee
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: target
+      label: target
+      targetTemplateId: mazeFleeBeaconTemplate
+      range: 12
+  clockwiseCloseOrbiterTemplate:
+    name: Clockwise Close Orbiter
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathOrbitClockwiseDistanceTwo
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: player
+      label: player
+      targetTemplateId: orbitPlayerTemplate
+      range: 12
+  anticlockwiseFarOrbiterTemplate:
+    name: Anticlockwise Far Orbiter
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: targetPathOrbitAnticlockwiseDistanceFour
+    actionStateDefaults:
+      facing: West
+    targetingRules:
+    - slot: 1
+      hint: player
+      label: player
+      targetTemplateId: orbitPlayerTemplate
+      range: 12
+presentations:
+  targetPathFailureLogRoom:
+    glyph: '#'
+    color: White
+  targetPathMazeRoom:
+    glyph: '#'
+    color: White
+  targetPathDualOrbitRoom:
+    glyph: '#'
+    color: White
+  targetPathBlocker:
+    glyph: x
+    color: White
+  missingCandidateBeacon:
+    glyph: '?'
+    color: White
+  offPlaneBeacon:
+    glyph: b
+    color: White
+  unreachableBeacon:
+    glyph: u
+    color: White
+  noFleeBeacon:
+    glyph: f
+    color: White
+  blockedOrbitBeacon:
+    glyph: q
+    color: White
+  alreadyAdjacentBeacon:
+    glyph: a
+    color: White
+  mazeWall:
+    glyph: x
+    color: White
+  mazeSeekBeaconTemplate:
+    glyph: s
+    color: Cyan
+  mazeFleeBeaconTemplate:
+    glyph: f
+    color: Green
+  orbitPlayerTemplate:
+    glyph: '@'
+    color: White
+  missingTargetActorTemplate:
+    glyph: m
+    color: White
+  offPlaneActorTemplate:
+    glyph: o
+    color: White
+  unreachableActorTemplate:
+    glyph: u
+    color: White
+  noFleeActorTemplate:
+    glyph: f
+    color: White
+  blockedOrbitActorTemplate:
+    glyph: q
+    color: White
+  alreadyAdjacentActorTemplate:
+    glyph: a
+    color: White
+  mazeSeekingActorTemplate:
+    glyph: S
+    color: Cyan
+  mazeFleeingActorTemplate:
+    glyph: F
+    color: Green
+  clockwiseCloseOrbiterTemplate:
+    glyph: c
+    color: DarkGreen
+  anticlockwiseFarOrbiterTemplate:
+    glyph: a
+    color: Earth
+actionPlans:
+  targetPathFailureSeekTarget:
+    id: targetPathFailureSeekTarget
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: target
+        targetSelf: false
+        pathMode: SeekAdjacency
+  targetPathFailureOffPlaneTarget:
+    id: targetPathFailureOffPlaneTarget
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetSelf: false
+        pathMode: SeekAdjacency
+  targetPathFailureFleeTarget:
+    id: targetPathFailureFleeTarget
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: target
+        targetSelf: false
+        pathMode: FleeAdjacency
+  targetPathFailureOrbitTarget:
+    id: targetPathFailureOrbitTarget
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: target
+        targetSelf: false
+        pathMode: Orbit
+        desiredDistance: 2
+        orbitDirection: Clockwise
+  targetPathMazeSeek:
+    id: targetPathMazeSeek
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: target
+        targetSelf: false
+        pathMode: SeekAdjacency
+  targetPathMazeFlee:
+    id: targetPathMazeFlee
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: target
+        targetSelf: false
+        pathMode: FleeAdjacency
+  targetPathOrbitClockwiseDistanceTwo:
+    id: targetPathOrbitClockwiseDistanceTwo
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: player
+        targetSelf: false
+        pathMode: Orbit
+        desiredDistance: 2
+        orbitDirection: Clockwise
+  targetPathOrbitAnticlockwiseDistanceFour:
+    id: targetPathOrbitAnticlockwiseDistanceFour
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: player
+        targetSelf: false
+        pathMode: Orbit
+        desiredDistance: 4
+        orbitDirection: Anticlockwise
+scenarios:
+  beta-canonical-target-path-failure-logs:
+    name: Canonical Target Path Failure Logs
+    scenarioRootEntityTemplateId: targetPathFailureLogRoom
+  beta-canonical-target-path-maze:
+    name: Canonical Target Path Maze
+    scenarioRootEntityTemplateId: targetPathMazeRoom
+  beta-canonical-target-path-dual-orbit:
+    name: Canonical Target Path Dual Orbit
+    scenarioRootEntityTemplateId: targetPathDualOrbitRoom

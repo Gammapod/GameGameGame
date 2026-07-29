@@ -163,6 +163,35 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsInvalidTargetPathMoveFields()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("targetPathMalformed"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove),
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove, PathMode: ActionPlanTargetPathMode.MaintainDistance),
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove, PathMode: ActionPlanTargetPathMode.Orbit, DesiredDistance: 2),
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove, PathMode: ActionPlanTargetPathMode.SeekAdjacency, DesiredDistance: 1),
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove, PathMode: ActionPlanTargetPathMode.FleeAdjacency, OrbitDirection: ActionPlanOrbitDirection.Clockwise),
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.TargetPathMove, PathMode: ActionPlanTargetPathMode.MaintainDistance, DesiredDistance: -1)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.StepIndex == 0 && diagnostic.Message.Contains("pathMode"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.StepIndex == 1 && diagnostic.Message.Contains("desiredDistance"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.StepIndex == 2 && diagnostic.Message.Contains("orbitDirection"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.StepIndex == 3 && diagnostic.Message.Contains("desiredDistance") && diagnostic.Message.Contains("not support"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.StepIndex == 4 && diagnostic.Message.Contains("orbitDirection") && diagnostic.Message.Contains("only"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.StepIndex == 5 && diagnostic.Message.Contains("non-negative"));
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingCreateEntityTemplateReference()
     {
         var registry = PrototypeContent.CreateRegistry()

@@ -225,6 +225,50 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
         onChanged?.Invoke();
     }
 
+    public void SetActionPlanBehaviorStepTargetPathMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanTargetPathMode? pathMode)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.TargetPathMove && pathMode is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only TargetPathMove steps support pathMode.");
+        }
+
+        step.PathMode = pathMode?.ToString();
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepDesiredDistance(ActionPlanTemplateId planId, int stepIndex, int? desiredDistance)
+    {
+        if (desiredDistance is < 0)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} desiredDistance must be non-negative; found {desiredDistance}.");
+        }
+
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.TargetPathMove && desiredDistance is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only TargetPathMove steps support desiredDistance.");
+        }
+
+        step.DesiredDistance = desiredDistance;
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepOrbitDirection(ActionPlanTemplateId planId, int stepIndex, ActionPlanOrbitDirection? orbitDirection)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.TargetPathMove && orbitDirection is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only TargetPathMove steps support orbitDirection.");
+        }
+
+        step.OrbitDirection = orbitDirection?.ToString();
+        onChanged?.Invoke();
+    }
+
     public void SetActionPlanBehaviorStepCosts(ActionPlanTemplateId planId, int stepIndex, IReadOnlyList<ActionStepCostDescriptor> costs)
     {
         foreach (var cost in costs)
@@ -345,6 +389,10 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
             {
                 DirectionMode = step.DirectionMode ?? ActionPlanMoveDirectionMode.Forward,
                 TransferDirection = step.TransferDirection ?? TransferDirection.TargetToActor
+            },
+            ActionPlanBehaviorStepKind.TargetPathMove => step with
+            {
+                PathMode = step.PathMode ?? ActionPlanTargetPathMode.SeekAdjacency
             },
             _ => step
         };

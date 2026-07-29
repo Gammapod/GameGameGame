@@ -20,6 +20,9 @@ internal sealed class ConsumerPlayModeConsole : Console
     private readonly SadConsoleDisplaySettings _displaySettings;
     private readonly SadConsoleComponentRenderer _renderer;
     private readonly ConnectorLineDrawCallRenderer _connectorRenderer = new();
+    private readonly GameplayCaptureRecorder _captureRecorder = new();
+    private readonly IGameplayCaptureSink _captureSink = new MonoGameGameplayCaptureSink();
+    private readonly Queue<int> _pendingCaptureTurns = new();
     private readonly ConsumerPlayModeScreen _screen;
     private ConsumerPlayModeLayout _layout;
     private ConnectorLineViewModel? _lastConnector;
@@ -47,13 +50,31 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
+        FlushPendingCaptures();
+
         if (_screen.HasActivePrompt)
         {
+            if (IsWaitKeyReleased(keyboard))
+            {
+                var submission = _screen.SubmitWait();
+                Redraw();
+                QueueCaptureAfterSuccessfulPlayerTurn(submission);
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.U))
+            {
+                _screen.UndoPreviousFrame();
+                Redraw();
+                return true;
+            }
+
             if (ReadDirection(keyboard) is { } promptDirection)
             {
                 if (_screen.ActivePromptAcceptsDirection(promptDirection))
                 {
-                    _screen.HandlePromptDirection(promptDirection);
+                    var outcome = _screen.HandlePromptDirection(promptDirection);
+                    QueueCaptureAfterSuccessfulPlayerTurn(outcome.Submission);
                 }
                 else
                 {
@@ -73,8 +94,9 @@ internal sealed class ConsumerPlayModeConsole : Console
 
             if (keyboard.IsKeyReleased(Keys.Enter))
             {
-                _screen.HandlePromptCommand(UiComponentCommand.Select);
+                var outcome = _screen.HandlePromptCommand(UiComponentCommand.Select);
                 Redraw();
+                QueueCaptureAfterSuccessfulPlayerTurn(outcome.Submission);
                 return true;
             }
 
@@ -95,14 +117,31 @@ internal sealed class ConsumerPlayModeConsole : Console
 
         if (keyboard.IsKeyReleased(Keys.Enter))
         {
-            _screen.SubmitDefaultAction();
+            var outcome = _screen.SubmitDefaultAction();
             Redraw();
+            QueueCaptureAfterSuccessfulPlayerTurn(outcome.Submission);
             return true;
         }
 
         if (ReadDirection(keyboard) is { } direction)
         {
-            _screen.SubmitMove(direction);
+            var submission = _screen.SubmitMove(direction);
+            Redraw();
+            QueueCaptureAfterSuccessfulPlayerTurn(submission);
+            return true;
+        }
+
+        if (IsWaitKeyReleased(keyboard))
+        {
+            var submission = _screen.SubmitWait();
+            Redraw();
+            QueueCaptureAfterSuccessfulPlayerTurn(submission);
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.U))
+        {
+            _screen.UndoPreviousFrame();
             Redraw();
             return true;
         }
@@ -116,6 +155,13 @@ internal sealed class ConsumerPlayModeConsole : Console
         if (keyboard.IsKeyReleased(Keys.F12))
         {
             _layout = _layout.WithDebugVisible(!_layout.DebugVisible);
+            Redraw();
+            return true;
+        }
+
+        if (keyboard.IsKeyReleased(Keys.F10))
+        {
+            ToggleCaptureRecording();
             Redraw();
             return true;
         }
@@ -177,6 +223,7 @@ internal sealed class ConsumerPlayModeConsole : Console
         {
             _screen.FooterText,
             _screen.LastActionStatus,
+            _captureRecorder.StatusText,
             $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {drawable.Width}x{drawable.Height}",
             $"Scenario: {_scenario.Name} ({_scenario.ScenarioId})"
         };
@@ -200,6 +247,60 @@ internal sealed class ConsumerPlayModeConsole : Console
         var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
         var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
         _connectorRenderer.Draw([_lastConnector], AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: false);
+    }
+
+    private void ToggleCaptureRecording()
+    {
+        try
+        {
+            if (_captureRecorder.IsRecording)
+            {
+                while (_pendingCaptureTurns.Count > 0)
+                {
+                    _captureRecorder.CaptureFrame(_pendingCaptureTurns.Dequeue(), _captureSink);
+                }
+
+                var result = _captureRecorder.Stop(_captureSink);
+                _screen.SetDebugStatus(result.Message);
+            }
+            else
+            {
+                var result = _captureRecorder.Start(_scenario.Name, _screen.WorldTurnNumber, _captureSink);
+                _screen.SetDebugStatus(result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            _screen.SetDebugStatus($"Capture failed: {ex.Message}");
+        }
+    }
+
+    private void QueueCaptureAfterSuccessfulPlayerTurn(GameplayRuntimeSubmission? submission)
+    {
+        if (!_captureRecorder.IsRecording || submission is not { Succeeded: true })
+        {
+            return;
+        }
+
+        _pendingCaptureTurns.Enqueue(_screen.WorldTurnNumber);
+    }
+
+    private void FlushPendingCaptures()
+    {
+        while (_pendingCaptureTurns.Count > 0)
+        {
+            try
+            {
+                var result = _captureRecorder.CaptureFrame(_pendingCaptureTurns.Dequeue(), _captureSink);
+                _screen.SetDebugStatus(result.Message);
+            }
+            catch (Exception ex)
+            {
+                _pendingCaptureTurns.Clear();
+                _screen.SetDebugStatus($"Capture failed: {ex.Message}");
+                break;
+            }
+        }
     }
 
     private void DrawBorderBuffer()
@@ -235,4 +336,9 @@ internal sealed class ConsumerPlayModeConsole : Console
         Keys.NumPad3 => GggDirection.SouthEast,
         _ => null
     };
+
+    internal static bool IsWaitKey(Keys key) => key is Keys.Space or Keys.D5 or Keys.NumPad5;
+
+    private static bool IsWaitKeyReleased(Keyboard keyboard) =>
+        keyboard.KeysReleased.Any(key => IsWaitKey(key.Key));
 }

@@ -75,7 +75,11 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
                         step.DirectionMode,
                         step.TransferDirection,
                         step.Costs,
-                        FormatCostSummary(step.Costs));
+                        FormatCostSummary(step.Costs),
+                        step.PathMode,
+                        step.DesiredDistance,
+                        step.OrbitDirection,
+                        FormatTargetPathSummary(step));
                 })
                 .ToList();
         }
@@ -97,6 +101,27 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
         document.EntityTemplates.TryGetValue(templateId, out var template) && !string.IsNullOrWhiteSpace(template.Name)
             ? template.Name
             : templateId;
+
+    private static string? FormatTargetPathSummary(ActionPlanBehaviorStepDescriptor step)
+    {
+        if (step.Kind != ActionPlanBehaviorStepKind.TargetPathMove || step.PathMode is not { } pathMode)
+        {
+            return null;
+        }
+
+        var parts = new List<string> { $"Path: {pathMode}" };
+        if (step.DesiredDistance is { } desiredDistance)
+        {
+            parts.Add($"desiredDistance={desiredDistance}");
+        }
+
+        if (step.OrbitDirection is { } orbitDirection)
+        {
+            parts.Add($"orbitDirection={orbitDirection}");
+        }
+
+        return string.Join("; ", parts);
+    }
 
     private IReadOnlyList<string> GetActionPlanStateHints(ActionPlanDescriptor descriptor, EntityTemplateId? entityTemplateId)
     {
