@@ -256,7 +256,7 @@ internal sealed class ConsumerPlayModeScreen
         return ActorPovPlayScreenModelBuilder.Build(
             world,
             actorId,
-            Session.ActionPlans,
+            ProjectionActionPlans(),
             drawableBounds,
             ResolveInspectionAppearance,
             GetActionPlanDescriptorForEntity,
@@ -603,10 +603,10 @@ internal sealed class ConsumerPlayModeScreen
         ControlledActorProjection = _panelProjection.Project(
             world,
             actorId,
-            Session.ActionPlans,
+            ProjectionActionPlans(),
             actorId);
         CurrentPlaceProjection = ControlledActorProjection.PointOfView?.CurrentPlace is { } currentPlace
-            ? _panelProjection.Project(world, currentPlace.EntityId, Session.ActionPlans, actorId)
+            ? _panelProjection.Project(world, currentPlace.EntityId, ProjectionActionPlans(), actorId)
             : null;
         CurrentSpaceView = CurrentPlaceProjection?.InventoryGrid is not null
             ? InventorySpaceViewModel.FromProjection(
@@ -635,7 +635,7 @@ internal sealed class ConsumerPlayModeScreen
 
         foreach (var row in CurrentPlaceProjection.Contents.Where(row => row.EntityId != actorId))
         {
-            var projection = _panelProjection.Project(world, row.EntityId, Session!.ActionPlans, actorId);
+            var projection = _panelProjection.Project(world, row.EntityId, ProjectionActionPlans(), actorId);
             if (projection.InventoryGrid is not null)
             {
                 return projection;
@@ -837,7 +837,7 @@ internal sealed class ConsumerPlayModeScreen
     {
         var actorId = _sessionController?.PlayerEntityId ?? Session!.PlayerEntityId;
         var world = _sessionController?.World ?? Session!.World;
-        var projection = _panelProjection.Project(world, actorId, Session!.ActionPlans, actorId);
+        var projection = _panelProjection.Project(world, actorId, ProjectionActionPlans(), actorId);
         return InventoryPanelFromProjection("0.3-player-inventory-prompt", title, projection, bounds, selected, focused, rows);
     }
 
@@ -930,8 +930,8 @@ internal sealed class ConsumerPlayModeScreen
     {
         var actorId = _sessionController?.PlayerEntityId ?? Session!.PlayerEntityId;
         var world = _sessionController?.World ?? Session!.World;
-        var actorProjection = _panelProjection.Project(world, actorId, Session!.ActionPlans, actorId);
-        var counterpartyProjection = _panelProjection.Project(world, counterpartyId, Session.ActionPlans, actorId);
+        var actorProjection = _panelProjection.Project(world, actorId, ProjectionActionPlans(), actorId);
+        var counterpartyProjection = _panelProjection.Project(world, counterpartyId, ProjectionActionPlans(), actorId);
         var validItems = items.Where(item => item.CanExecute).ToList();
         var selectedItem = validItems[Math.Clamp(prompt.FocusedIndex, 0, Math.Max(0, validItems.Count - 1))];
         var width = Math.Min(Math.Max(48, drawableBounds.Width), 78);
@@ -1048,6 +1048,9 @@ internal sealed class ConsumerPlayModeScreen
         return world is not null && world.Entities.TryGetValue(entityId, out var entity) ? entity.Name : entityId.Value;
     }
 
+    private IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans() =>
+        _sessionController?.ProjectionActionPlans ?? Session?.ActionPlans ?? new Dictionary<EntityId, IEntityActionPlan>();
+
     private string FormatDestination(PlaneCoord destination)
     {
         if ((_sessionController?.PlayerEntityId ?? Session?.PlayerEntityId) is { } actorId)
@@ -1105,7 +1108,10 @@ internal sealed class ConsumerPlayModeScreen
 
     private EntityInspectionAppearance ResolveInspectionAppearance(EntityId entityId)
     {
-        if (Session?.Registry.TryGetTemplateIdForEntity(entityId, out var templateId) == true
+        var world = _sessionController?.World ?? Session?.World;
+        if (Session is not null
+            && world is not null
+            && Session.Registry.TryGetTemplateIdForEntity(world, entityId, out var templateId)
             && Session.Registry.Presentations.TryGetValue(templateId, out var presentation))
         {
             return presentation.ToInspectionAppearance();
@@ -1116,13 +1122,19 @@ internal sealed class ConsumerPlayModeScreen
 
     private ActionPlanDescriptor? GetActionPlanDescriptorForEntity(EntityId entityId)
     {
-        if (Session is null || !Session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        var world = _sessionController?.World ?? Session?.World;
+        if (Session is null
+            || world is null
+            || !Session.Registry.TryGetTemplateIdForEntity(world, entityId, out var templateId))
         {
             return null;
         }
 
         var template = Session.Registry.GetEntityTemplate(templateId);
-        return template.DefaultActionPlanId is { } planId
+        var defaultPlanId = world.GetDefaultActionPlanId(entityId) is { } runtimePlanId
+            ? new ActionPlanTemplateId(runtimePlanId.Value)
+            : template.DefaultActionPlanId;
+        return defaultPlanId is { } planId
             && Session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
                 ? descriptor
                 : null;

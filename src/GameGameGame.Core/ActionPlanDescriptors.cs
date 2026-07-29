@@ -93,7 +93,15 @@ public enum ActionPlanBehaviorStepKind
     ApplyPostPlan,
     TransformAdjacentToInventory,
     TransformInventoryToAdjacent,
-    Transfer
+    Transfer,
+    CreateEntity,
+    PolymorphTarget
+}
+
+public enum CreateEntityPlacement
+{
+    AdjacentOpen,
+    Facing
 }
 
 public enum ActionPlanMoveDirectionMode
@@ -123,7 +131,9 @@ public sealed record ActionPlanBehaviorStepDescriptor(
     bool TargetSelf = false,
     ActionPlanId? PlanId = null,
     ActionPlanMoveDirectionMode? DirectionMode = null,
-    TransferDirection? TransferDirection = null);
+    TransferDirection? TransferDirection = null,
+    string? TemplateId = null,
+    CreateEntityPlacement? CreatePlacement = null);
 
 public enum ActionPlanPrimitiveKind
 {

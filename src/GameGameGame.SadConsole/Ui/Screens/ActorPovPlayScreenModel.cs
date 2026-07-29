@@ -135,7 +135,7 @@ internal static class ActorPovPlayScreenModelBuilder
 
     private static Func<EntityId, EntityInspectionAppearance> ResolveInspectionAppearance(PlayableScenarioSession session) => entityId =>
     {
-        if (session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId)
+        if (session.Registry.TryGetTemplateIdForEntity(session.World, entityId, out var templateId)
             && session.Registry.Presentations.TryGetValue(templateId, out var presentation))
         {
             return presentation.ToInspectionAppearance();
@@ -146,13 +146,16 @@ internal static class ActorPovPlayScreenModelBuilder
 
     private static Func<EntityId, ActionPlanDescriptor?> ResolveActionPlanDescriptor(PlayableScenarioSession session) => entityId =>
     {
-        if (!session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        if (!session.Registry.TryGetTemplateIdForEntity(session.World, entityId, out var templateId))
         {
             return null;
         }
 
         var template = session.Registry.GetEntityTemplate(templateId);
-        return template.DefaultActionPlanId is { } planId
+        var defaultPlanId = session.World.GetDefaultActionPlanId(entityId) is { } runtimePlanId
+            ? new ActionPlanTemplateId(runtimePlanId.Value)
+            : template.DefaultActionPlanId;
+        return defaultPlanId is { } planId
             && session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
                 ? descriptor
                 : null;

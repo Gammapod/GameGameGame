@@ -66,7 +66,7 @@ internal sealed class GameplayMockScreen
 
     private EntityInspectionAppearance ResolveInspectionAppearance(EntityId entityId)
     {
-        if (_session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId)
+        if (_session.Registry.TryGetTemplateIdForEntity(World, entityId, out var templateId)
             && _session.Registry.Presentations.TryGetValue(templateId, out var presentation))
         {
             return presentation.ToInspectionAppearance();
@@ -776,7 +776,7 @@ internal sealed class GameplayMockScreen
 
     private IReadOnlyList<string> BuildTargetingRuleRows(EntityId entityId)
     {
-        if (!_session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        if (!_session.Registry.TryGetTemplateIdForEntity(World, entityId, out var templateId))
         {
             return ["targeting rules: template unavailable"];
         }
@@ -801,13 +801,16 @@ internal sealed class GameplayMockScreen
 
     private IReadOnlyList<string> BuildActionPlanRows(EntityId entityId)
     {
-        if (!_session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        if (!_session.Registry.TryGetTemplateIdForEntity(World, entityId, out var templateId))
         {
             return ["action plan: template unavailable"];
         }
 
         var template = _session.Registry.GetEntityTemplate(templateId);
-        if (template.DefaultActionPlanId is not { } planId || !_session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var plan))
+        var defaultPlanId = World.GetDefaultActionPlanId(entityId) is { } runtimePlanId
+            ? new ActionPlanTemplateId(runtimePlanId.Value)
+            : template.DefaultActionPlanId;
+        if (defaultPlanId is not { } planId || !_session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var plan))
         {
             return ["action plan: none"];
         }

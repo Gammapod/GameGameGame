@@ -188,6 +188,18 @@ public static class ActionStepCatalog
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity), State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity), State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
         new(
+            ActionPlanBehaviorStepKind.CreateEntity,
+            "Create Entity",
+            "Creates a new runtime entity from an authored template. Defaults to the first open adjacent cell and can also create in a resolved facing direction when create placement is Facing.",
+            RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
+            DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
+        new(
+            ActionPlanBehaviorStepKind.PolymorphTarget,
+            "Polymorph Target",
+            "Reads the persistent Target and changes that entity to another authored template while preserving runtime identity, facing, inventory dimensions, current inventory, and target state.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
+        new(
             ActionPlanBehaviorStepKind.ApplyPrePlan,
             "Apply Pre-Plan",
             "Reads the persistent Target and applies the referenced Action Plan as that target's one-turn Pre override, replacing any existing Pre override on the target.",

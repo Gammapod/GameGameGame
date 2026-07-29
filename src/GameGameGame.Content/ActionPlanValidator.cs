@@ -5,6 +5,7 @@ namespace GameGameGame.Content;
 internal static class ActionPlanValidator
 {
     public static void Validate(
+        IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates,
         IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> actionPlanTemplates,
         List<string> errors,
         List<ContentDiagnostic> diagnostics)
@@ -17,7 +18,7 @@ internal static class ActionPlanValidator
 
             ValidateActionPlanShape(diagnostics, templateId, descriptor);
             ValidateBehaviorTargetSlots(diagnostics, templateId, descriptor);
-            ValidateBehaviorStepFields(diagnostics, templateId, descriptor);
+            ValidateBehaviorStepFields(diagnostics, templateId, descriptor, entityTemplates.Keys.ToHashSet());
             ValidateBehaviorPlanReferences(diagnostics, templateId, descriptor, planIds);
             ValidatePrimitiveFallback(diagnostics, templateId, descriptor, planIds);
 
@@ -127,7 +128,8 @@ internal static class ActionPlanValidator
     private static void ValidateBehaviorStepFields(
         List<ContentDiagnostic> diagnostics,
         ActionPlanTemplateId actionPlanTemplateId,
-        ActionPlanDescriptor descriptor)
+        ActionPlanDescriptor descriptor,
+        HashSet<EntityTemplateId> entityTemplateIds)
     {
         if (descriptor.Behavior is not { } behavior)
         {
@@ -162,6 +164,40 @@ internal static class ActionPlanValidator
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionStepField,
                     $"Action plan {descriptor.Id} action step {step.Kind} requires transferDirection.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+
+            if (step.Kind is ActionPlanBehaviorStepKind.CreateEntity or ActionPlanBehaviorStepKind.PolymorphTarget)
+            {
+                if (string.IsNullOrWhiteSpace(step.TemplateId))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingTargetTemplateReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} requires templateId.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: index));
+                }
+                else if (!entityTemplateIds.Contains(new EntityTemplateId(step.TemplateId)))
+                {
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingTargetTemplateReference,
+                        $"Action plan {descriptor.Id} action step {step.Kind} references missing template {step.TemplateId}.",
+                        actionPlanTemplateId: actionPlanTemplateId,
+                        actionPlanId: descriptor.Id,
+                        stepIndex: index));
+                }
+            }
+
+            if (step.Kind == ActionPlanBehaviorStepKind.CreateEntity
+                && step.CreatePlacement == CreateEntityPlacement.Facing
+                && step.DirectionMode is null)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepField,
+                    $"Action plan {descriptor.Id} action step {step.Kind} with Facing placement requires directionMode.",
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: descriptor.Id,
                     stepIndex: index));

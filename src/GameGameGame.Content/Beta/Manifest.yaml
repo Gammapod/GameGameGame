@@ -344,6 +344,13 @@ sections:
     status: active-delta
     tags: [delta, topology, movement, containment, player-interaction, spike]
     source: docs/Plans/Topology-Service-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
+    scenarioId: delta-create-destroy-polymorph-flagship-room
+    name: Create Destroy Polymorph Flagship Room
+    description: User-facing Delta flagship room for template-backed CreateEntity, DestroyTarget, and PolymorphTarget; reviewers should observe the rat king at (6,4) spawning rats east with Facing/Forward placement, rats walking toward the snake at (10,4), the snake destroying adjacent rats, and the egg/caterpillar/cocoon/butterfly self-polymorph loop.
+    status: active-delta
+    tags: [delta, entity-lifecycle, create, destroy, polymorph, flagship]
+    source: docs/Plans/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md
 - id: user
   name: User-Generated Scenarios
   description: Frontend-editor-authored scenarios should be registered here or in a user manifest rather than mixed with packaged Beta/Delta content.

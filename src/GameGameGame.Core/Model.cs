@@ -76,6 +76,19 @@ public enum EntityTopologyPolicy
     ConnectsInwardAndOutward
 }
 
+public sealed record RuntimeEntityTemplate(
+    string TemplateId,
+    string Name,
+    int InventoryWidth,
+    int InventoryHeight,
+    int Bulk,
+    int Aperture,
+    ActionPlanId? DefaultActionPlanId = null,
+    Direction? InitialFacing = null,
+    EntityEnterPolicy? EnterPolicy = null,
+    EntityExitPolicy? ExitPolicy = null,
+    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None);
+
 public static class DirectionMath
 {
     public static Direction[] AllDirections { get; } =
@@ -124,7 +137,8 @@ public sealed record Entity(
     int Aperture,
     EntityEnterPolicy? EnterPolicy = null,
     EntityExitPolicy? ExitPolicy = null,
-    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None)
+    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None,
+    string? TemplateId = null)
 {
     public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
 

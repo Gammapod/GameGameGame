@@ -1003,7 +1003,7 @@ internal sealed class SadConsoleEditorContext
         }
 
         var entityId = nodes[Math.Clamp(SelectedPreviewEntityIndex, 0, nodes.Count - 1)].EntityId;
-        if (!_cachedPreview.Session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        if (!_cachedPreview.Session.Registry.TryGetTemplateIdForEntity(_cachedPreview.Session.World, entityId, out var templateId))
         {
             return SadConsoleEditorSourceJumpResult.Failure("Source unknown for selected runtime entity");
         }
@@ -2888,8 +2888,10 @@ internal static class SadConsoleEditorViewBuilder
             {
                 var coord = new PlaneCoord(planeId, new GridCoord(x, y));
                 chars[x] = session.World.GetOccupant(coord) is { } occupant
-                    ? session.Registry.GetPresentationForEntity(occupant).Glyph
-                    : '.';
+                    && session.Registry.TryGetTemplateIdForEntity(session.World, occupant, out var templateId)
+                    && session.Registry.Presentations.TryGetValue(templateId, out var presentation)
+                        ? presentation.Glyph
+                        : '.';
             }
 
             yield return new string(chars);

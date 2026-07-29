@@ -53,6 +53,24 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeCurrentSpaceUsesRuntimeTemplatePresentationWhenEntityPolymorphs()
+    {
+        var (path, session) = LifecycleFlagshipSession();
+        var eggId = new EntityId("lifecycleEgg");
+        session.World.Entities[eggId] = session.World.Entities[eggId] with
+        {
+            Name = "Butterfly",
+            TemplateId = "lifecycleButterfly"
+        };
+
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+
+        var visual = Assert.Single(screen.CurrentSpaceView!.Entities, entity => entity.EntityId == eggId);
+        Assert.Equal('c', visual.Primary.Glyph);
+        Assert.Equal(PresentationColor.Green, visual.Primary.Foreground);
+    }
+
+    [Fact]
     public void ConsumerPlayModeCanOverlayDebugLabelsWithoutMovingGridCells()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
@@ -479,6 +497,17 @@ public sealed class ConsumerPlayModeScreenTests
             "Debug",
             "CanonicalDebugRooms.yaml");
         return (path, PlayableScenarioLauncher.CreateFromFile(path, "canonical-debug-size-calibration-room"));
+    }
+
+    private static (string Path, PlayableScenarioSession Session) LifecycleFlagshipSession()
+    {
+        var path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Content",
+            "Beta",
+            "EntityLifecycle",
+            "CreateDestroyPolymorphShowcase.yaml");
+        return (path, PlayableScenarioLauncher.CreateFromFile(path, "delta-create-destroy-polymorph-flagship-room"));
     }
 
     private static void AssertInside(SadConsoleRect outer, SadConsoleRect inner)

@@ -22,6 +22,10 @@ public sealed class WorldState
 
     public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
 
+    public Dictionary<string, RuntimeEntityTemplate> RuntimeEntityTemplates { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<EntityId, ActionPlanId> _defaultActionPlanIds = [];
+
     public WorldState Clone()
     {
         var clone = new WorldState();
@@ -73,6 +77,18 @@ public sealed class WorldState
         foreach (var (entityId, state) in source.ActionStates)
         {
             ActionStates[entityId] = CloneActionState(state);
+        }
+
+        RuntimeEntityTemplates.Clear();
+        foreach (var (templateId, template) in source.RuntimeEntityTemplates)
+        {
+            RuntimeEntityTemplates[templateId] = template;
+        }
+
+        _defaultActionPlanIds.Clear();
+        foreach (var (entityId, planId) in source._defaultActionPlanIds)
+        {
+            _defaultActionPlanIds[entityId] = planId;
         }
     }
 
@@ -283,6 +299,15 @@ public sealed class WorldState
         }
     }
 
+    public void SetDefaultActionPlanId(EntityId entityId, ActionPlanId actionPlanId) =>
+        _defaultActionPlanIds[entityId] = actionPlanId;
+
+    public ActionPlanId? GetDefaultActionPlanId(EntityId entityId) =>
+        _defaultActionPlanIds.TryGetValue(entityId, out var actionPlanId) ? actionPlanId : null;
+
+    public void ClearDefaultActionPlanId(EntityId entityId) =>
+        _defaultActionPlanIds.Remove(entityId);
+
     public NodeId AddNode(PlaneId planeId, GridCoord coord)
     {
         var nodeId = new NodeId($"{planeId}:{coord.X},{coord.Y}");
@@ -375,6 +400,7 @@ public sealed class WorldState
         Occupancy.Remove(entity.OccupiedNodeId);
         Entities.Remove(entityId);
         ActionStates.Remove(entityId);
+        _defaultActionPlanIds.Remove(entityId);
         destroyed.Add(entityId);
     }
 

@@ -48,8 +48,11 @@ internal sealed class SadConsoleShell : Console
         _catalog = startup.Catalog;
         _message = startup.Error ?? "Enter launches. Up/Down selects. Esc quits.";
         _panelProjection = new EntityPanelProjectionService(entityId =>
-            _session?.Registry.GetPresentationForEntity(entityId).ToInspectionAppearance()
-            ?? new EntityInspectionAppearance('?', GggColor.Gray));
+            _session is { } session
+            && session.Registry.TryGetTemplateIdForEntity(session.World, entityId, out var templateId)
+            && session.Registry.Presentations.TryGetValue(templateId, out var presentation)
+                ? presentation.ToInspectionAppearance()
+                : new EntityInspectionAppearance('?', GggColor.Gray));
         _affordances = new ControlledActorAffordanceService(_movement);
         _sessionViewBuilder = new SadConsoleSessionViewBuilder(_panelProjection, _affordances);
 

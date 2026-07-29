@@ -152,6 +152,56 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsCreateEntityAndPolymorphTargetTemplateFields()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              rat:
+                name: Rat
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+              egg:
+                name: Egg
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              rat:
+                glyph: r
+                color: Gray
+              egg:
+                glyph: e
+                color: Yellow
+            actionPlans:
+              lifecycle:
+                id: lifecycle
+                behavior:
+                  steps:
+                    - kind: CreateEntity
+                      templateId: rat
+                      createPlacement: Facing
+                      directionMode: Forward
+                    - kind: PolymorphTarget
+                      targetSelf: true
+                      templateId: egg
+            """);
+
+        var steps = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("lifecycle")).Behavior!.Steps;
+
+        Assert.Equal(ActionPlanBehaviorStepKind.CreateEntity, steps[0].Kind);
+        Assert.Equal("rat", steps[0].TemplateId);
+        Assert.Equal(CreateEntityPlacement.Facing, steps[0].CreatePlacement);
+        Assert.Equal(ActionPlanMoveDirectionMode.Forward, steps[0].DirectionMode);
+        Assert.Equal(ActionPlanBehaviorStepKind.PolymorphTarget, steps[1].Kind);
+        Assert.True(steps[1].TargetSelf);
+        Assert.Equal("egg", steps[1].TemplateId);
+    }
+
+    [Fact]
     public void YamlContentLoaderMaterializesBulkAndApertureMetadata()
     {
         var registry = YamlContentLoader.LoadRegistry(

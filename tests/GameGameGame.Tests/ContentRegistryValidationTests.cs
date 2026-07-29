@@ -163,6 +163,72 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsMissingCreateEntityTemplateReference()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("createMissingTemplate"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.CreateEntity, TemplateId: "missingRat")
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingTargetTemplateReference);
+        Assert.Equal(new ActionPlanId("createMissingTemplate"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("missingRat", diagnostic.Message);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsMissingPolymorphTargetTemplateReference()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("polymorphMissingTemplate"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PolymorphTarget, TargetSelf: true, TemplateId: "missingButterfly")
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingTargetTemplateReference);
+        Assert.Equal(new ActionPlanId("polymorphMissingTemplate"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("missingButterfly", diagnostic.Message);
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsCreateEntityFacingPlacementMissingDirectionMode()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("createFacingMissingDirection"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(
+                            ActionPlanBehaviorStepKind.CreateEntity,
+                            TemplateId: PrototypeContent.RockTemplateId.Value,
+                            CreatePlacement: CreateEntityPlacement.Facing)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.Message.Contains("directionMode"));
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingApplyPrePlanReference()
     {
         var missingPlanId = new ActionPlanId("missingFear");

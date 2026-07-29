@@ -9,9 +9,11 @@ internal sealed class GameplaySessionController
     private readonly ControlledActorCommandService _commands;
     private readonly ActionChoiceService _actionChoices;
     private readonly InitiativePlayerChoiceStepper _initiativeStepper;
-    private readonly IReadOnlyList<EntityId> _actorOrder;
-    private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _automaticActionPlans;
+    private readonly DynamicScenarioActionPlanSynchronizer _actionPlanSynchronizer = new();
     private readonly IReadOnlyDictionary<EntityId, IEntityActionPlan> _emptyActionPlans = new Dictionary<EntityId, IEntityActionPlan>();
+    private readonly Dictionary<EntityId, IEntityActionPlan> _runtimeActionPlans;
+    private IReadOnlyList<EntityId> _actorOrder = [];
+    private IReadOnlyDictionary<EntityId, IEntityActionPlan> _automaticActionPlans = new Dictionary<EntityId, IEntityActionPlan>();
     private SimulationHistorySession _history;
     private int _initiativeCursor;
     private int _frameIndex;
@@ -20,12 +22,7 @@ internal sealed class GameplaySessionController
     public GameplaySessionController(PlayableScenarioSession session)
     {
         Session = session;
-        _actorOrder = session.ActorOrder.Count > 0
-            ? session.ActorOrder.Select(actor => actor.EntityId).ToList()
-            : session.ActionPlans.Keys.Append(session.PlayerEntityId).Distinct().ToList();
-        _automaticActionPlans = session.ActionPlans
-            .Where(entry => session.World.GetActionControlSource(entry.Key) != EntityControlSource.PlayerChoice)
-            .ToDictionary(entry => entry.Key, entry => entry.Value);
+        _runtimeActionPlans = new Dictionary<EntityId, IEntityActionPlan>(session.ActionPlans);
         _activeControlledActorId = session.PlayerEntityId;
         _commands = new ControlledActorCommandService(
             _movement,
@@ -38,6 +35,7 @@ internal sealed class GameplaySessionController
             _activeControlledActorId,
             session.ActivePlaneId,
             session.ActiveContainerEntityId);
+        RefreshRuntimeActorFacts();
         AdvanceUntilPlayerChoice(0);
         RefreshDisplayTargets();
         RefreshActionChoiceRequest();
@@ -50,20 +48,23 @@ internal sealed class GameplaySessionController
     public int FrameIndex => _frameIndex;
     public ActionChoiceRequest? CurrentActionChoiceRequest { get; private set; }
     public ActionLogProjection? ActionLog { get; private set; }
-    public IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => Session.ActionPlans;
+    public IReadOnlyDictionary<EntityId, IEntityActionPlan> ProjectionActionPlans => _runtimeActionPlans;
 
     public IReadOnlyList<ActionPlanBehaviorStepDescriptor> AvailablePlayerActionSteps() =>
         GetActionPlanDescriptorForEntity(_activeControlledActorId)?.Behavior?.Steps ?? [];
 
     public ActionPlanDescriptor? GetActionPlanDescriptorForEntity(EntityId entityId)
     {
-        if (!Session.Registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        if (!Session.Registry.TryGetTemplateIdForEntity(World, entityId, out var templateId))
         {
             return null;
         }
 
         var template = Session.Registry.GetEntityTemplate(templateId);
-        return template.DefaultActionPlanId is { } planId
+        var defaultPlanId = World.GetDefaultActionPlanId(entityId) is { } runtimePlanId
+            ? new ActionPlanTemplateId(runtimePlanId.Value)
+            : template.DefaultActionPlanId;
+        return defaultPlanId is { } planId
             && Session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor)
                 ? descriptor
                 : null;
@@ -240,6 +241,7 @@ internal sealed class GameplaySessionController
 
     private void AdvanceUntilPlayerChoice(int startIndex)
     {
+        RefreshRuntimeActorFacts();
         if (_actorOrder.Count == 0)
         {
             CurrentActionChoiceRequest = null;
@@ -267,6 +269,7 @@ internal sealed class GameplaySessionController
             _history.RecordActorInterval(result.ActorLogs, activePlaneId, activeContainerId);
         }
 
+        RefreshRuntimeActorFacts();
         _initiativeCursor = result.NextActorIndex;
         if (result.Request is { } request)
         {
@@ -324,14 +327,50 @@ internal sealed class GameplaySessionController
 
     private void RefreshAfterRuntimeSubmission()
     {
+        RefreshRuntimeActorFacts();
         ActionLog = ActionLogProjection.FromHistory(_history);
         RefreshDisplayTargets();
         RefreshActionChoiceRequest();
     }
 
+    private void RefreshRuntimeActorFacts()
+    {
+        _actionPlanSynchronizer.SynchronizeInPlace(World, Session.Registry, _runtimeActionPlans);
+        var refreshedActorOrder = ScenarioInitiativeOrderService
+            .GetScenarioActorsInInitiativeOrder(World, _runtimeActionPlans, Session.ActiveContainerEntityId, Session.ActivePlaneId)
+            .Select(actor => actor.EntityId)
+            .ToList();
+        if (Session.ActorOrder.Count > 0)
+        {
+            var ordered = Session.ActorOrder
+                .Select(actor => actor.EntityId)
+                .Where(entityId => World.Entities.ContainsKey(entityId))
+                .ToList();
+            ordered.AddRange(refreshedActorOrder.Where(entityId => !ordered.Contains(entityId)));
+            _actorOrder = ordered;
+        }
+        else
+        {
+            _actorOrder = refreshedActorOrder;
+        }
+
+        if (_actorOrder.Count == 0)
+        {
+            _actorOrder = _runtimeActionPlans.Keys.Append(Session.PlayerEntityId).Distinct().ToList();
+        }
+
+        _automaticActionPlans = _runtimeActionPlans
+            .Where(entry => World.GetActionControlSource(entry.Key) != EntityControlSource.PlayerChoice)
+            .ToDictionary(entry => entry.Key, entry => entry.Value);
+        if (_actorOrder.Count > 0)
+        {
+            _initiativeCursor = ((_initiativeCursor % _actorOrder.Count) + _actorOrder.Count) % _actorOrder.Count;
+        }
+    }
+
     private void RefreshDisplayTargets()
     {
-        foreach (var entityId in Session.ActionPlans.Keys)
+        foreach (var entityId in _runtimeActionPlans.Keys)
         {
             TargetingService.RefreshTargets(World, Session.Registry, entityId);
         }

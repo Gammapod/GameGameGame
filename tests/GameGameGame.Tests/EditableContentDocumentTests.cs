@@ -110,6 +110,55 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentRoundTripsCreateEntityAndPolymorphTargetFields()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              rat:
+                name: Rat
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+              egg:
+                name: Egg
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              rat:
+                glyph: r
+                color: Gray
+              egg:
+                glyph: e
+                color: Yellow
+            actionPlans:
+              lifecycle:
+                id: lifecycle
+                behavior:
+                  steps:
+                    - kind: CreateEntity
+                      templateId: rat
+                      createPlacement: Facing
+                      directionMode: East
+                    - kind: PolymorphTarget
+                      targetSelf: true
+                      templateId: egg
+            """);
+
+        var reloaded = EditableContentDocument.LoadYaml(document.SaveYaml()).ToRegistry();
+        var steps = reloaded.ActionPlanDescriptors[new ActionPlanTemplateId("lifecycle")].Behavior!.Steps;
+
+        Assert.Equal("rat", steps[0].TemplateId);
+        Assert.Equal(CreateEntityPlacement.Facing, steps[0].CreatePlacement);
+        Assert.Equal(ActionPlanMoveDirectionMode.East, steps[0].DirectionMode);
+        Assert.Equal("egg", steps[1].TemplateId);
+        Assert.True(steps[1].TargetSelf);
+    }
+
+    [Fact]
     public void EditableContentDocumentCanonicalizesLegacyActionPlanVariableFieldsOnSave()
     {
         var document = EditableContentDocument.LoadYaml(

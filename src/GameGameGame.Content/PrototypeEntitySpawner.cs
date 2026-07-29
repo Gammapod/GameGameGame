@@ -12,6 +12,11 @@ internal sealed class PrototypeEntitySpawner(
         var template = entityTemplates[templateId];
 
         var result = SpawnEntity(world, template, options);
+        world.Entities[result.EntityId] = world.Entities[result.EntityId] with { TemplateId = templateId.Value };
+        if (template.DefaultActionPlanId is { } defaultActionPlanId)
+        {
+            world.SetDefaultActionPlanId(result.EntityId, new ActionPlanId(defaultActionPlanId.Value));
+        }
         registerTemplateAssignment(result.EntityId, templateId);
 
         return result;

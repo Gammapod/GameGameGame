@@ -44,7 +44,7 @@ public sealed class GameplayMockScreenTests
     }
 
     [Fact]
-    public void FrameDoesNotThrowWhenCurrentPlaceLacksRegistryTemplateAssignment()
+    public void FrameUsesWorldTemplateWhenCurrentPlaceLacksRegistryTemplateAssignment()
     {
         var session = CreateGameplayMockSession();
         RemoveTemplateAssignment(session.Registry, session.ActiveContainerEntityId);
@@ -54,9 +54,9 @@ public sealed class GameplayMockScreenTests
 
         Assert.Equal(session.ActiveContainerEntityId, frame.PlayerProjection.PointOfView?.CurrentPlace?.EntityId);
         Assert.Equal(session.ActiveContainerEntityId, frame.CurrentPlaceProjection?.EntityId);
-        Assert.Equal('?', frame.PlayerProjection.PointOfView?.CurrentPlace?.Glyph);
+        Assert.Equal('#', frame.PlayerProjection.PointOfView?.CurrentPlace?.Glyph);
         Assert.Equal(PresentationColor.Gray, frame.PlayerProjection.PointOfView?.CurrentPlace?.Color);
-        Assert.Equal('?', frame.CurrentPlaceProjection?.Glyph);
+        Assert.Equal('#', frame.CurrentPlaceProjection?.Glyph);
         Assert.Equal(PresentationColor.Gray, frame.CurrentPlaceProjection?.Color);
     }
 
@@ -253,6 +253,32 @@ public sealed class GameplayMockScreenTests
         Assert.True(result.Succeeded, result.FailureText);
         Assert.Equal(1, controller.FrameIndex);
         Assert.Equal(initialCrateLocation, session.World.GetEntityLocation(controlledCrateId));
+    }
+
+    [Fact]
+    public void GameplaySessionControllerSynchronizesCreatedActorActionPlanAfterAutomaticCreate()
+    {
+        var session = LifecycleFlagshipSession();
+
+        var controller = new GameplaySessionController(session);
+
+        var createdRatId = new EntityId("lifecyclerat-1");
+        Assert.True(controller.World.Entities.ContainsKey(createdRatId));
+        Assert.True(controller.ProjectionActionPlans.ContainsKey(createdRatId));
+    }
+
+    [Fact]
+    public void GameplaySessionControllerUsesPolymorphedActionPlanOnNextAutomaticCycle()
+    {
+        var session = LifecycleFlagshipSession();
+        var lifecycleId = new EntityId("lifecycleEgg");
+        var controller = new GameplaySessionController(session);
+        Assert.Equal("lifecycleCaterpillar", controller.World.Entities[lifecycleId].TemplateId);
+
+        var result = controller.SubmitWait();
+
+        Assert.True(result.Succeeded, result.FailureText);
+        Assert.Equal("lifecycleCocoon", controller.World.Entities[lifecycleId].TemplateId);
     }
 
     [Fact]
@@ -949,6 +975,17 @@ public sealed class GameplayMockScreenTests
         Assert.NotNull(field);
         var assignments = Assert.IsType<Dictionary<EntityId, EntityTemplateId>>(field.GetValue(registry));
         Assert.True(assignments.Remove(entityId));
+    }
+
+    private static PlayableScenarioSession LifecycleFlagshipSession()
+    {
+        var path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Content",
+            "Beta",
+            "EntityLifecycle",
+            "CreateDestroyPolymorphShowcase.yaml");
+        return PlayableScenarioLauncher.CreateFromFile(path, "delta-create-destroy-polymorph-flagship-room");
     }
 
     private static string FormatEntityId(EntityId entityId) => entityId.Value;

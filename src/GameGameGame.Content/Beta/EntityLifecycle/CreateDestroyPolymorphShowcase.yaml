@@ -1,0 +1,200 @@
+entityTemplates:
+  lifecycleFlagshipRoom:
+    name: Create Destroy Polymorph Flagship Room
+    inventoryWidth: 14
+    inventoryHeight: 8
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: lifecycleEgg
+      templateId: lifecycleEgg
+      coord:
+        x: 3
+        y: 3
+    - entityId: ratking
+      templateId: lifecycleRatKing
+      coord:
+        x: 6
+        y: 4
+    - entityId: snake
+      templateId: lifecycleSnake
+      coord:
+        x: 10
+        y: 4
+    - entityId: blockedRat
+      templateId: lifecycleRat
+      coord:
+        x: 4
+        y: 6
+    - entityId: backstepObstacle
+      templateId: lifecycleObstacle
+      coord:
+        x: 5
+        y: 6
+  lifecycleRatKing:
+    name: Rat King
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 5
+    carryingCapacity: 0
+    bulk: 5
+    aperture: 5
+    defaultActionPlanId: lifecycleCreateRatFacing
+    actionStateDefaults:
+      facing: East
+  lifecycleRat:
+    name: Rat
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: lifecycleRatWalkEast
+    actionStateDefaults:
+      facing: East
+  lifecycleSnake:
+    name: Snake
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 4
+    carryingCapacity: 0
+    bulk: 4
+    aperture: 4
+    defaultActionPlanId: lifecycleDestroyFood
+    targeting:
+      range: 1
+      rules:
+      - slot: 1
+        label: food
+        targetTemplateId: lifecycleRat
+        targetCapabilities:
+        - DestroyTarget
+        range: 1
+  lifecycleObstacle:
+    name: Backstep Obstacle
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 0
+  lifecycleEgg:
+    name: Egg
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: lifecycleEggHatches
+  lifecycleCaterpillar:
+    name: Caterpillar
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: lifecycleCaterpillarCocoons
+  lifecycleCocoon:
+    name: Cocoon
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: lifecycleCocoonEmerges
+  lifecycleButterfly:
+    name: Butterfly
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: lifecycleButterflyCycles
+presentations:
+  lifecycleFlagshipRoom:
+    glyph: '#'
+    color: Gray
+  lifecycleRatKing:
+    glyph: K
+    color: DarkGreen
+  lifecycleRat:
+    glyph: r
+    color: Gray
+  lifecycleSnake:
+    glyph: S
+    color: Green
+  lifecycleObstacle:
+    glyph: X
+    color: Earth
+  lifecycleEgg:
+    glyph: e
+    color: Yellow
+  lifecycleCaterpillar:
+    glyph: c
+    color: Green
+  lifecycleCocoon:
+    glyph: o
+    color: Earth
+  lifecycleButterfly:
+    glyph: b
+    color: Cyan
+actionPlans:
+  lifecycleCreateRatFacing:
+    id: lifecycleCreateRatFacing
+    behavior:
+      steps:
+      - kind: CreateEntity
+        templateId: lifecycleRat
+        createPlacement: Facing
+        directionMode: Forward
+  lifecycleRatWalkEast:
+    id: lifecycleRatWalkEast
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: Backstep
+  lifecycleDestroyFood:
+    id: lifecycleDestroyFood
+    behavior:
+      steps:
+      - kind: DestroyTarget
+        targetLabel: food
+  lifecycleEggHatches:
+    id: lifecycleEggHatches
+    behavior:
+      steps:
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: lifecycleCaterpillar
+  lifecycleCaterpillarCocoons:
+    id: lifecycleCaterpillarCocoons
+    behavior:
+      steps:
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: lifecycleCocoon
+  lifecycleCocoonEmerges:
+    id: lifecycleCocoonEmerges
+    behavior:
+      steps:
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: lifecycleButterfly
+  lifecycleButterflyCycles:
+    id: lifecycleButterflyCycles
+    behavior:
+      steps:
+      - kind: PolymorphTarget
+        targetSelf: true
+        templateId: lifecycleEgg
+scenarios:
+  delta-create-destroy-polymorph-flagship-room:
+    name: Create Destroy Polymorph Flagship Room
+    scenarioRootEntityTemplateId: lifecycleFlagshipRoom

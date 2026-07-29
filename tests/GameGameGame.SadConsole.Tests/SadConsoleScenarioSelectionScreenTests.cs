@@ -170,6 +170,40 @@ public sealed class SadConsoleScenarioSelectionScreenTests
     }
 
     [Fact]
+    public void ScenarioSelectionListsCreateDestroyPolymorphFlagshipRoomFromManifest()
+    {
+        var catalog = ScenarioCatalog.LoadManifest(Path.Combine(AppContext.BaseDirectory, "Content", "Beta", "Manifest.yaml"));
+
+        var delta = Assert.Single(catalog.Sections ?? [], section => section.Id == "delta");
+        var flagship = Assert.Single(delta.Entries, entry => entry.ScenarioId == "delta-create-destroy-polymorph-flagship-room");
+        var screen = ScenarioSelectionScreen.FromCatalog(catalog);
+        while (screen.SelectedSection?.Id != "delta")
+        {
+            screen.Handle(UiComponentCommand.Right);
+        }
+
+        Assert.Equal("Create Destroy Polymorph Flagship Room", flagship.Name);
+        Assert.Equal("active-delta", flagship.Status);
+        Assert.Contains("entity-lifecycle", flagship.Tags ?? []);
+        Assert.Contains(screen.VisibleScenarios, entry => entry.ScenarioId == flagship.ScenarioId);
+    }
+
+    [Fact]
+    public void PlayModeDynamicLifecycleScenarioBuildsScreenModelWithoutMissingPresentationCrash()
+    {
+        var catalog = ScenarioCatalog.LoadManifest(Path.Combine(AppContext.BaseDirectory, "Content", "Beta", "Manifest.yaml"));
+        var entry = catalog.Entries.Single(entry => entry.ScenarioId == "delta-create-destroy-polymorph-flagship-room");
+
+        var screen = ConsumerPlayModeScreen.Open(entry);
+        var model = screen.ActorPovModel(SadConsoleRect.FromSize(1, 1, 118, 40));
+
+        Assert.Null(screen.LaunchFailure);
+        Assert.NotNull(model);
+        Assert.DoesNotContain(model!.Projection.Diagnostics, diagnostic => diagnostic.Message.Contains("presentation", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(screen.Components());
+    }
+
+    [Fact]
     public void StartupUsesScenarioSelectionByDefault()
     {
         var startup = SadConsoleStartup.FromArgs(["--content", "missing-file.yaml"]);

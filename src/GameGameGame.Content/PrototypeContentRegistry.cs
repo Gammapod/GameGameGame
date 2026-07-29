@@ -22,6 +22,9 @@ public sealed class PrototypeContentRegistry(
     public EntityPresentation GetPresentationForEntity(EntityId entityId) =>
         presentations[GetTemplateIdForEntity(entityId)];
 
+    public EntityPresentation GetPresentationForEntity(WorldState world, EntityId entityId) =>
+        presentations[GetTemplateIdForEntity(world, entityId)];
+
     public EntityTemplateId GetTemplateIdForEntity(EntityId entityId) =>
         _entityTemplateAssignments.TryGetValue(entityId, out var templateId)
             ? templateId
@@ -29,6 +32,31 @@ public sealed class PrototypeContentRegistry(
 
     public bool TryGetTemplateIdForEntity(EntityId entityId, out EntityTemplateId templateId) =>
         _entityTemplateAssignments.TryGetValue(entityId, out templateId);
+
+    public EntityTemplateId GetTemplateIdForEntity(WorldState world, EntityId entityId) =>
+        TryGetTemplateIdForEntity(world, entityId, out var templateId)
+            ? templateId
+            : throw new InvalidOperationException($"No template assignment is registered for entity {entityId}.");
+
+    public bool TryGetTemplateIdForEntity(WorldState world, EntityId entityId, out EntityTemplateId templateId)
+    {
+        if (world.Entities.TryGetValue(entityId, out var entity) && !string.IsNullOrWhiteSpace(entity.TemplateId))
+        {
+            templateId = new EntityTemplateId(entity.TemplateId);
+            if (entityTemplates.ContainsKey(templateId))
+            {
+                return true;
+            }
+        }
+
+        if (_entityTemplateAssignments.TryGetValue(entityId, out templateId))
+        {
+            return true;
+        }
+
+        templateId = default;
+        return false;
+    }
 
     public ActionPlanDescriptor GetActionPlanDescriptor(ActionPlanTemplateId id) => actionPlanTemplates[id];
 
@@ -119,7 +147,7 @@ public sealed class PrototypeContentRegistry(
 
     private void ValidateActionPlans(List<string> errors, List<ContentDiagnostic> diagnostics)
     {
-        ActionPlanValidator.Validate(actionPlanTemplates, errors, diagnostics);
+        ActionPlanValidator.Validate(entityTemplates, actionPlanTemplates, errors, diagnostics);
         ValidateTemplateActionPlanVariables(errors, diagnostics);
     }
 

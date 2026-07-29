@@ -150,15 +150,19 @@ public static class ScenarioRunService
         var movement = new MovementService();
         var history = SimulationHistorySession.Start(world, ScenarioRootEntityId, scenarioPlaneId, ScenarioRootEntityId);
         var stepper = new InitiativePlayerChoiceStepper(movement, new ActionChoiceService(movement));
-        var actorOrderIds = actorOrder.Select(actor => actor.EntityId).ToList();
+        var actionPlans = new Dictionary<EntityId, IEntityActionPlan>(materialization.ActionPlans);
+        var actionPlanSynchronizer = new DynamicScenarioActionPlanSynchronizer();
 
         for (var turn = 1; turn <= turnCount; turn++)
         {
+            actionPlanSynchronizer.SynchronizeInPlace(world, materialization.Registry, actionPlans);
+            actorOrder = ScenarioInitiativeOrderService.GetScenarioActorsInInitiativeOrder(world, actionPlans, materialization.ScenarioRootEntityId, scenarioPlaneId);
+            var actorOrderIds = actorOrder.Select(actor => actor.EntityId).ToList();
             var step = stepper.AdvanceUntilPlayerChoice(
                 world,
                 actorOrderIds,
-                materialization.ActionPlans,
-                actorId => GetActionPlanDescriptor(materialization.Registry, actorId),
+                actionPlans,
+                actorId => GetActionPlanDescriptor(world, materialization.Registry, actorId),
                 startIndex: 0,
                 (stepWorld, entityId) => TargetingService.RefreshTargets(stepWorld, materialization.Registry, entityId));
 
@@ -202,9 +206,9 @@ public static class ScenarioRunService
         return new ScenarioRunHistoryResult(completedReport, materialization, history);
     }
 
-    private static ActionPlanDescriptor? GetActionPlanDescriptor(PrototypeContentRegistry registry, EntityId entityId)
+    private static ActionPlanDescriptor? GetActionPlanDescriptor(WorldState world, PrototypeContentRegistry registry, EntityId entityId)
     {
-        if (!registry.TryGetTemplateIdForEntity(entityId, out var templateId))
+        if (!registry.TryGetTemplateIdForEntity(world, entityId, out var templateId))
         {
             return null;
         }

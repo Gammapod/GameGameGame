@@ -194,7 +194,9 @@ public static class YamlContentLoader
             step.TargetSelf,
             step.PlanId is null ? null : new ActionPlanId(step.PlanId),
             step.DirectionMode is null ? null : Enum.Parse<ActionPlanMoveDirectionMode>(step.DirectionMode, ignoreCase: true),
-            step.TransferDirection is null ? null : Enum.Parse<TransferDirection>(step.TransferDirection, ignoreCase: true));
+            step.TransferDirection is null ? null : Enum.Parse<TransferDirection>(step.TransferDirection, ignoreCase: true),
+            step.TemplateId,
+            step.CreatePlacement is null ? null : Enum.Parse<CreateEntityPlacement>(step.CreatePlacement, ignoreCase: true));
 
     private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
         new(
@@ -441,6 +443,10 @@ public static class YamlContentLoader
         public string? DirectionMode { get; set; }
 
         public string? TransferDirection { get; set; }
+
+        public string? TemplateId { get; set; }
+
+        public string? CreatePlacement { get; set; }
     }
 
     private sealed class ActionPlanPrimitiveDescriptorDto

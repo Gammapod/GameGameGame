@@ -102,6 +102,7 @@ public static class ScenarioMaterializer
             registry = document.ToRegistry();
             validationDiagnostics.AddRange(registry.Validate().Errors);
             validationDiagnostics = validationDiagnostics.Distinct().ToList();
+            PopulateRuntimeTemplates(world, registry);
         }
         catch (Exception ex)
         {
@@ -346,6 +347,25 @@ public static class ScenarioMaterializer
         foreach (var (entityId, actionPlan) in additions)
         {
             actionPlans[entityId] = actionPlan;
+        }
+    }
+
+    private static void PopulateRuntimeTemplates(WorldState world, PrototypeContentRegistry registry)
+    {
+        foreach (var (templateId, template) in registry.EntityTemplates)
+        {
+            world.RuntimeEntityTemplates[templateId.Value] = new RuntimeEntityTemplate(
+                templateId.Value,
+                template.Name,
+                template.InventoryWidth,
+                template.InventoryHeight,
+                template.Bulk,
+                template.Aperture,
+                template.DefaultActionPlanId is { } planId ? new ActionPlanId(planId.Value) : null,
+                template.ActionStateDefaults?.Facing,
+                template.EnterPolicy,
+                template.ExitPolicy,
+                template.TopologyPolicy);
         }
     }
 

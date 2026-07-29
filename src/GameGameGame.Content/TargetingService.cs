@@ -11,7 +11,7 @@ public static class TargetingService
     public static void RefreshTargets(WorldState world, PrototypeContentRegistry registry, EntityId actorId)
     {
         if (!world.Entities.ContainsKey(actorId)
-            || !registry.TryGetTemplateIdForEntity(actorId, out var actorTemplateId))
+            || !registry.TryGetTemplateIdForEntity(world, actorId, out var actorTemplateId))
         {
             return;
         }
@@ -55,7 +55,7 @@ public static class TargetingService
         int range,
         TargetingLocalityQuery locality) =>
         LocalityCandidates.Query(world, actorId, locality)
-            .Where(entry => MatchesTargetTemplate(registry, entry.EntityId, rule.TargetTemplateId))
+            .Where(entry => MatchesTargetTemplate(world, registry, entry.EntityId, rule.TargetTemplateId))
             .Where(entry => MatchesTargetCapabilities(world, actorId, entry.EntityId, rule.TargetCapabilities))
             .Select(entry => new
             {
@@ -90,9 +90,9 @@ public static class TargetingService
     private static int ManhattanDistance(GridCoord first, GridCoord second) =>
         Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
 
-    private static bool MatchesTargetTemplate(PrototypeContentRegistry registry, EntityId entityId, EntityTemplateId? targetTemplateId) =>
+    private static bool MatchesTargetTemplate(WorldState world, PrototypeContentRegistry registry, EntityId entityId, EntityTemplateId? targetTemplateId) =>
         targetTemplateId is null
-        || (registry.TryGetTemplateIdForEntity(entityId, out var templateId) && templateId == targetTemplateId);
+        || (registry.TryGetTemplateIdForEntity(world, entityId, out var templateId) && templateId == targetTemplateId);
 
     private static bool MatchesTargetCapabilities(
         WorldState world,
