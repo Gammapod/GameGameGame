@@ -186,6 +186,12 @@ internal sealed class ConsumerPlayModeConsole : Console
         _lastConnector = null;
         foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: false))
         {
+            if (component is ConnectorLineComponent connector)
+            {
+                _lastConnector = connector.View;
+                continue;
+            }
+
             _renderer.DrawComponent(component);
         }
 
@@ -211,6 +217,12 @@ internal sealed class ConsumerPlayModeConsole : Console
     {
         foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: true))
         {
+            if (component is ConnectorLineComponent connector)
+            {
+                _lastConnector = connector.View;
+                continue;
+            }
+
             _renderer.DrawComponent(component);
         }
 

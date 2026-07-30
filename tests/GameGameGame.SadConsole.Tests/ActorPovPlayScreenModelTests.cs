@@ -232,11 +232,13 @@ public sealed class ActorPovPlayScreenModelTests
             fixture.Appearance,
             fixture.ActionPlanDescriptor);
 
-        var component = Assert.IsType<PanelComponent>(ActorPovPlayComponentFactory.ParentChainComponent(model));
+        var components = ActorPovPlayComponentFactory.ParentChainComponents(model);
+        var grids = components.OfType<InventorySpaceComponent>().ToList();
 
-        Assert.Equal("actor-pov-parent-chain", component.Id);
-        Assert.Contains(component.BodyRows, row => row.Contains("Scenario Host", StringComparison.Ordinal) && row.Contains(fixture.RoomId.Value, StringComparison.Ordinal));
-        AssertInside(model.Layout.ParentChain.Bounds, component.Bounds);
+        var grid = Assert.Single(grids);
+        Assert.Equal("Scenario Host", grid.View.Title);
+        Assert.DoesNotContain(components, component => component is ConnectorLineComponent);
+        Assert.All(grids, grid => AssertInside(model.Layout.ParentChain.Bounds, grid.Bounds));
     }
 
     [Fact]
@@ -249,7 +251,7 @@ public sealed class ActorPovPlayScreenModelTests
             new Dictionary<EntityId, IEntityActionPlan>(),
             SadConsoleRect.FromSize(1, 1, 118, 38));
 
-        var component = Assert.IsType<PanelComponent>(ActorPovPlayComponentFactory.ParentChainComponent(model));
+        var component = Assert.IsType<PanelComponent>(Assert.Single(ActorPovPlayComponentFactory.ParentChainComponents(model)));
 
         Assert.Equal("actor-pov-parent-chain", component.Id);
         Assert.Contains(component.BodyRows, row => row.Contains("No visible parent", StringComparison.OrdinalIgnoreCase));
@@ -268,11 +270,36 @@ public sealed class ActorPovPlayScreenModelTests
             fixture.Appearance,
             fixture.ActionPlanDescriptor);
 
-        var component = Assert.IsType<PanelComponent>(ActorPovPlayComponentFactory.ParentChainComponent(model));
+        var components = ActorPovPlayComponentFactory.ParentChainComponents(model);
+        var grids = components.OfType<InventorySpaceComponent>().ToList();
+        var connector = Assert.Single(components.OfType<ConnectorLineComponent>());
 
-        Assert.Contains(component.BodyRows, row => row.Contains("hidden ancestor", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("omitted", component.Status, StringComparison.OrdinalIgnoreCase);
-        AssertInside(model.Layout.ParentChain.Bounds, component.Bounds);
+        Assert.Equal(3, grids.Count);
+        Assert.Contains(connector.View.Segments, segment => segment.Id == "parent-chain-more-ancestors-offscreen");
+        Assert.All(grids, grid => AssertInside(model.Layout.ParentChain.Bounds, grid.Bounds));
+    }
+
+    [Fact]
+    public void ParentChainComponentsPlaceImmediateParentAtBottomGrandparentMiddleGreatGrandparentTop()
+    {
+        var fixture = ActorPovFixture.CreateDeepParentChain();
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor);
+
+        var grids = ActorPovPlayComponentFactory.ParentChainComponents(model)
+            .OfType<InventorySpaceComponent>()
+            .ToList();
+
+        Assert.Equal(3, grids.Count);
+        Assert.Equal("Ancestor 6", grids[0].View.Title);
+        Assert.Equal("Ancestor 8", grids[2].View.Title);
+        Assert.True(grids[0].Bounds.Top < grids[1].Bounds.Top);
+        Assert.True(grids[1].Bounds.Top < grids[2].Bounds.Top);
     }
 
     [Fact]
@@ -396,13 +423,34 @@ public sealed class ActorPovPlayScreenModelTests
 
         Assert.Equal(
             [
-                "actor-pov-parent-chain",
+                "actor-pov-parent-chain-0-grid",
+                "actor-pov-parent-chain-connectors",
                 "actor-pov-current-place-grid",
                 "actor-pov-world-inspection-grid",
                 "actor-pov-actor-inventory-grid",
                 "actor-pov-actor-inventory-inspection-grid"
             ],
             components.Select(component => component.Id));
+    }
+
+    [Fact]
+    public void MainComponentsConnectImmediateParentOwningCellToCurrentPlace()
+    {
+        var fixture = ActorPovFixture.Create();
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor);
+
+        var connector = Assert.Single(ActorPovPlayComponentFactory.MainComponents(model).OfType<ConnectorLineComponent>());
+        var currentPlace = Assert.Single(ActorPovPlayComponentFactory.MainComponents(model).OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-current-place-grid");
+
+        var segment = Assert.Single(connector.View.Segments, segment => segment.Id == "parent-chain-0-to-current-place");
+        Assert.True(segment.Start.CellX < segment.End.CellX);
+        Assert.Equal(currentPlace.Bounds.Left, segment.End.CellX);
     }
 
     private static (WorldState World, EntityId ActorId) CurrentPlaceMissingFixture()
