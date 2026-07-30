@@ -21,6 +21,7 @@ internal sealed class ConsumerPlayModeConsole : Console
     private readonly SadConsoleComponentRenderer _renderer;
     private readonly ConnectorLineDrawCallRenderer _connectorRenderer = new();
     private readonly GameplayCaptureRecorder _captureRecorder = new();
+    private readonly GameplayCapturePolicy _capturePolicy = GameplayCapturePolicy.Default;
     private readonly IGameplayCaptureSink _captureSink = new MonoGameGameplayCaptureSink();
     private readonly Queue<int> _pendingCaptureTurns = new();
     private readonly ConsumerPlayModeScreen _screen;
@@ -182,25 +183,22 @@ internal sealed class ConsumerPlayModeConsole : Console
     {
         _renderer.ClearSurface();
         var drawable = _layout.DrawableBounds;
+        var frame = _screen.BuildRenderFrame(drawable, _layout.DebugVisible);
 
         _lastConnectors.Clear();
-        foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: false))
+        foreach (var component in frame.MainDrawableComponents)
         {
-            if (component is ConnectorLineComponent connector)
-            {
-                _lastConnectors.Add(connector.View);
-                continue;
-            }
-
             _renderer.DrawComponent(component);
         }
 
+        _lastConnectors.AddRange(frame.MainConnectors.Select(connector => connector.View));
+
         if (_layout.DebugVisible)
         {
-            DrawDebugOverlay(drawable);
+            DrawDebugOverlay(frame);
         }
 
-        if (_screen.PromptComponent(drawable) is { } prompt)
+        if (frame.PromptOverlay is { } prompt)
         {
             _renderer.RenderOverlay(prompt);
         }
@@ -213,21 +211,17 @@ internal sealed class ConsumerPlayModeConsole : Console
         Surface.IsDirty = true;
     }
 
-    private void DrawDebugOverlay(SadConsoleRect drawable)
+    private void DrawDebugOverlay(ConsumerPlayModeRenderFrame frame)
     {
         _lastConnectors.Clear();
-        foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: true))
+        foreach (var component in frame.DebugDrawableComponents)
         {
-            if (component is ConnectorLineComponent connector)
-            {
-                _lastConnectors.Add(connector.View);
-                continue;
-            }
-
             _renderer.DrawComponent(component);
         }
 
-        if (_screen.ActorPovDiagnosticsChromeComponent(drawable) is { } diagnosticsChrome)
+        _lastConnectors.AddRange(frame.DebugConnectors.Select(connector => connector.View));
+
+        if (frame.DiagnosticsChromeComponent is { } diagnosticsChrome)
         {
             _renderer.DrawComponent(diagnosticsChrome);
         }
@@ -237,16 +231,17 @@ internal sealed class ConsumerPlayModeConsole : Console
             _screen.FooterText,
             _screen.LastActionStatus,
             _captureRecorder.StatusText,
-            $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {drawable.Width}x{drawable.Height}",
+            _capturePolicy.DebugSummary,
+            $"Theme: {_theme.Name} | {_displaySettings.Summary} | Drawable: {frame.DrawableBounds.Width}x{frame.DrawableBounds.Height}",
             $"Scenario: {_scenario.Name} ({_scenario.ScenarioId})"
         };
-        rows.AddRange(_screen.DebugRows(drawable, _screen.HasActivePrompt));
+        rows.AddRange(frame.DebugRows);
 
-        var maxRows = Math.Min(rows.Count, Math.Max(0, drawable.Height));
-        var startY = Math.Max(drawable.Top, drawable.Bottom - maxRows);
+        var maxRows = Math.Min(rows.Count, Math.Max(0, frame.DrawableBounds.Height));
+        var startY = Math.Max(frame.DrawableBounds.Top, frame.DrawableBounds.Bottom - maxRows);
         for (var index = 0; index < maxRows; index++)
         {
-            _renderer.PrintClipped(drawable.Left, startY + index, drawable.Width, rows[index], Color.DarkGray);
+            _renderer.PrintClipped(frame.DrawableBounds.Left, startY + index, frame.DrawableBounds.Width, rows[index], Color.DarkGray);
         }
     }
 
@@ -290,7 +285,13 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     private void QueueCaptureAfterSuccessfulPlayerTurn(GameplayRuntimeSubmission? submission)
     {
-        if (!_captureRecorder.IsRecording || submission is not { Succeeded: true })
+        if (!_captureRecorder.IsRecording)
+        {
+            return;
+        }
+
+        var frame = _screen.BuildRenderFrame(_layout.DrawableBounds, _layout.DebugVisible);
+        if (!_capturePolicy.ShouldQueueAfterPlayerSubmission(submission, frame))
         {
             return;
         }

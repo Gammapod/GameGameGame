@@ -275,6 +275,31 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeBuildsRenderFrameWithNamedCaptureRegions()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        var normal = screen.BuildRenderFrame(drawable, debugVisible: false);
+        var debug = screen.BuildRenderFrame(drawable, debugVisible: true);
+
+        Assert.False(normal.DebugVisible);
+        Assert.Equal(drawable, normal.DrawableBounds);
+        Assert.NotEmpty(normal.MainDrawableComponents);
+        Assert.Empty(normal.DebugComponents);
+        Assert.Null(normal.DiagnosticsChromeComponent);
+        Assert.Empty(normal.DebugRows);
+        Assert.Contains(normal.CaptureRegions(), region => region.Id == "actor-pov-current-place-grid");
+
+        Assert.True(debug.DebugVisible);
+        Assert.NotEmpty(debug.DebugComponents);
+        Assert.NotNull(debug.DiagnosticsChromeComponent);
+        Assert.NotEmpty(debug.DebugRows);
+        Assert.Contains(debug.CaptureRegions(), region => region.Id == "actor-pov-actor-inventory-grid");
+    }
+
+    [Fact]
     public void ConsumerPlayModeReportsLaunchFailureInDebugRows()
     {
         var screen = ConsumerPlayModeScreen.Open(new ScenarioCatalogEntry("missing-file.yaml", "missing", "Missing", "Missing file"));

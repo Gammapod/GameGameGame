@@ -281,6 +281,28 @@ internal sealed class ConsumerPlayModeScreen
         return ActorPovComponents(drawableBounds, showDebugLabels: false);
     }
 
+    public ConsumerPlayModeRenderFrame BuildRenderFrame(SadConsoleRect drawableBounds, bool debugVisible)
+    {
+        var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false);
+        var promptOverlay = PromptComponent(drawableBounds);
+        var debugComponents = debugVisible
+            ? ActorPovComponents(drawableBounds, showDebugLabels: true)
+            : [];
+        var diagnosticsChrome = debugVisible ? ActorPovDiagnosticsChromeComponent(drawableBounds) : null;
+        var debugRows = debugVisible
+            ? DebugRows(drawableBounds, promptOverlay is not null)
+            : [];
+
+        return new ConsumerPlayModeRenderFrame(
+            drawableBounds,
+            debugVisible,
+            mainComponents,
+            debugComponents,
+            diagnosticsChrome,
+            promptOverlay,
+            debugRows);
+    }
+
     public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels)
     {
         return ActorPovModel(drawableBounds) is { } model

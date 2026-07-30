@@ -1,4 +1,6 @@
 using GameGameGame.SadConsoleApp.Ui.Rendering;
+using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Screens;
 
 namespace GameGameGame.SadConsole.Tests;
 
