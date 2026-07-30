@@ -8,6 +8,44 @@ namespace GameGameGame.Tests;
 public sealed class ScenarioToolingServiceTests
 {
     [Fact]
+    public void PlayerNarrativeLogProjectionProjectsStructuredRowsFromHistory()
+    {
+        var world = TestWorld.CreateWorld();
+        var history = SimulationHistorySession.Start(world, TestWorld.PlayerId, TestWorld.WorldPlaneId);
+        var trace = TraceNode.Success("Resolve plan for Slime");
+        trace.Add(TraceNode.Success("Action Step MoveFacing"));
+        world.AdvanceTurn();
+        history.RecordActorInterval([
+            new SimulationHistoryActorLog(
+                0,
+                TestWorld.SlimeId,
+                "Slime",
+                Succeeded: true,
+                ConsumedTurn: true,
+                ContinuePlan: false,
+                Summary: "Moved East",
+                trace)
+        ], TestWorld.WorldPlaneId);
+
+        var rows = PlayerNarrativeLogProjection.Project(new PlayerNarrativeLogProjectionRequest(history, TestWorld.PlayerId));
+
+        var row = Assert.Single(rows);
+        Assert.Equal(1, row.TurnNumber);
+        Assert.Equal(1, row.InitiativeIndex);
+        Assert.Equal(0, row.OrderIndex);
+        Assert.Equal(TestWorld.SlimeId, row.ActorEntityId);
+        Assert.Equal("Slime", row.ActorDisplayName);
+        Assert.Equal("MoveFacing", row.ActionStepKind);
+        Assert.Equal(1, row.ActionStepIndex);
+        Assert.True(row.Succeeded);
+        Assert.Equal("succeeded", row.Result);
+        Assert.Equal("action.move_facing.success", row.MessageId);
+        Assert.Equal("Slime", row.MessageArgs["actor"]);
+        Assert.Null(row.Text);
+        Assert.Null(row.IsPlayerVisible);
+    }
+
+    [Fact]
     public void ScenarioRunServiceRunsRootInventoryActorsInInitiativeOrder()
     {
         var document = new EditableContentDocument();

@@ -53,6 +53,13 @@ internal sealed class ConsumerPlayModeConsole : Console
     {
         FlushPendingCaptures();
 
+        if (keyboard.IsKeyReleased(Keys.L))
+        {
+            _screen.CycleLeftRegionMode();
+            Redraw();
+            return true;
+        }
+
         if (_screen.HasActivePrompt)
         {
             if (IsWaitKeyReleased(keyboard))

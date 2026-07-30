@@ -34,6 +34,7 @@ internal sealed class ConsumerPlayModeScreen
     public InventorySpaceViewModel? CurrentSpaceView { get; private set; }
     public InventorySpaceViewModel? LinkedInspectedSpaceView { get; private set; }
     public string LastActionStatus { get; private set; } = "Ready.";
+    public LeftRegionMode LeftRegionMode { get; private set; } = LeftRegionMode.ParentLocationChain;
     public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
     public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
     public string? ActivePromptFocusedChoiceLabel => _intentController.CurrentPrompt?.FocusedChoice?.Label;
@@ -42,7 +43,7 @@ internal sealed class ConsumerPlayModeScreen
     public int WorldTurnNumber => (_sessionController?.World ?? Session?.World)?.TurnNumber ?? 0;
     public string Title => "New Play Mode";
     public string Purpose => "Consumer-facing Play mode skeleton. Current-space component is active.";
-    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | U: undo | F10: capture | F12: debug | Esc: return";
+    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | L: left region | U: undo | F10: capture | F12: debug | Esc: return";
 
     public static ConsumerPlayModeScreen Open(ScenarioCatalogEntry catalogEntry)
     {
@@ -62,6 +63,24 @@ internal sealed class ConsumerPlayModeScreen
     public void SetDebugStatus(string message)
     {
         LastActionStatus = message;
+    }
+
+    public string CycleLeftRegionMode()
+    {
+        LeftRegionMode = LeftRegionMode switch
+        {
+            LeftRegionMode.ParentLocationChain => LeftRegionMode.GlobalLog,
+            LeftRegionMode.GlobalLog => LeftRegionMode.CurrentLocationLog,
+            _ => LeftRegionMode.ParentLocationChain
+        };
+        LastActionStatus = LeftRegionMode switch
+        {
+            LeftRegionMode.ParentLocationChain => "Left region: parent/location chain.",
+            LeftRegionMode.GlobalLog => "Left region: full log history.",
+            LeftRegionMode.CurrentLocationLog => "Left region: current-location log history.",
+            _ => "Left region changed."
+        };
+        return LastActionStatus;
     }
 
     public GameplayRuntimeSubmission SubmitMove(Direction direction)
@@ -306,9 +325,48 @@ internal sealed class ConsumerPlayModeScreen
     public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels)
     {
         return ActorPovModel(drawableBounds) is { } model
-            ? ActorPovPlayComponentFactory.MainComponents(model, showDebugLabels)
+            ? ActorPovPlayComponentFactory.MainComponents(model, showDebugLabels, LeftRegionComponents(model), TurnHeader())
             : [];
     }
+
+    public IReadOnlyList<IUiComponent>? LeftRegionComponents(ActorPovPlayScreenModel model)
+    {
+        if (LeftRegionMode == LeftRegionMode.ParentLocationChain)
+        {
+            return null;
+        }
+
+        var region = model.Layout.ParentChain;
+        var bounds = region.IsOmitted || region.Bounds.Width == 0 || region.Bounds.Height == 0
+            ? model.Layout.DiagnosticsRegion.Bounds
+            : region.Bounds;
+        var maxRows = Math.Max(0, bounds.Height - 2);
+        var currentPlacePlaneId = model.CurrentPlace?.InventoryGrid?.PlaneId;
+        var scope = LeftRegionMode == LeftRegionMode.CurrentLocationLog
+            ? PlayLogScope.CurrentLocation
+            : PlayLogScope.Global;
+        var rows = PlayLogViewBuilder.Build(
+                _sessionController?.ActionLog,
+                scope,
+                currentPlacePlaneId,
+                maxRows)
+            .Select(row => row.Text)
+            .ToList();
+        var title = LeftRegionMode == LeftRegionMode.CurrentLocationLog
+            ? "Log: Current location"
+            : "Log: All";
+
+        return [new PanelComponent(
+            LeftRegionMode == LeftRegionMode.CurrentLocationLog ? "actor-pov-left-log-current-location" : "actor-pov-left-log-global",
+            title,
+            bounds,
+            rows,
+            UiComponentState.Unselected,
+            "L cycles left region",
+            TurnHeader())];
+    }
+
+    private string TurnHeader() => $"T{WorldTurnNumber}";
 
     public ActorPovPlayScreenModel? ActorPovModel(SadConsoleRect drawableBounds)
     {

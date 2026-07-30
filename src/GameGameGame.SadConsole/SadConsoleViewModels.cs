@@ -295,6 +295,21 @@ internal static class PromptChoiceCycler
 
 internal sealed record LocalActivityRow(string Text, bool IsHeader = false, bool IsPositive = false, bool IsWarning = false, bool IsMuted = false);
 
+internal enum PlayLogScope
+{
+    Global,
+    CurrentLocation
+}
+
+internal enum LeftRegionMode
+{
+    ParentLocationChain,
+    GlobalLog,
+    CurrentLocationLog
+}
+
+internal sealed record PlayLogRow(string Text, bool Succeeded, EntityId? ActorId = null, bool IsMuted = false);
+
 internal static class ActionOutcomeTextFormatter
 {
     public static string FormatGlobal(ActionOutcome outcome)
@@ -433,5 +448,90 @@ internal static class LocalActivityViewBuilder
 
         rows.Add(row);
         return true;
+    }
+}
+
+internal static class PlayLogViewBuilder
+{
+    public const string EmptyText = "No log entries.";
+
+    public static IReadOnlyList<PlayLogRow> Build(
+        ActionLogProjection? actionLog,
+        PlayLogScope scope,
+        PlaneId? currentLocationPlaneId,
+        int maxRows)
+    {
+        if (maxRows <= 0)
+        {
+            return [];
+        }
+
+        if (scope == PlayLogScope.CurrentLocation && currentLocationPlaneId is null)
+        {
+            return [new PlayLogRow(EmptyText, Succeeded: true, IsMuted: true)];
+        }
+
+        var rows = ActionLogQueryService.Select(
+            actionLog,
+            new ActionLogQuery(
+                PlaneAnchors: scope == PlayLogScope.CurrentLocation && currentLocationPlaneId is { } planeId
+                    ? new HashSet<PlaneId> { planeId }
+                    : null,
+                Order: ActionLogOrder.NewestFirst,
+                MaxRows: maxRows));
+
+        if (rows.Count == 0)
+        {
+            return [new PlayLogRow(EmptyText, Succeeded: true, IsMuted: true)];
+        }
+
+        return rows
+            .Select(outcome => new PlayLogRow(
+                ActionOutcomeTextFormatter.FormatGlobal(outcome),
+                outcome.Succeeded,
+                outcome.ActorId))
+            .ToList();
+    }
+}
+
+internal static class CurrentRegionActivityViewBuilder
+{
+    public const string EmptyText = "Recent successes: none";
+
+    public static IReadOnlyList<string> Build(EntityPanelProjection? currentPlace, int maxRows)
+    {
+        if (maxRows <= 0)
+        {
+            return [];
+        }
+
+        var rows = new List<string> { "Recent successes" };
+        if (maxRows == 1)
+        {
+            return rows;
+        }
+
+        if (currentPlace?.InventoryGrid is not { } grid)
+        {
+            rows.Add(EmptyText);
+            return rows.Take(maxRows).ToList();
+        }
+
+        var outcomes = ActionLogQueryService.Select(
+            ActionLogProjection.FromOutcomes(currentPlace.LocalLog),
+            new ActionLogQuery(
+                PlaneAnchors: new HashSet<PlaneId> { grid.PlaneId },
+                Succeeded: true,
+                Order: ActionLogOrder.NewestFirst,
+                MaxRows: maxRows - 1));
+
+        if (outcomes.Count == 0)
+        {
+            rows.Add(EmptyText);
+            return rows.Take(maxRows).ToList();
+        }
+
+        rows.AddRange(outcomes.Select(ActionOutcomeTextFormatter.FormatLocal));
+        return rows.Take(maxRows).ToList();
     }
 }

@@ -142,6 +142,12 @@ internal sealed class SadConsoleComponentRenderer
         FillRect(target, bounds, Color.Black);
         DrawBox(target, bounds, border, tileset.Roles.PanelBorder);
         PrintClipped(target, bounds.Left + 2, bounds.Top, Math.Max(0, bounds.Width - 4), component.Title, ColorFromToken(theme.Panel.TitleText));
+        if (component is PanelComponent { HeaderRight: { } headerRight } && !string.IsNullOrWhiteSpace(headerRight))
+        {
+            var rightWidth = Math.Min(Math.Max(0, bounds.Width - 4), headerRight.Length);
+            var rightX = bounds.Left + Math.Max(2, bounds.Width - 2 - rightWidth);
+            PrintClipped(target, rightX, bounds.Top, rightWidth, headerRight, ColorFromToken(theme.Panel.TitleText));
+        }
 
         var rows = component.RenderRows(theme).Skip(1).ToList();
         var maxRows = Math.Max(0, bounds.Height - 2);

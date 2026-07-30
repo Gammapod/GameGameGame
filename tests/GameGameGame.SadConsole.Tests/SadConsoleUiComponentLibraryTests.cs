@@ -31,12 +31,14 @@ public sealed class SadConsoleUiComponentLibraryTests
             new SadConsoleRect(1, 1, 30, 10),
             ["root", "player"],
             UiComponentState.Focused,
-            "derived turn-0 runtime preview");
+            "derived turn-0 runtime preview",
+            "T12");
 
         var rows = component.RenderRows(SadConsoleTheme.Default);
 
         Assert.Contains("HotPink", rows[0]);
         Assert.Contains("Scenario Preview", rows[0]);
+        Assert.Contains("T12", rows[0]);
         Assert.Contains("root", rows);
         Assert.Contains("status: derived turn-0 runtime preview", rows);
     }

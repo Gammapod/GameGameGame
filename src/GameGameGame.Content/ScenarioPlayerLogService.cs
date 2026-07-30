@@ -27,9 +27,10 @@ public static class ScenarioPlayerLogService
             session.Document,
             new PersistedScenarioRunRequest(request.ScenarioId, request.TurnCount));
 
-        var rows = run.History is null || observerEntityId is null
+        var projectedRows = run.History is null || observerEntityId is null
             ? []
-            : ProjectRows(run.History, observerEntityId.Value);
+            : PlayerNarrativeLogProjection.Project(new PlayerNarrativeLogProjectionRequest(run.History, observerEntityId.Value));
+        var rows = projectedRows.Select(ToAgentRow).ToList();
         var turns = rows
             .GroupBy(row => row.TurnNumber)
             .OrderBy(group => group.Key)
@@ -54,105 +55,29 @@ public static class ScenarioPlayerLogService
             run.Report.CapabilityGaps,
             turns,
             rows,
-            BuildFollowUps(rows));
+            BuildFollowUps(projectedRows));
     }
 
-    private static IReadOnlyList<AgentScenarioPlayerLogRow> ProjectRows(SimulationHistorySession history, EntityId observerEntityId)
-    {
-        var rows = new List<AgentScenarioPlayerLogRow>();
-        var orderIndex = 0;
-        foreach (var interval in history.Intervals.OrderBy(interval => interval.ToFrameIndex))
-        {
-            var world = history.Frames[interval.ToFrameIndex].Snapshot;
-            foreach (var log in interval.ActorLogs.OrderBy(log => log.Order))
-            {
-                var outcome = ActionOutcomeProjection.FromActorLog(world, interval.ToFrameIndex, log);
-                var attempts = outcome.ActionStepAttempts.Count == 0
-                    ? [(ActionStepAttempt?)null]
-                    : outcome.ActionStepAttempts.Select(attempt => (ActionStepAttempt?)attempt).ToList();
+    private static AgentScenarioPlayerLogRow ToAgentRow(PlayerNarrativeLogRow row) => new(
+        row.TurnNumber,
+        row.InitiativeIndex,
+        row.OrderIndex,
+        row.ActorEntityId,
+        row.ActorDisplayName,
+        row.ActionPlanId,
+        row.ActionStepKind,
+        row.ActionStepIndex,
+        row.Succeeded,
+        row.Result,
+        row.MessageId,
+        row.Variant,
+        row.Text,
+        row.TargetEntityId,
+        row.TargetDisplayName,
+        row.MessageArgs,
+        row.IsPlayerVisible);
 
-                foreach (var attempt in attempts)
-                {
-                    var stepKind = attempt?.StepKind;
-                    var succeeded = attempt?.Status == TraceStatus.Success || (attempt is null && log.Succeeded);
-                    var messageId = BuildMessageId(stepKind, succeeded);
-                    var messageArgs = BuildMessageArgs(outcome, attempt);
-                    rows.Add(new AgentScenarioPlayerLogRow(
-                        TurnNumber: interval.ToFrameIndex,
-                        InitiativeIndex: log.Order + 1,
-                        OrderIndex: orderIndex++,
-                        ActorEntityId: log.ActorId,
-                        ActorDisplayName: StableEntityName(world, log.ActorId, log.ActorName),
-                        ActionPlanId: null,
-                        ActionStepKind: stepKind,
-                        ActionStepIndex: attempt?.Order,
-                        Succeeded: succeeded,
-                        Result: succeeded ? "succeeded" : "failed",
-                        MessageId: messageId,
-                        Variant: null,
-                        Text: null,
-                        TargetEntityId: null,
-                        TargetDisplayName: null,
-                        MessageArgs: messageArgs,
-                        IsPlayerVisible: null));
-                }
-            }
-        }
-
-        return rows;
-    }
-
-    private static IReadOnlyDictionary<string, string> BuildMessageArgs(ActionOutcome outcome, ActionStepAttempt? attempt)
-    {
-        var args = new Dictionary<string, string>
-        {
-            ["actor"] = outcome.ActorName
-        };
-        if (attempt?.FailureReason is { } reason)
-        {
-            args["failureReason"] = reason.ToString();
-        }
-        if (!string.IsNullOrWhiteSpace(attempt?.Detail))
-        {
-            args["detail"] = attempt.Detail!;
-        }
-        var aperture = outcome.SuccessCriteria.FirstOrDefault(criterion => criterion.Kind == ActionSuccessCriterionKind.Aperture && criterion.SuccessRatio is not null);
-        if (aperture?.SuccessRatio is { } ratio)
-        {
-            args["successRatio"] = ratio.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-
-        return args;
-    }
-
-    private static string BuildMessageId(string? stepKind, bool succeeded) =>
-        $"action.{ToSnakeCase(stepKind ?? "Turn")}.{(succeeded ? "success" : "failure")}";
-
-    private static string ToSnakeCase(string value)
-    {
-        var chars = new List<char>(value.Length + 4);
-        for (var i = 0; i < value.Length; i++)
-        {
-            var c = value[i];
-            if (char.IsUpper(c) && i > 0)
-            {
-                chars.Add('_');
-            }
-
-            chars.Add(char.ToLowerInvariant(c));
-        }
-
-        return new string(chars.ToArray());
-    }
-
-    private static string StableEntityName(WorldState world, EntityId entityId, string? knownName = null) =>
-        !string.IsNullOrWhiteSpace(knownName)
-            ? knownName!
-            : world.Entities.TryGetValue(entityId, out var entity) && !string.IsNullOrWhiteSpace(entity.Name)
-                ? entity.Name
-                : entityId.Value;
-
-    private static IReadOnlyList<string> BuildFollowUps(IReadOnlyList<AgentScenarioPlayerLogRow> rows)
+    private static IReadOnlyList<string> BuildFollowUps(IReadOnlyList<PlayerNarrativeLogRow> rows)
     {
         var followUps = new List<string>
         {

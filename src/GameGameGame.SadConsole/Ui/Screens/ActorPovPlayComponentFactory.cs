@@ -6,13 +6,19 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
 internal static class ActorPovPlayComponentFactory
 {
-    public static IReadOnlyList<IUiComponent> MainComponents(ActorPovPlayScreenModel model, bool showDebugLabels = false)
+    public static IReadOnlyList<IUiComponent> MainComponents(
+        ActorPovPlayScreenModel model,
+        bool showDebugLabels = false,
+        IReadOnlyList<IUiComponent>? parentChainOverride = null,
+        string? turnHeader = null)
     {
         var currentPlace = CurrentPlaceComponent(model, showDebugLabels);
+        var parentChain = parentChainOverride ?? ParentChainComponents(model, showDebugLabels, currentPlace as InventorySpaceComponent);
         return
         [
-            .. ParentChainComponents(model, showDebugLabels, currentPlace as InventorySpaceComponent),
+            .. parentChain,
             currentPlace,
+            .. CurrentRegionActivityComponents(model, turnHeader),
             .. WorldInspectionComponents(model, showDebugLabels, currentPlace as InventorySpaceComponent),
             ActorInventoryComponent(model, showDebugLabels),
             ActorInventoryInspectionComponent(model, showDebugLabels)
@@ -250,13 +256,14 @@ internal static class ActorPovPlayComponentFactory
             model.ControlledActor.EntityId,
             cellMetrics: InventorySpaceCellMetrics.Default);
         var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
+        var gridRegion = CurrentPlaceGridBounds(region.Bounds);
         var sizing = new InventorySpaceComponent(
             "actor-pov-current-place-sizing",
             view.Title,
             SadConsoleRect.FromSize(0, 0, 1, 1),
             view,
             options: options);
-        var bounds = CenteredClipped(region.Bounds, sizing.RequiredWidth, sizing.RequiredHeight);
+        var bounds = CenteredClipped(gridRegion, sizing.RequiredWidth, sizing.RequiredHeight);
 
         return new InventorySpaceComponent(
             "actor-pov-current-place-grid",
@@ -266,6 +273,48 @@ internal static class ActorPovPlayComponentFactory
             state: UiComponentState.Focused,
             options: options);
     }
+
+    public static IReadOnlyList<IUiComponent> CurrentRegionActivityComponents(ActorPovPlayScreenModel model, string? turnHeader = null)
+    {
+        var region = model.Layout.CurrentPlace;
+        var bounds = CurrentRegionActivityBounds(region.Bounds);
+        if (bounds.Width == 0 || bounds.Height == 0)
+        {
+            return [];
+        }
+
+        var rows = CurrentRegionActivityViewBuilder.Build(model.CurrentPlace, Math.Max(0, bounds.Height - 2));
+        return [new PanelComponent(
+            "actor-pov-current-region-activity",
+            "Current location activity",
+            bounds,
+            rows,
+            UiComponentState.Unselected,
+            HeaderRight: turnHeader)];
+    }
+
+    private static SadConsoleRect CurrentRegionActivityBounds(SadConsoleRect currentPlaceBounds)
+    {
+        var height = CurrentRegionActivityHeight(currentPlaceBounds);
+        return SadConsoleRect.FromSize(
+            currentPlaceBounds.Left,
+            Math.Max(currentPlaceBounds.Top, currentPlaceBounds.Bottom - height),
+            currentPlaceBounds.Width,
+            height);
+    }
+
+    private static SadConsoleRect CurrentPlaceGridBounds(SadConsoleRect currentPlaceBounds)
+    {
+        var activityHeight = CurrentRegionActivityHeight(currentPlaceBounds);
+        var gap = activityHeight > 0 ? 1 : 0;
+        var height = Math.Max(1, currentPlaceBounds.Height - activityHeight - gap);
+        return SadConsoleRect.FromSize(currentPlaceBounds.Left, currentPlaceBounds.Top, currentPlaceBounds.Width, height);
+    }
+
+    private static int CurrentRegionActivityHeight(SadConsoleRect currentPlaceBounds) =>
+        currentPlaceBounds.Height < 10 || currentPlaceBounds.Width < 12
+            ? 0
+            : Math.Min(6, Math.Max(4, currentPlaceBounds.Height / 4));
 
     public static IUiComponent ActorInventoryComponent(ActorPovPlayScreenModel model, bool showDebugLabels = false)
     {

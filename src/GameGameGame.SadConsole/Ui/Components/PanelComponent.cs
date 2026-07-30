@@ -9,7 +9,8 @@ internal sealed record PanelComponent(
     SadConsoleRect Bounds,
     IReadOnlyList<string> BodyRows,
     UiComponentState State = UiComponentState.Unselected,
-    string? Status = null) : IUiComponent
+    string? Status = null,
+    string? HeaderRight = null) : IUiComponent
 {
     public string BorderColor(SadConsoleTheme theme) => State.BorderColor(theme);
 
@@ -17,7 +18,9 @@ internal sealed record PanelComponent(
     {
         var rows = new List<string>
         {
-            $"[{BorderColor(theme)}] {Title}"
+            string.IsNullOrWhiteSpace(HeaderRight)
+                ? $"[{BorderColor(theme)}] {Title}"
+                : $"[{BorderColor(theme)}] {Title} {HeaderRight}"
         };
         rows.AddRange(BodyRows.Count == 0 ? [$"({theme.Panel.MutedText}) empty"] : BodyRows);
         if (!string.IsNullOrWhiteSpace(Status))

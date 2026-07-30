@@ -125,6 +125,7 @@ public sealed class ActorPovPlayScreenModelTests
         Assert.Equal("actor-pov-current-place-grid", component.Id);
         Assert.Equal(UiComponentState.Focused, component.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, component.Options);
+        Assert.Empty(component.BodyRows);
         Assert.Equal("Room", component.View.Title);
         AssertInside(model.Layout.CurrentPlace.Bounds, component.Bounds);
     }
@@ -144,7 +145,30 @@ public sealed class ActorPovPlayScreenModelTests
         var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model, showDebugLabels: true));
 
         Assert.Same(InventorySpaceRenderOptions.Labeled, component.Options);
+        Assert.Empty(component.BodyRows);
         AssertInside(model.Layout.CurrentPlace.Bounds, component.Bounds);
+    }
+
+    [Fact]
+    public void CurrentRegionActivityComponentPinsToBottomOfCurrentPlaceRegion()
+    {
+        var fixture = ActorPovFixture.Create();
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor);
+
+        var activity = Assert.IsType<PanelComponent>(Assert.Single(ActorPovPlayComponentFactory.CurrentRegionActivityComponents(model)));
+        var currentPlace = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        Assert.Equal("actor-pov-current-region-activity", activity.Id);
+        AssertInside(model.Layout.CurrentPlace.Bounds, activity.Bounds);
+        Assert.True(activity.Bounds.Top > currentPlace.Bounds.Top);
+        Assert.Equal(model.Layout.CurrentPlace.Bounds.Bottom, activity.Bounds.Bottom);
+        Assert.Contains("Recent successes", activity.BodyRows);
     }
 
     [Fact]
@@ -429,6 +453,7 @@ public sealed class ActorPovPlayScreenModelTests
                 "actor-pov-parent-chain-0-grid",
                 "actor-pov-parent-chain-connectors",
                 "actor-pov-current-place-grid",
+                "actor-pov-current-region-activity",
                 "actor-pov-world-inspection-northwest-empty",
                 "actor-pov-world-inspection-north-empty",
                 "actor-pov-world-inspection-northeast-empty",

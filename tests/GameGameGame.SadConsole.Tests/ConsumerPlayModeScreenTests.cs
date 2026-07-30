@@ -22,13 +22,17 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.NotNull(screen.ControlledActorProjection);
         Assert.NotNull(screen.CurrentPlaceProjection);
         Assert.NotNull(screen.CurrentSpaceView);
-        Assert.Equal(13, components.Count);
+        Assert.Equal(14, components.Count);
         var parentChain = Assert.IsType<PanelComponent>(components.Single(component => component.Id == "actor-pov-parent-chain"));
         var currentSpace = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "actor-pov-current-place-grid"));
         Assert.Equal("actor-pov-current-place-grid", currentSpace.Id);
         Assert.Equal(UiComponentState.Focused, currentSpace.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, currentSpace.Options);
         Assert.Empty(currentSpace.BodyRows);
+        var activity = Assert.IsType<PanelComponent>(components.Single(component => component.Id == "actor-pov-current-region-activity"));
+        Assert.Equal("Current location activity", activity.Title);
+        Assert.Equal($"T{screen.WorldTurnNumber}", activity.HeaderRight);
+        Assert.Equal(["Recent successes", CurrentRegionActivityViewBuilder.EmptyText], activity.BodyRows);
         Assert.Equal(1, currentSpace.View.CellMetrics.Width);
         Assert.True(currentSpace.Bounds.Height >= currentSpace.RequiredHeight);
         var actorInventory = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "actor-pov-actor-inventory-grid"));
@@ -43,6 +47,8 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Equal(UiComponentState.Selected, actorInventory.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, actorInventory.Options);
         AssertInside(actorPovModel.Layout.CurrentPlace.Bounds, currentSpace.Bounds);
+        AssertInside(actorPovModel.Layout.CurrentPlace.Bounds, activity.Bounds);
+        Assert.True(activity.Bounds.Top > currentSpace.Bounds.Top);
         Assert.Equal(8, worldInspection.Count);
         Assert.All(worldInspection, component => AssertInside(actorPovModel.Layout.WorldInspection.Bounds, component.Bounds));
         AssertInside(actorPovModel.Layout.WorldInspection.Bounds, worldInspectionConnector.Bounds);
@@ -56,6 +62,81 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Contains(debugRows, row => row.StartsWith("size:", StringComparison.Ordinal));
         Assert.Contains(debugRows, row => row.StartsWith("view:", StringComparison.Ordinal));
         Assert.Contains(debugRows, row => row.StartsWith("layers:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ConsumerPlayModeCyclesLeftRegionBetweenParentChainAndLogPanels()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+        Assert.True(screen.SubmitMove(Direction.South).Succeeded, screen.LastActionStatus);
+
+        var parentComponents = screen.Components(drawable);
+        Assert.Equal(LeftRegionMode.ParentLocationChain, screen.LeftRegionMode);
+        Assert.Contains(parentComponents, component => component.Id == "actor-pov-parent-chain");
+        Assert.DoesNotContain(parentComponents, component => component.Id.StartsWith("actor-pov-left-log", StringComparison.Ordinal));
+
+        var globalStatus = screen.CycleLeftRegionMode();
+        var globalComponents = screen.Components(drawable);
+
+        Assert.Equal(LeftRegionMode.GlobalLog, screen.LeftRegionMode);
+        Assert.Contains("full log", globalStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(globalComponents, component => component.Id == "actor-pov-parent-chain");
+        var globalLog = Assert.IsType<PanelComponent>(globalComponents.Single(component => component.Id == "actor-pov-left-log-global"));
+        Assert.Equal("Log: All", globalLog.Title);
+        Assert.Equal($"T{screen.WorldTurnNumber}", globalLog.HeaderRight);
+        Assert.Contains(globalLog.BodyRows, row => row.Contains("moved South", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("L: left region", screen.FooterText);
+
+        screen.CycleLeftRegionMode();
+        var currentLocationComponents = screen.Components(drawable);
+
+        Assert.Equal(LeftRegionMode.CurrentLocationLog, screen.LeftRegionMode);
+        var currentLocationLog = Assert.IsType<PanelComponent>(currentLocationComponents.Single(component => component.Id == "actor-pov-left-log-current-location"));
+        Assert.Equal("Log: Current location", currentLocationLog.Title);
+        Assert.Equal($"T{screen.WorldTurnNumber}", currentLocationLog.HeaderRight);
+        Assert.Contains(currentLocationLog.BodyRows, row => row.Contains("moved South", StringComparison.OrdinalIgnoreCase));
+
+        screen.CycleLeftRegionMode();
+        var restoredComponents = screen.Components(drawable);
+
+        Assert.Equal(LeftRegionMode.ParentLocationChain, screen.LeftRegionMode);
+        Assert.Contains(restoredComponents, component => component.Id == "actor-pov-parent-chain");
+    }
+
+    [Fact]
+    public void ConsumerPlayModeLeftRegionLogRowsAreClippedToPanelBodyHeight()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+        screen.CycleLeftRegionMode();
+        for (var index = 0; index < 6; index++)
+        {
+            Assert.True(screen.SubmitWait().Succeeded, screen.LastActionStatus);
+        }
+
+        var log = Assert.IsType<PanelComponent>(screen.Components(drawable).Single(component => component.Id == "actor-pov-left-log-global"));
+
+        Assert.True(log.BodyRows.Count <= Math.Max(0, log.Bounds.Height - 2));
+        Assert.StartsWith("T", log.BodyRows.FirstOrDefault() ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeCurrentPlaceShowsPersistentSuccessOnlyActivityRows()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        Assert.True(screen.SubmitMove(Direction.South).Succeeded, screen.LastActionStatus);
+
+        var activity = Assert.IsType<PanelComponent>(screen.Components(drawable).Single(component => component.Id == "actor-pov-current-region-activity"));
+        Assert.Equal($"T{screen.WorldTurnNumber}", activity.HeaderRight);
+        Assert.Contains("Recent successes", activity.BodyRows);
+        Assert.Contains(activity.BodyRows, row => row.Contains("moved South", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(activity.BodyRows, row => row.Contains("FAIL", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
