@@ -34,5 +34,9 @@ Thumbs.db
 TestResults/
 coverage/
 debug/**
+captures/**
+*.jpg
+*.jpeg
+*.gif
 *.coverage
 *.trx

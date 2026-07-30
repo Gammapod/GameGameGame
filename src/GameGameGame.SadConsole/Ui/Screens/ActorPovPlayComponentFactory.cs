@@ -13,7 +13,7 @@ internal static class ActorPovPlayComponentFactory
         [
             .. ParentChainComponents(model, showDebugLabels, currentPlace as InventorySpaceComponent),
             currentPlace,
-            WorldInspectionComponent(model, showDebugLabels),
+            .. WorldInspectionComponents(model, showDebugLabels, currentPlace as InventorySpaceComponent),
             ActorInventoryComponent(model, showDebugLabels),
             ActorInventoryInspectionComponent(model, showDebugLabels)
         ];
@@ -315,17 +315,61 @@ internal static class ActorPovPlayComponentFactory
             options: options);
     }
 
+    public static IReadOnlyList<IUiComponent> WorldInspectionComponents(
+        ActorPovPlayScreenModel model,
+        bool showDebugLabels = false,
+        InventorySpaceComponent? currentPlaceComponent = null)
+    {
+        var region = model.Layout.WorldInspection;
+        if (region.IsOmitted || region.Bounds.Width == 0 || region.Bounds.Height == 0)
+        {
+            return [new PanelComponent(
+                "actor-pov-world-inspection-empty",
+                "Adjacent world inspection",
+                region.Bounds,
+                ["Adjacent world inspection region is omitted by layout."],
+                UiComponentState.Unselected,
+                "layout omitted")];
+        }
+
+        var actorCoord = model.ControlledActor.Location.Coord;
+        var byDirection = model.Projection.WorldInspectionCandidates
+            .GroupBy(candidate => DirectionFromActorCoord(actorCoord, candidate.CoordinateInSourceInventory))
+            .Where(group => group.Key is not null)
+            .ToDictionary(group => group.Key!.Value, group => group.First());
+        var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
+        var components = new List<IUiComponent>();
+        var inspectedComponents = new List<(Direction Direction, ActorPovInspectionCandidateProjection Candidate, InventorySpaceComponent Component)>();
+        foreach (var slot in AdjacentInspectionSlots(region.Bounds))
+        {
+            byDirection.TryGetValue(slot.Direction, out var candidate);
+            var component = AdjacentWorldInspectionComponent(
+                slot.Direction,
+                slot.Bounds,
+                candidate,
+                model.ControlledActor.EntityId,
+                options);
+            components.Add(component);
+            if (candidate is not null && component is InventorySpaceComponent inspectedComponent)
+            {
+                inspectedComponents.Add((slot.Direction, candidate, inspectedComponent));
+            }
+        }
+
+        if (WorldInspectionConnector(region.Bounds, currentPlaceComponent, inspectedComponents) is { } connector)
+        {
+            components.Add(new ConnectorLineComponent(
+                "actor-pov-world-inspection-connectors",
+                "Adjacent world inspection connectors",
+                region.Bounds,
+                connector));
+        }
+
+        return components;
+    }
+
     public static IUiComponent WorldInspectionComponent(ActorPovPlayScreenModel model, bool showDebugLabels = false) =>
-        InspectionComponent(
-            "actor-pov-world-inspection-grid",
-            "actor-pov-world-inspection-empty",
-            "World inspection chain",
-            model.Layout.WorldInspection,
-            model.SelectedWorldInspectionCandidate?.Entity,
-            model.ControlledActor.EntityId,
-            model.Projection.WorldInspectionCandidates.Count,
-            "No selected world inspection candidate.",
-            showDebugLabels);
+        WorldInspectionComponents(model, showDebugLabels).First();
 
     public static IUiComponent ActorInventoryInspectionComponent(ActorPovPlayScreenModel model, bool showDebugLabels = false) =>
         InspectionComponent(
@@ -428,6 +472,165 @@ internal static class ActorPovPlayComponentFactory
             state: UiComponentState.Selected,
             options: options);
     }
+
+    private static IUiComponent AdjacentWorldInspectionComponent(
+        Direction direction,
+        SadConsoleRect bounds,
+        ActorPovInspectionCandidateProjection? candidate,
+        EntityId controlledActorId,
+        InventorySpaceRenderOptions options)
+    {
+        var suffix = DirectionId(direction);
+        var title = $"{DirectionLabel(direction)} inspection";
+        if (candidate?.Entity.InventoryGrid is not { })
+        {
+            return new PanelComponent(
+                $"actor-pov-world-inspection-{suffix}-empty",
+                title,
+                bounds,
+                [$"No adjacent inventory space {DirectionLabel(direction)}."],
+                UiComponentState.Unselected,
+                "empty");
+        }
+
+        var view = InventorySpaceViewModel.FromProjection(
+            $"0.actor-pov.world-inspection.{suffix}.inventory-space",
+            candidate.Entity,
+            controlledActorId,
+            cellMetrics: InventorySpaceCellMetrics.Default);
+        var sizing = new InventorySpaceComponent(
+            $"actor-pov-world-inspection-{suffix}-sizing",
+            view.Title,
+            SadConsoleRect.FromSize(0, 0, 1, 1),
+            view,
+            options: options);
+        var gridBounds = CenteredClipped(bounds, sizing.RequiredWidth, sizing.RequiredHeight);
+        return new InventorySpaceComponent(
+            $"actor-pov-world-inspection-{suffix}-grid",
+            view.Title,
+            gridBounds,
+            view,
+            state: UiComponentState.Selected,
+            options: options);
+    }
+
+    private static ConnectorLineViewModel? WorldInspectionConnector(
+        SadConsoleRect worldInspectionBounds,
+        InventorySpaceComponent? currentPlaceComponent,
+        IReadOnlyList<(Direction Direction, ActorPovInspectionCandidateProjection Candidate, InventorySpaceComponent Component)> inspectedComponents)
+    {
+        if (currentPlaceComponent is null || inspectedComponents.Count == 0)
+        {
+            return null;
+        }
+
+        var segments = new List<ConnectorLineSegment>();
+        foreach (var inspected in inspectedComponents)
+        {
+            if (!currentPlaceComponent.View.IsVisible(inspected.Candidate.CoordinateInSourceInventory))
+            {
+                continue;
+            }
+
+            var sourceCell = currentPlaceComponent.CellBounds(inspected.Candidate.CoordinateInSourceInventory);
+            var targetBounds = inspected.Component.Bounds;
+            var suffix = DirectionId(inspected.Direction);
+            segments.Add(new ConnectorLineSegment(
+                $"current-place-{suffix}-to-world-inspection-{suffix}",
+                CenterOf(sourceCell, $"current-place-{suffix}-entity-cell"),
+                new ConnectorLineEndpoint(
+                    $"world-inspection-{suffix}-node-left-edge",
+                    targetBounds.Left,
+                    targetBounds.Top + (targetBounds.Height / 2),
+                    AnchorX: 0f,
+                    AnchorY: 0.5f),
+                PresentationColor.Cyan,
+                Layer: 1));
+        }
+
+        return segments.Count == 0
+            ? null
+            : new ConnectorLineViewModel(
+                "actor-pov-world-inspection.connector",
+                "Adjacent world inspection ownership links",
+                segments,
+                ConnectorLineFallbackGlyphs.Ascii);
+    }
+
+    private static IReadOnlyList<(Direction Direction, SadConsoleRect Bounds)> AdjacentInspectionSlots(SadConsoleRect bounds)
+    {
+        var directions = new[]
+        {
+            Direction.NorthWest,
+            Direction.North,
+            Direction.NorthEast,
+            Direction.East,
+            Direction.SouthEast,
+            Direction.South,
+            Direction.SouthWest,
+            Direction.West
+        };
+        var slots = new List<(Direction Direction, SadConsoleRect Bounds)>();
+        var leftWidth = bounds.Width / 2;
+        var rightWidth = bounds.Width - leftWidth;
+        var baseHeight = bounds.Height / 4;
+        var extraHeight = bounds.Height % 4;
+
+        for (var column = 0; column < 2; column++)
+        {
+            var top = bounds.Top;
+            var left = column == 0 ? bounds.Left : bounds.Left + leftWidth;
+            var width = column == 0 ? leftWidth : rightWidth;
+            for (var row = 0; row < 4; row++)
+            {
+                var height = baseHeight + (row < extraHeight ? 1 : 0);
+                slots.Add((directions[(column * 4) + row], SadConsoleRect.FromSize(left, top, width, height)));
+                top += height;
+            }
+        }
+
+        return slots;
+    }
+
+    private static Direction? DirectionFromActorCoord(GridCoord actorCoord, GridCoord candidateCoord)
+    {
+        foreach (var direction in AdjacentDirections)
+        {
+            if (actorCoord.Offset(direction) == candidateCoord)
+            {
+                return direction;
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<Direction> AdjacentDirections { get; } =
+    [
+        Direction.NorthWest,
+        Direction.North,
+        Direction.NorthEast,
+        Direction.East,
+        Direction.SouthEast,
+        Direction.South,
+        Direction.SouthWest,
+        Direction.West
+    ];
+
+    private static string DirectionId(Direction direction) => direction.ToString().ToLowerInvariant();
+
+    private static string DirectionLabel(Direction direction) => direction switch
+    {
+        Direction.NorthWest => "northwest",
+        Direction.North => "north",
+        Direction.NorthEast => "northeast",
+        Direction.East => "east",
+        Direction.SouthEast => "southeast",
+        Direction.South => "south",
+        Direction.SouthWest => "southwest",
+        Direction.West => "west",
+        _ => direction.ToString()
+    };
 
     private static SadConsoleRect CenteredClipped(SadConsoleRect region, int requiredWidth, int requiredHeight)
     {

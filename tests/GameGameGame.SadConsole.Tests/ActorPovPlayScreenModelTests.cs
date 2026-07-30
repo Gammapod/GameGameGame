@@ -314,9 +314,10 @@ public sealed class ActorPovPlayScreenModelTests
             fixture.Appearance,
             fixture.ActionPlanDescriptor);
 
-        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.WorldInspectionComponent(model));
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.WorldInspectionComponents(model)
+            .Single(component => component.Id.Contains("-east-", StringComparison.Ordinal)));
 
-        Assert.Equal("actor-pov-world-inspection-grid", component.Id);
+        Assert.Equal("actor-pov-world-inspection-east-grid", component.Id);
         Assert.Equal(UiComponentState.Selected, component.State);
         Assert.Equal("Chest", component.View.Title);
         AssertInside(model.Layout.WorldInspection.Bounds, component.Bounds);
@@ -352,11 +353,13 @@ public sealed class ActorPovPlayScreenModelTests
             new Dictionary<EntityId, IEntityActionPlan>(),
             SadConsoleRect.FromSize(1, 1, 118, 38));
 
-        var worldInspection = Assert.IsType<PanelComponent>(ActorPovPlayComponentFactory.WorldInspectionComponent(model));
+        var worldInspectionComponents = ActorPovPlayComponentFactory.WorldInspectionComponents(model);
+        var worldInspection = Assert.IsType<PanelComponent>(worldInspectionComponents.First());
         var carriedInspection = Assert.IsType<PanelComponent>(ActorPovPlayComponentFactory.ActorInventoryInspectionComponent(model));
 
-        Assert.Equal("actor-pov-world-inspection-empty", worldInspection.Id);
-        Assert.Equal("no candidates", worldInspection.Status);
+        Assert.Equal(8, worldInspectionComponents.Count);
+        Assert.Equal("actor-pov-world-inspection-northwest-empty", worldInspection.Id);
+        Assert.Equal("empty", worldInspection.Status);
         Assert.Equal("actor-pov-actor-inventory-inspection-empty", carriedInspection.Id);
         Assert.Equal("no candidates", carriedInspection.Status);
         AssertInside(model.Layout.WorldInspection.Bounds, worldInspection.Bounds);
@@ -426,7 +429,15 @@ public sealed class ActorPovPlayScreenModelTests
                 "actor-pov-parent-chain-0-grid",
                 "actor-pov-parent-chain-connectors",
                 "actor-pov-current-place-grid",
-                "actor-pov-world-inspection-grid",
+                "actor-pov-world-inspection-northwest-empty",
+                "actor-pov-world-inspection-north-empty",
+                "actor-pov-world-inspection-northeast-empty",
+                "actor-pov-world-inspection-east-grid",
+                "actor-pov-world-inspection-southeast-empty",
+                "actor-pov-world-inspection-south-empty",
+                "actor-pov-world-inspection-southwest-empty",
+                "actor-pov-world-inspection-west-empty",
+                "actor-pov-world-inspection-connectors",
                 "actor-pov-actor-inventory-grid",
                 "actor-pov-actor-inventory-inspection-grid"
             ],
@@ -445,12 +456,38 @@ public sealed class ActorPovPlayScreenModelTests
             fixture.Appearance,
             fixture.ActionPlanDescriptor);
 
-        var connector = Assert.Single(ActorPovPlayComponentFactory.MainComponents(model).OfType<ConnectorLineComponent>());
-        var currentPlace = Assert.Single(ActorPovPlayComponentFactory.MainComponents(model).OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-current-place-grid");
+        var components = ActorPovPlayComponentFactory.MainComponents(model);
+        var connector = Assert.Single(components.OfType<ConnectorLineComponent>(), component => component.Id == "actor-pov-parent-chain-connectors");
+        var currentPlace = Assert.Single(components.OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-current-place-grid");
 
         var segment = Assert.Single(connector.View.Segments, segment => segment.Id == "parent-chain-0-to-current-place");
         Assert.True(segment.Start.CellX < segment.End.CellX);
         Assert.Equal(currentPlace.Bounds.Left, segment.End.CellX);
+    }
+
+    [Fact]
+    public void MainComponentsConnectAdjacentWorldEntityCellToInspectionPanel()
+    {
+        var fixture = ActorPovFixture.Create();
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor);
+
+        var components = ActorPovPlayComponentFactory.MainComponents(model);
+        var connector = Assert.Single(components.OfType<ConnectorLineComponent>(), component => component.Id == "actor-pov-world-inspection-connectors");
+        var currentPlace = Assert.Single(components.OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-current-place-grid");
+        var inspected = Assert.Single(components.OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-world-inspection-east-grid");
+
+        var segment = Assert.Single(connector.View.Segments, segment => segment.Id == "current-place-east-to-world-inspection-east");
+        var sourceCell = currentPlace.CellBounds(new GridCoord(2, 0));
+        Assert.Equal(sourceCell.Left + (sourceCell.Width / 2), segment.Start.CellX);
+        Assert.Equal(sourceCell.Top + (sourceCell.Height / 2), segment.Start.CellY);
+        Assert.Equal(inspected.Bounds.Left, segment.End.CellX);
+        Assert.Equal(inspected.Bounds.Top + (inspected.Bounds.Height / 2), segment.End.CellY);
     }
 
     private static (WorldState World, EntityId ActorId) CurrentPlaceMissingFixture()

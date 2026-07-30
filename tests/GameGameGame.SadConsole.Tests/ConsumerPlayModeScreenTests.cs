@@ -22,7 +22,7 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.NotNull(screen.ControlledActorProjection);
         Assert.NotNull(screen.CurrentPlaceProjection);
         Assert.NotNull(screen.CurrentSpaceView);
-        Assert.Equal(5, components.Count);
+        Assert.Equal(13, components.Count);
         var parentChain = Assert.IsType<PanelComponent>(components.Single(component => component.Id == "actor-pov-parent-chain"));
         var currentSpace = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "actor-pov-current-place-grid"));
         Assert.Equal("actor-pov-current-place-grid", currentSpace.Id);
@@ -32,14 +32,20 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Equal(1, currentSpace.View.CellMetrics.Width);
         Assert.True(currentSpace.Bounds.Height >= currentSpace.RequiredHeight);
         var actorInventory = Assert.IsType<InventorySpaceComponent>(components.Single(component => component.Id == "actor-pov-actor-inventory-grid"));
-        var worldInspection = components.Single(component => component.Id is "actor-pov-world-inspection-grid" or "actor-pov-world-inspection-empty");
+        var worldInspection = components
+            .Where(component => component.Id.StartsWith("actor-pov-world-inspection-", StringComparison.Ordinal)
+                && component.Id != "actor-pov-world-inspection-connectors")
+            .ToList();
+        var worldInspectionConnector = Assert.IsType<ConnectorLineComponent>(components.Single(component => component.Id == "actor-pov-world-inspection-connectors"));
         var carriedInspection = components.Single(component => component.Id is "actor-pov-actor-inventory-inspection-grid" or "actor-pov-actor-inventory-inspection-empty");
         var actorPovModel = screen.ActorPovModel(SadConsoleRect.FromSize(1, 1, 118, 40))!;
         AssertInside(actorPovModel.Layout.ParentChain.Bounds, parentChain.Bounds);
         Assert.Equal(UiComponentState.Selected, actorInventory.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, actorInventory.Options);
         AssertInside(actorPovModel.Layout.CurrentPlace.Bounds, currentSpace.Bounds);
-        AssertInside(actorPovModel.Layout.WorldInspection.Bounds, worldInspection.Bounds);
+        Assert.Equal(8, worldInspection.Count);
+        Assert.All(worldInspection, component => AssertInside(actorPovModel.Layout.WorldInspection.Bounds, component.Bounds));
+        AssertInside(actorPovModel.Layout.WorldInspection.Bounds, worldInspectionConnector.Bounds);
         AssertInside(actorPovModel.Layout.ActorInventory.Bounds, actorInventory.Bounds);
         AssertInside(actorPovModel.Layout.ActorInventoryInspection.Bounds, carriedInspection.Bounds);
 
@@ -50,6 +56,33 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Contains(debugRows, row => row.StartsWith("size:", StringComparison.Ordinal));
         Assert.Contains(debugRows, row => row.StartsWith("view:", StringComparison.Ordinal));
         Assert.Contains(debugRows, row => row.StartsWith("layers:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ConsumerPlayModeWorldInspectionRegionIsTwoColumnsByFourAdjacentDirections()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+        var model = screen.ActorPovModel(drawable)!;
+
+        var components = ActorPovPlayComponentFactory.WorldInspectionComponents(model).ToDictionary(component => component.Id);
+        var region = model.Layout.WorldInspection.Bounds;
+
+        Assert.Equal(8, components.Count);
+        var northwest = ComponentForDirection(components.Values, "northwest");
+        var north = ComponentForDirection(components.Values, "north");
+        var southeast = ComponentForDirection(components.Values, "southeast");
+        var southwest = ComponentForDirection(components.Values, "southwest");
+        var west = ComponentForDirection(components.Values, "west");
+        var columnWidth = region.Width / 2;
+        var rowHeight = region.Height / 4;
+        AssertInside(SadConsoleRect.FromSize(region.Left, region.Top, columnWidth, rowHeight + region.Height % 4), northwest.Bounds);
+        AssertInside(SadConsoleRect.FromSize(region.Left, region.Top + rowHeight + 1, columnWidth, rowHeight), north.Bounds);
+        Assert.True(north.Bounds.Top > northwest.Bounds.Top);
+        AssertInside(SadConsoleRect.FromSize(region.Left + columnWidth, region.Top, region.Width - columnWidth, rowHeight + region.Height % 4), southeast.Bounds);
+        AssertInside(SadConsoleRect.FromSize(region.Left + columnWidth, region.Top + (rowHeight * 3) + region.Height % 4, region.Width - columnWidth, rowHeight), west.Bounds);
+        Assert.True(west.Bounds.Top > southwest.Bounds.Top);
     }
 
     [Fact]
@@ -473,6 +506,9 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     private static ScenarioCatalogEntry DemoEntry() => new("prototype", "prototype", "Prototype", "Prototype session");
+
+    private static IUiComponent ComponentForDirection(IEnumerable<IUiComponent> components, string direction) =>
+        components.Single(component => component.Id.Contains($"-{direction}-", StringComparison.Ordinal));
 
     private static void MoveAdjacentToWeightBulk0(ConsumerPlayModeScreen screen)
     {

@@ -25,7 +25,7 @@ internal sealed class ConsumerPlayModeConsole : Console
     private readonly Queue<int> _pendingCaptureTurns = new();
     private readonly ConsumerPlayModeScreen _screen;
     private ConsumerPlayModeLayout _layout;
-    private ConnectorLineViewModel? _lastConnector;
+    private readonly List<ConnectorLineViewModel> _lastConnectors = [];
 
     public ConsumerPlayModeConsole(
         ScenarioCatalogEntry scenario,
@@ -172,7 +172,7 @@ internal sealed class ConsumerPlayModeConsole : Console
     public override void Render(TimeSpan delta)
     {
         base.Render(delta);
-        if (_lastConnector is not null && !_screen.HasActivePrompt)
+        if (_lastConnectors.Count > 0 && !_screen.HasActivePrompt)
         {
             GameHost.Instance.DrawCalls.Enqueue(new DrawCallCustom(DrawLinkedConnector));
         }
@@ -183,12 +183,12 @@ internal sealed class ConsumerPlayModeConsole : Console
         _renderer.ClearSurface();
         var drawable = _layout.DrawableBounds;
 
-        _lastConnector = null;
+        _lastConnectors.Clear();
         foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: false))
         {
             if (component is ConnectorLineComponent connector)
             {
-                _lastConnector = connector.View;
+                _lastConnectors.Add(connector.View);
                 continue;
             }
 
@@ -215,11 +215,12 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     private void DrawDebugOverlay(SadConsoleRect drawable)
     {
+        _lastConnectors.Clear();
         foreach (var component in _screen.ActorPovComponents(drawable, showDebugLabels: true))
         {
             if (component is ConnectorLineComponent connector)
             {
-                _lastConnector = connector.View;
+                _lastConnectors.Add(connector.View);
                 continue;
             }
 
@@ -251,14 +252,14 @@ internal sealed class ConsumerPlayModeConsole : Console
 
     private void DrawLinkedConnector()
     {
-        if (_lastConnector is null)
+        if (_lastConnectors.Count == 0)
         {
             return;
         }
 
         var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
         var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
-        _connectorRenderer.Draw([_lastConnector], AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: false);
+        _connectorRenderer.Draw(_lastConnectors, AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: false);
     }
 
     private void ToggleCaptureRecording()
