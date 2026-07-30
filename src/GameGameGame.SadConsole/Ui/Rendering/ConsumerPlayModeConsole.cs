@@ -44,6 +44,7 @@ internal sealed class ConsumerPlayModeConsole : Console
         _screen = ConsumerPlayModeScreen.Open(scenario);
         _layout = layout ?? ConsumerPlayModeLayout.FromDisplaySettings(displaySettings);
         UseKeyboard = true;
+        UseMouse = true;
         IsFocused = true;
         FocusedMode = FocusBehavior.Set;
         Redraw();
@@ -177,8 +178,34 @@ internal sealed class ConsumerPlayModeConsole : Console
         return false;
     }
 
+    public override bool ProcessMouse(MouseScreenObjectState state)
+    {
+        if (!state.IsOnScreenObject || _screen.HasActivePrompt)
+        {
+            if (_screen.ClearHoverCell())
+            {
+                Redraw();
+            }
+
+            return false;
+        }
+
+        var position = state.SurfaceCellPosition;
+        if (_screen.SetHoverCell(position.X, position.Y))
+        {
+            Redraw();
+        }
+
+        return false;
+    }
+
     public override void Render(TimeSpan delta)
     {
+        if (_screen.AdvanceHoverTooltipDelay(delta))
+        {
+            Redraw();
+        }
+
         base.Render(delta);
         if (_lastConnectors.Count > 0 && !_screen.HasActivePrompt)
         {
@@ -207,11 +234,20 @@ internal sealed class ConsumerPlayModeConsole : Console
 
         if (frame.PromptOverlay is { } prompt)
         {
+            _renderer.ClearTooltipOverlay();
             _renderer.RenderOverlay(prompt);
         }
         else
         {
             _renderer.ClearOverlay();
+            if (frame.TooltipOverlay is { } tooltip)
+            {
+                _renderer.RenderTooltipOverlay(tooltip);
+            }
+            else
+            {
+                _renderer.ClearTooltipOverlay();
+            }
         }
 
         DrawBorderBuffer();

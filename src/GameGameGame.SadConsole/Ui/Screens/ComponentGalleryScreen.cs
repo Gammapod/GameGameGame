@@ -24,6 +24,7 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("confirm-overlay"),
             new FocusTarget("candii-tileset"),
             new FocusTarget("connector-line"),
+            new FocusTarget("play-entity-tooltip"),
             new FocusTarget("play-mode-components"),
             new FocusTarget("inventory-space"),
             new FocusTarget("footer")
@@ -51,6 +52,7 @@ internal sealed class ComponentGalleryScreen
             ConfirmOverlayExample(),
             CandiiTilesetExample(),
             ConnectorLineExample(),
+            PlayEntityTooltipExample(),
             PlayModeComponentMapExample(),
             InventorySpaceExample(),
             FooterPanel()
@@ -195,6 +197,15 @@ internal sealed class ComponentGalleryScreen
             SadConsoleRect.FromSize(79, 16, 38, 7),
             view,
             _focusRouter.StateFor("connector-line"));
+    }
+
+    private PlayEntityTooltipComponent PlayEntityTooltipExample()
+    {
+        return new PlayEntityTooltipComponent(
+            "play-entity-tooltip",
+            "Play entity tooltip pattern",
+            SadConsoleRect.FromSize(79, 40, 38, 1),
+            ["Big Slime Moved North"]);
     }
 
     private InventorySpaceComponent InventorySpaceExample()

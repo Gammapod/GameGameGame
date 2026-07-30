@@ -6,6 +6,8 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
 internal sealed class ConsumerPlayModeScreen
 {
+    internal static readonly TimeSpan HoverTooltipDelay = TimeSpan.FromMilliseconds(350);
+
     private readonly EntityPanelProjectionService _panelProjection;
     private readonly GameplaySessionController? _sessionController;
     private readonly PlayModeIntentController _intentController;
@@ -35,6 +37,9 @@ internal sealed class ConsumerPlayModeScreen
     public InventorySpaceViewModel? LinkedInspectedSpaceView { get; private set; }
     public string LastActionStatus { get; private set; } = "Ready.";
     public LeftRegionMode LeftRegionMode { get; private set; } = LeftRegionMode.ParentLocationChain;
+    public (int X, int Y)? HoverCell { get; private set; }
+    public bool HoverTooltipReady { get; private set; }
+    private TimeSpan _hoverElapsed;
     public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
     public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
     public string? ActivePromptFocusedChoiceLabel => _intentController.CurrentPrompt?.FocusedChoice?.Label;
@@ -81,6 +86,50 @@ internal sealed class ConsumerPlayModeScreen
             _ => "Left region changed."
         };
         return LastActionStatus;
+    }
+
+    public bool SetHoverCell(int x, int y)
+    {
+        var next = (x, y);
+        if (HoverCell == next)
+        {
+            return false;
+        }
+
+        HoverCell = next;
+        HoverTooltipReady = false;
+        _hoverElapsed = TimeSpan.Zero;
+        return true;
+    }
+
+    public bool ClearHoverCell()
+    {
+        if (HoverCell is null)
+        {
+            return false;
+        }
+
+        HoverCell = null;
+        HoverTooltipReady = false;
+        _hoverElapsed = TimeSpan.Zero;
+        return true;
+    }
+
+    public bool AdvanceHoverTooltipDelay(TimeSpan delta)
+    {
+        if (HoverCell is null || HoverTooltipReady)
+        {
+            return false;
+        }
+
+        _hoverElapsed += delta < TimeSpan.Zero ? TimeSpan.Zero : delta;
+        if (_hoverElapsed < HoverTooltipDelay)
+        {
+            return false;
+        }
+
+        HoverTooltipReady = true;
+        return true;
     }
 
     public GameplayRuntimeSubmission SubmitMove(Direction direction)
@@ -304,6 +353,13 @@ internal sealed class ConsumerPlayModeScreen
     {
         var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false);
         var promptOverlay = PromptComponent(drawableBounds);
+        var tooltipOverlay = promptOverlay is null && HoverTooltipReady && HoverCell is { } hoverCell
+            ? PlayEntityHoverTooltipBuilder.Build(
+                PlayEntityHoverHitTester.HitTest(hoverCell.X, hoverCell.Y, mainComponents, _sessionController?.ActionLog),
+                drawableBounds,
+                hoverCell.X,
+                hoverCell.Y)
+            : null;
         var debugComponents = debugVisible
             ? ActorPovComponents(drawableBounds, showDebugLabels: true)
             : [];
@@ -319,6 +375,7 @@ internal sealed class ConsumerPlayModeScreen
             debugComponents,
             diagnosticsChrome,
             promptOverlay,
+            tooltipOverlay,
             debugRows);
     }
 

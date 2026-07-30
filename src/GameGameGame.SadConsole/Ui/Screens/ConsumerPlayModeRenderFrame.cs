@@ -9,6 +9,7 @@ internal sealed record ConsumerPlayModeRenderFrame(
     IReadOnlyList<IUiComponent> DebugComponents,
     IUiComponent? DiagnosticsChromeComponent,
     IUiComponent? PromptOverlay,
+    IUiComponent? TooltipOverlay,
     IReadOnlyList<string> DebugRows)
 {
     public bool PromptOverlayActive => PromptOverlay is not null;
@@ -37,6 +38,11 @@ internal sealed record ConsumerPlayModeRenderFrame(
         if (PromptOverlay is not null)
         {
             regions.Add(new ConsumerPlayModeCaptureRegion(PromptOverlay.Id, PromptOverlay.Title, PromptOverlay.Bounds, IsOverlay: true));
+        }
+
+        if (TooltipOverlay is not null)
+        {
+            regions.Add(new ConsumerPlayModeCaptureRegion(TooltipOverlay.Id, TooltipOverlay.Title, TooltipOverlay.Bounds, IsOverlay: true));
         }
 
         return regions;

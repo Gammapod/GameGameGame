@@ -1,5 +1,6 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
+using GameGameGame.SadConsoleApp.Ui.Components;
 
 namespace GameGameGame.SadConsoleApp;
 
@@ -39,6 +40,9 @@ internal sealed record SadConsoleSessionViewBuilderState(
 internal readonly record struct SadConsoleRect(int Left, int Top, int Width, int Bottom)
 {
     public int Height => Math.Max(0, Bottom - Top);
+
+    public bool Contains(int x, int y) =>
+        x >= Left && x < Left + Width && y >= Top && y < Bottom;
 
     public static SadConsoleRect FromSize(int left, int top, int width, int height) =>
         new(left, top, width, top + height);
@@ -533,5 +537,115 @@ internal static class CurrentRegionActivityViewBuilder
 
         rows.AddRange(outcomes.Select(ActionOutcomeTextFormatter.FormatLocal));
         return rows.Take(maxRows).ToList();
+    }
+}
+
+internal sealed record PlayEntityHoverInfo(
+    string ComponentId,
+    string ComponentTitle,
+    EntityId EntityId,
+    string EntityName,
+    PlaneId PlaneId,
+    GridCoord Coord,
+    SadConsoleRect CellBounds,
+    string? LastSuccessfulLog);
+
+internal static class PlayEntityHoverHitTester
+{
+    public static PlayEntityHoverInfo? HitTest(
+        int x,
+        int y,
+        IReadOnlyList<IUiComponent> components,
+        ActionLogProjection? actionLog,
+        int maxRecentSuccessRows = 3)
+    {
+        foreach (var component in components.OfType<InventorySpaceComponent>().Reverse())
+        {
+            if (!component.Bounds.Contains(x, y))
+            {
+                continue;
+            }
+
+            foreach (var entity in component.View.Entities.Where(entity => component.View.IsVisible(entity.Coord)).Reverse())
+            {
+                var cellBounds = component.CellBounds(entity.Coord);
+                if (!cellBounds.Contains(x, y))
+                {
+                    continue;
+                }
+
+                var latestSuccess = ActionLogQueryService.Select(
+                    actionLog,
+                    new ActionLogQuery(
+                        EntityAnchors: new HashSet<EntityId> { entity.EntityId },
+                        Succeeded: true,
+                        Order: ActionLogOrder.NewestFirst,
+                        MaxRows: 1))
+                    .FirstOrDefault();
+
+                return new PlayEntityHoverInfo(
+                    component.Id,
+                    component.Title,
+                    entity.EntityId,
+                    entity.DisplayName ?? entity.EntityId.Value,
+                    component.View.PlaneId,
+                    entity.Coord,
+                    cellBounds,
+                    latestSuccess?.Sentence);
+            }
+        }
+
+        return null;
+    }
+}
+
+internal static class PlayEntityHoverTooltipBuilder
+{
+    public static IUiComponent? Build(
+        PlayEntityHoverInfo? hover,
+        SadConsoleRect drawableBounds,
+        int mouseX,
+        int mouseY)
+    {
+        if (hover is null || drawableBounds.Width <= 0 || drawableBounds.Height <= 0)
+        {
+            return null;
+        }
+
+        var text = string.IsNullOrWhiteSpace(hover.LastSuccessfulLog)
+            ? hover.EntityName
+            : $"{hover.EntityName} {TrimEntityPrefix(hover.LastSuccessfulLog, hover.EntityName)}";
+        var rows = new List<string> { text };
+
+        var width = Math.Min(
+            Math.Max(24, rows.Concat([hover.EntityName]).Max(row => row.Length) + 2),
+            Math.Max(1, drawableBounds.Width));
+        var height = Math.Min(rows.Count + 2, Math.Max(1, drawableBounds.Height));
+        var subjectCenterX = hover.CellBounds.Left + (hover.CellBounds.Width / 2);
+        var preferredLeft = subjectCenterX - (width / 2);
+        var preferredTop = hover.CellBounds.Bottom + 1;
+        if (preferredTop + height > drawableBounds.Bottom)
+        {
+            preferredTop = hover.CellBounds.Top - height - 1;
+        }
+
+        var left = Math.Clamp(preferredLeft, drawableBounds.Left, Math.Max(drawableBounds.Left, drawableBounds.Left + drawableBounds.Width - width));
+        var top = Math.Clamp(preferredTop, drawableBounds.Top, Math.Max(drawableBounds.Top, drawableBounds.Bottom - height));
+
+        return new PlayEntityTooltipComponent(
+            "actor-pov-hover-tooltip",
+            "Hover",
+            SadConsoleRect.FromSize(left, top, width, height),
+            rows.Take(height).ToList());
+    }
+
+    private static string TrimEntityPrefix(string text, string entityName)
+    {
+        if (text.StartsWith(entityName, StringComparison.OrdinalIgnoreCase))
+        {
+            return text[entityName.Length..].TrimStart();
+        }
+
+        return text;
     }
 }

@@ -1,6 +1,7 @@
 using GameGameGame.Core;
 using GameGameGame.Content;
 using GameGameGame.SadConsoleApp;
+using GameGameGame.SadConsoleApp.Ui.Components;
 
 namespace GameGameGame.SadConsole.Tests;
 
@@ -102,6 +103,81 @@ public sealed class PlayLogViewBuilderTests
         Assert.Equal(["Recent successes", CurrentRegionActivityViewBuilder.EmptyText], rows);
     }
 
+    [Fact]
+    public void HoverHitTestFindsVisibleInventoryEntityAndFiltersRecentSuccesses()
+    {
+        var plane = new PlaneId("room");
+        var actor = new EntityId("actor");
+        var chest = new EntityId("chest");
+        var component = InventoryComponent(plane, chest);
+        var log = ActionLogProjection.FromOutcomes([
+            Outcome("old chest success", true, chest, plane, 1),
+            Outcome("actor success", true, actor, plane, 2),
+            Outcome("chest failure", false, chest, plane, 3),
+            Outcome("new chest success", true, chest, plane, 4)
+        ]);
+        var cell = component.CellBounds(new GridCoord(1, 0));
+
+        var hover = PlayEntityHoverHitTester.HitTest(cell.Left, cell.Top, [component], log, maxRecentSuccessRows: 2);
+
+        Assert.NotNull(hover);
+        Assert.Equal(chest, hover.EntityId);
+        Assert.Equal("Chest", hover.EntityName);
+        Assert.Equal(new GridCoord(1, 0), hover.Coord);
+        Assert.Equal("new chest success", hover.LastSuccessfulLog);
+    }
+
+    [Fact]
+    public void HoverTooltipPrefersBelowSubjectCenteredAndClampedInsideDrawableBounds()
+    {
+        var hover = new PlayEntityHoverInfo(
+            "component",
+            "Current place",
+            new EntityId("chest"),
+            "Chest",
+            new PlaneId("room"),
+            new GridCoord(1, 0),
+            SadConsoleRect.FromSize(25, 2, 1, 1),
+            "opened");
+        var drawable = SadConsoleRect.FromSize(1, 1, 80, 12);
+
+        var tooltip = PlayEntityHoverTooltipBuilder.Build(hover, drawable, mouseX: 19, mouseY: 2);
+        var tooltipComponent = Assert.IsType<PlayEntityTooltipComponent>(tooltip);
+
+        Assert.NotNull(tooltip);
+        Assert.Equal("actor-pov-hover-tooltip", tooltip.Id);
+        Assert.Equal(hover.CellBounds.Bottom + 1, tooltip.Bounds.Top);
+        Assert.Equal(hover.CellBounds.Left + (hover.CellBounds.Width / 2) - (tooltip.Bounds.Width / 2), tooltip.Bounds.Left);
+        Assert.True(tooltip.Bounds.Left >= drawable.Left);
+        Assert.True(tooltip.Bounds.Top >= drawable.Top);
+        Assert.True(tooltip.Bounds.Left + tooltip.Bounds.Width <= drawable.Left + drawable.Width);
+        Assert.True(tooltip.Bounds.Bottom <= drawable.Bottom);
+        Assert.Equal(["Chest opened"], tooltipComponent.BodyRows);
+    }
+
+    [Fact]
+    public void HoverTooltipMovesToAvoidClippingAndUsesTranslucentBackgroundContract()
+    {
+        var hover = new PlayEntityHoverInfo(
+            "component",
+            "Current place",
+            new EntityId("chest"),
+            "Chest",
+            new PlaneId("room"),
+            new GridCoord(1, 0),
+            SadConsoleRect.FromSize(19, 7, 1, 1),
+            "Chest opened");
+        var drawable = SadConsoleRect.FromSize(1, 1, 20, 8);
+
+        var tooltip = Assert.IsType<PlayEntityTooltipComponent>(PlayEntityHoverTooltipBuilder.Build(hover, drawable, mouseX: 19, mouseY: 7));
+
+        Assert.True(tooltip.Bounds.Left >= drawable.Left);
+        Assert.True(tooltip.Bounds.Top >= drawable.Top);
+        Assert.True(tooltip.Bounds.Left + tooltip.Bounds.Width <= drawable.Left + drawable.Width);
+        Assert.True(tooltip.Bounds.Bottom <= drawable.Bottom);
+        Assert.InRange(tooltip.BackgroundAlpha, (byte)1, (byte)254);
+    }
+
     private static ActionOutcome Outcome(string sentence, bool succeeded, EntityId actor, PlaneId planeId, int turnNumber) => new(
         turnNumber,
         actor,
@@ -133,4 +209,27 @@ public sealed class PlayLogViewBuilderTests
         new InventoryInspectionGrid(planeId, 3, 3, []),
         [],
         localLog);
+
+    private static InventorySpaceComponent InventoryComponent(PlaneId planeId, EntityId entityId)
+    {
+        var view = new InventorySpaceViewModel(
+            "test-view",
+            "Current place",
+            planeId,
+            Width: 3,
+            Height: 1,
+            InventorySpaceCellMetrics.Default,
+            InventorySpaceViewport.Full(3, 1),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer('.', PresentationColor.Gray)),
+            [new InventorySpaceEntityVisual(new GridCoord(1, 0), entityId, new InventorySpaceVisualLayer('c', PresentationColor.Earth), Accent: null, InventorySpaceVisualPlacement.Default, "Chest")],
+            [],
+            new InventorySpaceFrame(false, null, PresentationColor.Gray));
+
+        return new InventorySpaceComponent(
+            "test-grid",
+            "Current place",
+            SadConsoleRect.FromSize(10, 2, 3, 1),
+            view,
+            options: InventorySpaceRenderOptions.Bare);
+    }
 }

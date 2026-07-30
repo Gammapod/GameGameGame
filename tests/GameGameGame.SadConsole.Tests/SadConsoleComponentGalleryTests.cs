@@ -29,6 +29,7 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("confirm-overlay", component.Id),
             component => Assert.Equal("candii-tileset", component.Id),
             component => Assert.Equal("connector-line", component.Id),
+            component => Assert.Equal("play-entity-tooltip", component.Id),
             component => Assert.Equal("play-mode-components", component.Id),
             component => Assert.Equal("inventory-space", component.Id),
             component => Assert.Equal("footer", component.Id));
@@ -67,6 +68,7 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("square 8x8 cells"));
         Assert.Contains(rows, row => row.Contains("Connector-line pattern"));
         Assert.Contains(rows, row => row.Contains("Accepted connector-line pattern"));
+        Assert.Contains(rows, row => row.Contains("Big Slime Moved North"));
         Assert.Contains(rows, row => row.Contains("Play mode component map"));
         Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
         Assert.Contains(rows, row => row.Contains("Inventory-space component"));
@@ -247,6 +249,19 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Equal('|', connector.View.FallbackGlyphs.Vertical);
         Assert.Equal('+', connector.View.FallbackGlyphs.Junction);
         Assert.Contains(connector.RenderRows(SadConsoleTheme.Default), row => row.Contains("below prompts/debug"));
+    }
+
+    [Fact]
+    public void GalleryIncludesPlayEntityTooltipPatternAsExecutablePatternReference()
+    {
+        var gallery = ComponentGalleryScreen.CreateDefault();
+
+        var tooltip = Assert.IsType<PlayEntityTooltipComponent>(gallery.Components().Single(component => component.Id == "play-entity-tooltip"));
+
+        Assert.Equal("Play entity tooltip pattern", tooltip.Title);
+        Assert.Equal(["Big Slime Moved North"], tooltip.BodyRows);
+        Assert.InRange(tooltip.BackgroundAlpha, (byte)1, (byte)254);
+        Assert.Equal(1, tooltip.Bounds.Height);
     }
 
     [Fact]

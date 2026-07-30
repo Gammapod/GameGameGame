@@ -16,7 +16,9 @@ internal sealed class SadConsoleComponentRenderer
     private readonly TilesetProfile tileset;
     private readonly TilesetTextRenderer textRenderer;
     private Console? _overlayLayer;
+    private Console? _tooltipLayer;
     private bool _overlayAttached;
+    private bool _tooltipAttached;
 
     public SadConsoleComponentRenderer(Console host, SadConsoleTheme theme, SadConsoleDisplaySettings? displaySettings = null)
     {
@@ -94,6 +96,38 @@ internal sealed class SadConsoleComponentRenderer
         _overlayLayer.Surface.IsDirty = true;
     }
 
+    public void ClearTooltipOverlay()
+    {
+        if (!_tooltipAttached)
+        {
+            return;
+        }
+
+        host.Children.Remove(_tooltipLayer!);
+        _tooltipAttached = false;
+    }
+
+    public void RenderTooltipOverlay(IUiComponent tooltip)
+    {
+        var bounds = tooltip.Bounds;
+        if (_tooltipLayer is null || _tooltipLayer.Width != bounds.Width || _tooltipLayer.Height != bounds.Height)
+        {
+            ClearTooltipOverlay();
+            _tooltipLayer = new Console(bounds.Width, bounds.Height, bounds.Width, bounds.Height);
+        }
+
+        _tooltipLayer.Position = new Point(bounds.Left, bounds.Top);
+        if (!_tooltipAttached)
+        {
+            host.Children.Add(_tooltipLayer);
+            _tooltipAttached = true;
+        }
+
+        textRenderer.Clear(_tooltipLayer, Color.White, Color.Transparent);
+        DrawComponent(_tooltipLayer, tooltip, localBounds: true);
+        _tooltipLayer.Surface.IsDirty = true;
+    }
+
     private Point CenteredOverlayPosition(int width, int height) => new(
         Math.Max(0, (host.Width - width) / 2),
         Math.Max(0, (host.Height - height) / 2));
@@ -116,6 +150,12 @@ internal sealed class SadConsoleComponentRenderer
         if (component is InventorySpaceComponent inventorySpace)
         {
             DrawInventorySpaceComponent(target, inventorySpace, localBounds);
+            return;
+        }
+
+        if (component is PlayEntityTooltipComponent tooltip)
+        {
+            DrawPlayEntityTooltipComponent(target, tooltip, localBounds);
             return;
         }
 
@@ -185,6 +225,25 @@ internal sealed class SadConsoleComponentRenderer
         var sideWidth = Math.Max(8, (innerWidth - gap) / 2);
         DrawTransferInventorySide(target, component.ActorSide, SadConsoleRect.FromSize(innerLeft, sideTop, sideWidth, sideHeight));
         DrawTransferInventorySide(target, component.CounterpartySide, SadConsoleRect.FromSize(innerLeft + sideWidth + gap, sideTop, Math.Max(8, innerWidth - sideWidth - gap), sideHeight));
+    }
+
+    private void DrawPlayEntityTooltipComponent(Console target, PlayEntityTooltipComponent component, bool localBounds)
+    {
+        var bounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : component.Bounds;
+        var background = new Color((byte)0, (byte)0, (byte)0, component.BackgroundAlpha);
+        FillRect(target, bounds, background);
+        var maxRows = Math.Min(component.BodyRows.Count, Math.Max(0, bounds.Height));
+        for (var index = 0; index < maxRows; index++)
+        {
+            textRenderer.PrintClipped(
+                target,
+                bounds.Left,
+                bounds.Top + index,
+                Math.Max(0, bounds.Width),
+                ComponentGalleryConsole.StripStyleTokens(component.BodyRows[index]),
+                Color.White,
+                background);
+        }
     }
 
     private void DrawTransferInventorySide(Console target, TransferInventorySideComponent side, SadConsoleRect bounds)

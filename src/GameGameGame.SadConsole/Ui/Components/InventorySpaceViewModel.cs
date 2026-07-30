@@ -71,6 +71,7 @@ internal sealed record InventorySpaceViewModel(
 
         var metrics = cellMetrics ?? InventorySpaceCellMetrics.Default;
         var visibleViewport = viewport ?? InventorySpaceViewport.Full(grid.Width, grid.Height);
+        var namesByEntityId = projection.Contents.ToDictionary(row => row.EntityId, row => row.EntityName);
         var entities = grid.Cells
             .Where(cell => cell.EntityId is not null)
             .Select(cell => new InventorySpaceEntityVisual(
@@ -78,7 +79,8 @@ internal sealed record InventorySpaceViewModel(
                 cell.EntityId!.Value,
                 new InventorySpaceVisualLayer(cell.Glyph, cell.Color),
                 Accent: null,
-                InventorySpaceVisualPlacement.Default))
+                InventorySpaceVisualPlacement.Default,
+                namesByEntityId.GetValueOrDefault(cell.EntityId.Value)))
             .ToList();
         var decorators = new List<InventorySpaceDecorator>();
 
@@ -152,7 +154,8 @@ internal sealed record InventorySpaceEntityVisual(
     EntityId EntityId,
     InventorySpaceVisualLayer Primary,
     InventorySpaceVisualLayer? Accent,
-    InventorySpaceVisualPlacement Placement);
+    InventorySpaceVisualPlacement Placement,
+    string? DisplayName = null);
 
 internal sealed record InventorySpaceVisualLayer(
     int Glyph,

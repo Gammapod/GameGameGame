@@ -106,6 +106,31 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeDelaysHoverTooltipUntilHoverSettles()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 118, 40);
+        var currentGrid = Assert.IsType<InventorySpaceComponent>(screen.Components(drawable).Single(component => component.Id == "actor-pov-current-place-grid"));
+        var entity = currentGrid.View.Entities.First(entity => entity.DisplayName is not null);
+        var cell = currentGrid.CellBounds(entity.Coord);
+
+        Assert.True(screen.SetHoverCell(cell.Left, cell.Top));
+        Assert.False(screen.HoverTooltipReady);
+        Assert.Null(screen.BuildRenderFrame(drawable, debugVisible: false).TooltipOverlay);
+
+        Assert.False(screen.AdvanceHoverTooltipDelay(ConsumerPlayModeScreen.HoverTooltipDelay - TimeSpan.FromMilliseconds(1)));
+        Assert.Null(screen.BuildRenderFrame(drawable, debugVisible: false).TooltipOverlay);
+
+        Assert.True(screen.AdvanceHoverTooltipDelay(TimeSpan.FromMilliseconds(1)));
+        Assert.True(screen.HoverTooltipReady);
+        Assert.IsType<PlayEntityTooltipComponent>(screen.BuildRenderFrame(drawable, debugVisible: false).TooltipOverlay);
+
+        Assert.True(screen.SetHoverCell(cell.Left + 1, cell.Top));
+        Assert.False(screen.HoverTooltipReady);
+    }
+
+    [Fact]
     public void ConsumerPlayModeLeftRegionLogRowsAreClippedToPanelBodyHeight()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();
