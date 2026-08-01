@@ -168,3 +168,27 @@ Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario rep
 - **Unlocks:** Safer frontend/user-generated scenario curation, deliberate promotion from user/delta to canonical, and reduced accidental Manifest.yaml rewrites.
 - **Classification:** Content/package organization issue; editor/agent API workflow request.
 - **Priority:** Medium-high if scenario browsing/editing becomes a regular content workflow.
+
+### GAP-011: Authorable Action Step cooldowns and initial cooldown state for ecology pacing
+
+- **Discovered in:** Pocket Bazaar ecology vignette testbed, especially `ecology-glowcap-grubarium`.
+- **Scenario/content:** `src/GameGameGame.Content/Beta/Ecology/EcologyVignettes.yaml`, cave ecology experiments with fungus, spores, grubs, bats, and guano.
+- **Desired behavior:** Authors should be able to pace repeated ecological actions such as spore creation, egg laying, reproduction, feeding, and recovery with a general cooldown/lockout mechanism. A possible brainstorm shape is an action step with cooldown metadata, e.g. `CreateEntity { templateId: glowcapSpore, cooldownTurns: 5 }`, where the step fails/falls through while locked out after a successful use. Newly created entities should optionally begin with authored cooldown state already active, e.g. a newborn grub cannot use its own `CreateEntity egg` step until 20 turns after creation.
+- **Current behavior:** Authors can approximate handling time with `PickupTarget -> costed CreateEntity/PolymorphTarget`, inventory limits, and deterministic lifecycle phases. These approximations do not express true timed recovery, juvenile maturation, reproductive cooldowns, or starvation timers.
+- **Current workaround:** Increase resource costs, add intermediate lifecycle templates, reduce initial population, or rely on spatial/inventory friction. These knobs work but can create threshold behavior: extinction on one side and runaway growth on the other.
+- **Missing capability:** General per-action or per-step cooldown state; materialization support for initial cooldown state on spawned entities; validation and reporting for cooldown-gated fallthrough; frontend/editor exposure for authored cooldown metadata. Starvation and reproductive cooldown might both be modeled as specialized uses of this broader feature if actions can become available/unavailable over time.
+- **Unlocks:** Stable ecology loops; age/maturation gates; spell/action pacing; factories with production rates; creatures that must recover after reproducing; stationary producers whose output rate is not one per turn; more realistic starvation/maintenance behaviors when paired with resource-consumption actions.
+- **Classification:** New engine capability plus content/editor/API authoring support.
+- **Priority:** High for ecology/economy authoring; promote when Pocket Bazaar ecology exhibits become a selected release target.
+
+### GAP-012: Awareness-count and density-dependent action conditions
+
+- **Discovered in:** Pocket Bazaar ecology vignette testbed and design discussion around density-dependent reproduction, resource seeking, and group threat response.
+- **Scenario/content:** Future ecology/economy/faction vignettes; examples include grubs limiting egg laying by nearby egg count, goblins changing behavior based on number of visible gold items, and trolls attacking or fleeing based on visible human count.
+- **Desired behavior:** Targeting/awareness should optionally expose multiple matching targets per authored relationship instead of only a single nearest target. Authors should then be able to gate actions on awareness counts or density thresholds. Brainstorm examples: `Goblin loves Gold` tracks all visible gold; `Seek loves` may default to the first target, while `Seek [loves] >= 2` only acts when at least two gold items are known. `Grub inhibits Egg` plus `Create [egg] <= 5` would lay eggs only while local egg density is below a threshold. `Troll fears Humans` could attack when `[fears] <= 3` and flee when `[fears] > 3`.
+- **Current behavior:** Targeting profiles select the nearest matching candidate per rule/label. Authors can express nearest-target pursuit, pickup, flee, destroy, and transfer behaviors, but cannot directly ask how many relevant targets are visible/nearby or gate an action on that count.
+- **Current workaround:** Use layout, resource costs, carrying capacity, or fixed initial populations to influence density indirectly. This is insufficient for local carrying capacities, crowd avoidance, morale/group fear, or density-dependent reproduction.
+- **Missing capability:** Multi-target awareness arrays or counted target sets; action-step predicates over target counts and possibly local ranges; validation for threshold syntax; clear fallthrough semantics when count gates fail; report/debug projection of awareness counts so authors can tune scenarios.
+- **Unlocks:** Population caps as content; local carrying capacity; group morale and intimidation; richer resource-seeking behavior; swarm avoidance; ecologies that stabilize through local density instead of global hard caps.
+- **Classification:** New engine/action/targeting capability plus content/editor/API authoring support.
+- **Priority:** High for ecology and faction behavior authoring; likely pairs well with cooldown support.

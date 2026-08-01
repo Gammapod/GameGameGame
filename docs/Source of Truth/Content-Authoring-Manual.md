@@ -293,6 +293,7 @@ Preferred scenario workflow:
 2. Create or reuse entity templates, presentations, inventories, and action plans.
 3. Assign default action plans and initial `Facing` as needed.
 4. Mark controlled placed entity instances with `controller: Player` when the controlled actor should be explicit. Use legacy player template/entity/start only for compatibility scenarios that still insert a player into the root plane.
+   - For new exploratory or exhibit-style scenarios, include an explicit placed player/observer entity with a basic action loadout unless the scenario is intentionally playerless. The current standard loadout is a reusable player/observer template with `controller: Player`, initial `Facing`, and a default action plan ordered as `Move` Forward, `PickupTarget`, `DropFacing`, then `Transfer` `TargetToActor` Forward. This keeps scenarios manually inspectable and provides a consistent baseline for player interaction while AI actors demonstrate the authored behavior.
 5. Validate the content document.
 6. Materialize and run the scenario.
 7. Use SadConsole/manual play when spatial behavior needs visual review; use legacy frames/GIF recording only when an artifact is specifically needed.
@@ -301,6 +302,46 @@ Preferred scenario workflow:
 10. Log gaps for unsupported behavior or insufficient reporting.
 
 Keep scenarios focused. Prefer multiple small vignettes over one scenario that depends on unclear interactions or unsupported filters.
+
+## Ecology authoring notes
+
+Status: Early content-authoring practice from the Pocket Bazaar ecology vignette testbed. These notes are not invariants; treat them as practical knobs to try when authoring isolated ecologies with the current Action Step surface.
+
+Ecology vignettes should be understood as spatial, individual-based systems. Track what each entity can produce, consume, carry, convert, and remove per turn. Prefer material flows such as `resource -> carrier inventory -> costed lifecycle action` over direct deletion when modeling eating, predation, nutrient recycling, or economic spending.
+
+### Currently modellable ecology knobs
+
+1. **Reproduction requiring multiple food units.**
+   - Author by giving the reproducing entity enough inventory/carrying capacity and adding multiple resource costs to its `CreateEntity` or lifecycle action.
+   - Example: the cave test changed grub reproduction from `1 glowcapSpore -> 1 glowcapGrub` to `2 glowcapSpore -> 1 glowcapGrub` by increasing grub capacity to 2 and setting the reproduction cost quantity to 2.
+   - Finding: this is a strong population-control knob. It slowed grub growth and made foraging more visible, but with two bats the grubs tended toward extinction and with one bat they could still overrun. Food cost controls rate; it does not by itself solve indefinite parent survival.
+
+2. **Handling time / lifecycle processing delay.**
+   - Author by ordering `PickupTarget` before a costed output action, so an entity must spend at least one action collecting the resource/prey and another action converting it.
+   - Example: bats should prefer `PickupTarget prey -> CreateEntity guano` with `glowcapGrub` as the cost, rather than `DestroyTarget prey`.
+   - Finding: replacing direct bat destruction with pickup-plus-costed guano made the cave much more legible and prevented immediate grub extinction. This pattern creates explicit handled states such as “bat carrying grub” and exposes placement/inventory constraints as real ecological pressure.
+
+3. **Waste or incomplete conversion.**
+   - Author by making costs exceed outputs, e.g. `2 spores -> 1 grub`, `2 grubs -> 1 guano`, or `2 guano -> 1 spore`.
+   - Finding: the current `2 spores -> 1 grub` cave test shows that lossy conversion can prevent instant bloom, but it is a very sensitive knob. Use it to dampen runaway growth, and expect to retune predator count, starting population, or input rate afterward.
+
+4. **Predator or regulator reproduction tied to consumption.**
+   - Author structurally with the same pattern as other costed creation: a predator carries prey/resources, then spends them to `CreateEntity` another predator/regulator or helper.
+   - Related evidence: the Goblin Coin Table uses `Coin -> Hired Bruiser` as an economic analogue. It proved that costed creation is easy to author, but also that unchecked regulator/helper creation can dominate the scenario and clog space.
+   - Finding: consumption-tied predator reproduction is authorable, but should usually be paired with a limiting factor such as high cost, limited input, small inventory, lossy conversion, or future density/cooldown support.
+
+5. **Limited lifespan or staged lifecycle chains, approximately.**
+   - Author with deterministic lifecycle phases using `PolymorphTarget`, optionally combined with costed actions. Existing lifecycle showcases demonstrate chains such as egg/silkworm/cocoon/moth.
+   - Finding: this can model phase changes, one-shot reproductive states, or “spent” forms, but it is not a true age or timed lifespan. Without turn counters or duration controls, each phase tends to resolve on the entity's next successful action unless blocked by costs, movement, or inventory constraints.
+
+### Current ecology authoring lessons
+
+- Treat production, conversion, and removal as throughput limits. Count the maximum per-turn rates: resource creation, resource-to-consumer conversion, and consumer removal.
+- Fixed top predators remove a roughly linear amount of prey, while self-reproducing consumers can grow superlinearly once enough food and space exist.
+- Direct `DestroyTarget` is usually too opaque for ecology. Prefer pickup-plus-costed output so consumed material remains inspectable before conversion.
+- Food costs, predator count, and input rate are strong knobs, but they can produce threshold behavior: extinction on one side and runaway growth on the other.
+- Closing the material loop with local resources, e.g. `guano -> spore -> grub -> guano`, should usually be tested before adding more species or more predators.
+- Add an intentionally playerless analysis scenario only when headless turn traces are more important than manual play. Otherwise use the standard placed player/observer loadout above.
 
 ## Validation, simulation, recording, and review
 

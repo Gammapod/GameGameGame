@@ -1,0 +1,598 @@
+entityTemplates:
+  ecologyObserver:
+    name: Ecology Observer
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: observerPlan
+    actionStateDefaults:
+      facing: West
+  glowcapGrubariumRoom:
+    name: Glowcap Grubarium
+    inventoryWidth: 16
+    inventoryHeight: 9
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: glowcapObserver
+      templateId: ecologyObserver
+      coord:
+        x: 0
+        y: 0
+      controller: Player
+    - entityId: glowcapNorth
+      templateId: glowcapFungus
+      coord:
+        x: 3
+        y: 2
+    - entityId: glowcapSouth
+      templateId: glowcapFungus
+      coord:
+        x: 3
+        y: 6
+    - entityId: glowcapEast
+      templateId: glowcapFungus
+      coord:
+        x: 12
+        y: 4
+    - entityId: grubA
+      templateId: glowcapGrub
+      coord:
+        x: 5
+        y: 2
+    - entityId: grubB
+      templateId: glowcapGrub
+      coord:
+        x: 5
+        y: 6
+    - entityId: grubC
+      templateId: glowcapGrub
+      coord:
+        x: 10
+        y: 4
+    - entityId: batA
+      templateId: duskwingBat
+      coord:
+        x: 8
+        y: 1
+  glowcapFungus:
+    name: Glowcap Fungus
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 0
+    defaultActionPlanId: glowcapFungusProducesSpores
+  glowcapSpore:
+    name: Glowcap Spore
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  glowcapGrub:
+    name: Cave Grub
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 2
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: grubEatReproduceSeek
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: food
+        targetTemplateId: glowcapSpore
+        range: 0
+  duskwingBat:
+    name: Duskwing Bat
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: batRegulateGrubs
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: prey
+        targetTemplateId: glowcapGrub
+        targetCapabilities:
+        - PickupTarget
+        range: 0
+  glowcapGuano:
+    name: Bat Guano
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  manaAutomataRoom:
+    name: Mana Crystal Automata
+    inventoryWidth: 16
+    inventoryHeight: 9
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: manaObserver
+      templateId: ecologyObserver
+      coord:
+        x: 0
+        y: 0
+      controller: Player
+    - entityId: crystalWest
+      templateId: manaCrystal
+      coord:
+        x: 3
+        y: 2
+    - entityId: crystalEast
+      templateId: manaCrystal
+      coord:
+        x: 12
+        y: 6
+    - entityId: constructA
+      templateId: tinyConstruct
+      coord:
+        x: 5
+        y: 2
+    - entityId: constructB
+      templateId: tinyConstruct
+      coord:
+        x: 10
+        y: 6
+    - entityId: leechA
+      templateId: manaLeech
+      coord:
+        x: 7
+        y: 4
+    - entityId: leechB
+      templateId: manaLeech
+      coord:
+        x: 9
+        y: 4
+  manaCrystal:
+    name: Mana Crystal
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 0
+    defaultActionPlanId: crystalEmitsMana
+  manaSpark:
+    name: Mana Spark
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  tinyConstruct:
+    name: Tiny Construct
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 2
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: constructRechargeThenDefend
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: threat
+        targetTemplateId: manaLeech
+        range: 0
+      - slot: 2
+        label: charge
+        targetTemplateId: manaSpark
+        range: 0
+  manaLeech:
+    name: Mana Leech
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: leechDrainSplitSeek
+    actionStateDefaults:
+      facing: West
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: mana
+        targetTemplateId: manaSpark
+        range: 0
+  goblinCoinTableRoom:
+    name: Goblin Coin Table
+    inventoryWidth: 18
+    inventoryHeight: 9
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: coinObserver
+      templateId: ecologyObserver
+      coord:
+        x: 0
+        y: 0
+      controller: Player
+    - entityId: coinFountainWest
+      templateId: coinFountain
+      coord:
+        x: 3
+        y: 4
+    - entityId: coinFountainEast
+      templateId: coinFountain
+      coord:
+        x: 14
+        y: 4
+    - entityId: goblinA
+      templateId: coinGoblin
+      coord:
+        x: 5
+        y: 2
+    - entityId: goblinB
+      templateId: coinGoblin
+      coord:
+        x: 12
+        y: 6
+    - entityId: thiefA
+      templateId: goblinThief
+      coord:
+        x: 8
+        y: 4
+  coinFountain:
+    name: Coin Fountain
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 100
+    carryingCapacity: 0
+    bulk: 100
+    aperture: 0
+    defaultActionPlanId: fountainSpillsCoin
+  bazaarCoin:
+    name: Coin
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  coinGoblin:
+    name: Coin Goblin
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 2
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: goblinBuyThenGather
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: coin
+        targetTemplateId: bazaarCoin
+        range: 0
+      - slot: 2
+        label: thief
+        targetTemplateId: goblinThief
+        range: 0
+  goblinThief:
+    name: Goblin Thief
+    inventoryWidth: 2
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 2
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: thiefStealThenGather
+    actionStateDefaults:
+      facing: West
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: victim
+        targetTemplateId: coinGoblin
+        range: 0
+      - slot: 2
+        label: coin
+        targetTemplateId: bazaarCoin
+        range: 0
+  hiredBruiser:
+    name: Hired Bruiser
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: bruiserPursuesThieves
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: thief
+        targetTemplateId: goblinThief
+        range: 0
+presentations:
+  ecologyObserver:
+    glyph: '@'
+    color: Yellow
+  glowcapGrubariumRoom:
+    glyph: '#'
+    color: Gray
+  glowcapFungus:
+    glyph: F
+    color: Cyan
+  glowcapSpore:
+    glyph: .
+    color: Green
+  glowcapGrub:
+    glyph: g
+    color: Earth
+  duskwingBat:
+    glyph: b
+    color: DarkGreen
+  glowcapGuano:
+    glyph: ','
+    color: Earth
+  manaAutomataRoom:
+    glyph: '#'
+    color: Gray
+  manaCrystal:
+    glyph: C
+    color: Cyan
+  manaSpark:
+    glyph: '*'
+    color: Cyan
+  tinyConstruct:
+    glyph: k
+    color: Gray
+  manaLeech:
+    glyph: l
+    color: DarkGreen
+  goblinCoinTableRoom:
+    glyph: '#'
+    color: Gray
+  coinFountain:
+    glyph: $
+    color: Yellow
+  bazaarCoin:
+    glyph: .
+    color: Yellow
+  coinGoblin:
+    glyph: g
+    color: Green
+  goblinThief:
+    glyph: t
+    color: Earth
+  hiredBruiser:
+    glyph: B
+    color: Gray
+actionPlans:
+  glowcapFungusProducesSpores:
+    id: glowcapFungusProducesSpores
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: glowcapSpore
+        createPlacement: AdjacentOpen
+  grubEatReproduceSeek:
+    id: grubEatReproduceSeek
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: glowcapGrub
+        createPlacement: AdjacentOpen
+        costs:
+        - templateId: glowcapSpore
+          quantity: 2
+      - kind: PickupTarget
+        targetLabel: food
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: food
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+    steps: []
+  batRegulateGrubs:
+    id: batRegulateGrubs
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: prey
+        targetSelf: false
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: glowcapGuano
+        createPlacement: AdjacentOpen
+        costs:
+        - templateId: glowcapGrub
+          quantity: 1
+      - kind: TargetPathMove
+        targetLabel: prey
+        targetSelf: false
+        pathMode: SeekAdjacency
+    steps: []
+  crystalEmitsMana:
+    id: crystalEmitsMana
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: manaSpark
+        createPlacement: AdjacentOpen
+  constructRechargeThenDefend:
+    id: constructRechargeThenDefend
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: charge
+        targetSelf: false
+      - kind: DestroyTarget
+        targetLabel: threat
+        targetSelf: false
+        costs:
+        - templateId: manaSpark
+          quantity: 1
+      - kind: TargetPathMove
+        targetLabel: threat
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: TargetPathMove
+        targetLabel: charge
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+  leechDrainSplitSeek:
+    id: leechDrainSplitSeek
+    behavior:
+      steps:
+      - kind: PickupTarget
+        targetLabel: mana
+        targetSelf: false
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: manaLeech
+        createPlacement: AdjacentOpen
+        costs:
+        - templateId: manaSpark
+          quantity: 1
+      - kind: TargetPathMove
+        targetLabel: mana
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+  fountainSpillsCoin:
+    id: fountainSpillsCoin
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: bazaarCoin
+        createPlacement: AdjacentOpen
+  goblinBuyThenGather:
+    id: goblinBuyThenGather
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: hiredBruiser
+        createPlacement: AdjacentOpen
+        costs:
+        - templateId: bazaarCoin
+          quantity: 1
+      - kind: PickupTarget
+        targetLabel: coin
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: coin
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: TargetPathMove
+        targetLabel: thief
+        targetSelf: false
+        pathMode: FleeAdjacency
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+  thiefStealThenGather:
+    id: thiefStealThenGather
+    behavior:
+      steps:
+      - kind: TakeTarget
+        targetLabel: victim
+        targetSelf: false
+      - kind: PickupTarget
+        targetLabel: coin
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: victim
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: TargetPathMove
+        targetLabel: coin
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+  bruiserPursuesThieves:
+    id: bruiserPursuesThieves
+    behavior:
+      steps:
+      - kind: DestroyTarget
+        targetLabel: thief
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: thief
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+  observerPlan:
+    id: observerPlan
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: PickupTarget
+        targetSelf: false
+      - kind: DropFacing
+        targetSelf: false
+      - kind: Transfer
+        targetSelf: false
+        directionMode: Forward
+        transferDirection: TargetToActor
+    steps: []
+scenarios:
+  ecology-glowcap-grubarium:
+    name: Ecology Glowcap Grubarium
+    scenarioRootEntityTemplateId: glowcapGrubariumRoom
+  ecology-mana-crystal-automata:
+    name: Ecology Mana Crystal Automata
+    scenarioRootEntityTemplateId: manaAutomataRoom
+  ecology-goblin-coin-table:
+    name: Ecology Goblin Coin Table
+    scenarioRootEntityTemplateId: goblinCoinTableRoom

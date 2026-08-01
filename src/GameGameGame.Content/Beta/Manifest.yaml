@@ -379,6 +379,27 @@ sections:
     status: active-delta
     tags: [delta, entity-lifecycle, create, destroy, polymorph, costs, targeting]
     source: User-requested Delta lifecycle showcase
+  - contentPath: src\GameGameGame.Content\Beta\Ecology\EcologyVignettes.yaml
+    scenarioId: ecology-glowcap-grubarium
+    name: Ecology Glowcap Grubarium
+    description: Exploratory ecology exhibit for Pocket Bazaar planning; glowcap fungus emits spores, cave grubs eat and reproduce from spores, and bats regulate grubs through ordered action plans. Intended to stay behaviorally active for at least 50 turns while exposing producer/consumer/regulator knobs.
+    status: active-delta
+    tags: [delta, ecology, bazaar, exhibit, create, destroy, costs, targeting]
+    source: User-requested ecology vignette testbed
+  - contentPath: src\GameGameGame.Content\Beta\Ecology\EcologyVignettes.yaml
+    scenarioId: ecology-mana-crystal-automata
+    name: Ecology Mana Crystal Automata
+    description: Exploratory resource-gated behavior exhibit for Pocket Bazaar planning; mana crystals emit sparks, leeches drain and split from mana, and constructs recharge before spending mana to destroy leeches. Intended to stay behaviorally active for at least 50 turns while exposing action-cost economy knobs.
+    status: active-delta
+    tags: [delta, ecology, economy, bazaar, exhibit, create, destroy, costs, targeting]
+    source: User-requested ecology vignette testbed
+  - contentPath: src\GameGameGame.Content\Beta\Ecology\EcologyVignettes.yaml
+    scenarioId: ecology-goblin-coin-table
+    name: Ecology Goblin Coin Table
+    description: Exploratory micro-economy exhibit for Pocket Bazaar planning; coin fountains emit coins, goblins gather and spend coins to hire bruisers, and thieves steal from goblins. Intended to stay behaviorally active for at least 50 turns while exposing coin substrate and social-behavior knobs.
+    status: active-delta
+    tags: [delta, ecology, economy, bazaar, exhibit, create, transfer, costs, targeting]
+    source: User-requested ecology vignette testbed
 - id: user
   name: User-Generated Scenarios
   description: Frontend-editor-authored scenarios should be registered here or in a user manifest rather than mixed with packaged Beta/Delta content.
