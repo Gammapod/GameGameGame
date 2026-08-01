@@ -129,7 +129,7 @@ public sealed class LinkedInventorySpaceLayoutTests
             height,
             InventorySpaceCellMetrics.Default,
             InventorySpaceViewport.Full(width, height),
-            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray)),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray)),
             [],
             [],
             new InventorySpaceFrame(Visible: false, Title: id, Color: PresentationColor.Yellow));

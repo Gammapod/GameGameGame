@@ -100,7 +100,7 @@ public sealed class InventorySpacePresentationGeometryTests
         Height: 2,
         InventorySpaceCellMetrics.Default,
         InventorySpaceViewport.Full(3, 2),
-        new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x202020)),
+        new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x202020)),
         [
             new InventorySpaceEntityVisual(new GridCoord(0, 0), new EntityId("actor"), new InventorySpaceVisualLayer('@', PresentationColor.Yellow), Accent: null, InventorySpaceVisualPlacement.Default, DisplayName: "Actor"),
             new InventorySpaceEntityVisual(new GridCoord(2, 1), new EntityId("box"), new InventorySpaceVisualLayer('B', PresentationColor.Earth), Accent: null, InventorySpaceVisualPlacement.Default, DisplayName: "Box")

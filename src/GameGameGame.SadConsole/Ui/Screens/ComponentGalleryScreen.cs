@@ -220,7 +220,7 @@ internal sealed class ComponentGalleryScreen
             Height: 4,
             InventorySpaceCellMetrics.Default,
             InventorySpaceViewport.Full(5, 4),
-            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
             [
                 new InventorySpaceEntityVisual(new GridCoord(1, 1), new EntityId("gallery-player"), new InventorySpaceVisualLayer('@', PresentationColor.Yellow), Accent: null, InventorySpaceVisualPlacement.Default),
                 new InventorySpaceEntityVisual(new GridCoord(3, 2), new EntityId("gallery-box"), new InventorySpaceVisualLayer('B', PresentationColor.Earth), Accent: null, InventorySpaceVisualPlacement.Default)
@@ -237,7 +237,7 @@ internal sealed class ComponentGalleryScreen
             SadConsoleRect.FromSize(40, 32, 37, 12),
             view,
             [
-                "backdrop glyph 160 fg 808080 bg 404040",
+                "backdrop glyph 223 fg 808080 bg 404040",
                 "entity glyphs preserve identity",
                 "decorators are separate overlay facts",
                 "profile: framed debug"
@@ -291,7 +291,7 @@ internal sealed class ComponentGalleryScreen
             Height: 2,
             InventorySpaceCellMetrics.Default,
             InventorySpaceViewport.Full(3, 2),
-            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x202020)),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x202020)),
             [
                 new InventorySpaceEntityVisual(new GridCoord(0, 0), new EntityId($"{id}-actor"), new InventorySpaceVisualLayer('@', PresentationColor.Yellow), Accent: null, InventorySpaceVisualPlacement.Default),
                 new InventorySpaceEntityVisual(new GridCoord(2, 1), new EntityId($"{id}-box"), new InventorySpaceVisualLayer('B', PresentationColor.Earth), Accent: null, InventorySpaceVisualPlacement.Default)

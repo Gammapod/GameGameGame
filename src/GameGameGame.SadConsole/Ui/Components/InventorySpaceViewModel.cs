@@ -137,7 +137,7 @@ internal sealed record InventorySpaceViewModel(
             grid.Height,
             metrics,
             visibleViewport,
-            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
             entities,
             decorators,
             new InventorySpaceFrame(showFrame, projection.Name, PresentationColor.Yellow));

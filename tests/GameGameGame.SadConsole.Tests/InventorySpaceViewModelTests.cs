@@ -91,7 +91,7 @@ public sealed class InventorySpaceViewModelTests
             focusedCoord: new GridCoord(1, 0));
 
         Assert.Equal("space", view.Id);
-        Assert.Equal(160, view.Backdrop.Tile.Glyph);
+        Assert.Equal(223, view.Backdrop.Tile.Glyph);
         Assert.Equal(0x808080, view.Backdrop.Tile.ForegroundRgb);
         Assert.Equal(0x404040, view.Backdrop.Tile.BackgroundRgb);
         Assert.Equal(projection.InventoryGrid!.PlaneId, view.PlaneId);

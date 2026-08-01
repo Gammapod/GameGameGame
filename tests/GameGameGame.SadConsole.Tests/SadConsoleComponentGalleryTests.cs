@@ -75,7 +75,7 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Play mode component map"));
         Assert.Contains(rows, row => row.Contains("0.2.1 Action selector"));
         Assert.Contains(rows, row => row.Contains("Inventory-space component"));
-        Assert.Contains(rows, row => row.Contains("backdrop glyph 160"));
+        Assert.Contains(rows, row => row.Contains("backdrop glyph 223"));
         Assert.Contains(rows, row => row.Contains("layers: backdrop"));
         Assert.DoesNotContain(rows, row => row.Contains("Command palette overlay"));
         Assert.Contains(rows, row => row.Contains("Context footer"));
@@ -227,7 +227,7 @@ public sealed class SadConsoleComponentGalleryTests
 
         var inventorySpace = Assert.IsType<InventorySpaceComponent>(gallery.Components().Single(component => component.Id == "inventory-space"));
 
-        Assert.Equal(160, inventorySpace.View.Backdrop.Tile.Glyph);
+        Assert.Equal(223, inventorySpace.View.Backdrop.Tile.Glyph);
         Assert.Equal(0x808080, inventorySpace.View.Backdrop.Tile.ForegroundRgb);
         Assert.Equal(0x404040, inventorySpace.View.Backdrop.Tile.BackgroundRgb);
         Assert.Equal(5, inventorySpace.View.Viewport.Width);
