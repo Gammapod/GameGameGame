@@ -133,15 +133,15 @@ Status: Resolved in Sprint 20 first slice for headless/editor-agent scenario rep
 - **Classification:** Reporting/tooling request; API ergonomics/documentation issue.
 - **Priority:** Medium; may be resolved together with GAP-002.
 
-### GAP-008: Carried entity instances cannot author per-instance initial state/facing
+### GAP-008: Placed/carried entity instances cannot author per-instance initial state/facing
 
-- **Discovered in:** SadConsole Editor parity review.
-- **Scenario/content:** Future inventory-authored actors/items where each carried instance needs distinct initial facing or action state.
-- **Desired behavior:** The inventory editor should own per-instance state for carried/placed entities, such as facing, instead of exposing template-level defaults as a primary entity-template editor field.
-- **Current behavior:** Entity templates expose `actionStateDefaults`, while carried entity summaries/editing currently focus on template, coordinate, glyph/color, and diagnostics. The rebuilt editor intentionally does not expose template default facing as a main entity-template field.
-- **Current workaround:** Keep template defaults hidden/defaulted, or author separate templates when different defaults are required.
-- **Missing capability:** Shared content/editor model and frontend projection/mutation support for per-carried-instance initial state overrides, including validation and scenario materialization behavior.
-- **Unlocks:** Placing multiple instances of one template with different initial facing/state; cleaner inventory-authored setup; less template duplication.
+- **Discovered in:** SadConsole Editor parity review; reinforced by user-authored `user-ratbarn-ratcatcher` scenario.
+- **Scenario/content:** `src/GameGameGame.Content/Beta/User/RatBarnScenario.yaml`, scenario `user-ratbarn-ratcatcher`; future inventory-authored actors/items where each placed or carried instance needs distinct initial facing, tags, or state.
+- **Desired behavior:** Inventory/placement authorship should own per-instance state for placed/carried entities, such as initial `Facing`, and future tags/states. The same rat template should be placeable twice with different authored starting directions because facing belongs to that specific placement in the parent inventory/room, not inherently to the reusable rat template.
+- **Current behavior:** Entity templates expose `actionStateDefaults`, while carried entity summaries/editing currently focus on template, coordinate, controller, glyph/color, and diagnostics. Persisted placement data does not expose authored action-state overrides, so starting `Facing` is inherited from the referenced template during materialization.
+- **Current workaround:** Author separate templates when different initial defaults are required, e.g. one north-facing rat template and one west-facing rat template that otherwise share behavior and presentation.
+- **Missing capability:** Shared content/editor model and frontend/agent projection/mutation support for per-placed/per-carried-instance initial state overrides, including YAML schema, validation, materialization behavior, scenario reports, and conflict/merge rules with template defaults. A possible shape is placement-local data such as `actionStateOverrides: { facing: North }`, later extendable to tags/states.
+- **Unlocks:** Placing multiple instances of one template with different initial facing/state; cleaner inventory-authored room setup; less template duplication; future authoring where local scenario/room placement supplies instance-specific tags, flags, or starting state.
 - **Classification:** Content/editor/materialization capability.
 - **Priority:** Medium; promote when authored layouts need per-instance state.
 

@@ -413,7 +413,14 @@ sections:
   status: user
   tags:
   - user-generated
-  entries: []
+  entries:
+  - contentPath: src\GameGameGame.Content\Beta\User\RatBarnScenario.yaml
+    scenarioId: user-ratbarn-ratcatcher
+    name: RatBarn RatCatcher
+    description: User-requested RatBarn scenario with a nested main room containing a RatCatcher, two moving Rats, a Crate, and inert props; the RatCatcher seeks and picks up rats, then enters the crate when no rats remain in the room.
+    status: user
+    tags: [user-generated, ratbarn, targeting, pickup, containment, movement]
+    source: User request
 - id: canonical
   name: Canonical and Main-Game Candidates
   description: Promoted main-game scenarios, reusable content, and canonical candidates belong here once they are no longer only vertical-slice proof rooms.

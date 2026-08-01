@@ -1,0 +1,289 @@
+entityTemplates:
+  ratBarnScenarioRoot:
+    name: RatBarn Scenario Root
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1000
+    carryingCapacity: 10000
+    bulk: 1000
+    aperture: 10000
+    carriedEntities:
+    - entityId: ratBarnRoom
+      templateId: ratBarnRoom
+      coord:
+        x: 0
+        y: 0
+  ratBarnRoom:
+    name: RatBarn Room
+    inventoryWidth: 12
+    inventoryHeight: 8
+    weight: 1000
+    carryingCapacity: 10000
+    bulk: 1000
+    aperture: 10000
+    carriedEntities:
+    - entityId: ratCatcher
+      templateId: ratBarnRatCatcher
+      coord:
+        x: 2
+        y: 3
+      controller: Player
+    - entityId: northFacingRat
+      templateId: ratBarnNorthFacingRat
+      coord:
+        x: 7
+        y: 2
+    - entityId: westFacingRat
+      templateId: ratBarnWestFacingRat
+      coord:
+        x: 8
+        y: 5
+    - entityId: ratBarnCrate
+      templateId: ratBarnCrate
+      coord:
+        x: 10
+        y: 3
+    - entityId: ratBarnCrystal
+      templateId: ratBarnCrystal
+      coord:
+        x: 5
+        y: 5
+  ratBarnRatCatcher:
+    name: RatCatcher
+    inventoryWidth: 4
+    inventoryHeight: 3
+    weight: 2
+    carryingCapacity: 20
+    bulk: 2
+    aperture: 10
+    defaultActionPlanId: ratCatcherCatchRatsThenEnterCrate
+    actionStateDefaults:
+      facing: East
+    targeting:
+      range: 10
+      rules:
+      - slot: 1
+        label: north
+        targetTemplateId: ratBarnNorthFacingRat
+        range: 0
+        locality:
+          origins:
+          - CurrentPlace
+      - slot: 2
+        label: west
+        targetTemplateId: ratBarnWestFacingRat
+        range: 0
+        locality:
+          origins:
+          - CurrentPlace
+      - slot: 3
+        label: crate
+        targetTemplateId: ratBarnCrate
+        targetCapabilities:
+        - EnterTarget
+        range: 0
+    carriedEntities:
+    - entityId: ratCatcherCoin1
+      templateId: ratBarnCoin
+      coord:
+        x: 0
+        y: 0
+    - entityId: ratCatcherCoin2
+      templateId: ratBarnCoin
+      coord:
+        x: 1
+        y: 0
+    - entityId: ratCatcherCoin3
+      templateId: ratBarnCoin
+      coord:
+        x: 2
+        y: 0
+    - entityId: ratCatcherBag
+      templateId: ratBarnBag
+      coord:
+        x: 0
+        y: 1
+  ratBarnNorthFacingRat:
+    name: Rat
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: ratBarnRatMoveThenBackstep
+    actionStateDefaults:
+      facing: North
+  ratBarnWestFacingRat:
+    name: Rat
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: ratBarnRatMoveThenBackstep
+    actionStateDefaults:
+      facing: West
+  ratBarnCrate:
+    name: Crate
+    inventoryWidth: 4
+    inventoryHeight: 4
+    weight: 8
+    carryingCapacity: 100
+    bulk: 8
+    aperture: 10
+    carriedEntities:
+    - entityId: ratBarnBroom
+      templateId: ratBarnBroom
+      coord:
+        x: 3
+        y: 3
+    - entityId: ratBarnBucket
+      templateId: ratBarnBucket
+      coord:
+        x: 2
+        y: 3
+    - entityId: crateCoin1
+      templateId: ratBarnCoin
+      coord:
+        x: 0
+        y: 2
+    - entityId: crateCoin2
+      templateId: ratBarnCoin
+      coord:
+        x: 0
+        y: 3
+    - entityId: crateCoin4
+      templateId: ratBarnCoin
+      coord:
+        x: 1
+        y: 3
+  ratBarnCrystal:
+    name: Crystal
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 3
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  ratBarnBag:
+    name: Bag
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 5
+  ratBarnCoin:
+    name: Coin
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  ratBarnBroom:
+    name: Broom
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 2
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+  ratBarnBucket:
+    name: Bucket
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 2
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+presentations:
+  ratBarnScenarioRoot:
+    glyph: '#'
+    color: Gray
+  ratBarnRoom:
+    glyph: '#'
+    color: Gray
+  ratBarnRatCatcher:
+    presentationId: actor.player
+    paletteId: actor.player.default
+    glyph: C
+    color: Green
+  ratBarnNorthFacingRat:
+    presentationId: creature.rat
+    paletteId: creature.rat.default
+    glyph: r
+    color: Earth
+  ratBarnWestFacingRat:
+    presentationId: creature.rat
+    paletteId: creature.rat.default
+    glyph: r
+    color: Earth
+  ratBarnCrate:
+    presentationId: item.box
+    paletteId: item.box.default
+    glyph: X
+    color: Earth
+  ratBarnCrystal:
+    presentationId: item.crystal
+    paletteId: item.crystal.default
+    glyph: '*'
+    color: Cyan
+  ratBarnBag:
+    presentationId: item.bag
+    paletteId: item.bag.default
+    glyph: b
+    color: Earth
+  ratBarnCoin:
+    presentationId: item.coin
+    paletteId: item.coin.default
+    glyph: $
+    color: Yellow
+  ratBarnBroom:
+    glyph: /
+    color: Earth
+  ratBarnBucket:
+    glyph: u
+    color: Gray
+actionPlans:
+  ratCatcherCatchRatsThenEnterCrate:
+    id: ratCatcherCatchRatsThenEnterCrate
+    behavior:
+      steps:
+      - kind: TargetPathMove
+        targetLabel: north
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: PickupTarget
+        targetLabel: north
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: west
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: PickupTarget
+        targetLabel: west
+        targetSelf: false
+      - kind: SeekTarget
+        targetLabel: crate
+        targetSelf: false
+      - kind: EnterTarget
+        targetLabel: crate
+        targetSelf: false
+      - kind: DropFacing
+        targetSelf: false
+    steps: []
+  ratBarnRatMoveThenBackstep:
+    id: ratBarnRatMoveThenBackstep
+    behavior:
+      steps:
+      - kind: MoveFacing
+        targetSelf: false
+      - kind: Backstep
+        targetSelf: false
+scenarios:
+  user-ratbarn-ratcatcher:
+    name: RatBarn RatCatcher
+    scenarioRootEntityTemplateId: ratBarnScenarioRoot
