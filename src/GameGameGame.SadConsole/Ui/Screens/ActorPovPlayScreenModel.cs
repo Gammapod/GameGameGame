@@ -9,7 +9,8 @@ internal sealed record ActorPovPlayScreenModel(
     ActorPovPlayProjection Projection,
     ActorPovPlayPresentationState PresentationState,
     IReadOnlyList<ActorPovPlayViewportState> Viewports,
-    IReadOnlyList<ActorPovPlayScreenDiagnostic> Diagnostics)
+    IReadOnlyList<ActorPovPlayScreenDiagnostic> Diagnostics,
+    IReadOnlyDictionary<EntityId, Direction> FacingByEntityId)
 {
     public EntityPanelProjection ControlledActor => Projection.ControlledActor;
     public EntityPanelProjection? CurrentPlace => Projection.CurrentPlace;
@@ -69,8 +70,14 @@ internal static class ActorPovPlayScreenModelBuilder
             projection,
             normalizedState,
             BuildViewports(projection),
-            BuildDiagnostics(layout, projection));
+            BuildDiagnostics(layout, projection),
+            BuildFacingFacts(world));
     }
+
+    private static IReadOnlyDictionary<EntityId, Direction> BuildFacingFacts(WorldState world) =>
+        world.ActionStates
+            .Where(pair => pair.Value.Facing is not null)
+            .ToDictionary(pair => pair.Key, pair => pair.Value.Facing!.Value);
 
     private static ActorPovPlayPresentationState NormalizePresentationState(
         ActorPovPlayProjection projection,

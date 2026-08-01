@@ -149,6 +149,13 @@ internal sealed class SadConsoleComponentRenderer
     {
         if (component is InventorySpaceComponent inventorySpace)
         {
+            if (inventorySpace.DisplayProfile is not null)
+            {
+                var inventoryBounds = localBounds ? new SadConsoleRect(0, 0, target.Width, target.Height) : inventorySpace.Bounds;
+                FillRect(target, inventoryBounds, Color.Black);
+                return;
+            }
+
             DrawInventorySpaceComponent(target, inventorySpace, localBounds);
             return;
         }

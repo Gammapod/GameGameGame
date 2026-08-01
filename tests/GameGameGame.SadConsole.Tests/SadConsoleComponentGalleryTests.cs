@@ -28,6 +28,7 @@ public sealed class SadConsoleComponentGalleryTests
             component => Assert.Equal("choice-picker-overlay", component.Id),
             component => Assert.Equal("confirm-overlay", component.Id),
             component => Assert.Equal("candii-tileset", component.Id),
+            component => Assert.Equal("inventory-space-scale-probe", component.Id),
             component => Assert.Equal("connector-line", component.Id),
             component => Assert.Equal("play-entity-tooltip", component.Id),
             component => Assert.Equal("play-mode-components", component.Id),
@@ -66,6 +67,8 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Contains(rows, row => row.Contains("Confirm overlay"));
         Assert.Contains(rows, row => row.Contains("Candii 8x8 tileset preview"));
         Assert.Contains(rows, row => row.Contains("square 8x8 cells"));
+        Assert.Contains(rows, row => row.Contains("Inventory Space Zoom probe"));
+        Assert.Contains(rows, row => row.Contains("Mixed Space Zoom probe"));
         Assert.Contains(rows, row => row.Contains("Connector-line pattern"));
         Assert.Contains(rows, row => row.Contains("Accepted connector-line pattern"));
         Assert.Contains(rows, row => row.Contains("Big Slime Moved North"));
@@ -249,6 +252,38 @@ public sealed class SadConsoleComponentGalleryTests
         Assert.Equal('|', connector.View.FallbackGlyphs.Vertical);
         Assert.Equal('+', connector.View.FallbackGlyphs.Junction);
         Assert.Contains(connector.RenderRows(SadConsoleTheme.Default), row => row.Contains("below prompts/debug"));
+    }
+
+    [Fact]
+    public void GalleryIncludesInventorySpaceScaleProbeAsExecutablePatternReference()
+    {
+        var gallery = ComponentGalleryScreen.CreateDefault();
+
+        var probe = Assert.IsType<InventorySpaceScaleProbeComponent>(gallery.Components().Single(component => component.Id == "inventory-space-scale-probe"));
+
+        Assert.Collection(
+            probe.Samples,
+            sample =>
+            {
+                Assert.Equal(InventorySpaceRelationshipTier.CurrentLocation, sample.Profile.RelationshipTier);
+                Assert.Equal(InventorySpaceZoom.Huge32, sample.Profile.SpaceZoom);
+                Assert.Equal(32, sample.Profile.CellPixelSize);
+            },
+            sample =>
+            {
+                Assert.Equal(InventorySpaceRelationshipTier.PlayerInventory, sample.Profile.RelationshipTier);
+                Assert.Equal(InventorySpaceZoom.Large24, sample.Profile.SpaceZoom);
+                Assert.Equal(24, sample.Profile.CellPixelSize);
+                Assert.Equal(1, sample.Profile.CellGapPixels);
+            },
+            sample => Assert.Equal(InventorySpaceZoom.Normal16, sample.Profile.SpaceZoom),
+            sample => Assert.Equal(InventorySpaceZoom.Small8, sample.Profile.SpaceZoom),
+            sample =>
+            {
+                Assert.Equal(InventorySpaceZoom.Micro4, sample.Profile.SpaceZoom);
+                Assert.False(sample.Profile.UsesCandiiFont);
+            });
+        Assert.All(probe.Samples, sample => Assert.Equal(2, sample.View.Entities.Count));
     }
 
     [Fact]

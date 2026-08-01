@@ -52,7 +52,9 @@ internal sealed class ConnectorLineDrawCallRenderer
     }
 
     private static XnaVector2 CellAnchor(int originX, int originY, int cellWidth, int cellHeight, ConnectorLineEndpoint endpoint) =>
-        new(originX + (endpoint.CellX * cellWidth) + (cellWidth * endpoint.AnchorX), originY + (endpoint.CellY * cellHeight) + (cellHeight * endpoint.AnchorY));
+        endpoint.PixelX is { } pixelX && endpoint.PixelY is { } pixelY
+            ? new XnaVector2(originX + pixelX, originY + pixelY)
+            : new XnaVector2(originX + (endpoint.CellX * cellWidth) + (cellWidth * endpoint.AnchorX), originY + (endpoint.CellY * cellHeight) + (cellHeight * endpoint.AnchorY));
 
     private static void DrawPixelLine(Texture2D pixel, XnaVector2 start, XnaVector2 end, XnaColor color, float thickness)
     {

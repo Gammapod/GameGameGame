@@ -128,6 +128,33 @@ public sealed class PlayLogViewBuilderTests
     }
 
     [Fact]
+    public void HoverHitTestUsesPresentationGeometryForProfiledInventorySpaces()
+    {
+        var plane = new PlaneId("room");
+        var chest = new EntityId("chest");
+        var component = InventoryComponent(plane, chest, InventorySpaceDisplayProfile.ForRelationshipTier(InventorySpaceRelationshipTier.CurrentLocation));
+        var geometry = InventorySpacePresentationGeometry.FromComponent(component, rootCellWidthPixels: 16, rootCellHeightPixels: 16);
+        var chestBounds = geometry.CellPixelBounds(new GridCoord(1, 0));
+        var hoverRootCellX = chestBounds.Left / 16;
+        var hoverRootCellY = chestBounds.Top / 16;
+        var log = ActionLogProjection.FromOutcomes([Outcome("new chest success", true, chest, plane, 4)]);
+
+        var hover = PlayEntityHoverHitTester.HitTest(
+            hoverRootCellX,
+            hoverRootCellY,
+            [component],
+            log,
+            rootCellWidthPixels: 16,
+            rootCellHeightPixels: 16);
+
+        Assert.NotNull(hover);
+        Assert.Equal(chest, hover.EntityId);
+        Assert.Equal(new GridCoord(1, 0), hover.Coord);
+        Assert.Equal("new chest success", hover.LastSuccessfulLog);
+        Assert.True(hover.CellBounds.Width >= 2);
+    }
+
+    [Fact]
     public void HoverTooltipPrefersBelowSubjectCenteredAndClampedInsideDrawableBounds()
     {
         var hover = new PlayEntityHoverInfo(
@@ -210,7 +237,7 @@ public sealed class PlayLogViewBuilderTests
         [],
         localLog);
 
-    private static InventorySpaceComponent InventoryComponent(PlaneId planeId, EntityId entityId)
+    private static InventorySpaceComponent InventoryComponent(PlaneId planeId, EntityId entityId, InventorySpaceDisplayProfile? displayProfile = null)
     {
         var view = new InventorySpaceViewModel(
             "test-view",
@@ -230,6 +257,7 @@ public sealed class PlayLogViewBuilderTests
             "Current place",
             SadConsoleRect.FromSize(10, 2, 3, 1),
             view,
-            options: InventorySpaceRenderOptions.Bare);
+            options: InventorySpaceRenderOptions.Bare,
+            displayProfile: displayProfile);
     }
 }

@@ -23,6 +23,7 @@ internal sealed class ComponentGalleryScreen
             new FocusTarget("choice-picker-overlay"),
             new FocusTarget("confirm-overlay"),
             new FocusTarget("candii-tileset"),
+            new FocusTarget("inventory-space-scale-probe"),
             new FocusTarget("connector-line"),
             new FocusTarget("play-entity-tooltip"),
             new FocusTarget("play-mode-components"),
@@ -51,6 +52,7 @@ internal sealed class ComponentGalleryScreen
             ChoicePickerOverlayExample(),
             ConfirmOverlayExample(),
             CandiiTilesetExample(),
+            InventorySpaceScaleProbeExample(),
             ConnectorLineExample(),
             PlayEntityTooltipExample(),
             PlayModeComponentMapExample(),
@@ -257,6 +259,49 @@ internal sealed class ComponentGalleryScreen
             ],
             _focusRouter.StateFor("candii-tileset"),
             "First square-tile baseline smoke test.");
+    }
+
+    private InventorySpaceScaleProbeComponent InventorySpaceScaleProbeExample()
+    {
+        var samples = new[]
+        {
+            ScaleProbeSample("huge32", "Current", InventorySpaceRelationshipTier.CurrentLocation),
+            ScaleProbeSample("large24", "Player inv", InventorySpaceRelationshipTier.PlayerInventory),
+            ScaleProbeSample("normal16", "Parent", InventorySpaceRelationshipTier.ImmediateParent),
+            ScaleProbeSample("small8", "Grandparent", InventorySpaceRelationshipTier.Grandparent),
+            ScaleProbeSample("micro4", "Great+", InventorySpaceRelationshipTier.GreatGrandparentOrBeyond)
+        };
+
+        return new InventorySpaceScaleProbeComponent(
+            "inventory-space-scale-probe",
+            "Inventory Space Zoom probe",
+            SadConsoleRect.FromSize(79, 24, 38, 15),
+            samples,
+            _focusRouter.StateFor("inventory-space-scale-probe"));
+    }
+
+    private static InventorySpaceScaleProbeSample ScaleProbeSample(string id, string label, InventorySpaceRelationshipTier tier)
+    {
+        var profile = InventorySpaceDisplayProfile.ForRelationshipTier(tier);
+        var view = new InventorySpaceViewModel(
+            $"gallery.inventory-space-scale-probe.{id}.view",
+            label,
+            new PlaneId($"gallery-scale-{id}"),
+            Width: 3,
+            Height: 2,
+            InventorySpaceCellMetrics.Default,
+            InventorySpaceViewport.Full(3, 2),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(160, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x202020)),
+            [
+                new InventorySpaceEntityVisual(new GridCoord(0, 0), new EntityId($"{id}-actor"), new InventorySpaceVisualLayer('@', PresentationColor.Yellow), Accent: null, InventorySpaceVisualPlacement.Default),
+                new InventorySpaceEntityVisual(new GridCoord(2, 1), new EntityId($"{id}-box"), new InventorySpaceVisualLayer('B', PresentationColor.Earth), Accent: null, InventorySpaceVisualPlacement.Default)
+            ],
+            [
+                new InventorySpaceDecorator(new GridCoord(0, 0), InventorySpaceDecoratorRole.Controlled, new EntityId($"{id}-actor"), new InventorySpaceVisualLayer('*', PresentationColor.Cyan), Priority: 100)
+            ],
+            new InventorySpaceFrame(Visible: false, Title: label, Color: PresentationColor.Yellow));
+
+        return new InventorySpaceScaleProbeSample(id, label, profile, view);
     }
 
     private TextEntryOverlayComponent TextEntryOverlayExample()

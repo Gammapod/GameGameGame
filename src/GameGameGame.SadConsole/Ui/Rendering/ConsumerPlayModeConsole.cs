@@ -19,6 +19,7 @@ internal sealed class ConsumerPlayModeConsole : Console
     private readonly SadConsoleTheme _theme;
     private readonly SadConsoleDisplaySettings _displaySettings;
     private readonly SadConsoleComponentRenderer _renderer;
+    private readonly MixedScaleInventorySpaceRenderer _mixedScaleInventoryRenderer;
     private readonly ConnectorLineDrawCallRenderer _connectorRenderer = new();
     private readonly GameplayCaptureRecorder _captureRecorder = new();
     private readonly GameplayCapturePolicy _capturePolicy = GameplayCapturePolicy.Default;
@@ -41,6 +42,7 @@ internal sealed class ConsumerPlayModeConsole : Console
         _theme = theme;
         _displaySettings = displaySettings;
         _renderer = new SadConsoleComponentRenderer(this, _theme, _displaySettings);
+        _mixedScaleInventoryRenderer = new MixedScaleInventorySpaceRenderer(this, "Candii");
         _screen = ConsumerPlayModeScreen.Open(scenario);
         _layout = layout ?? ConsumerPlayModeLayout.FromDisplaySettings(displaySettings);
         UseKeyboard = true;
@@ -190,7 +192,7 @@ internal sealed class ConsumerPlayModeConsole : Console
             return false;
         }
 
-        var position = state.SurfaceCellPosition;
+        var position = state.WorldCellPosition;
         if (_screen.SetHoverCell(position.X, position.Y))
         {
             Redraw();
@@ -207,6 +209,7 @@ internal sealed class ConsumerPlayModeConsole : Console
         }
 
         base.Render(delta);
+        _mixedScaleInventoryRenderer.QueueMicroDrawCall();
         if (_lastConnectors.Count > 0 && !_screen.HasActivePrompt)
         {
             GameHost.Instance.DrawCalls.Enqueue(new DrawCallCustom(DrawLinkedConnector));
@@ -216,20 +219,25 @@ internal sealed class ConsumerPlayModeConsole : Console
     private void Redraw()
     {
         _renderer.ClearSurface();
+        _mixedScaleInventoryRenderer.BeginFrame();
         var drawable = _layout.DrawableBounds;
-        var frame = _screen.BuildRenderFrame(drawable, _layout.DebugVisible);
+        var rootCellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
+        var rootCellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
+        var frame = _screen.BuildRenderFrame(drawable, _layout.DebugVisible, rootCellWidth, rootCellHeight);
+        var mixedScaleOcclusionRects = MixedScaleOcclusionRects(frame, rootCellWidth, rootCellHeight);
 
         _lastConnectors.Clear();
         foreach (var component in frame.MainDrawableComponents)
         {
             _renderer.DrawComponent(component);
+            DrawMixedScaleInventorySpace(component, mixedScaleOcclusionRects);
         }
 
         _lastConnectors.AddRange(frame.MainConnectors.Select(connector => connector.View));
 
         if (_layout.DebugVisible)
         {
-            DrawDebugOverlay(frame);
+            DrawDebugOverlay(frame, mixedScaleOcclusionRects);
         }
 
         if (frame.PromptOverlay is { } prompt)
@@ -250,16 +258,18 @@ internal sealed class ConsumerPlayModeConsole : Console
             }
         }
 
+        _mixedScaleInventoryRenderer.EndFrame();
         DrawBorderBuffer();
         Surface.IsDirty = true;
     }
 
-    private void DrawDebugOverlay(ConsumerPlayModeRenderFrame frame)
+    private void DrawDebugOverlay(ConsumerPlayModeRenderFrame frame, IReadOnlyList<PixelRect> mixedScaleOcclusionRects)
     {
         _lastConnectors.Clear();
         foreach (var component in frame.DebugDrawableComponents)
         {
             _renderer.DrawComponent(component);
+            DrawMixedScaleInventorySpace(component, mixedScaleOcclusionRects);
         }
 
         _lastConnectors.AddRange(frame.DebugConnectors.Select(connector => connector.View));
@@ -298,6 +308,49 @@ internal sealed class ConsumerPlayModeConsole : Console
         var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
         var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
         _connectorRenderer.Draw(_lastConnectors, AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: false);
+    }
+
+    private IReadOnlyList<PixelRect> MixedScaleOcclusionRects(ConsumerPlayModeRenderFrame frame, int rootCellWidth, int rootCellHeight)
+    {
+        var rects = new List<PixelRect>();
+        if (frame.PromptOverlay is { } prompt)
+        {
+            var left = Math.Max(0, (Width - prompt.Bounds.Width) / 2);
+            var top = Math.Max(0, (Height - prompt.Bounds.Height) / 2);
+            rects.Add(RootCellRectToPixel(SadConsoleRect.FromSize(left, top, prompt.Bounds.Width, prompt.Bounds.Height), rootCellWidth, rootCellHeight));
+        }
+
+        if (frame.TooltipOverlay is { } tooltip)
+        {
+            rects.Add(RootCellRectToPixel(tooltip.Bounds, rootCellWidth, rootCellHeight));
+        }
+
+        if (frame.DiagnosticsChromeComponent is { } diagnostics)
+        {
+            rects.Add(RootCellRectToPixel(diagnostics.Bounds, rootCellWidth, rootCellHeight));
+        }
+
+        return rects;
+    }
+
+    private static PixelRect RootCellRectToPixel(SadConsoleRect rect, int rootCellWidth, int rootCellHeight) =>
+        new(rect.Left * rootCellWidth, rect.Top * rootCellHeight, rect.Width * rootCellWidth, rect.Height * rootCellHeight);
+
+    private void DrawMixedScaleInventorySpace(IUiComponent component, IReadOnlyList<PixelRect> occlusionRects)
+    {
+        if (component is not InventorySpaceComponent inventorySpace || inventorySpace.DisplayProfile is not { } profile)
+        {
+            return;
+        }
+
+        var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
+        var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
+        _mixedScaleInventoryRenderer.Draw(
+            inventorySpace.View,
+            profile,
+            inventorySpace.Bounds.Left * cellWidth,
+            inventorySpace.Bounds.Top * cellHeight,
+            occlusionRects);
     }
 
     private void ToggleCaptureRecording()

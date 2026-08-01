@@ -3,6 +3,7 @@ using GameGameGame.Core;
 using GameGameGame.SadConsoleApp;
 using GameGameGame.SadConsoleApp.Ui.Components;
 using GameGameGame.SadConsoleApp.Ui.Screens;
+using SadMirror = SadConsole.Mirror;
 
 namespace GameGameGame.SadConsole.Tests;
 
@@ -127,6 +128,9 @@ public sealed class ActorPovPlayScreenModelTests
         Assert.Same(InventorySpaceRenderOptions.Bare, component.Options);
         Assert.Empty(component.BodyRows);
         Assert.Equal("Room", component.View.Title);
+        Assert.Equal(InventorySpaceZoom.Huge32, component.DisplayProfile?.SpaceZoom);
+        Assert.Equal(32, component.DisplayProfile?.CellPixelSize);
+        Assert.True(component.DisplayProfile?.ShowFacingDecorators);
         AssertInside(model.Layout.CurrentPlace.Bounds, component.Bounds);
     }
 
@@ -145,8 +149,30 @@ public sealed class ActorPovPlayScreenModelTests
         var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model, showDebugLabels: true));
 
         Assert.Same(InventorySpaceRenderOptions.Labeled, component.Options);
+        Assert.Equal(InventorySpaceZoom.Huge32, component.DisplayProfile?.SpaceZoom);
         Assert.Empty(component.BodyRows);
         AssertInside(model.Layout.CurrentPlace.Bounds, component.Bounds);
+    }
+
+    [Fact]
+    public void CurrentPlaceComponentProjectsFacingDecoratorForVisibleActors()
+    {
+        var fixture = ActorPovFixture.Create();
+        fixture.World.SetActionFacing(fixture.ActorId, Direction.SouthEast);
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor);
+
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        var facing = Assert.Single(component.View.Decorators, decorator => decorator.Role == InventorySpaceDecoratorRole.Facing && decorator.EntityId == fixture.ActorId);
+        Assert.Equal(new GridCoord(1, 0), facing.Coord);
+        Assert.Equal(251, facing.Style.Glyph);
+        Assert.Equal(SadMirror.Horizontal | SadMirror.Vertical, facing.Style.Mirror);
     }
 
     [Fact]
@@ -206,6 +232,9 @@ public sealed class ActorPovPlayScreenModelTests
         Assert.Equal(UiComponentState.Selected, component.State);
         Assert.Same(InventorySpaceRenderOptions.Bare, component.Options);
         Assert.Equal("Actor", component.View.Title);
+        Assert.Equal(InventorySpaceZoom.Large24, component.DisplayProfile?.SpaceZoom);
+        Assert.Equal(24, component.DisplayProfile?.CellPixelSize);
+        Assert.Equal(1, component.DisplayProfile?.CellGapPixels);
         AssertInside(model.Layout.ActorInventory.Bounds, component.Bounds);
     }
 
@@ -261,6 +290,7 @@ public sealed class ActorPovPlayScreenModelTests
 
         var grid = Assert.Single(grids);
         Assert.Equal("Scenario Host", grid.View.Title);
+        Assert.Equal(InventorySpaceZoom.Normal16, grid.DisplayProfile?.SpaceZoom);
         Assert.DoesNotContain(components, component => component is ConnectorLineComponent);
         Assert.All(grids, grid => AssertInside(model.Layout.ParentChain.Bounds, grid.Bounds));
     }
@@ -322,6 +352,9 @@ public sealed class ActorPovPlayScreenModelTests
         Assert.Equal(3, grids.Count);
         Assert.Equal("Ancestor 6", grids[0].View.Title);
         Assert.Equal("Ancestor 8", grids[2].View.Title);
+        Assert.Equal(InventorySpaceZoom.Micro4, grids[0].DisplayProfile?.SpaceZoom);
+        Assert.Equal(InventorySpaceZoom.Small8, grids[1].DisplayProfile?.SpaceZoom);
+        Assert.Equal(InventorySpaceZoom.Normal16, grids[2].DisplayProfile?.SpaceZoom);
         Assert.True(grids[0].Bounds.Top < grids[1].Bounds.Top);
         Assert.True(grids[1].Bounds.Top < grids[2].Bounds.Top);
     }
@@ -486,7 +519,9 @@ public sealed class ActorPovPlayScreenModelTests
         var currentPlace = Assert.Single(components.OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-current-place-grid");
 
         var segment = Assert.Single(connector.View.Segments, segment => segment.Id == "parent-chain-0-to-current-place");
-        Assert.True(segment.Start.CellX < segment.End.CellX);
+        var parent = Assert.Single(components.OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-parent-chain-0-grid");
+        var parentGeometry = InventorySpacePresentationGeometry.FromComponent(parent, 16, 16);
+        Assert.Contains(parent.View.VisibleCoords().Select(parentGeometry.CellCenter), point => point.X == segment.Start.PixelX && point.Y == segment.Start.PixelY);
         Assert.Equal(currentPlace.Bounds.Left, segment.End.CellX);
     }
 
@@ -508,9 +543,10 @@ public sealed class ActorPovPlayScreenModelTests
         var inspected = Assert.Single(components.OfType<InventorySpaceComponent>(), component => component.Id == "actor-pov-world-inspection-east-grid");
 
         var segment = Assert.Single(connector.View.Segments, segment => segment.Id == "current-place-east-to-world-inspection-east");
-        var sourceCell = currentPlace.CellBounds(new GridCoord(2, 0));
-        Assert.Equal(sourceCell.Left + (sourceCell.Width / 2), segment.Start.CellX);
-        Assert.Equal(sourceCell.Top + (sourceCell.Height / 2), segment.Start.CellY);
+        var currentGeometry = InventorySpacePresentationGeometry.FromComponent(currentPlace, 16, 16);
+        var sourceCell = currentGeometry.CellCenter(new GridCoord(2, 0));
+        Assert.Equal(sourceCell.X, segment.Start.PixelX);
+        Assert.Equal(sourceCell.Y, segment.Start.PixelY);
         Assert.Equal(inspected.Bounds.Left, segment.End.CellX);
         Assert.Equal(inspected.Bounds.Top + (inspected.Bounds.Height / 2), segment.End.CellY);
     }

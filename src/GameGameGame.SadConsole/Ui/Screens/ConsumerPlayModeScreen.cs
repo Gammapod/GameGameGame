@@ -349,13 +349,19 @@ internal sealed class ConsumerPlayModeScreen
         return ActorPovComponents(drawableBounds, showDebugLabels: false);
     }
 
-    public ConsumerPlayModeRenderFrame BuildRenderFrame(SadConsoleRect drawableBounds, bool debugVisible)
+    public ConsumerPlayModeRenderFrame BuildRenderFrame(SadConsoleRect drawableBounds, bool debugVisible, int rootCellWidthPixels = 1, int rootCellHeightPixels = 1)
     {
         var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false);
         var promptOverlay = PromptComponent(drawableBounds);
         var tooltipOverlay = promptOverlay is null && HoverTooltipReady && HoverCell is { } hoverCell
             ? PlayEntityHoverTooltipBuilder.Build(
-                PlayEntityHoverHitTester.HitTest(hoverCell.X, hoverCell.Y, mainComponents, _sessionController?.ActionLog),
+                PlayEntityHoverHitTester.HitTest(
+                    hoverCell.X,
+                    hoverCell.Y,
+                    mainComponents,
+                    _sessionController?.ActionLog,
+                    rootCellWidthPixels: rootCellWidthPixels,
+                    rootCellHeightPixels: rootCellHeightPixels),
                 drawableBounds,
                 hoverCell.X,
                 hoverCell.Y)

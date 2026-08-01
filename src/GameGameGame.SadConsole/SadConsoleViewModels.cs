@@ -557,10 +557,34 @@ internal static class PlayEntityHoverHitTester
         int y,
         IReadOnlyList<IUiComponent> components,
         ActionLogProjection? actionLog,
-        int maxRecentSuccessRows = 3)
+        int maxRecentSuccessRows = 3,
+        int rootCellWidthPixels = 1,
+        int rootCellHeightPixels = 1)
     {
         foreach (var component in components.OfType<InventorySpaceComponent>().Reverse())
         {
+            if (component.DisplayProfile is not null)
+            {
+                var geometry = InventorySpacePresentationGeometry.FromComponent(component, rootCellWidthPixels, rootCellHeightPixels);
+                var pixelX = (x * rootCellWidthPixels) + (rootCellWidthPixels / 2);
+                var pixelY = (y * rootCellHeightPixels) + (rootCellHeightPixels / 2);
+                if (geometry.HitTest(pixelX, pixelY) is not { EntityId: { } entityId } hit)
+                {
+                    continue;
+                }
+
+                var latestSuccess = LatestSuccess(actionLog, entityId);
+                return new PlayEntityHoverInfo(
+                    component.Id,
+                    component.Title,
+                    entityId,
+                    hit.DisplayName ?? entityId.Value,
+                    component.View.PlaneId,
+                    hit.Coord,
+                    PixelToRootCellRect(hit.Bounds, rootCellWidthPixels, rootCellHeightPixels),
+                    latestSuccess?.Sentence);
+            }
+
             if (!component.Bounds.Contains(x, y))
             {
                 continue;
@@ -574,14 +598,7 @@ internal static class PlayEntityHoverHitTester
                     continue;
                 }
 
-                var latestSuccess = ActionLogQueryService.Select(
-                    actionLog,
-                    new ActionLogQuery(
-                        EntityAnchors: new HashSet<EntityId> { entity.EntityId },
-                        Succeeded: true,
-                        Order: ActionLogOrder.NewestFirst,
-                        MaxRows: 1))
-                    .FirstOrDefault();
+                var latestSuccess = LatestSuccess(actionLog, entity.EntityId);
 
                 return new PlayEntityHoverInfo(
                     component.Id,
@@ -596,6 +613,27 @@ internal static class PlayEntityHoverHitTester
         }
 
         return null;
+    }
+
+    private static ActionOutcome? LatestSuccess(ActionLogProjection? actionLog, EntityId entityId) =>
+        ActionLogQueryService.Select(
+                actionLog,
+                new ActionLogQuery(
+                    EntityAnchors: new HashSet<EntityId> { entityId },
+                    Succeeded: true,
+                    Order: ActionLogOrder.NewestFirst,
+                    MaxRows: 1))
+            .FirstOrDefault();
+
+    private static SadConsoleRect PixelToRootCellRect(PixelRect rect, int rootCellWidthPixels, int rootCellHeightPixels)
+    {
+        var width = Math.Max(1, rootCellWidthPixels);
+        var height = Math.Max(1, rootCellHeightPixels);
+        var left = rect.Left / width;
+        var top = rect.Top / height;
+        var right = (int)Math.Ceiling(rect.Right / (double)width);
+        var bottom = (int)Math.Ceiling(rect.Bottom / (double)height);
+        return new SadConsoleRect(left, top, Math.Max(1, right - left), bottom);
     }
 }
 

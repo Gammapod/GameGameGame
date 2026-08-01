@@ -62,6 +62,12 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Contains(debugRows, row => row.StartsWith("size:", StringComparison.Ordinal));
         Assert.Contains(debugRows, row => row.StartsWith("view:", StringComparison.Ordinal));
         Assert.Contains(debugRows, row => row.StartsWith("layers:", StringComparison.Ordinal));
+
+        Assert.Equal(InventorySpaceZoom.Huge32, currentSpace.DisplayProfile?.SpaceZoom);
+        Assert.Equal(32, currentSpace.DisplayProfile?.CellPixelSize);
+        Assert.Equal(InventorySpaceZoom.Large24, actorInventory.DisplayProfile?.SpaceZoom);
+        Assert.Equal(24, actorInventory.DisplayProfile?.CellPixelSize);
+        Assert.Equal(1, actorInventory.DisplayProfile?.CellGapPixels);
     }
 
     [Fact]
@@ -113,20 +119,23 @@ public sealed class ConsumerPlayModeScreenTests
         var drawable = SadConsoleRect.FromSize(1, 1, 118, 40);
         var currentGrid = Assert.IsType<InventorySpaceComponent>(screen.Components(drawable).Single(component => component.Id == "actor-pov-current-place-grid"));
         var entity = currentGrid.View.Entities.First(entity => entity.DisplayName is not null);
-        var cell = currentGrid.CellBounds(entity.Coord);
+        var geometry = InventorySpacePresentationGeometry.FromComponent(currentGrid, rootCellWidthPixels: 16, rootCellHeightPixels: 16);
+        var cell = geometry.CellPixelBounds(entity.Coord);
+        var hoverX = cell.Left / 16;
+        var hoverY = cell.Top / 16;
 
-        Assert.True(screen.SetHoverCell(cell.Left, cell.Top));
+        Assert.True(screen.SetHoverCell(hoverX, hoverY));
         Assert.False(screen.HoverTooltipReady);
-        Assert.Null(screen.BuildRenderFrame(drawable, debugVisible: false).TooltipOverlay);
+        Assert.Null(screen.BuildRenderFrame(drawable, debugVisible: false, rootCellWidthPixels: 16, rootCellHeightPixels: 16).TooltipOverlay);
 
         Assert.False(screen.AdvanceHoverTooltipDelay(ConsumerPlayModeScreen.HoverTooltipDelay - TimeSpan.FromMilliseconds(1)));
-        Assert.Null(screen.BuildRenderFrame(drawable, debugVisible: false).TooltipOverlay);
+        Assert.Null(screen.BuildRenderFrame(drawable, debugVisible: false, rootCellWidthPixels: 16, rootCellHeightPixels: 16).TooltipOverlay);
 
         Assert.True(screen.AdvanceHoverTooltipDelay(TimeSpan.FromMilliseconds(1)));
         Assert.True(screen.HoverTooltipReady);
-        Assert.IsType<PlayEntityTooltipComponent>(screen.BuildRenderFrame(drawable, debugVisible: false).TooltipOverlay);
+        Assert.IsType<PlayEntityTooltipComponent>(screen.BuildRenderFrame(drawable, debugVisible: false, rootCellWidthPixels: 16, rootCellHeightPixels: 16).TooltipOverlay);
 
-        Assert.True(screen.SetHoverCell(cell.Left + 1, cell.Top));
+        Assert.True(screen.SetHoverCell(hoverX + 1, hoverY));
         Assert.False(screen.HoverTooltipReady);
     }
 

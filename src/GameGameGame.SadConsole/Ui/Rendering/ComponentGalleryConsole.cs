@@ -23,6 +23,7 @@ internal sealed class ComponentGalleryConsole : Console
     private readonly SadConsoleComponentRenderer _renderer;
     private readonly ConnectorLineDrawCallRenderer _connectorRenderer = new();
     private readonly TilesetProfile _candiiProfile;
+    private readonly MixedScaleInventorySpaceRenderer _inventorySpaceScaleProbeRenderer;
     private Console? _candiiPreviewLayer;
     private string _message = "Component gallery. Arrows select components. Enter focuses. Esc releases focus or exits.";
 
@@ -31,6 +32,7 @@ internal sealed class ComponentGalleryConsole : Console
         _theme = theme ?? SadConsoleTheme.Default;
         _renderer = new SadConsoleComponentRenderer(this, _theme, displaySettings);
         _candiiProfile = candiiProfile ?? TilesetProfileLoader.Load(ResolveAssetPath("Candii.tileset.json"));
+        _inventorySpaceScaleProbeRenderer = new MixedScaleInventorySpaceRenderer(this, _candiiProfile.FontName);
         _gallery = ComponentGalleryScreen.CreateDefault(_theme);
         UseKeyboard = true;
         IsFocused = true;
@@ -95,6 +97,7 @@ internal sealed class ComponentGalleryConsole : Console
         }
 
         RenderCandiiPreview();
+        RenderInventorySpaceScaleProbe();
 
         Surface.IsDirty = true;
     }
@@ -107,6 +110,7 @@ internal sealed class ComponentGalleryConsole : Console
         }
 
         GameHost.Instance.DrawCalls.Enqueue(new DrawCallCustom(DrawConnectorLines));
+        _inventorySpaceScaleProbeRenderer.QueueMicroDrawCall();
     }
 
     private void DrawConnectorLines()
@@ -120,6 +124,46 @@ internal sealed class ComponentGalleryConsole : Console
         var cellWidth = Math.Max(1, WidthPixels / Math.Max(1, Width));
         var cellHeight = Math.Max(1, HeightPixels / Math.Max(1, Height));
         _connectorRenderer.Draw(components.Select(component => component.View).ToList(), AbsoluteArea.X, AbsoluteArea.Y, cellWidth, cellHeight, drawEndpoints: true);
+    }
+
+    private void RenderInventorySpaceScaleProbe()
+    {
+        var component = _gallery.Components().OfType<InventorySpaceScaleProbeComponent>().FirstOrDefault();
+        _inventorySpaceScaleProbeRenderer.BeginFrame();
+        if (component is null)
+        {
+            _inventorySpaceScaleProbeRenderer.EndFrame();
+            return;
+        }
+
+        if (!SadConsole.Game.Instance.Fonts.TryGetValue(_candiiProfile.FontName, out var candiiFont))
+        {
+            PrintClipped(component.Bounds.Left + 1, component.Bounds.Top + 1, component.Bounds.Width - 2, $"{_candiiProfile.FontName} font was not loaded.", Color.Red);
+            _inventorySpaceScaleProbeRenderer.EndFrame();
+            return;
+        }
+
+        var rootCellWidth = Math.Max(1, WidthPixels / Width);
+        var rootCellHeight = Math.Max(1, HeightPixels / Height);
+        var bounds = component.Bounds;
+        var baseX = bounds.Left * rootCellWidth + rootCellWidth;
+        var labelY = bounds.Top + 3;
+        var sampleTopPixels = (bounds.Top + 5) * rootCellHeight;
+        var cursorX = baseX;
+
+        foreach (var sample in component.Samples)
+        {
+            var profile = sample.Profile;
+            var sampleWidth = profile.RequiredPixelWidth(sample.View.Viewport.Width);
+            var labelCellX = Math.Min(Width - 1, Math.Max(0, cursorX / rootCellWidth));
+            PrintClipped(labelCellX, labelY, Math.Max(4, Math.Min(10, bounds.Left + bounds.Width - labelCellX)), profile.CellPixelSize.ToString(), Color.Gray);
+
+            _inventorySpaceScaleProbeRenderer.Draw(sample.View, profile, cursorX, sampleTopPixels);
+
+            cursorX += sampleWidth + Math.Max(8, rootCellWidth);
+        }
+
+        _inventorySpaceScaleProbeRenderer.EndFrame();
     }
 
     private void RenderCandiiPreview()

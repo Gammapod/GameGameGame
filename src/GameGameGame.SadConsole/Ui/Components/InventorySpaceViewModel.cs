@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Styling;
+using SadConsole;
 
 namespace GameGameGame.SadConsoleApp.Ui.Components;
 
@@ -62,7 +63,8 @@ internal sealed record InventorySpaceViewModel(
         GridCoord? focusedCoord = null,
         InventorySpaceCellMetrics? cellMetrics = null,
         InventorySpaceViewport? viewport = null,
-        bool showFrame = true)
+        bool showFrame = true,
+        IReadOnlyDictionary<EntityId, Direction>? facingByEntityId = null)
     {
         if (projection.InventoryGrid is not { } grid)
         {
@@ -72,6 +74,13 @@ internal sealed record InventorySpaceViewModel(
         var metrics = cellMetrics ?? InventorySpaceCellMetrics.Default;
         var visibleViewport = viewport ?? InventorySpaceViewport.Full(grid.Width, grid.Height);
         var namesByEntityId = projection.Contents.ToDictionary(row => row.EntityId, row => row.EntityName);
+        var facingFacts = facingByEntityId is null
+            ? new Dictionary<EntityId, Direction>()
+            : new Dictionary<EntityId, Direction>(facingByEntityId);
+        if (projection.ActionState.Facing is { } projectionFacing)
+        {
+            facingFacts[projection.EntityId] = projectionFacing;
+        }
         var entities = grid.Cells
             .Where(cell => cell.EntityId is not null)
             .Select(cell => new InventorySpaceEntityVisual(
@@ -116,6 +125,10 @@ internal sealed record InventorySpaceViewModel(
                 Priority: 90));
         }
 
+        decorators.AddRange(grid.Cells
+            .Where(cell => cell.EntityId is { } entityId && facingFacts.ContainsKey(entityId))
+            .Select(cell => FacingDecorator(cell.Coord, cell.EntityId!.Value, facingFacts[cell.EntityId.Value])));
+
         return new InventorySpaceViewModel(
             id,
             projection.Name,
@@ -129,11 +142,80 @@ internal sealed record InventorySpaceViewModel(
             decorators,
             new InventorySpaceFrame(showFrame, projection.Name, PresentationColor.Yellow));
     }
+
+    public static InventorySpaceDecorator FacingDecorator(GridCoord coord, EntityId entityId, Direction direction)
+    {
+        var (glyph, mirror) = FacingGlyph(direction);
+        return new InventorySpaceDecorator(
+            coord,
+            InventorySpaceDecoratorRole.Facing,
+            entityId,
+            new InventorySpaceVisualLayer(glyph, PresentationColor.Yellow, Mirror: mirror),
+            Priority: 110);
+    }
+
+    public static (int Glyph, Mirror Mirror) FacingGlyph(Direction direction) => direction switch
+    {
+        Direction.North => (252, Mirror.None),
+        Direction.South => (252, Mirror.Vertical),
+        Direction.East => (253, Mirror.None),
+        Direction.West => (253, Mirror.Horizontal),
+        Direction.NorthWest => (251, Mirror.None),
+        Direction.NorthEast => (251, Mirror.Horizontal),
+        Direction.SouthWest => (251, Mirror.Vertical),
+        Direction.SouthEast => (251, Mirror.Horizontal | Mirror.Vertical),
+        _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, "Unknown facing direction.")
+    };
 }
 
 internal sealed record InventorySpaceCellMetrics(int Width, int Height, int Gap)
 {
     public static InventorySpaceCellMetrics Default { get; } = new(1, 1, 0);
+}
+
+internal enum InventorySpaceZoom
+{
+    Micro4,
+    Small8,
+    Normal16,
+    Large24,
+    Huge32
+}
+
+internal enum InventorySpaceRelationshipTier
+{
+    CurrentLocation,
+    PlayerInventory,
+    ImmediateParent,
+    Grandparent,
+    GreatGrandparentOrBeyond
+}
+
+internal sealed record InventorySpaceDisplayProfile(
+    InventorySpaceRelationshipTier RelationshipTier,
+    InventorySpaceZoom SpaceZoom,
+    int CellPixelSize,
+    int CellGapPixels,
+    bool UsesCandiiFont,
+    bool ShowFacingDecorators)
+{
+    public static InventorySpaceDisplayProfile ForRelationshipTier(InventorySpaceRelationshipTier tier) => tier switch
+    {
+        InventorySpaceRelationshipTier.CurrentLocation => new(tier, InventorySpaceZoom.Huge32, 32, 0, UsesCandiiFont: true, ShowFacingDecorators: true),
+        InventorySpaceRelationshipTier.PlayerInventory => new(tier, InventorySpaceZoom.Large24, 24, 1, UsesCandiiFont: true, ShowFacingDecorators: true),
+        InventorySpaceRelationshipTier.ImmediateParent => new(tier, InventorySpaceZoom.Normal16, 16, 0, UsesCandiiFont: true, ShowFacingDecorators: true),
+        InventorySpaceRelationshipTier.Grandparent => new(tier, InventorySpaceZoom.Small8, 8, 0, UsesCandiiFont: true, ShowFacingDecorators: true),
+        InventorySpaceRelationshipTier.GreatGrandparentOrBeyond => new(tier, InventorySpaceZoom.Micro4, 4, 0, UsesCandiiFont: false, ShowFacingDecorators: true),
+        _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unknown inventory-space relationship tier.")
+    };
+
+    public int? CandiiScale => UsesCandiiFont ? CellPixelSize / 8 : null;
+
+    public int RequiredPixelWidth(int viewportWidth) =>
+        Math.Max(0, viewportWidth) * CellPixelSize + Math.Max(0, viewportWidth - 1) * CellGapPixels;
+
+    public int RequiredPixelHeight(int viewportHeight) =>
+        Math.Max(0, viewportHeight) * CellPixelSize + Math.Max(0, viewportHeight - 1) * CellGapPixels;
 }
 
 internal sealed record InventorySpaceViewport(GridCoord Origin, int Width, int Height)
@@ -162,7 +244,8 @@ internal sealed record InventorySpaceVisualLayer(
     PresentationColor Foreground,
     PresentationColor? Background = null,
     int? ForegroundRgb = null,
-    int? BackgroundRgb = null);
+    int? BackgroundRgb = null,
+    Mirror Mirror = Mirror.None);
 
 internal sealed record InventorySpaceVisualPlacement(
     InventorySpaceScaleMode ScaleMode,
@@ -250,7 +333,8 @@ internal sealed class InventorySpaceComponent : IUiComponent
         InventorySpaceViewModel view,
         IReadOnlyList<string>? bodyRows = null,
         UiComponentState state = UiComponentState.Unselected,
-        InventorySpaceRenderOptions? options = null)
+        InventorySpaceRenderOptions? options = null,
+        InventorySpaceDisplayProfile? displayProfile = null)
     {
         Id = id;
         Title = title;
@@ -259,6 +343,7 @@ internal sealed class InventorySpaceComponent : IUiComponent
         BodyRows = bodyRows ?? [];
         State = state;
         Options = options ?? InventorySpaceRenderOptions.FramedDebug;
+        DisplayProfile = displayProfile;
     }
 
     public string Id { get; }
@@ -268,6 +353,7 @@ internal sealed class InventorySpaceComponent : IUiComponent
     public InventorySpaceViewModel View { get; }
     public IReadOnlyList<string> BodyRows { get; }
     public InventorySpaceRenderOptions Options { get; }
+    public InventorySpaceDisplayProfile? DisplayProfile { get; }
     public int RequiredHeight => FrameRows + TitleRows + DebugRows + ColumnLabelRows + View.Viewport.Height;
     public int RequiredWidth => FrameColumns + RowLabelColumns + GridWidth;
 

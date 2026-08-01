@@ -15,7 +15,16 @@ internal sealed record ConnectorLineViewModel(
             .ToList();
 }
 
-internal sealed record ConnectorLineEndpoint(string Id, int CellX, int CellY, float AnchorX = 0.5f, float AnchorY = 0.5f);
+internal sealed record ConnectorLineEndpoint(string Id, int CellX, int CellY, float AnchorX = 0.5f, float AnchorY = 0.5f, int? PixelX = null, int? PixelY = null)
+{
+    public static ConnectorLineEndpoint FromPixel(string id, PixelPoint point, int rootCellWidthPixels, int rootCellHeightPixels) =>
+        new(
+            id,
+            Math.Max(0, point.X / Math.Max(1, rootCellWidthPixels)),
+            Math.Max(0, point.Y / Math.Max(1, rootCellHeightPixels)),
+            PixelX: point.X,
+            PixelY: point.Y);
+}
 
 internal sealed record ConnectorLineSegment(
     string Id,
