@@ -2,7 +2,7 @@
 id: plan.sadconsole-inventory-space-zoom-sprint
 title: SadConsole Inventory Space Zoom Sprint Plan
 kind: sprint-plan
-status: active
+status: archived
 truth_rank: 50
 truth_domains: [planning-priority, frontend-presentation]
 owners: [frontend-owner]
@@ -20,7 +20,7 @@ related:
 
 # SadConsole Inventory Space Zoom Sprint Plan
 
-Status: Active focused frontend sprint plan.
+Status: Archived completed focused frontend sprint plan. The sprint proved and implemented mixed-scale inventory-space rendering, shared pixel presentation geometry, connector/tooltip/layer/performance mitigations, and SadConsole facing decorators for Consumer Play mode. Accepted reusable patterns were promoted to `docs/Source of Truth/Frontend-UX-Standards.md` and `docs/Source of Truth/Frontend-UX-Decisions.md`.
 
 ## Goal
 
@@ -285,6 +285,8 @@ Acceptance notes:
 - **Mitigation used:** Mark each reused mixed-scale child cell surface dirty immediately after updating its glyph/foreground/background. Keep watching this area; if stale cells persist, the next mitigation should replace per-cell child consoles with a single explicitly redrawn per-space surface or batched draw-call renderer.
 - **2026-07-31 implementation checkpoint 10:** Added the first facing-decorator path for mixed-scale inventory spaces. Official SadConsole docs confirm each `ColoredGlyphBase` cell has a `Mirror` property and each `CellDecorator` can carry a glyph, color, and mirror flag. The frontend now maps Candii glyph `252` to North/South, `253` to East/West, and `251` to diagonals with SadConsole `Mirror.Horizontal`/`Mirror.Vertical` combinations, then layers the yellow facing arrow as a `CellDecorator` over the entity glyph so entity identity is preserved.
 - **Mitigation used:** Keep facing facts presentation-only in SadConsole by passing world action-facing facts into the Actor POV screen model as a read-only dictionary, then into `InventorySpaceViewModel.FromProjection(...)`; no Core/Content projection contract changes were made in this slice. Micro 4x4 spaces still cannot honestly show the Candii arrow decorator and should be treated as summary rendering until a micro-state marker policy is chosen.
+- **2026-07-31 cleanup checkpoint 11:** Before promoting the pattern, removed the hidden 16px root-cell assumption from Actor POV component sizing/connector geometry. Root-cell pixel metrics are now explicit screen-model input (`InventorySpaceRootCellMetrics`) and flow from `ConsumerPlayModeScreen.BuildRenderFrame(...)` into component sizing and connector anchor resolution.
+- **Mitigation used:** Keep `InventorySpaceRootCellMetrics.DefaultPlay` as the default test/component-model baseline, but allow the live renderer path to pass the active root-cell pixel dimensions. Also separated the profile preference `ShowFacingDecorators` from the renderer capability `CanRenderGlyphFacingDecorators`; `Micro4` may carry the facing-decorator preference while the current micro renderer honestly reports that it cannot render Candii glyph-facing decorators.
 
 ## Exit criteria
 

@@ -349,9 +349,10 @@ internal sealed class ConsumerPlayModeScreen
         return ActorPovComponents(drawableBounds, showDebugLabels: false);
     }
 
-    public ConsumerPlayModeRenderFrame BuildRenderFrame(SadConsoleRect drawableBounds, bool debugVisible, int rootCellWidthPixels = 1, int rootCellHeightPixels = 1)
+    public ConsumerPlayModeRenderFrame BuildRenderFrame(SadConsoleRect drawableBounds, bool debugVisible, int rootCellWidthPixels = 16, int rootCellHeightPixels = 16)
     {
-        var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false);
+        var rootCellMetrics = new InventorySpaceRootCellMetrics(rootCellWidthPixels, rootCellHeightPixels);
+        var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false, rootCellMetrics);
         var promptOverlay = PromptComponent(drawableBounds);
         var tooltipOverlay = promptOverlay is null && HoverTooltipReady && HoverCell is { } hoverCell
             ? PlayEntityHoverTooltipBuilder.Build(
@@ -367,9 +368,9 @@ internal sealed class ConsumerPlayModeScreen
                 hoverCell.Y)
             : null;
         var debugComponents = debugVisible
-            ? ActorPovComponents(drawableBounds, showDebugLabels: true)
+            ? ActorPovComponents(drawableBounds, showDebugLabels: true, rootCellMetrics)
             : [];
-        var diagnosticsChrome = debugVisible ? ActorPovDiagnosticsChromeComponent(drawableBounds) : null;
+        var diagnosticsChrome = debugVisible ? ActorPovDiagnosticsChromeComponent(drawableBounds, rootCellMetrics) : null;
         var debugRows = debugVisible
             ? DebugRows(drawableBounds, promptOverlay is not null)
             : [];
@@ -385,9 +386,9 @@ internal sealed class ConsumerPlayModeScreen
             debugRows);
     }
 
-    public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels)
+    public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels, InventorySpaceRootCellMetrics? rootCellMetrics = null)
     {
-        return ActorPovModel(drawableBounds) is { } model
+        return ActorPovModel(drawableBounds, rootCellMetrics) is { } model
             ? ActorPovPlayComponentFactory.MainComponents(model, showDebugLabels, LeftRegionComponents(model), TurnHeader())
             : [];
     }
@@ -431,7 +432,7 @@ internal sealed class ConsumerPlayModeScreen
 
     private string TurnHeader() => $"T{WorldTurnNumber}";
 
-    public ActorPovPlayScreenModel? ActorPovModel(SadConsoleRect drawableBounds)
+    public ActorPovPlayScreenModel? ActorPovModel(SadConsoleRect drawableBounds, InventorySpaceRootCellMetrics? rootCellMetrics = null)
     {
         if (Session is null)
         {
@@ -447,19 +448,20 @@ internal sealed class ConsumerPlayModeScreen
             drawableBounds,
             ResolveInspectionAppearance,
             GetActionPlanDescriptorForEntity,
-            actionLog: _sessionController?.ActionLog);
+            actionLog: _sessionController?.ActionLog,
+            rootCellMetrics: rootCellMetrics);
     }
 
-    public IUiComponent? ActorPovCurrentPlaceComponent(SadConsoleRect drawableBounds, bool showDebugLabels)
+    public IUiComponent? ActorPovCurrentPlaceComponent(SadConsoleRect drawableBounds, bool showDebugLabels, InventorySpaceRootCellMetrics? rootCellMetrics = null)
     {
-        return ActorPovModel(drawableBounds) is { } model
+        return ActorPovModel(drawableBounds, rootCellMetrics) is { } model
             ? ActorPovPlayComponentFactory.CurrentPlaceComponent(model, showDebugLabels)
             : null;
     }
 
-    public IUiComponent? ActorPovDiagnosticsChromeComponent(SadConsoleRect drawableBounds)
+    public IUiComponent? ActorPovDiagnosticsChromeComponent(SadConsoleRect drawableBounds, InventorySpaceRootCellMetrics? rootCellMetrics = null)
     {
-        return ActorPovModel(drawableBounds) is { } model
+        return ActorPovModel(drawableBounds, rootCellMetrics) is { } model
             ? ActorPovPlayComponentFactory.DiagnosticsChromeComponent(model)
             : null;
     }

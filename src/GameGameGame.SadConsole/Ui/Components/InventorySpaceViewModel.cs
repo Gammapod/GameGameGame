@@ -211,6 +211,8 @@ internal sealed record InventorySpaceDisplayProfile(
 
     public int? CandiiScale => UsesCandiiFont ? CellPixelSize / 8 : null;
 
+    public bool CanRenderGlyphFacingDecorators => ShowFacingDecorators && UsesCandiiFont;
+
     public int RequiredPixelWidth(int viewportWidth) =>
         Math.Max(0, viewportWidth) * CellPixelSize + Math.Max(0, viewportWidth - 1) * CellGapPixels;
 

@@ -10,7 +10,8 @@ internal sealed record ActorPovPlayScreenModel(
     ActorPovPlayPresentationState PresentationState,
     IReadOnlyList<ActorPovPlayViewportState> Viewports,
     IReadOnlyList<ActorPovPlayScreenDiagnostic> Diagnostics,
-    IReadOnlyDictionary<EntityId, Direction> FacingByEntityId)
+    IReadOnlyDictionary<EntityId, Direction> FacingByEntityId,
+    InventorySpaceRootCellMetrics RootCellMetrics)
 {
     public EntityPanelProjection ControlledActor => Projection.ControlledActor;
     public EntityPanelProjection? CurrentPlace => Projection.CurrentPlace;
@@ -40,7 +41,8 @@ internal static class ActorPovPlayScreenModelBuilder
         SadConsoleRect drawableBounds,
         ActorPovPlayPresentationState? presentationState = null,
         EntityId? controlledActorId = null,
-        ActionLogProjection? actionLog = null) =>
+        ActionLogProjection? actionLog = null,
+        InventorySpaceRootCellMetrics? rootCellMetrics = null) =>
         Build(
             session.World,
             controlledActorId ?? session.PlayerEntityId,
@@ -49,7 +51,8 @@ internal static class ActorPovPlayScreenModelBuilder
             ResolveInspectionAppearance(session),
             ResolveActionPlanDescriptor(session),
             presentationState,
-            actionLog);
+            actionLog,
+            rootCellMetrics);
 
     public static ActorPovPlayScreenModel Build(
         WorldState world,
@@ -59,19 +62,22 @@ internal static class ActorPovPlayScreenModelBuilder
         Func<EntityId, EntityInspectionAppearance>? getAppearance = null,
         Func<EntityId, ActionPlanDescriptor?>? getActionPlanDescriptor = null,
         ActorPovPlayPresentationState? presentationState = null,
-        ActionLogProjection? actionLog = null)
+        ActionLogProjection? actionLog = null,
+        InventorySpaceRootCellMetrics? rootCellMetrics = null)
     {
         var layout = ActorPovPlayLayoutResolver.Resolve(drawableBounds);
         var projection = new ActorPovPlayProjectionService(getAppearance, getActionPlanDescriptor)
             .Project(world, controlledActorId, actionPlans, actionLog);
         var normalizedState = NormalizePresentationState(projection, presentationState);
+        var resolvedRootCellMetrics = rootCellMetrics ?? InventorySpaceRootCellMetrics.DefaultPlay;
         return new ActorPovPlayScreenModel(
             layout,
             projection,
             normalizedState,
             BuildViewports(projection),
             BuildDiagnostics(layout, projection),
-            BuildFacingFacts(world));
+            BuildFacingFacts(world),
+            resolvedRootCellMetrics);
     }
 
     private static IReadOnlyDictionary<EntityId, Direction> BuildFacingFacts(WorldState world) =>

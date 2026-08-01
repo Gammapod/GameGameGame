@@ -136,6 +136,39 @@ The SadConsole inventory-space component is the first reusable player-facing sta
     - The gallery must include an inventory-space example demonstrating backdrop, entity visuals, decorators, frame, labels, and required-size behavior.
     - Future accepted changes to the component should update the gallery example and focused tests before broad Play-mode usage changes.
 
+### Mixed-scale inventory-space presentation
+
+1. **Inventory-space relationship tiers may choose different visual zooms.**
+   - Current accepted Play-mode mapping is:
+     - current location/current place: `Huge32`, 32x32 pixels, 0px gap;
+     - controlled actor/player inventory: `Large24`, 24x24 pixels, 1px gap;
+     - immediate parent: `Normal16`, 16x16 pixels;
+     - grandparent: `Small8`, 8x8 pixels;
+     - great-grandparent and beyond: `Micro4`, 4x4 pixels.
+   - These are frontend display profiles only. They do not imply simulation size, visibility, containment, action legality, or physical scale.
+
+2. **Mixed-scale rendering is geometry-first.**
+   - Every mixed-scale inventory-space component should resolve through shared presentation geometry that knows the active root-cell pixel metrics, display profile, grid origin, pixel cell bounds, entity hit regions, and connector anchors.
+   - Rendering, connector lines, hover/tooltips, and mouse diagnostics should consume this same geometry rather than reconstructing pixel positions separately.
+   - Root-cell pixel metrics must be explicit input to component sizing and geometry. Do not hide fixed 16px assumptions in Play-mode layout code.
+
+3. **Micro spaces are summary renderings.**
+   - `Micro4` does not use Candii glyph identity. It is a colored summary marker renderer.
+   - A display profile may request state/decorator presentation while a renderer reports it cannot honestly show a glyph decorator at micro scale. Do not pretend Candii arrow glyphs are visible in `Micro4`; choose a separate micro-state marker policy before promoting state indicators there.
+
+4. **Facing is a layered decorator treatment.**
+   - Facing must not replace entity identity glyphs.
+   - The accepted current Candii facing mapping is yellow arrows layered over entity glyphs using SadConsole `CellDecorator` and `Mirror` flags:
+     - North: glyph `252`;
+     - South: glyph `252` mirrored vertically;
+     - East: glyph `253`;
+     - West: glyph `253` mirrored horizontally;
+     - Northwest: glyph `251`;
+     - Northeast: glyph `251` mirrored horizontally;
+     - Southwest: glyph `251` mirrored vertically;
+     - Southeast: glyph `251` mirrored horizontally and vertically.
+   - This treatment may appear on any visible entity with facing facts for now; later UX may restrict density, but must preserve the decorator-not-replacement rule.
+
 ## Consumer Play-mode display shell
 
 1. **Play mode owns display chrome, not gameplay semantics.**

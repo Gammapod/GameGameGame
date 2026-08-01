@@ -23,28 +23,33 @@ public sealed class InventorySpaceViewModelTests
         Assert.Equal(4, currentLocation.CandiiScale);
         Assert.True(currentLocation.UsesCandiiFont);
         Assert.True(currentLocation.ShowFacingDecorators);
+        Assert.True(currentLocation.CanRenderGlyphFacingDecorators);
 
         Assert.Equal(InventorySpaceZoom.Large24, playerInventory.SpaceZoom);
         Assert.Equal(24, playerInventory.CellPixelSize);
         Assert.Equal(1, playerInventory.CellGapPixels);
         Assert.Equal(3, playerInventory.CandiiScale);
         Assert.True(playerInventory.ShowFacingDecorators);
+        Assert.True(playerInventory.CanRenderGlyphFacingDecorators);
 
         Assert.Equal(InventorySpaceZoom.Normal16, immediateParent.SpaceZoom);
         Assert.Equal(16, immediateParent.CellPixelSize);
         Assert.Equal(2, immediateParent.CandiiScale);
         Assert.True(immediateParent.ShowFacingDecorators);
+        Assert.True(immediateParent.CanRenderGlyphFacingDecorators);
 
         Assert.Equal(InventorySpaceZoom.Small8, grandparent.SpaceZoom);
         Assert.Equal(8, grandparent.CellPixelSize);
         Assert.Equal(1, grandparent.CandiiScale);
         Assert.True(grandparent.ShowFacingDecorators);
+        Assert.True(grandparent.CanRenderGlyphFacingDecorators);
 
         Assert.Equal(InventorySpaceZoom.Micro4, greatGrandparent.SpaceZoom);
         Assert.Equal(4, greatGrandparent.CellPixelSize);
         Assert.False(greatGrandparent.UsesCandiiFont);
         Assert.Null(greatGrandparent.CandiiScale);
         Assert.True(greatGrandparent.ShowFacingDecorators);
+        Assert.False(greatGrandparent.CanRenderGlyphFacingDecorators);
     }
 
     [Fact]

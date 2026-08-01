@@ -6,8 +6,6 @@ namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
 internal static class ActorPovPlayComponentFactory
 {
-    private const int DefaultPlayRootCellPixels = 16;
-
     public static IReadOnlyList<IUiComponent> MainComponents(
         ActorPovPlayScreenModel model,
         bool showDebugLabels = false,
@@ -86,7 +84,7 @@ internal static class ActorPovPlayComponentFactory
                 model.ControlledActor.EntityId,
                 cellMetrics: InventorySpaceCellMetrics.Default,
                 facingByEntityId: model.FacingByEntityId);
-            var required = RequiredRootCellSize(view, options, profile);
+            var required = RequiredRootCellSize(view, options, profile, model.RootCellMetrics);
             var bounds = CenteredClipped(band, required.Width, required.Height);
             var component = new InventorySpaceComponent(
                 $"actor-pov-parent-chain-{chainIndex}-grid",
@@ -100,7 +98,7 @@ internal static class ActorPovPlayComponentFactory
             inventoryComponents.Add((chainIndex, node, component));
         }
 
-        if (ParentChainConnector(region.Bounds, firstVisibleIndex, inventoryComponents, currentPlaceComponent) is { } connector)
+        if (ParentChainConnector(region.Bounds, firstVisibleIndex, inventoryComponents, currentPlaceComponent, model.RootCellMetrics) is { } connector)
         {
             components.Add(new ConnectorLineComponent(
                 "actor-pov-parent-chain-connectors",
@@ -147,7 +145,8 @@ internal static class ActorPovPlayComponentFactory
         SadConsoleRect parentChainBounds,
         int firstVisibleIndex,
         IReadOnlyList<(int ChainIndex, ActorPovChainNodeProjection Node, InventorySpaceComponent Component)> visible,
-        InventorySpaceComponent? currentPlaceComponent)
+        InventorySpaceComponent? currentPlaceComponent,
+        InventorySpaceRootCellMetrics rootCellMetrics)
     {
         var segments = new List<ConnectorLineSegment>();
         var byIndex = visible.ToDictionary(item => item.ChainIndex);
@@ -162,7 +161,7 @@ internal static class ActorPovPlayComponentFactory
             {
                 segments.Add(new ConnectorLineSegment(
                     $"parent-chain-{item.ChainIndex}-to-{child.ChainIndex}",
-                    AnchorForCell(item.Component, childCoord, $"parent-chain-{item.ChainIndex}-owning-cell"),
+                    AnchorForCell(item.Component, childCoord, $"parent-chain-{item.ChainIndex}-owning-cell", rootCellMetrics),
                     new ConnectorLineEndpoint(
                         $"parent-chain-{child.ChainIndex}-node-top",
                         child.Component.Bounds.Left + (child.Component.Bounds.Width / 2),
@@ -182,7 +181,7 @@ internal static class ActorPovPlayComponentFactory
         {
             segments.Add(new ConnectorLineSegment(
                 $"parent-chain-{immediateParent.ChainIndex}-to-current-place",
-                AnchorForCell(immediateParent.Component, currentPlaceCoord, $"parent-chain-{immediateParent.ChainIndex}-current-place-owning-cell"),
+                AnchorForCell(immediateParent.Component, currentPlaceCoord, $"parent-chain-{immediateParent.ChainIndex}-current-place-owning-cell", rootCellMetrics),
                 new ConnectorLineEndpoint(
                     "current-place-node-left-edge",
                     currentPlaceComponent.Bounds.Left,
@@ -222,12 +221,12 @@ internal static class ActorPovPlayComponentFactory
                 ConnectorLineFallbackGlyphs.Ascii);
     }
 
-    private static ConnectorLineEndpoint AnchorForCell(InventorySpaceComponent component, GridCoord coord, string id)
+    private static ConnectorLineEndpoint AnchorForCell(InventorySpaceComponent component, GridCoord coord, string id, InventorySpaceRootCellMetrics rootCellMetrics)
     {
         if (component.DisplayProfile is not null)
         {
-            var geometry = InventorySpacePresentationGeometry.FromComponent(component, DefaultPlayRootCellPixels, DefaultPlayRootCellPixels);
-            return ConnectorLineEndpoint.FromPixel(id, geometry.CellCenter(coord), DefaultPlayRootCellPixels, DefaultPlayRootCellPixels);
+            var geometry = InventorySpacePresentationGeometry.FromComponent(component, rootCellMetrics);
+            return ConnectorLineEndpoint.FromPixel(id, geometry.CellCenter(coord), rootCellMetrics.WidthPixels, rootCellMetrics.HeightPixels);
         }
 
         var bounds = component.CellBounds(coord);
@@ -268,7 +267,7 @@ internal static class ActorPovPlayComponentFactory
         var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
         var gridRegion = CurrentPlaceGridBounds(region.Bounds);
         var profile = InventorySpaceDisplayProfile.ForRelationshipTier(InventorySpaceRelationshipTier.CurrentLocation);
-        var required = RequiredRootCellSize(view, options, profile);
+        var required = RequiredRootCellSize(view, options, profile, model.RootCellMetrics);
         var bounds = CenteredClipped(gridRegion, required.Width, required.Height);
 
         return new InventorySpaceComponent(
@@ -356,7 +355,7 @@ internal static class ActorPovPlayComponentFactory
             facingByEntityId: model.FacingByEntityId);
         var options = showDebugLabels ? InventorySpaceRenderOptions.Labeled : InventorySpaceRenderOptions.Bare;
         var profile = InventorySpaceDisplayProfile.ForRelationshipTier(InventorySpaceRelationshipTier.PlayerInventory);
-        var required = RequiredRootCellSize(view, options, profile);
+        var required = RequiredRootCellSize(view, options, profile, model.RootCellMetrics);
         var bounds = CenteredClipped(region.Bounds, required.Width, required.Height);
 
         return new InventorySpaceComponent(
@@ -411,7 +410,7 @@ internal static class ActorPovPlayComponentFactory
             }
         }
 
-        if (WorldInspectionConnector(region.Bounds, currentPlaceComponent, inspectedComponents) is { } connector)
+        if (WorldInspectionConnector(region.Bounds, currentPlaceComponent, inspectedComponents, model.RootCellMetrics) is { } connector)
         {
             components.Add(new ConnectorLineComponent(
                 "actor-pov-world-inspection-connectors",
@@ -577,7 +576,8 @@ internal static class ActorPovPlayComponentFactory
     private static ConnectorLineViewModel? WorldInspectionConnector(
         SadConsoleRect worldInspectionBounds,
         InventorySpaceComponent? currentPlaceComponent,
-        IReadOnlyList<(Direction Direction, ActorPovInspectionCandidateProjection Candidate, InventorySpaceComponent Component)> inspectedComponents)
+        IReadOnlyList<(Direction Direction, ActorPovInspectionCandidateProjection Candidate, InventorySpaceComponent Component)> inspectedComponents,
+        InventorySpaceRootCellMetrics rootCellMetrics)
     {
         if (currentPlaceComponent is null || inspectedComponents.Count == 0)
         {
@@ -596,7 +596,7 @@ internal static class ActorPovPlayComponentFactory
             var suffix = DirectionId(inspected.Direction);
             segments.Add(new ConnectorLineSegment(
                 $"current-place-{suffix}-to-world-inspection-{suffix}",
-                AnchorForCell(currentPlaceComponent, inspected.Candidate.CoordinateInSourceInventory, $"current-place-{suffix}-entity-cell"),
+                AnchorForCell(currentPlaceComponent, inspected.Candidate.CoordinateInSourceInventory, $"current-place-{suffix}-entity-cell", rootCellMetrics),
                 new ConnectorLineEndpoint(
                     $"world-inspection-{suffix}-node-left-edge",
                     targetBounds.Left,
@@ -716,12 +716,13 @@ internal static class ActorPovPlayComponentFactory
     private static (int Width, int Height) RequiredRootCellSize(
         InventorySpaceViewModel view,
         InventorySpaceRenderOptions options,
-        InventorySpaceDisplayProfile profile)
+        InventorySpaceDisplayProfile profile,
+        InventorySpaceRootCellMetrics rootCellMetrics)
     {
         var pixelWidth = profile.RequiredPixelWidth(view.Viewport.Width);
         var pixelHeight = profile.RequiredPixelHeight(view.Viewport.Height);
-        var gridWidthCells = Math.Max(1, (int)Math.Ceiling(pixelWidth / (double)DefaultPlayRootCellPixels));
-        var gridHeightCells = Math.Max(1, (int)Math.Ceiling(pixelHeight / (double)DefaultPlayRootCellPixels));
+        var gridWidthCells = Math.Max(1, (int)Math.Ceiling(pixelWidth / (double)rootCellMetrics.WidthPixels));
+        var gridHeightCells = Math.Max(1, (int)Math.Ceiling(pixelHeight / (double)rootCellMetrics.HeightPixels));
         var sizing = new InventorySpaceComponent(
             "profile-sizing",
             view.Title,

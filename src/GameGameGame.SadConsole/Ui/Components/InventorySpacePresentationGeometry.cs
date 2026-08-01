@@ -4,6 +4,12 @@ namespace GameGameGame.SadConsoleApp.Ui.Components;
 
 internal readonly record struct PixelPoint(int X, int Y);
 
+internal readonly record struct InventorySpaceRootCellMetrics(int WidthPixels, int HeightPixels)
+{
+    public static InventorySpaceRootCellMetrics Pixel { get; } = new(1, 1);
+    public static InventorySpaceRootCellMetrics DefaultPlay { get; } = new(16, 16);
+}
+
 internal readonly record struct PixelRect(int Left, int Top, int Width, int Height)
 {
     public int Right => Left + Width;
@@ -91,19 +97,24 @@ internal sealed record InventorySpacePresentationGeometry(
     public static InventorySpacePresentationGeometry FromComponent(
         InventorySpaceComponent component,
         int rootCellWidthPixels,
-        int rootCellHeightPixels)
+        int rootCellHeightPixels) =>
+        FromComponent(component, new InventorySpaceRootCellMetrics(rootCellWidthPixels, rootCellHeightPixels));
+
+    public static InventorySpacePresentationGeometry FromComponent(
+        InventorySpaceComponent component,
+        InventorySpaceRootCellMetrics rootCellMetrics)
     {
         var profile = component.DisplayProfile ?? InventorySpaceDisplayProfile.ForRelationshipTier(InventorySpaceRelationshipTier.ImmediateParent);
         var gridOriginRootCells = GridOriginRootCells(component);
         var gridOriginPixels = new PixelPoint(
-            gridOriginRootCells.Left * rootCellWidthPixels,
-            gridOriginRootCells.Top * rootCellHeightPixels);
+            gridOriginRootCells.Left * rootCellMetrics.WidthPixels,
+            gridOriginRootCells.Top * rootCellMetrics.HeightPixels);
         var visibleCoords = component.View.VisibleCoords();
         var spacePixelBounds = new PixelRect(
-            component.Bounds.Left * rootCellWidthPixels,
-            component.Bounds.Top * rootCellHeightPixels,
-            component.Bounds.Width * rootCellWidthPixels,
-            component.Bounds.Height * rootCellHeightPixels);
+            component.Bounds.Left * rootCellMetrics.WidthPixels,
+            component.Bounds.Top * rootCellMetrics.HeightPixels,
+            component.Bounds.Width * rootCellMetrics.WidthPixels,
+            component.Bounds.Height * rootCellMetrics.HeightPixels);
 
         PixelRect CellBounds(GridCoord coord)
         {
@@ -127,8 +138,8 @@ internal sealed record InventorySpacePresentationGeometry(
             component.Bounds,
             spacePixelBounds,
             gridOriginPixels,
-            rootCellWidthPixels,
-            rootCellHeightPixels,
+            rootCellMetrics.WidthPixels,
+            rootCellMetrics.HeightPixels,
             entityRegions,
             component.View.Viewport.Origin,
             visibleCoords);

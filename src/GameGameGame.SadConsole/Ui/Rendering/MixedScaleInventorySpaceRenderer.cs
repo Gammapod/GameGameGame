@@ -69,8 +69,7 @@ internal sealed class MixedScaleInventorySpaceRenderer
                 view,
                 options: InventorySpaceRenderOptions.Bare,
                 displayProfile: profile),
-            rootCellWidthPixels: 1,
-            rootCellHeightPixels: 1);
+            InventorySpaceRootCellMetrics.Pixel);
         return Draw(view, geometry, occlusionRects);
     }
 
@@ -108,7 +107,7 @@ internal sealed class MixedScaleInventorySpaceRenderer
             .Where(entity => view.IsVisible(entity.Coord))
             .GroupBy(entity => entity.Coord)
             .ToDictionary(group => group.Key, group => group.First());
-        var facingDecoratorsByCoord = profile.ShowFacingDecorators
+        var facingDecoratorsByCoord = profile.CanRenderGlyphFacingDecorators
             ? view.Decorators
                 .Where(decorator => decorator.Role == InventorySpaceDecoratorRole.Facing && view.IsVisible(decorator.Coord))
                 .GroupBy(decorator => decorator.Coord)

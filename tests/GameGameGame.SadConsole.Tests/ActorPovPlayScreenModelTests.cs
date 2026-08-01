@@ -106,7 +106,20 @@ public sealed class ActorPovPlayScreenModelTests
 
         Assert.Equal(session.PlayerEntityId, model.ControlledActor.EntityId);
         Assert.Equal(drawable, model.Layout.DrawableBounds);
+        Assert.Equal(InventorySpaceRootCellMetrics.DefaultPlay, model.RootCellMetrics);
         Assert.NotNull(model.CurrentPlace);
+    }
+
+    [Fact]
+    public void BuildCarriesExplicitRootCellPixelMetricsForMixedScaleGeometry()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var drawable = SadConsoleRect.FromSize(1, 1, 78, 43);
+        var rootCellMetrics = new InventorySpaceRootCellMetrics(20, 18);
+
+        var model = ActorPovPlayScreenModelBuilder.Build(session, drawable, rootCellMetrics: rootCellMetrics);
+
+        Assert.Equal(rootCellMetrics, model.RootCellMetrics);
     }
 
     [Fact]
@@ -131,6 +144,7 @@ public sealed class ActorPovPlayScreenModelTests
         Assert.Equal(InventorySpaceZoom.Huge32, component.DisplayProfile?.SpaceZoom);
         Assert.Equal(32, component.DisplayProfile?.CellPixelSize);
         Assert.True(component.DisplayProfile?.ShowFacingDecorators);
+        Assert.True(component.DisplayProfile?.CanRenderGlyphFacingDecorators);
         AssertInside(model.Layout.CurrentPlace.Bounds, component.Bounds);
     }
 
