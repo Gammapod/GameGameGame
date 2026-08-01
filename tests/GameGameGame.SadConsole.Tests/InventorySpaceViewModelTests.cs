@@ -2,7 +2,9 @@ using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp;
 using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Presentation;
 using GameGameGame.SadConsoleApp.Ui.Screens;
+using GameGameGame.SadConsoleApp.Ui.Tiles;
 using SadMirror = SadConsole.Mirror;
 
 namespace GameGameGame.SadConsole.Tests;
@@ -130,6 +132,89 @@ public sealed class InventorySpaceViewModelTests
     }
 
     [Fact]
+    public void SadConsolePresentationResolverMapsSemanticIdsToCandiiGlyphsAndFallsBack()
+    {
+        Assert.Equal(126, SadConsolePresentationResolver.Default.ResolveGlyph(new PresentationId("creature.rat"), 'r'));
+        Assert.Equal(219, SadConsolePresentationResolver.Default.ResolveGlyph(new PresentationId("actor.player"), '@'));
+        Assert.Equal('?', SadConsolePresentationResolver.Default.ResolveGlyph(new PresentationId("unknown.semantic"), '?'));
+        Assert.Equal('r', SadConsolePresentationResolver.Default.ResolveGlyph(null, 'r'));
+    }
+
+    [Fact]
+    public void CandiiTilesetProfileLoadsPresentationMappings()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        Assert.Equal(126, profile.PresentationMappings.GlyphsByPresentationId["creature.rat"]);
+        Assert.Equal(219, profile.PresentationMappings.GlyphsByPresentationId["actor.player"]);
+        Assert.Equal(32, profile.PresentationMappings.GlyphsByPresentationId["face.neutral"]);
+    }
+
+    [Fact]
+    public void SadConsolePresentationResolverUsesSuppliedTilesetProfileMappings()
+    {
+        var profile = TestTilesetProfile(new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["creature.rat"] = 7,
+            ["actor.player"] = 8,
+        });
+        var resolver = new SadConsolePresentationResolver(profile);
+
+        Assert.Equal(7, resolver.ResolveGlyph(new PresentationId("creature.rat"), 'r'));
+        Assert.Equal(8, resolver.ResolveGlyph(new PresentationId("actor.player"), '@'));
+        Assert.Equal('?', resolver.ResolveGlyph(new PresentationId("unknown.semantic"), '?'));
+    }
+
+    [Fact]
+    public void TilesetProfileValidationRejectsNegativePresentationGlyphIndexes()
+    {
+        var profile = TestTilesetProfile(new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["creature.rat"] = -1,
+        });
+
+        Assert.Contains(
+            "presentationMappings.glyphsByPresentationId['creature.rat'] must be non-negative.",
+            profile.Validate());
+    }
+
+    [Fact]
+    public void InventorySpaceViewModelResolvesSemanticPresentationIdsForEntityVisualGlyphs()
+    {
+        var ratId = new EntityId("rat-1");
+        var playerId = new EntityId("player-1");
+        var legacyId = new EntityId("legacy-1");
+        var planeId = new PlaneId("plane");
+        var projection = new EntityPanelProjection(
+            playerId,
+            "Room",
+            '@',
+            PresentationColor.White,
+            new PlaneCoord(planeId, new GridCoord(0, 0)),
+            new EntityContainmentPath(playerId, EntityContainmentPathStatus.Complete, [], [], []),
+            [],
+            new EntityPanelActionStateProjection(null, null, new Dictionary<int, EntityId>()),
+            null,
+            new InventoryInspectionGrid(
+                planeId,
+                3,
+                1,
+                [
+                    new InventoryInspectionCell(new GridCoord(0, 0), ratId, 'r', PresentationColor.Gray, new PresentationId("creature.rat")),
+                    new InventoryInspectionCell(new GridCoord(1, 0), playerId, '@', PresentationColor.White, new PresentationId("actor.player")),
+                    new InventoryInspectionCell(new GridCoord(2, 0), legacyId, '?', PresentationColor.Gray, new PresentationId("unknown.semantic")),
+                ]),
+            [],
+            []);
+
+        var view = InventorySpaceViewModel.FromProjection("space", projection);
+
+        Assert.Equal(126, Assert.Single(view.Entities, entity => entity.EntityId == ratId).Primary.Glyph);
+        Assert.Equal(219, Assert.Single(view.Entities, entity => entity.EntityId == playerId).Primary.Glyph);
+        Assert.Equal('?', Assert.Single(view.Entities, entity => entity.EntityId == legacyId).Primary.Glyph);
+    }
+
+    [Fact]
     public void InventorySpaceViewModelComputesStableViewportCellBoundsWithGap()
     {
         var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), PlayableScenarioLauncher.CreatePrototype());
@@ -224,4 +309,17 @@ public sealed class InventorySpaceViewModelTests
     }
 
     private static ScenarioCatalogEntry DemoEntry() => new("prototype", "prototype", "Prototype", "Prototype session");
+
+    private static TilesetProfile TestTilesetProfile(IReadOnlyDictionary<string, int> presentationGlyphs) => new(
+        "test-tileset",
+        "Test",
+        "Test.font",
+        "Test.png",
+        8,
+        8,
+        8,
+        0,
+        true,
+        new TilesetPresentationMappings(presentationGlyphs),
+        new TilesetRoles(1, new TileBorderGlyphSet(1, 1, 1, 1, 1, 1)));
 }

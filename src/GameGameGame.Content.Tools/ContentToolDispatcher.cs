@@ -130,6 +130,8 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 preset.Template.InventoryHeight,
                 preset.Template.Bulk,
                 preset.Template.Aperture,
+                preset.Presentation.PresentationId,
+                preset.Presentation.PaletteId,
                 preset.Presentation.Glyph,
                 preset.Presentation.Color,
                 preset.Template.DefaultActionPlanId,

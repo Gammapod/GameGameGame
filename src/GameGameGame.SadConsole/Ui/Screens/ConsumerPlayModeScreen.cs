@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Presentation;
 
 namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
@@ -1303,7 +1304,7 @@ internal sealed class ConsumerPlayModeScreen
             && Session.Registry.TryGetTemplateIdForEntity(world, entityId, out var templateId)
             && Session.Registry.Presentations.TryGetValue(templateId, out var presentation))
         {
-            return presentation.ToInspectionAppearance();
+            return SadConsolePresentationResolver.Default.ResolveAppearance(presentation.ToInspectionAppearance());
         }
 
         return new EntityInspectionAppearance('?', PresentationColor.Gray);

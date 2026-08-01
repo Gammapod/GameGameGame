@@ -30,7 +30,42 @@ public static class YamlContentLoader
         return new PrototypeContentRegistry(
             MaterializeEntityTemplates(document.EntityTemplates),
             MaterializeActionPlans(document.ActionPlans),
-            MaterializePresentations(document.Presentations));
+            MaterializePresentations(document.Presentations),
+            MaterializePresentationCatalog(document.PresentationCatalog),
+            MaterializePaletteCatalog(document.Palettes));
+    }
+
+    private static IReadOnlyDictionary<PresentationId, PresentationDefinition> MaterializePresentationCatalog(
+        Dictionary<string, PresentationDefinitionDto>? catalog)
+    {
+        var result = new Dictionary<PresentationId, PresentationDefinition>(BuiltInPresentationCatalog.Presentations);
+        foreach (var (id, definition) in catalog ?? [])
+        {
+            var presentationId = new PresentationId(id);
+            result[presentationId] = new PresentationDefinition(
+                presentationId,
+                definition.Name ?? id,
+                definition.FallbackText ?? "?",
+                definition.Tags);
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyDictionary<PaletteId, PaletteDefinition> MaterializePaletteCatalog(
+        Dictionary<string, PaletteDefinitionDto>? palettes)
+    {
+        var result = new Dictionary<PaletteId, PaletteDefinition>(BuiltInPresentationCatalog.Palettes);
+        foreach (var (id, definition) in palettes ?? [])
+        {
+            var paletteId = new PaletteId(id);
+            result[paletteId] = new PaletteDefinition(
+                paletteId,
+                definition.Name ?? id,
+                definition.Roles ?? new Dictionary<string, PresentationColor>());
+        }
+
+        return result;
     }
 
     private static IReadOnlyDictionary<EntityTemplateId, EntityTemplate> MaterializeEntityTemplates(
@@ -153,8 +188,17 @@ public static class YamlContentLoader
 
         foreach (var (id, presentation) in presentations ?? [])
         {
+            var glyph = string.IsNullOrWhiteSpace(presentation.Glyph)
+                ? FallbackGlyph(presentation.PresentationId)
+                : presentation.Glyph[0];
             result[new EntityTemplateId(id)] = new EntityPresentation(
-                Required(presentation.Glyph, nameof(presentation.Glyph))[0],
+                string.IsNullOrWhiteSpace(presentation.PresentationId)
+                    ? EntityPresentation.LegacyPresentationId(glyph)
+                    : new PresentationId(presentation.PresentationId),
+                string.IsNullOrWhiteSpace(presentation.PaletteId)
+                    ? EntityPresentation.LegacyPaletteId(presentation.Color)
+                    : new PaletteId(presentation.PaletteId),
+                glyph,
                 presentation.Color);
         }
 
@@ -315,6 +359,9 @@ public static class YamlContentLoader
     private static string Required(string? value, string name) =>
         string.IsNullOrWhiteSpace(value) ? throw Missing(name) : value;
 
+    private static char FallbackGlyph(string? presentationId) =>
+        string.IsNullOrWhiteSpace(presentationId) ? throw Missing(nameof(EntityPresentationDto.Glyph)) : '?';
+
     private static InvalidOperationException Missing(string name) =>
         new($"YAML content field {name} is required.");
 
@@ -324,7 +371,27 @@ public static class YamlContentLoader
 
         public Dictionary<string, EntityPresentationDto>? Presentations { get; set; }
 
+        public Dictionary<string, PresentationDefinitionDto>? PresentationCatalog { get; set; }
+
+        public Dictionary<string, PaletteDefinitionDto>? Palettes { get; set; }
+
         public Dictionary<string, ActionPlanDescriptorDto>? ActionPlans { get; set; }
+    }
+
+    private sealed class PresentationDefinitionDto
+    {
+        public string? Name { get; set; }
+
+        public string? FallbackText { get; set; }
+
+        public List<string>? Tags { get; set; }
+    }
+
+    private sealed class PaletteDefinitionDto
+    {
+        public string? Name { get; set; }
+
+        public Dictionary<string, PresentationColor>? Roles { get; set; }
     }
 
     private sealed class EntityTemplateDto
@@ -415,6 +482,10 @@ public static class YamlContentLoader
 
     private sealed class EntityPresentationDto
     {
+        public string? PresentationId { get; set; }
+
+        public string? PaletteId { get; set; }
+
         public string? Glyph { get; set; }
 
         public PresentationColor Color { get; set; }

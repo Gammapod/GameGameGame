@@ -113,11 +113,18 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                                     && diagnostic.CarriedEntityId == carried.EntityId.Value)
                                 .ToList(),
                             carried.Controller))
+                        .Select(summary => summary with
+                        {
+                            PresentationId = summary.TemplateId is null ? null : TryGetPresentationId(summary.TemplateId),
+                            PaletteId = summary.TemplateId is null ? null : TryGetPaletteId(summary.TemplateId)
+                        })
                         .ToList(),
                     diagnostics
                         .Where(diagnostic => diagnostic.EntityTemplateId == model.Id.Value)
                         .ToList())
                 {
+                    PresentationId = model.Presentation.PresentationId,
+                    PaletteId = model.Presentation.PaletteId,
                     EnterPolicy = model.Template.EnterPolicy,
                     EffectiveEnterPolicy = model.Template.EffectiveEnterPolicy,
                     ExitPolicy = model.Template.ExitPolicy,
@@ -171,6 +178,18 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
         session.Document.Presentations.TryGetValue(templateId, out var presentation)
             && !string.IsNullOrEmpty(presentation.Glyph)
                 ? presentation.Glyph[0]
+                : null;
+
+    private PresentationId? TryGetPresentationId(string templateId) =>
+        session.Document.Presentations.TryGetValue(templateId, out var presentation)
+            && !string.IsNullOrWhiteSpace(presentation.PresentationId)
+                ? new PresentationId(presentation.PresentationId)
+                : null;
+
+    private PaletteId? TryGetPaletteId(string templateId) =>
+        session.Document.Presentations.TryGetValue(templateId, out var presentation)
+            && !string.IsNullOrWhiteSpace(presentation.PaletteId)
+                ? new PaletteId(presentation.PaletteId)
                 : null;
 
     private PresentationColor? TryGetColor(string templateId) =>

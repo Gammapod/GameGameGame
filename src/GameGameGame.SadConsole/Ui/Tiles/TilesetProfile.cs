@@ -13,6 +13,7 @@ internal sealed record TilesetProfile(
     int BaseUnit,
     int Blank,
     bool AsciiCodepointMapping,
+    TilesetPresentationMappings PresentationMappings,
     TilesetRoles Roles)
 {
     public int ResolveTextGlyph(char character) => character == ' '
@@ -32,7 +33,37 @@ internal sealed record TilesetProfile(
         if (TileWidth > 0 && BaseUnit > 0 && TileWidth % BaseUnit != 0) errors.Add("tileWidth must be a multiple of baseUnit.");
         if (TileHeight > 0 && BaseUnit > 0 && TileHeight % BaseUnit != 0) errors.Add("tileHeight must be a multiple of baseUnit.");
         if (Blank < 0) errors.Add("blank glyph index must be non-negative.");
+        if (PresentationMappings is null)
+        {
+            errors.Add("presentationMappings is required.");
+        }
+        else
+        {
+            errors.AddRange(PresentationMappings.Validate("presentationMappings"));
+        }
+
         errors.AddRange(Roles.Validate("roles"));
+        return errors;
+    }
+}
+
+internal sealed record TilesetPresentationMappings(IReadOnlyDictionary<string, int> GlyphsByPresentationId)
+{
+    public IReadOnlyList<string> Validate(string path)
+    {
+        var errors = new List<string>();
+        if (GlyphsByPresentationId is null)
+        {
+            errors.Add($"{path}.glyphsByPresentationId is required.");
+            return errors;
+        }
+
+        foreach (var (presentationId, glyphIndex) in GlyphsByPresentationId)
+        {
+            if (string.IsNullOrWhiteSpace(presentationId)) errors.Add($"{path}.glyphsByPresentationId contains a blank presentation id.");
+            if (glyphIndex < 0) errors.Add($"{path}.glyphsByPresentationId['{presentationId}'] must be non-negative.");
+        }
+
         return errors;
     }
 }
@@ -98,5 +129,18 @@ internal static class TilesetProfileLoader
         }
 
         return profile;
+    }
+
+    public static TilesetProfile LoadCandii() => Load(ResolveAssetPath("Candii.tileset.json"));
+
+    public static string ResolveAssetPath(string fileName)
+    {
+        var outputPath = Path.Combine(AppContext.BaseDirectory, "assets", fileName);
+        if (File.Exists(outputPath)) return outputPath;
+
+        var workingPath = Path.Combine(Environment.CurrentDirectory, "assets", fileName);
+        if (File.Exists(workingPath)) return workingPath;
+
+        return outputPath;
     }
 }

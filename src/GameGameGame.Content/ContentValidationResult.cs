@@ -60,7 +60,9 @@ public enum ContentDiagnosticCode
     MissingTargetTemplateReference,
     InvalidActionStepTargetSlot,
     InvalidActionStepTargetReference,
-    InvalidActionStepField
+    InvalidActionStepField,
+    UnknownPresentationId,
+    UnknownPaletteId
 }
 
 public sealed record ContentDiagnostic(

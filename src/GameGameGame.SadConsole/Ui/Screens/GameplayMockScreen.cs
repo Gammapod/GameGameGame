@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Presentation;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 
 namespace GameGameGame.SadConsoleApp.Ui.Screens;
@@ -69,7 +70,7 @@ internal sealed class GameplayMockScreen
         if (_session.Registry.TryGetTemplateIdForEntity(World, entityId, out var templateId)
             && _session.Registry.Presentations.TryGetValue(templateId, out var presentation))
         {
-            return presentation.ToInspectionAppearance();
+            return SadConsolePresentationResolver.Default.ResolveAppearance(presentation.ToInspectionAppearance());
         }
 
         return new EntityInspectionAppearance('?', PresentationColor.Gray);

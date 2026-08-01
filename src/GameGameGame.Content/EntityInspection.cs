@@ -31,9 +31,19 @@ public sealed record InventoryInspectionGrid(
     int Height,
     IReadOnlyList<InventoryInspectionCell> Cells);
 
-public sealed record InventoryInspectionCell(GridCoord Coord, EntityId? EntityId, char Glyph, PresentationColor Color);
+public sealed record InventoryInspectionCell(
+    GridCoord Coord,
+    EntityId? EntityId,
+    char Glyph,
+    PresentationColor Color,
+    PresentationId? PresentationId = null,
+    PaletteId? PaletteId = null);
 
-public sealed record EntityInspectionAppearance(char Glyph, PresentationColor Color);
+public sealed record EntityInspectionAppearance(
+    char Glyph,
+    PresentationColor Color,
+    PresentationId? PresentationId = null,
+    PaletteId? PaletteId = null);
 
 public sealed class EntityInspectionService(Func<EntityId, EntityInspectionAppearance>? getAppearance = null)
 {
@@ -101,7 +111,13 @@ public sealed class EntityInspectionService(Func<EntityId, EntityInspectionAppea
                 {
                     var occupant = world.Entities[entityId];
                     var appearance = GetAppearance(occupant);
-                    cells.Add(new InventoryInspectionCell(coord, entityId, appearance.Glyph, appearance.Color));
+                    cells.Add(new InventoryInspectionCell(
+                        coord,
+                        entityId,
+                        appearance.Glyph,
+                        appearance.Color,
+                        appearance.PresentationId,
+                        appearance.PaletteId));
                 }
                 else
                 {

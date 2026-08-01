@@ -8,6 +8,10 @@ public sealed partial class EditableContentDocument
 
     public Dictionary<string, EntityPresentationDto> Presentations { get; set; } = [];
 
+    public Dictionary<string, PresentationDefinitionDto>? PresentationCatalog { get; set; }
+
+    public Dictionary<string, PaletteDefinitionDto>? Palettes { get; set; }
+
     public Dictionary<string, ActionPlanDescriptorDto> ActionPlans { get; set; } = [];
 
     public Dictionary<string, ScenarioDefinitionDto> Scenarios { get; set; } = [];
@@ -153,15 +157,37 @@ public sealed partial class EditableContentDocument
 
     public sealed class EntityPresentationDto
     {
+        public string? PresentationId { get; set; }
+
+        public string? PaletteId { get; set; }
+
         public string? Glyph { get; set; }
 
         public PresentationColor Color { get; set; }
 
         public static EntityPresentationDto From(EntityPresentation presentation) => new()
         {
+            PresentationId = presentation.PresentationId.Value,
+            PaletteId = presentation.PaletteId.Value,
             Glyph = presentation.Glyph.ToString(),
             Color = presentation.Color
         };
+    }
+
+    public sealed class PresentationDefinitionDto
+    {
+        public string? Name { get; set; }
+
+        public string? FallbackText { get; set; }
+
+        public List<string>? Tags { get; set; }
+    }
+
+    public sealed class PaletteDefinitionDto
+    {
+        public string? Name { get; set; }
+
+        public Dictionary<string, PresentationColor>? Roles { get; set; }
     }
 
     public sealed class ActionPlanDescriptorDto

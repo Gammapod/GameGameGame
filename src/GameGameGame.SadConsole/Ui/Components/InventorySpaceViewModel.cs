@@ -1,5 +1,6 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
+using GameGameGame.SadConsoleApp.Ui.Presentation;
 using GameGameGame.SadConsoleApp.Ui.Styling;
 using SadConsole;
 
@@ -86,7 +87,7 @@ internal sealed record InventorySpaceViewModel(
             .Select(cell => new InventorySpaceEntityVisual(
                 cell.Coord,
                 cell.EntityId!.Value,
-                new InventorySpaceVisualLayer(cell.Glyph, cell.Color),
+                new InventorySpaceVisualLayer(SadConsolePresentationResolver.Default.ResolveGlyph(cell), cell.Color),
                 Accent: null,
                 InventorySpaceVisualPlacement.Default,
                 namesByEntityId.GetValueOrDefault(cell.EntityId.Value)))

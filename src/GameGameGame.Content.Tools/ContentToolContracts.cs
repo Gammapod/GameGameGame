@@ -66,6 +66,8 @@ public sealed record ContentToolEntityTemplateSummary(
     int InventoryHeight,
     int Bulk,
     int Aperture,
+    PresentationId PresentationId,
+    PaletteId PaletteId,
     char Glyph,
     PresentationColor Color,
     ActionPlanTemplateId? DefaultActionPlanId,

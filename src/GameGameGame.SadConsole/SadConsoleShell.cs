@@ -1,5 +1,6 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
+using GameGameGame.SadConsoleApp.Ui.Presentation;
 using SadConsole;
 using SadConsole.Input;
 using SadRogue.Primitives;
@@ -51,7 +52,7 @@ internal sealed class SadConsoleShell : Console
             _session is { } session
             && session.Registry.TryGetTemplateIdForEntity(session.World, entityId, out var templateId)
             && session.Registry.Presentations.TryGetValue(templateId, out var presentation)
-                ? presentation.ToInspectionAppearance()
+                ? SadConsolePresentationResolver.Default.ResolveAppearance(presentation.ToInspectionAppearance())
                 : new EntityInspectionAppearance('?', GggColor.Gray));
         _affordances = new ControlledActorAffordanceService(_movement);
         _sessionViewBuilder = new SadConsoleSessionViewBuilder(_panelProjection, _affordances);

@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Components;
+using GameGameGame.SadConsoleApp.Ui.Presentation;
 
 namespace GameGameGame.SadConsoleApp.Ui.Screens;
 
@@ -151,7 +152,7 @@ internal static class ActorPovPlayScreenModelBuilder
         if (session.Registry.TryGetTemplateIdForEntity(session.World, entityId, out var templateId)
             && session.Registry.Presentations.TryGetValue(templateId, out var presentation))
         {
-            return presentation.ToInspectionAppearance();
+            return SadConsolePresentationResolver.Default.ResolveAppearance(presentation.ToInspectionAppearance());
         }
 
         return new EntityInspectionAppearance('?', PresentationColor.Gray);

@@ -254,7 +254,9 @@ public sealed record FrontendEditorOpenResult(FrontendEditorService? Service, st
 public sealed record FrontendEditorTemplatePresentationUpdate(
     string Name,
     string? GlyphText,
-    PresentationColor Color);
+    PresentationColor Color,
+    PresentationId? PresentationId = null,
+    PaletteId? PaletteId = null);
 
 public sealed record FrontendEditorTemplateMetadataUpdate(
     int InventoryWidth,
@@ -340,6 +342,10 @@ public sealed record FrontendEditorEntityTemplateSummary(
     IReadOnlyList<FrontendEditorCarriedEntitySummary> CarriedEntities,
     IReadOnlyList<FrontendEditorDiagnostic> Diagnostics)
 {
+    public PresentationId PresentationId { get; init; }
+
+    public PaletteId PaletteId { get; init; }
+
     public EntityEnterPolicy? EnterPolicy { get; init; }
 
     public EntityEnterPolicy EffectiveEnterPolicy { get; init; } = EntityEnterPolicy.FirstUnoccupiedRowMajor;
@@ -400,7 +406,12 @@ public sealed record FrontendEditorCarriedEntitySummary(
     PresentationColor? Color,
     GridCoord Coord,
     IReadOnlyList<FrontendEditorDiagnostic> Diagnostics,
-    EntityController? Controller = null);
+    EntityController? Controller = null)
+{
+    public PresentationId? PresentationId { get; init; }
+
+    public PaletteId? PaletteId { get; init; }
+}
 
 public sealed record FrontendEditorActionPlanSummary(
     string ActionPlanId,

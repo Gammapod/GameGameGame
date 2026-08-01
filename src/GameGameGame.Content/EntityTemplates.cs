@@ -63,9 +63,66 @@ public sealed record ActorActionStateDefaults(
     Direction? Facing = null,
     EntityId? Target = null);
 
-public sealed record EntityPresentation(char Glyph, PresentationColor Color)
+public readonly record struct PresentationId(string Value)
 {
-    public EntityInspectionAppearance ToInspectionAppearance() => new(Glyph, Color);
+    public override string ToString() => Value;
+}
+
+public readonly record struct PaletteId(string Value)
+{
+    public override string ToString() => Value;
+}
+
+public sealed record EntityPresentation(PresentationId PresentationId, PaletteId PaletteId, char Glyph, PresentationColor Color)
+{
+    public EntityPresentation(char Glyph, PresentationColor Color)
+        : this(LegacyPresentationId(Glyph), LegacyPaletteId(Color), Glyph: Glyph, Color: Color)
+    {
+    }
+
+    public EntityInspectionAppearance ToInspectionAppearance() => new(Glyph, Color, PresentationId, PaletteId);
+
+    public static PresentationId LegacyPresentationId(char glyph) => new($"legacy.glyph.{glyph}");
+
+    public static PaletteId LegacyPaletteId(PresentationColor color) => new($"legacy.color.{color}");
+}
+
+public sealed record PresentationDefinition(PresentationId Id, string Name, string FallbackText, IReadOnlyList<string>? Tags = null)
+{
+    public IReadOnlyList<string> Tags { get; } = Tags ?? [];
+}
+
+public sealed record PaletteDefinition(PaletteId Id, string Name, IReadOnlyDictionary<string, PresentationColor>? Roles = null)
+{
+    public IReadOnlyDictionary<string, PresentationColor> Roles { get; } = Roles ?? new Dictionary<string, PresentationColor>();
+}
+
+public static class BuiltInPresentationCatalog
+{
+    public static IReadOnlyDictionary<PresentationId, PresentationDefinition> Presentations { get; } = new Dictionary<PresentationId, PresentationDefinition>
+    {
+        [new PresentationId("creature.spider")] = new(new PresentationId("creature.spider"), "Spider", "s", ["creature"]),
+        [new PresentationId("creature.rat")] = new(new PresentationId("creature.rat"), "Rat", "r", ["creature"]),
+        [new PresentationId("creature.slime")] = new(new PresentationId("creature.slime"), "Slime", "s", ["creature"]),
+        [new PresentationId("item.coin")] = new(new PresentationId("item.coin"), "Coin", "c", ["item"]),
+        [new PresentationId("item.mana")] = new(new PresentationId("item.mana"), "Mana", "m", ["item"]),
+        [new PresentationId("item.heart")] = new(new PresentationId("item.heart"), "Heart", "h", ["item"]),
+        [new PresentationId("item.bag")] = new(new PresentationId("item.bag"), "Bag", "b", ["item"]),
+        [new PresentationId("item.crystal")] = new(new PresentationId("item.crystal"), "Crystal", "c", ["item"]),
+        [new PresentationId("item.box")] = new(new PresentationId("item.box"), "Box", "x", ["item"]),
+        [new PresentationId("item.potion")] = new(new PresentationId("item.potion"), "Potion", "!", ["item"]),
+        [new PresentationId("actor.player")] = new(new PresentationId("actor.player"), "Player", "@", ["actor"]),
+        [new PresentationId("face.smile")] = new(new PresentationId("face.smile"), "Smile Face", ":", ["face"]),
+        [new PresentationId("face.happy")] = new(new PresentationId("face.happy"), "Happy Face", ":", ["face"]),
+        [new PresentationId("face.sad")] = new(new PresentationId("face.sad"), "Sad Face", ":", ["face"]),
+        [new PresentationId("face.closed")] = new(new PresentationId("face.closed"), "Closed Face", ":", ["face"]),
+        [new PresentationId("face.neutral")] = new(new PresentationId("face.neutral"), "Neutral Face", ":", ["face"])
+    };
+
+    public static IReadOnlyDictionary<PaletteId, PaletteDefinition> Palettes { get; } = Presentations.Keys
+        .ToDictionary(
+            id => new PaletteId($"{id.Value}.default"),
+            id => new PaletteDefinition(new PaletteId($"{id.Value}.default"), $"{Presentations[id].Name} Default"));
 }
 
 public sealed record ScenarioDefinition(

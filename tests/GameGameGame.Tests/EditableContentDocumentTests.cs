@@ -110,6 +110,45 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentRoundTripsPresentationAndPaletteCatalogs()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            presentationCatalog:
+              creature.moth:
+                name: Moth
+                fallbackText: m
+                tags: [creature, insect]
+            palettes:
+              creature.moth.default:
+                name: Moth Default
+                roles:
+                  primary: Gray
+                  accent: Yellow
+            entityTemplates:
+              moth:
+                name: Moth
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              moth:
+                presentationId: creature.moth
+                paletteId: creature.moth.default
+                glyph: m
+                color: Gray
+            actionPlans: {}
+            """);
+
+        var reloaded = EditableContentDocument.LoadYaml(document.SaveYaml()).ToRegistry();
+
+        Assert.True(reloaded.Validate().IsValid, string.Join(Environment.NewLine, reloaded.Validate().Errors));
+        Assert.Contains(new PresentationId("creature.moth"), reloaded.PresentationCatalog.Keys);
+        Assert.Contains(new PaletteId("creature.moth.default"), reloaded.PaletteCatalog.Keys);
+    }
+
+    [Fact]
     public void EditableContentDocumentRoundTripsCreateEntityAndPolymorphTargetFields()
     {
         var document = EditableContentDocument.LoadYaml(

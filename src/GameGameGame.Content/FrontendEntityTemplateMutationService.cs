@@ -119,7 +119,11 @@ internal sealed class FrontendEntityTemplateMutationService(
         {
             var current = session.Editor.GetEntityPreset(id);
             var template = current.Template with { Name = update.Name.Trim() };
-            var presentation = new EntityPresentation(glyphText[0], update.Color);
+            var presentation = new EntityPresentation(
+                update.PresentationId ?? current.Presentation.PresentationId,
+                update.PaletteId ?? current.Presentation.PaletteId,
+                glyphText[0],
+                update.Color);
 
             session.Editor.UpdateEntityPreset(id, template, presentation);
             return FrontendEditorMutationResult.Success(

@@ -163,6 +163,32 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsUnknownPresentationAndPaletteIds()
+    {
+        var templateId = new EntityTemplateId("rock");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithPresentation(
+                templateId,
+                new EntityPresentation(
+                    new PresentationId("creature.unknown"),
+                    new PaletteId("palette.unknown"),
+                    '?',
+                    PresentationColor.Gray));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == ContentDiagnosticCode.UnknownPresentationId
+            && diagnostic.EntityTemplateId == templateId
+            && diagnostic.Message.Contains("creature.unknown"));
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == ContentDiagnosticCode.UnknownPaletteId
+            && diagnostic.EntityTemplateId == templateId
+            && diagnostic.Message.Contains("palette.unknown"));
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsInvalidTargetPathMoveFields()
     {
         var registry = PrototypeContent.CreateRegistry()

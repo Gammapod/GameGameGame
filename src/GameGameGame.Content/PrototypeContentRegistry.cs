@@ -5,7 +5,9 @@ namespace GameGameGame.Content;
 public sealed class PrototypeContentRegistry(
     IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates,
     IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> actionPlanTemplates,
-    IReadOnlyDictionary<EntityTemplateId, EntityPresentation> presentations)
+    IReadOnlyDictionary<EntityTemplateId, EntityPresentation> presentations,
+    IReadOnlyDictionary<PresentationId, PresentationDefinition>? presentationCatalog = null,
+    IReadOnlyDictionary<PaletteId, PaletteDefinition>? paletteCatalog = null)
 {
     private readonly Dictionary<EntityId, EntityTemplateId> _entityTemplateAssignments = [];
 
@@ -14,6 +16,10 @@ public sealed class PrototypeContentRegistry(
     public IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> ActionPlanDescriptors => actionPlanTemplates;
 
     public IReadOnlyDictionary<EntityTemplateId, EntityPresentation> Presentations => presentations;
+
+    public IReadOnlyDictionary<PresentationId, PresentationDefinition> PresentationCatalog { get; } = presentationCatalog ?? BuiltInPresentationCatalog.Presentations;
+
+    public IReadOnlyDictionary<PaletteId, PaletteDefinition> PaletteCatalog { get; } = paletteCatalog ?? BuiltInPresentationCatalog.Palettes;
 
     public EntityTemplate GetEntityTemplate(EntityTemplateId id) => entityTemplates[id];
 
@@ -93,7 +99,7 @@ public sealed class PrototypeContentRegistry(
             [id] = template
         };
 
-        return new PrototypeContentRegistry(templates, actionPlanTemplates, presentations);
+        return new PrototypeContentRegistry(templates, actionPlanTemplates, presentations, PresentationCatalog, PaletteCatalog);
     }
 
     public PrototypeContentRegistry WithPresentation(EntityTemplateId id, EntityPresentation presentation)
@@ -103,7 +109,7 @@ public sealed class PrototypeContentRegistry(
             [id] = presentation
         };
 
-        return new PrototypeContentRegistry(entityTemplates, actionPlanTemplates, updated);
+        return new PrototypeContentRegistry(entityTemplates, actionPlanTemplates, updated, PresentationCatalog, PaletteCatalog);
     }
 
     public PrototypeContentRegistry WithActionPlanDescriptor(ActionPlanTemplateId id, ActionPlanDescriptor descriptor)
@@ -113,7 +119,7 @@ public sealed class PrototypeContentRegistry(
             [id] = descriptor
         };
 
-        return new PrototypeContentRegistry(entityTemplates, updated, presentations);
+        return new PrototypeContentRegistry(entityTemplates, updated, presentations, PresentationCatalog, PaletteCatalog);
     }
 
     public ContentValidationResult Validate()
@@ -121,6 +127,7 @@ public sealed class PrototypeContentRegistry(
         var errors = new List<string>();
         var diagnostics = new List<ContentDiagnostic>();
         ValidateEntityTemplates(errors, diagnostics);
+        ValidatePresentations(diagnostics);
         ValidateActionPlans(errors, diagnostics);
 
         diagnostics.AddRange(errors.Select(error => ContentDiagnostic.Error(ContentDiagnosticCode.General, error)));
@@ -144,6 +151,30 @@ public sealed class PrototypeContentRegistry(
 
     private void ValidateEntityTemplates(List<string> errors, List<ContentDiagnostic> diagnostics)
         => EntityTemplateValidator.Validate(entityTemplates, actionPlanTemplates, presentations, errors, diagnostics);
+
+    private void ValidatePresentations(List<ContentDiagnostic> diagnostics)
+    {
+        foreach (var (templateId, presentation) in presentations)
+        {
+            if (!presentation.PresentationId.Value.StartsWith("legacy.glyph.", StringComparison.Ordinal)
+                && !PresentationCatalog.ContainsKey(presentation.PresentationId))
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.UnknownPresentationId,
+                    $"Entity template {templateId} references unknown presentationId {presentation.PresentationId}.",
+                    entityTemplateId: templateId));
+            }
+
+            if (!presentation.PaletteId.Value.StartsWith("legacy.color.", StringComparison.Ordinal)
+                && !PaletteCatalog.ContainsKey(presentation.PaletteId))
+            {
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.UnknownPaletteId,
+                    $"Entity template {templateId} references unknown paletteId {presentation.PaletteId}.",
+                    entityTemplateId: templateId));
+            }
+        }
+    }
 
     private void ValidateActionPlans(List<string> errors, List<ContentDiagnostic> diagnostics)
     {

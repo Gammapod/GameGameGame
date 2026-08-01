@@ -1,0 +1,72 @@
+entityTemplates:
+  semanticPresentationRatBackstepRoom:
+    name: Semantic Presentation Rat Backstep Room
+    inventoryWidth: 8
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: semanticPresentationRat
+      templateId: semanticPresentationRat
+      coord:
+        x: 7
+        y: 2
+    - entityId: semanticPresentationPlayer
+      templateId: semanticPresentationPlayer
+      coord:
+        x: 2
+        y: 2
+      controller: Player
+  semanticPresentationPlayer:
+    name: Player
+    inventoryWidth: 5
+    inventoryHeight: 3
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    actionStateDefaults:
+      facing: East
+  semanticPresentationRat:
+    name: Rat
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: semanticPresentationRatMoveThenBackstep
+    actionStateDefaults:
+      facing: East
+presentations:
+  semanticPresentationRatBackstepRoom:
+    glyph: '#'
+    color: Gray
+  semanticPresentationPlayer:
+    presentationId: actor.player
+    paletteId: actor.player.default
+    glyph: '@'
+    color: Green
+  semanticPresentationRat:
+    presentationId: creature.rat
+    paletteId: creature.rat.default
+    glyph: r
+    color: Earth
+actionPlans:
+  semanticPresentationRatMoveThenBackstep:
+    id: semanticPresentationRatMoveThenBackstep
+    behavior:
+      steps:
+      - kind: MoveFacing
+        targetSelf: false
+      - kind: Backstep
+        targetSelf: false
+scenarios:
+  delta-semantic-presentation-rat-backstep:
+    name: Delta Semantic Presentation Rat Backstep
+    scenarioRootEntityTemplateId: semanticPresentationRatBackstepRoom
+    playerControls:
+      player-1:
+      - semanticPresentationPlayer

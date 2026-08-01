@@ -152,6 +152,61 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsSemanticPresentationAndPaletteIdsWhilePreservingLegacyGlyphFallback()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              rat:
+                name: Rat
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+              player:
+                name: Player
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+              rock:
+                name: Rock
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+            presentations:
+              rat:
+                presentationId: creature.rat
+                paletteId: creature.rat.default
+                glyph: r
+                color: Gray
+              player:
+                presentationId: actor.player
+                paletteId: actor.player.default
+                glyph: '@'
+                color: Yellow
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        var rat = registry.GetPresentation(new EntityTemplateId("rat"));
+        var player = registry.GetPresentation(new EntityTemplateId("player"));
+        var rock = registry.GetPresentation(new EntityTemplateId("rock"));
+
+        Assert.Equal(new PresentationId("creature.rat"), rat.PresentationId);
+        Assert.Equal(new PaletteId("creature.rat.default"), rat.PaletteId);
+        Assert.Equal('r', rat.Glyph);
+        Assert.Equal('r', rat.ToInspectionAppearance().Glyph);
+        Assert.Equal(PresentationColor.Gray, rat.Color);
+        Assert.Equal('@', player.ToInspectionAppearance().Glyph);
+        Assert.Equal(new PresentationId("legacy.glyph.*"), rock.PresentationId);
+        Assert.Equal(new PaletteId("legacy.color.Earth"), rock.PaletteId);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCreateEntityAndPolymorphTargetTemplateFields()
     {
         var registry = YamlContentLoader.LoadRegistry(

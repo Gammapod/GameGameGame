@@ -19,6 +19,8 @@ public sealed class AgentContentEditorApiTests
                 InventoryHeight: 2,
                 Bulk: 5,
                 Aperture: 10,
+                PresentationId: new PresentationId("actor.player"),
+                PaletteId: new PaletteId("actor.player.default"),
                 Glyph: '@',
                 Color: PresentationColor.Cyan)));
         AssertSuccess(api.SetInitialFacing(actorId, Direction.East));
@@ -46,6 +48,8 @@ public sealed class AgentContentEditorApiTests
         Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
         Assert.True(snapshot.CanonicalValidation.IsValid, string.Join(Environment.NewLine, snapshot.CanonicalValidation.Errors));
         Assert.Contains("agentActor:", snapshot.YamlPreview);
+        Assert.Contains("presentationId: actor.player", snapshot.YamlPreview);
+        Assert.Contains("paletteId: actor.player.default", snapshot.YamlPreview);
         Assert.Contains("defaultActionPlanId: agentPatrol", snapshot.YamlPreview);
         Assert.Contains("actionStateDefaults:", snapshot.YamlPreview);
         Assert.Contains("facing: East", snapshot.YamlPreview);

@@ -102,6 +102,8 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             };
             var presentation = preset.Presentation with
             {
+                PresentationId = update.PresentationId ?? preset.Presentation.PresentationId,
+                PaletteId = update.PaletteId ?? preset.Presentation.PaletteId,
                 Glyph = update.Glyph ?? preset.Presentation.Glyph,
                 Color = update.Color ?? preset.Presentation.Color
             };
@@ -371,6 +373,8 @@ public sealed record AgentEntityTemplateUpdate(
     EntityTopologyPolicy? TopologyPolicy = null,
     bool ClearEnterPolicy = false,
     bool ClearExitPolicy = false,
+    PresentationId? PresentationId = null,
+    PaletteId? PaletteId = null,
     char? Glyph = null,
     PresentationColor? Color = null);
 
