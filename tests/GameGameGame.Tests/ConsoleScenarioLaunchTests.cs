@@ -6,6 +6,12 @@ namespace GameGameGame.Tests;
 [Trait(TestSuites.TraitName, TestSuites.Console)]
 public sealed class ConsoleScenarioLaunchTests
 {
+    private static readonly string FeedbackManifestPath = FindRepositoryPath(
+        "src",
+        "GameGameGame.Content",
+        "Beta",
+        "FeedbackManifest.yaml");
+
     [Fact]
     public void ScenarioCatalogListsScenariosFromDocument()
     {
@@ -174,6 +180,54 @@ public sealed class ConsoleScenarioLaunchTests
         finally
         {
             Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void FeedbackScenarioManifestContainsOnlyTesterFacingScenarios()
+    {
+        var validation = ScenarioCatalog.ValidateManifest(FeedbackManifestPath);
+        var catalog = ScenarioCatalog.LoadManifest(FeedbackManifestPath);
+        var forbiddenStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "legacy",
+            "user"
+        };
+        var forbiddenTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "debug",
+            "logs",
+            "log-testing",
+            "validation",
+            "legacy",
+            "user-generated"
+        };
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Diagnostics));
+        Assert.NotEmpty(catalog.Entries);
+        Assert.All(catalog.Sections ?? [], section => Assert.Contains(section.Id, new[] { "delta", "canonical" }));
+        Assert.All(catalog.Entries, entry =>
+        {
+            Assert.False(forbiddenStatuses.Contains(entry.Status ?? string.Empty), $"{entry.ScenarioId} has feedback-forbidden status {entry.Status}.");
+            Assert.DoesNotContain(entry.Tags ?? [], tag => forbiddenTags.Contains(tag));
+        });
+    }
+
+    [Fact]
+    public void FeedbackScenarioManifestEntriesLaunchAsPlayableSessions()
+    {
+        var catalog = ScenarioCatalog.LoadManifest(FeedbackManifestPath);
+
+        Assert.Empty(catalog.Diagnostics);
+        Assert.NotEmpty(catalog.Entries);
+        foreach (var entry in catalog.Entries)
+        {
+            var session = PlayableScenarioLauncher.CreateFromCatalogEntry(entry);
+
+            Assert.True(session.CanPlay, $"{entry.ScenarioId} should be playable.");
+            Assert.Empty(session.ValidationDiagnostics);
+            Assert.Empty(session.RuntimeFailures);
+            Assert.Empty(session.CapabilityGaps);
         }
     }
 
@@ -381,5 +435,21 @@ public sealed class ConsoleScenarioLaunchTests
         var directory = Path.Combine(Path.GetTempPath(), $"ggg-scenario-catalog-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
         return directory;
+    }
+
+    private static string FindRepositoryPath(params string[] relativeSegments)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "GameGameGame.sln")))
+            {
+                return Path.Combine([directory.FullName, .. relativeSegments]);
+            }
+
+            directory = directory.Parent;
+        }
+
+        return Path.Combine(relativeSegments);
     }
 }

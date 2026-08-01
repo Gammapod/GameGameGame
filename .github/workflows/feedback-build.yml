@@ -2,13 +2,10 @@ name: Feedback Build
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "feedback-*"
 
 jobs:
-  windows-console:
-    name: Windows Console Build
+  feedback-build:
+    name: Build curated desktop feedback package
     runs-on: windows-latest
 
     steps:
@@ -18,99 +15,21 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
-      - name: Test core/content/console
-        run: dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj -c Release
+      - name: Restore
+        run: dotnet restore GameGameGame.sln
 
-      - name: Publish self-contained console
-        run: dotnet publish src/GameGameGame.Console/GameGameGame.Console.csproj -c Release -r win-x64 --self-contained true -o artifacts/GameGameGame-win-x64
+      - name: Test
+        run: dotnet test GameGameGame.sln --configuration Release --no-restore
 
-      - name: Smoke test packaged scenario catalog
+      - name: Package feedback build
         shell: pwsh
-        working-directory: artifacts/GameGameGame-win-x64
-        run: |
-          ./GameGameGame.exe scan-scenarios Content/Beta --output Content/Beta/Manifest-smoke.yaml
-          Remove-Item Content/Beta/Manifest-smoke.yaml
+        run: ./tools/package-feedback-build.ps1 -Configuration Release -Runtime win-x64
 
-      - name: Add feedback README
-        shell: pwsh
-        run: |
-          @'
-          GameGameGame Feedback Build
-
-          Run GameGameGame.exe to open the interactive scenario list.
-
-          Controls:
-          - Up/Down selects a scenario.
-          - Enter launches the selected scenario.
-          - Arrow keys move in a scenario.
-          - I inspects, P picks up, D drops.
-          - Q or Esc returns to the scenario list or quits.
-
-          Scenario YAML files are included under Content/Beta for inspection.
-          '@ | Set-Content -Path artifacts/GameGameGame-win-x64/README.txt
-
-      - name: Zip feedback build
-        shell: pwsh
-        run: Compress-Archive -Path artifacts/GameGameGame-win-x64/* -DestinationPath artifacts/GameGameGame-win-x64.zip -Force
-
-      - name: Upload feedback build
+      - name: Upload feedback build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GameGameGame-win-x64
-          path: artifacts/GameGameGame-win-x64.zip
-
-  linux-console:
-    name: Linux Console Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Test core/content/console
-        run: dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj -c Release
-
-      - name: Publish self-contained console
-        run: dotnet publish src/GameGameGame.Console/GameGameGame.Console.csproj -c Release -r linux-x64 --self-contained true -o artifacts/GameGameGame-linux-x64
-
-      - name: Smoke test packaged scenario catalog
-        shell: bash
-        working-directory: artifacts/GameGameGame-linux-x64
-        run: |
-          ./GameGameGame scan-scenarios Content/Beta --output Content/Beta/Manifest-smoke.yaml
-          rm Content/Beta/Manifest-smoke.yaml
-
-      - name: Add feedback README
-        shell: bash
-        run: |
-          cat > artifacts/GameGameGame-linux-x64/README.txt << 'EOF'
-          GameGameGame Feedback Build
-
-          Run ./GameGameGame to open the interactive scenario list.
-
-          Controls:
-          - Up/Down selects a scenario.
-          - Enter launches the selected scenario.
-          - Arrow keys move in a scenario.
-          - I inspects, P picks up, D drops.
-          - Q or Esc returns to the scenario list or quits.
-
-          Scenario YAML files are included under Content/Beta for inspection.
-          EOF
-
-      - name: Tar feedback build
-        shell: bash
-        run: tar czf artifacts/GameGameGame-linux-x64.tar.gz -C artifacts/GameGameGame-linux-x64 .
-
-      - name: Upload feedback build
-        uses: actions/upload-artifact@v4
-        with:
-          name: GameGameGame-linux-x64
-          path: artifacts/GameGameGame-linux-x64.tar.gz
+          name: GameGameGame-feedback-win-x64
+          path: artifacts/feedback-build/GameGameGame-feedback-win-x64.zip
+          if-no-files-found: error
