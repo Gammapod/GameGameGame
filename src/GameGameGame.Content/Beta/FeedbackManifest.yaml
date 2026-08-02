@@ -1,83 +1,75 @@
 sections:
-- id: delta
-  name: Feedback Showcases
-  description: Curated tester-facing showcases for downloadable feedback builds. This manifest intentionally excludes legacy compatibility rooms, validation/debug calibration scenarios, and log-testing rooms.
-  status: active-delta
+- id: canonical
+  name: Canonical Feedback Scenarios
+  description: Curated canonical tester-facing scenarios for downloadable feedback builds. This manifest intentionally excludes legacy compatibility rooms, validation/debug calibration scenarios, log-testing rooms, and user-generated scenarios.
+  status: canonical
   tags:
   - feedback
-  - showcase
+  - canonical
   entries:
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalMoveShowcase.yaml
     scenarioId: beta-canonical-move-player-interaction
     name: Canonical Move Player Interaction
     description: Tester-facing room for canonical Move and player-selectable directional control.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, move, player-interaction]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalPickupDropShowcase.yaml
     scenarioId: beta-canonical-pickup-drop-player-interaction
     name: Canonical Pickup Drop Player Interaction
     description: Tester-facing room for pickup/drop choices and inventory interaction.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, pickup, drop, player-interaction]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalEnterExitShowcase.yaml
     scenarioId: beta-canonical-enter-player-interaction
     name: Canonical Enter Player Interaction
     description: Tester-facing room for entering an adjacent container with authored enter policy.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, enter, containment, player-interaction]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalEnterExitShowcase.yaml
     scenarioId: beta-canonical-exit-player-interaction
     name: Canonical Exit Player Interaction
     description: Tester-facing room for exiting from inside a container using player choices.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, exit, containment, player-interaction]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTransferShowcase.yaml
     scenarioId: beta-canonical-transfer-player-interaction
     name: Canonical Transfer Player Interaction
     description: Tester-facing room for manually round-tripping a carried coin with an adjacent chest through Transfer choices.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, transfer, inventory, player-interaction]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
     scenarioId: beta-canonical-target-path-maze
     name: Canonical Target Path Maze
     description: Tester-facing maze room where seeking and fleeing actors navigate around authored walls using pathfinding-backed target movement.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, target-path-movement, movement, targeting, pathfinding]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
     scenarioId: beta-canonical-target-path-dual-orbit
     name: Canonical Target Path Dual Orbit
     description: Tester-facing orbit room with two actors circling the player in opposite directions at different desired distances.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, canonical-action, target-path-movement, movement, targeting, orbit]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
     scenarioId: delta-create-destroy-polymorph-flagship-room
     name: Create Destroy Polymorph Flagship Room
     description: Tester-facing flagship room for template-backed creation, destruction, and polymorph lifecycle behavior.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, entity-lifecycle, create, destroy, polymorph, flagship]
     source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\MothLifecycleShowcase.yaml
     scenarioId: delta-moth-lifecycle-showcase
     name: Moth Lifecycle Showcase
     description: Tester-facing multi-phase lifecycle room with moths, flowers, flame, leaves, and costed transformations.
-    status: active-delta
+    status: canonical-candidate
     tags: [feedback, showcase, entity-lifecycle, create, destroy, polymorph, costs, targeting]
     source: Feedback build curated from Beta manifest
-- id: canonical
-  name: Canonical Candidate Play Spaces
-  description: Larger canonical-candidate spaces suitable for exploratory tester feedback.
-  status: canonical
-  tags:
-  - feedback
-  - canonical
-  entries:
   - contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
     scenarioId: beta-pocket-bazaar
     name: Pocket Bazaar
@@ -85,4 +77,11 @@ sections:
     status: canonical-candidate
     tags: [feedback, showcase, canonical, candidate, bazaar, containment, nested, manual, exhibits]
     source: Feedback build curated from Beta manifest
+- id: user
+  name: User-Generated Scenarios
+  description: User-authored scenarios are not feedback-exposed by this curated Phase 1 manifest.
+  status: user
+  tags:
+  - user-generated
+  entries: []
 diagnostics: []

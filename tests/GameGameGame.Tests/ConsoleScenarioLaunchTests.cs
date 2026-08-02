@@ -204,8 +204,11 @@ public sealed class ConsoleScenarioLaunchTests
         };
 
         Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Diagnostics));
-        Assert.NotEmpty(catalog.Entries);
-        Assert.All(catalog.Sections ?? [], section => Assert.Contains(section.Id, new[] { "delta", "canonical" }));
+        var sections = Assert.IsAssignableFrom<IReadOnlyList<ScenarioCatalogSection>>(catalog.Sections);
+        Assert.Equal(["canonical", "user"], sections.Select(section => section.Id).ToArray());
+        Assert.NotEmpty(sections.Single(section => section.Id == "canonical").Entries);
+        Assert.Empty(sections.Single(section => section.Id == "user").Entries);
+        Assert.All(catalog.Entries, entry => Assert.Contains(entry, sections.Single(section => section.Id == "canonical").Entries));
         Assert.All(catalog.Entries, entry =>
         {
             Assert.False(forbiddenStatuses.Contains(entry.Status ?? string.Empty), $"{entry.ScenarioId} has feedback-forbidden status {entry.Status}.");

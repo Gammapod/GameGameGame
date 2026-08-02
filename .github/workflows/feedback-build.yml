@@ -2,6 +2,20 @@ name: Feedback Build
 
 on:
   workflow_dispatch:
+    inputs:
+      upload_to_itch:
+        description: "Upload the packaged feedback build to itch.io with butler"
+        required: true
+        type: boolean
+        default: false
+      itch_target:
+        description: "Optional itch target in user/game:channel form. Defaults to repository variable ITCH_FEEDBACK_TARGET."
+        required: false
+        type: string
+      user_version:
+        description: "Optional butler user version. Defaults to the GitHub run number."
+        required: false
+        type: string
 
 jobs:
   feedback-build:
@@ -33,3 +47,50 @@ jobs:
           name: GameGameGame-feedback-win-x64
           path: artifacts/feedback-build/GameGameGame-feedback-win-x64.zip
           if-no-files-found: error
+
+      - name: Resolve itch upload settings
+        if: ${{ inputs.upload_to_itch }}
+        id: itch
+        shell: pwsh
+        run: |
+          $target = "${{ inputs.itch_target }}"
+          if ([string]::IsNullOrWhiteSpace($target)) {
+            $target = "${{ vars.ITCH_FEEDBACK_TARGET }}"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($target)) {
+            throw "Set workflow input itch_target or repository variable ITCH_FEEDBACK_TARGET to user/game:channel."
+          }
+
+          $userVersion = "${{ inputs.user_version }}"
+          if ([string]::IsNullOrWhiteSpace($userVersion)) {
+            $userVersion = "run-${{ github.run_number }}"
+          }
+
+          "target=$target" >> $env:GITHUB_OUTPUT
+          "user_version=$userVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Install butler
+        if: ${{ inputs.upload_to_itch }}
+        shell: pwsh
+        run: |
+          $butlerZip = Join-Path $env:RUNNER_TEMP "butler.zip"
+          $butlerDirectory = Join-Path $env:RUNNER_TEMP "butler"
+          Invoke-WebRequest "https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default" -OutFile $butlerZip
+          Expand-Archive -LiteralPath $butlerZip -DestinationPath $butlerDirectory -Force
+          "butlerDirectory=$butlerDirectory" >> $env:GITHUB_ENV
+
+      - name: Push feedback build to itch.io
+        if: ${{ inputs.upload_to_itch }}
+        shell: pwsh
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:BUTLER_API_KEY)) {
+            throw "Repository secret BUTLER_API_KEY is required for itch uploads."
+          }
+
+          & "$env:butlerDirectory\butler.exe" push `
+            "artifacts/feedback-build/GameGameGame-feedback-win-x64.zip" `
+            "${{ steps.itch.outputs.target }}" `
+            --userversion "${{ steps.itch.outputs.user_version }}"

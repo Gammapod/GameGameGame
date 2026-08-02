@@ -45,45 +45,8 @@ dotnet publish (Join-Path $repoRoot "src/GameGameGame.SadConsole/GameGameGame.Sa
 Copy-Item -LiteralPath $publishDirectory -Destination $stageDirectory -Recurse
 
 $betaStageDirectory = Join-Path $stageDirectory "Content/Beta"
-if (Test-Path -LiteralPath $betaStageDirectory) {
-    Remove-Item -LiteralPath $betaStageDirectory -Recurse -Force
-}
-
-New-Item -ItemType Directory -Path $betaStageDirectory | Out-Null
-
-$manifestLines = Get-Content -LiteralPath $manifestFullPath
-$contentPaths = @()
-foreach ($line in $manifestLines) {
-    if ($line -match '^\s*-?\s*contentPath:\s*(.+?)\s*$') {
-        $contentPath = $Matches[1].Trim().Trim('"').Trim("'")
-        if (-not [string]::IsNullOrWhiteSpace($contentPath)) {
-            $contentPaths += $contentPath
-        }
-    }
-}
-
-$contentPaths = $contentPaths | Sort-Object -Unique
-foreach ($contentPath in $contentPaths) {
-    $sourcePath = Join-Path $repoRoot $contentPath
-    if (-not (Test-Path -LiteralPath $sourcePath)) {
-        throw "Feedback manifest references missing content file: $contentPath"
-    }
-
-    $normalized = $contentPath.Replace('\', '/')
-    $marker = "GameGameGame.Content/Beta/"
-    $markerIndex = $normalized.IndexOf($marker, [StringComparison]::OrdinalIgnoreCase)
-    if ($markerIndex -lt 0) {
-        throw "Feedback content path must live under GameGameGame.Content/Beta: $contentPath"
-    }
-
-    $relativeBetaPath = $normalized.Substring($markerIndex + $marker.Length).Replace('/', [IO.Path]::DirectorySeparatorChar)
-    $destinationPath = Join-Path $betaStageDirectory $relativeBetaPath
-    $destinationParent = Split-Path -Parent $destinationPath
-    if (-not (Test-Path -LiteralPath $destinationParent)) {
-        New-Item -ItemType Directory -Path $destinationParent | Out-Null
-    }
-
-    Copy-Item -LiteralPath $sourcePath -Destination $destinationPath
+if (-not (Test-Path -LiteralPath $betaStageDirectory)) {
+    throw "Published build did not include expected content directory: $betaStageDirectory"
 }
 
 Copy-Item -LiteralPath $manifestFullPath -Destination (Join-Path $betaStageDirectory "Manifest.yaml")
@@ -94,8 +57,8 @@ Set-Content -LiteralPath $readmePath -Value @(
     "GameGameGame feedback build",
     "",
     "Launch GameGameGame.exe to open the curated feedback scenario catalog.",
-    "Bundled content is curated from src/GameGameGame.Content/Beta/FeedbackManifest.yaml.",
-    "This package intentionally excludes validation/debug/log-testing scenarios."
+    "Bundled YAML content includes the full packaged Beta content folder for inspection/editor use.",
+    "The normal frontend catalog uses Content/Beta/Manifest.yaml, replaced from FeedbackManifest.yaml, so validation/debug/log-testing scenarios are not exposed through the curated scenario list."
 )
 
 Compress-Archive -LiteralPath $stageDirectory -DestinationPath $zipPath -Force
