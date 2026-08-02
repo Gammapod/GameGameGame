@@ -31,6 +31,7 @@ internal sealed class ConnectorLineDrawCallRenderer
             var end = CellAnchor(originX, originY, cellWidth, cellHeight, segment.End);
             var color = XnaColorForPresentation(segment.Color);
             DrawPixelLine(pixel, start, end, color, thickness: 2f);
+            DrawArrowhead(pixel, start, end, color, thickness: 2f);
             if (drawEndpoints)
             {
                 DrawEndpoint(pixel, start, XnaColor.White, radius: 3);
@@ -69,6 +70,25 @@ internal sealed class ConnectorLineDrawCallRenderer
         Global.SharedSpriteBatch.Draw(pixel, start, null, color, rotation, new XnaVector2(0f, 0.5f), new XnaVector2(length, thickness), SpriteEffects.None, 0f);
     }
 
+    private static void DrawArrowhead(Texture2D pixel, XnaVector2 start, XnaVector2 end, XnaColor color, float thickness)
+    {
+        var delta = end - start;
+        var length = delta.Length();
+        if (length <= 0.01f)
+        {
+            return;
+        }
+
+        var direction = delta / length;
+        var arrowLength = MathF.Max(7f, thickness * 4f);
+        var arrowSpread = MathF.PI / 7f;
+        var angle = MathF.Atan2(direction.Y, direction.X);
+        DrawPixelLine(pixel, end, end - Unit(angle - arrowSpread) * arrowLength, color, thickness);
+        DrawPixelLine(pixel, end, end - Unit(angle + arrowSpread) * arrowLength, color, thickness);
+    }
+
+    private static XnaVector2 Unit(float angle) => new(MathF.Cos(angle), MathF.Sin(angle));
+
     private static void DrawEndpoint(Texture2D pixel, XnaVector2 center, XnaColor color, int radius)
     {
         Global.SharedSpriteBatch.Draw(pixel, new Microsoft.Xna.Framework.Rectangle((int)center.X - radius, (int)center.Y - radius, radius * 2, radius * 2), color);
@@ -82,7 +102,7 @@ internal sealed class ConnectorLineDrawCallRenderer
         PresentationColor.Cyan => XnaColor.Cyan,
         PresentationColor.Green => XnaColor.Green,
         PresentationColor.DarkGreen => XnaColor.DarkGreen,
-        PresentationColor.Earth => XnaColor.SaddleBrown,
+        PresentationColor.Earth => XnaColor.Orange,
         PresentationColor.Default => XnaColor.White,
         _ => XnaColor.White
     };

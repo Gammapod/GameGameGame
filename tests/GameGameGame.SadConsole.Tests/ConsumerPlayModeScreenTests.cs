@@ -415,6 +415,32 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeF9DebugLineToggleAddsOrangeTargetingConnectors()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        MoveAdjacentToWeightBulk0(screen);
+        var target = new EntityId("debugWeightBulk0");
+        session.World.SetActionTarget(session.PlayerEntityId, target);
+        var drawable = SadConsoleRect.FromSize(1, 1, 100, 35);
+
+        var hiddenFrame = screen.BuildRenderFrame(drawable, debugVisible: false);
+
+        Assert.False(screen.DebugLinesVisible);
+        Assert.DoesNotContain(hiddenFrame.MainConnectors, connector => connector.Id == "actor-pov-targeting-connectors");
+
+        screen.ToggleDebugLines();
+        var visibleFrame = screen.BuildRenderFrame(drawable, debugVisible: false);
+
+        Assert.True(screen.DebugLinesVisible);
+        Assert.Contains("F9: debug lines", screen.FooterText);
+        var targeting = Assert.Single(visibleFrame.MainConnectors, connector => connector.Id == "actor-pov-targeting-connectors");
+        var segment = Assert.Single(targeting.View.Segments);
+        Assert.Equal($"targeting-{session.PlayerEntityId.Value}-to-{target.Value}", segment.Id);
+        Assert.Equal(PresentationColor.Earth, segment.Color);
+    }
+
+    [Fact]
     public void ConsumerPlayModeReportsLaunchFailureInDebugRows()
     {
         var screen = ConsumerPlayModeScreen.Open(new ScenarioCatalogEntry("missing-file.yaml", "missing", "Missing", "Missing file"));

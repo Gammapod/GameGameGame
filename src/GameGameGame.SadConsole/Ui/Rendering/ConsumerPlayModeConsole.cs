@@ -170,6 +170,13 @@ internal sealed class ConsumerPlayModeConsole : Console
             return true;
         }
 
+        if (keyboard.IsKeyReleased(Keys.F9))
+        {
+            _screen.ToggleDebugLines();
+            Redraw();
+            return true;
+        }
+
         if (keyboard.IsKeyReleased(Keys.F10))
         {
             ToggleCaptureRecording();
@@ -233,7 +240,10 @@ internal sealed class ConsumerPlayModeConsole : Console
             DrawMixedScaleInventorySpace(component, mixedScaleOcclusionRects);
         }
 
-        _lastConnectors.AddRange(frame.MainConnectors.Select(connector => connector.View));
+        if (_screen.DebugLinesVisible)
+        {
+            _lastConnectors.AddRange(frame.MainConnectors.Select(connector => connector.View));
+        }
 
         if (_layout.DebugVisible)
         {
@@ -272,7 +282,10 @@ internal sealed class ConsumerPlayModeConsole : Console
             DrawMixedScaleInventorySpace(component, mixedScaleOcclusionRects);
         }
 
-        _lastConnectors.AddRange(frame.DebugConnectors.Select(connector => connector.View));
+        if (_screen.DebugLinesVisible)
+        {
+            _lastConnectors.AddRange(frame.DebugConnectors.Select(connector => connector.View));
+        }
 
         if (frame.DiagnosticsChromeComponent is { } diagnosticsChrome)
         {

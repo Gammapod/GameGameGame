@@ -40,6 +40,7 @@ internal sealed class ConsumerPlayModeScreen
     public LeftRegionMode LeftRegionMode { get; private set; } = LeftRegionMode.ParentLocationChain;
     public (int X, int Y)? HoverCell { get; private set; }
     public bool HoverTooltipReady { get; private set; }
+    public bool DebugLinesVisible { get; private set; }
     private TimeSpan _hoverElapsed;
     public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
     public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
@@ -49,7 +50,7 @@ internal sealed class ConsumerPlayModeScreen
     public int WorldTurnNumber => (_sessionController?.World ?? Session?.World)?.TurnNumber ?? 0;
     public string Title => "New Play Mode";
     public string Purpose => "Consumer-facing Play mode skeleton. Current-space component is active.";
-    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | L: left region | U: undo | F10: capture | F12: debug | Esc: return";
+    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | L: left region | U: undo | F9: debug lines | F10: capture | F12: debug | Esc: return";
 
     public static ConsumerPlayModeScreen Open(ScenarioCatalogEntry catalogEntry)
     {
@@ -87,6 +88,15 @@ internal sealed class ConsumerPlayModeScreen
             _ => "Left region changed."
         };
         return LastActionStatus;
+    }
+
+    public bool ToggleDebugLines()
+    {
+        DebugLinesVisible = !DebugLinesVisible;
+        LastActionStatus = DebugLinesVisible
+            ? "Debug lines visible: cyan containment, orange targeting."
+            : "Debug lines hidden.";
+        return DebugLinesVisible;
     }
 
     public bool SetHoverCell(int x, int y)
@@ -353,7 +363,7 @@ internal sealed class ConsumerPlayModeScreen
     public ConsumerPlayModeRenderFrame BuildRenderFrame(SadConsoleRect drawableBounds, bool debugVisible, int rootCellWidthPixels = 16, int rootCellHeightPixels = 16)
     {
         var rootCellMetrics = new InventorySpaceRootCellMetrics(rootCellWidthPixels, rootCellHeightPixels);
-        var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false, rootCellMetrics);
+        var mainComponents = ActorPovComponents(drawableBounds, showDebugLabels: false, rootCellMetrics, includeTargetingConnectors: DebugLinesVisible);
         var promptOverlay = PromptComponent(drawableBounds);
         var tooltipOverlay = promptOverlay is null && HoverTooltipReady && HoverCell is { } hoverCell
             ? PlayEntityHoverTooltipBuilder.Build(
@@ -369,7 +379,7 @@ internal sealed class ConsumerPlayModeScreen
                 hoverCell.Y)
             : null;
         var debugComponents = debugVisible
-            ? ActorPovComponents(drawableBounds, showDebugLabels: true, rootCellMetrics)
+            ? ActorPovComponents(drawableBounds, showDebugLabels: true, rootCellMetrics, includeTargetingConnectors: DebugLinesVisible)
             : [];
         var diagnosticsChrome = debugVisible ? ActorPovDiagnosticsChromeComponent(drawableBounds, rootCellMetrics) : null;
         var debugRows = debugVisible
@@ -387,10 +397,10 @@ internal sealed class ConsumerPlayModeScreen
             debugRows);
     }
 
-    public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels, InventorySpaceRootCellMetrics? rootCellMetrics = null)
+    public IReadOnlyList<IUiComponent> ActorPovComponents(SadConsoleRect drawableBounds, bool showDebugLabels, InventorySpaceRootCellMetrics? rootCellMetrics = null, bool includeTargetingConnectors = false)
     {
         return ActorPovModel(drawableBounds, rootCellMetrics) is { } model
-            ? ActorPovPlayComponentFactory.MainComponents(model, showDebugLabels, LeftRegionComponents(model), TurnHeader())
+            ? ActorPovPlayComponentFactory.MainComponents(model, showDebugLabels, LeftRegionComponents(model), TurnHeader(), includeTargetingConnectors)
             : [];
     }
 

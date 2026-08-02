@@ -10,11 +10,12 @@ internal static class ActorPovPlayComponentFactory
         ActorPovPlayScreenModel model,
         bool showDebugLabels = false,
         IReadOnlyList<IUiComponent>? parentChainOverride = null,
-        string? turnHeader = null)
+        string? turnHeader = null,
+        bool includeTargetingConnectors = false)
     {
         var currentPlace = CurrentPlaceComponent(model, showDebugLabels);
         var parentChain = parentChainOverride ?? ParentChainComponents(model, showDebugLabels, currentPlace as InventorySpaceComponent);
-        return
+        List<IUiComponent> components =
         [
             .. parentChain,
             currentPlace,
@@ -23,6 +24,17 @@ internal static class ActorPovPlayComponentFactory
             ActorInventoryComponent(model, showDebugLabels),
             ActorInventoryInspectionComponent(model, showDebugLabels)
         ];
+
+        if (includeTargetingConnectors && TargetingConnector(model, components) is { } targetingConnector)
+        {
+            components.Add(new ConnectorLineComponent(
+                "actor-pov-targeting-connectors",
+                "Action targeting links",
+                model.Layout.Root.Bounds,
+                targetingConnector));
+        }
+
+        return components;
     }
 
     public static IReadOnlyList<IUiComponent> ParentChainComponents(
@@ -231,6 +243,58 @@ internal static class ActorPovPlayComponentFactory
 
         var bounds = component.CellBounds(coord);
         return new ConnectorLineEndpoint(id, bounds.Left + (bounds.Width / 2), bounds.Top + (bounds.Height / 2));
+    }
+
+    private static ConnectorLineViewModel? TargetingConnector(ActorPovPlayScreenModel model, IReadOnlyList<IUiComponent> components)
+    {
+        var anchors = VisibleEntityAnchors(components, model.RootCellMetrics);
+        var segments = new List<ConnectorLineSegment>();
+        foreach (var (sourceId, targetIds) in model.TargetsByEntityId.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal))
+        {
+            if (!anchors.TryGetValue(sourceId, out var source))
+            {
+                continue;
+            }
+
+            foreach (var targetId in targetIds.OrderBy(target => target.Value, StringComparer.Ordinal))
+            {
+                if (!anchors.TryGetValue(targetId, out var target))
+                {
+                    continue;
+                }
+
+                segments.Add(new ConnectorLineSegment(
+                    $"targeting-{sourceId.Value}-to-{targetId.Value}",
+                    source,
+                    target,
+                    PresentationColor.Earth,
+                    Layer: 2));
+            }
+        }
+
+        return segments.Count == 0
+            ? null
+            : new ConnectorLineViewModel(
+                "actor-pov-targeting.connector",
+                "Action targeting links",
+                segments,
+                ConnectorLineFallbackGlyphs.Ascii);
+    }
+
+    private static IReadOnlyDictionary<EntityId, ConnectorLineEndpoint> VisibleEntityAnchors(IReadOnlyList<IUiComponent> components, InventorySpaceRootCellMetrics rootCellMetrics)
+    {
+        var anchors = new Dictionary<EntityId, ConnectorLineEndpoint>();
+        foreach (var component in components.OfType<InventorySpaceComponent>())
+        {
+            foreach (var entity in component.View.Entities.Where(entity => component.View.IsVisible(entity.Coord)))
+            {
+                anchors.TryAdd(
+                    entity.EntityId,
+                    AnchorForCell(component, entity.Coord, $"targeting-{entity.EntityId.Value}-cell", rootCellMetrics));
+            }
+        }
+
+        return anchors;
     }
 
     public static IUiComponent CurrentPlaceComponent(ActorPovPlayScreenModel model, bool showDebugLabels = false)

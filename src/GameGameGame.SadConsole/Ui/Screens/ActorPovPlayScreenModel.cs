@@ -12,6 +12,7 @@ internal sealed record ActorPovPlayScreenModel(
     IReadOnlyList<ActorPovPlayViewportState> Viewports,
     IReadOnlyList<ActorPovPlayScreenDiagnostic> Diagnostics,
     IReadOnlyDictionary<EntityId, Direction> FacingByEntityId,
+    IReadOnlyDictionary<EntityId, IReadOnlyList<EntityId>> TargetsByEntityId,
     InventorySpaceRootCellMetrics RootCellMetrics)
 {
     public EntityPanelProjection ControlledActor => Projection.ControlledActor;
@@ -78,6 +79,7 @@ internal static class ActorPovPlayScreenModelBuilder
             BuildViewports(projection),
             BuildDiagnostics(layout, projection),
             BuildFacingFacts(world),
+            BuildTargetFacts(world),
             resolvedRootCellMetrics);
     }
 
@@ -85,6 +87,25 @@ internal static class ActorPovPlayScreenModelBuilder
         world.ActionStates
             .Where(pair => pair.Value.Facing is not null)
             .ToDictionary(pair => pair.Key, pair => pair.Value.Facing!.Value);
+
+    private static IReadOnlyDictionary<EntityId, IReadOnlyList<EntityId>> BuildTargetFacts(WorldState world) =>
+        world.ActionStates
+            .Select(pair => (EntityId: pair.Key, Targets: BuildDistinctTargets(pair.Value)))
+            .Where(pair => pair.Targets.Count > 0)
+            .ToDictionary(pair => pair.EntityId, pair => pair.Targets);
+
+    private static IReadOnlyList<EntityId> BuildDistinctTargets(EntityActionState state)
+    {
+        var targets = new List<EntityId>();
+        if (state.Target is { } primaryTarget)
+        {
+            targets.Add(primaryTarget);
+        }
+
+        targets.AddRange(state.Targets.Values);
+        targets.AddRange(state.LabeledTargets.Values);
+        return targets.Distinct().ToList();
+    }
 
     private static ActorPovPlayPresentationState NormalizePresentationState(
         ActorPovPlayProjection projection,
