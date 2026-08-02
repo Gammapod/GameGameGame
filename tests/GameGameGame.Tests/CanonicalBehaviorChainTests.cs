@@ -10,6 +10,7 @@ public sealed class CanonicalBehaviorChainTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
         movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
@@ -38,6 +39,7 @@ public sealed class CanonicalBehaviorChainTests
     public void TransformAdjacentToInventoryBehaviorUsesPickupSemantics()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
         var plan = CreateBehaviorPlan("transform-adjacent-to-inventory", ActionPlanBehaviorStepKind.TransformAdjacentToInventory);
 
@@ -55,6 +57,7 @@ public sealed class CanonicalBehaviorChainTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set(ActionPlanSlot.Facing, new DirectionPlanValue(Direction.West));
         movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));

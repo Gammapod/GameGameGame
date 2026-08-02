@@ -156,6 +156,7 @@ public sealed class LegacyPlanBuiltInExecutionTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set("target", new EntityPlanValue(TestWorld.RockId));
         movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)));
@@ -173,6 +174,7 @@ public sealed class LegacyPlanBuiltInExecutionTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set("target", new EntityPlanValue(TestWorld.RockId));
         movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));
@@ -193,6 +195,7 @@ public sealed class LegacyPlanBuiltInExecutionTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set(ActionPlanSlot.Target, new EntityPlanValue(TestWorld.RockId));
         movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)));

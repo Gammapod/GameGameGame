@@ -139,7 +139,7 @@ internal static class ActionPlanValidator
         for (var index = 0; index < behavior.Steps.Count; index++)
         {
             var step = behavior.Steps[index];
-            if (step.Kind == ActionPlanBehaviorStepKind.Move && step.DirectionMode is null)
+            if (step.Kind is ActionPlanBehaviorStepKind.Move or ActionPlanBehaviorStepKind.Push && step.DirectionMode is null)
             {
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionStepField,

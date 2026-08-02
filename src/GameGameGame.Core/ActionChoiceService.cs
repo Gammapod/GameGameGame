@@ -8,8 +8,18 @@ public enum ActionChoiceKind
     Enter,
     Exit,
     Transfer,
+    Push,
     AuthoredStep
 }
+
+public sealed record ActionChoicePushDirectionOption(
+    EntityId TargetId,
+    Direction Direction,
+    PlaneCoord? Destination,
+    bool CanExecute,
+    FailureReason? FailureReason,
+    string? FailureDetail,
+    EntityId? BlockingEntityId = null);
 
 public sealed record ActionChoiceTransferCounterpartyOption(
     EntityId CounterpartyId,
@@ -45,13 +55,17 @@ public sealed record ActionChoice(
     IReadOnlyList<ControlledActorEntityAffordance> EntityOptions,
     IReadOnlyDictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>> DestinationsByTargetId,
     IReadOnlyList<ActionChoiceTransferCounterpartyOption> TransferCounterparties = null!,
-    IReadOnlyDictionary<EntityId, IReadOnlyList<ActionChoiceTransferItemOption>>? TransferItemsByCounterpartyId = null)
+    IReadOnlyDictionary<EntityId, IReadOnlyList<ActionChoiceTransferItemOption>>? TransferItemsByCounterpartyId = null,
+    IReadOnlyDictionary<EntityId, IReadOnlyList<ActionChoicePushDirectionOption>>? PushDirectionsByTargetId = null)
 {
     public IReadOnlyList<ControlledActorDestinationAffordance> Destinations(EntityId targetId) =>
         DestinationsByTargetId.TryGetValue(targetId, out var destinations) ? destinations : [];
 
     public IReadOnlyList<ActionChoiceTransferItemOption> TransferItems(EntityId counterpartyId) =>
         TransferItemsByCounterpartyId is not null && TransferItemsByCounterpartyId.TryGetValue(counterpartyId, out var items) ? items : [];
+
+    public IReadOnlyList<ActionChoicePushDirectionOption> PushDirections(EntityId targetId) =>
+        PushDirectionsByTargetId is not null && PushDirectionsByTargetId.TryGetValue(targetId, out var directions) ? directions : [];
 }
 
 public sealed record ActionChoiceRequest(
@@ -112,6 +126,17 @@ public sealed class ActionChoiceService(MovementService movement)
                         new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>(),
                         transferCounterparties,
                         transferCounterparties.ToDictionary(counterparty => counterparty.CounterpartyId, counterparty => QueryTransferItems(world, actorId, counterparty))));
+                    break;
+                case ActionPlanBehaviorStepKind.Push:
+                    var pushDirectionsByTarget = new Dictionary<EntityId, IReadOnlyList<ActionChoicePushDirectionOption>>();
+                    var pushTargets = QueryPushTargets(world, actorId, pushDirectionsByTarget);
+                    choices.Add(new ActionChoice(
+                        ActionChoiceKind.Push,
+                        index,
+                        [],
+                        pushTargets,
+                        new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>(),
+                        PushDirectionsByTargetId: pushDirectionsByTarget));
                     break;
                 default:
                     choices.Add(new ActionChoice(ActionChoiceKind.AuthoredStep, index, [], [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
@@ -295,6 +320,23 @@ public sealed class ActionChoiceService(MovementService movement)
         { CounterpartyId = counterpartyId };
     }
 
+    public ControlledActorCommandResult SubmitPushChoice(
+        WorldState world,
+        ActionChoiceRequest request,
+        EntityId targetId,
+        Direction direction,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null)
+    {
+        if (!request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Push))
+        {
+            throw new InvalidOperationException("Action choice request does not contain a Push choice.");
+        }
+
+        var commands = new ControlledActorCommandService(movement, actionPlans, beforePlan);
+        return commands.Execute(world, request.ActorId, ControlledActorCommand.Push(targetId, direction));
+    }
+
     private IReadOnlyList<ActionChoiceDirectionOption> QueryMoveDirections(WorldState world, EntityId actorId) =>
         DirectionMath.AllDirections.Select(direction =>
         {
@@ -321,6 +363,61 @@ public sealed class ActionChoiceService(MovementService movement)
             affordance.FailureReason,
             affordance.FailureDetail,
             affordance.BlockingEntityId);
+
+    private IReadOnlyList<ControlledActorEntityAffordance> QueryPushTargets(
+        WorldState world,
+        EntityId actorId,
+        Dictionary<EntityId, IReadOnlyList<ActionChoicePushDirectionOption>> directionsByTargetId)
+    {
+        if (!world.Entities.ContainsKey(actorId))
+        {
+            return [];
+        }
+
+        var actorLocation = world.GetEntityLocation(actorId);
+        var adjacentTargets = world.Occupancy.Values
+            .Where(targetId => targetId != actorId)
+            .Where(targetId => world.GetEntityLocation(targetId).PlaneId == actorLocation.PlaneId && movement.AreAdjacent(world, actorId, targetId))
+            .OrderBy(targetId => world.GetEntityLocation(targetId).Coord.Y)
+            .ThenBy(targetId => world.GetEntityLocation(targetId).Coord.X)
+            .ThenBy(targetId => targetId.Value)
+            .ToList();
+
+        var result = new List<ControlledActorEntityAffordance>();
+        foreach (var targetId in adjacentTargets)
+        {
+            var directions = QueryPushDirections(world, actorId, targetId);
+            directionsByTargetId[targetId] = directions;
+            var firstFailure = directions.FirstOrDefault(direction => !direction.CanExecute);
+            result.Add(new ControlledActorEntityAffordance(
+                targetId,
+                world.GetEntityLocation(targetId),
+                directions.Any(direction => direction.CanExecute),
+                firstFailure?.FailureReason,
+                firstFailure?.FailureDetail));
+        }
+
+        return result;
+    }
+
+    private IReadOnlyList<ActionChoicePushDirectionOption> QueryPushDirections(WorldState world, EntityId actorId, EntityId targetId) =>
+        DirectionMath.AllDirections.Select(direction =>
+        {
+            var destination = world.Entities.ContainsKey(targetId) && movement.TryGetMoveDestination(world, targetId, direction, out var resolvedDestination)
+                ? resolvedDestination
+                : (PlaneCoord?)null;
+            var evaluation = new PushAction(targetId, direction).Evaluate(world, actorId, movement);
+            var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
+            var blockingEntity = destination is { } concreteDestination ? world.GetOccupant(concreteDestination) : null;
+            return new ActionChoicePushDirectionOption(
+                targetId,
+                direction,
+                destination,
+                evaluation.CanExecute,
+                failure?.Reason == FailureReason.None ? null : failure?.Reason,
+                failure?.Detail,
+                blockingEntity);
+        }).ToList();
 
     private IReadOnlyDictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>> QueryAdjacentDropDestinations(
         WorldState world,

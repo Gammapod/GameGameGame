@@ -330,6 +330,20 @@ sections:
     status: active-delta
     tags: [delta, canonical-action, transfer, give, take, inventory, player-interaction, vertical-slice]
     source: docs/Plans/Give-Take-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalPushShowcase.yaml
+    scenarioId: beta-canonical-push-outcomes
+    name: Canonical Push Outcomes
+    description: Delta/canonical action outcome room proving canonical Push success, blocked destination failure, too-heavy/aperture failure, and non-adjacent/targeting failure cases.
+    status: active-delta
+    tags: [delta, canonical-action, push, outcomes, vertical-slice]
+    source: User-requested canonical Push demo/polish
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalPushShowcase.yaml
+    scenarioId: beta-canonical-push-player-interaction
+    name: Canonical Push Player Interaction
+    description: Delta/canonical action player-interaction room for pushing an adjacent named block into an open destination using authored Push choices.
+    status: active-delta
+    tags: [delta, canonical-action, push, player-interaction, vertical-slice]
+    source: User-requested canonical Push demo/polish
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
     scenarioId: beta-canonical-target-path-failure-logs
     name: Canonical Target Path Failure Logs

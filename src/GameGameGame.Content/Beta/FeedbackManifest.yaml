@@ -42,6 +42,13 @@ sections:
     status: canonical-candidate
     tags: [feedback, showcase, canonical-action, transfer, inventory, player-interaction]
     source: Feedback build curated from Beta manifest
+  - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalPushShowcase.yaml
+    scenarioId: beta-canonical-push-player-interaction
+    name: Canonical Push Player Interaction
+    description: Tester-facing room for pushing an adjacent named block into an open destination through Push choices.
+    status: canonical-candidate
+    tags: [feedback, showcase, canonical-action, push, player-interaction]
+    source: Feedback build curated from Beta manifest
   - contentPath: src\GameGameGame.Content\Beta\CanonicalActions\CanonicalTargetPathMovementShowcase.yaml
     scenarioId: beta-canonical-target-path-maze
     name: Canonical Target Path Maze

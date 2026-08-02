@@ -498,6 +498,7 @@ public sealed partial class PrototypeActionStepReferenceTests
     {
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set("facing", new DirectionPlanValue(Direction.West));
         var (wandering, _, registry) = CreateWanderingPlanDefinitions();

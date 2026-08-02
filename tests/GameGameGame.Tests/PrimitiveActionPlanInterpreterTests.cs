@@ -148,6 +148,7 @@ public sealed class PrimitiveActionPlanInterpreterTests
     public void PrimitivePickupTargetPicksUpPersistentActorTarget()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
         var descriptor = new ActionPlanDescriptor(
             new ActionPlanId("pickup-target"),
@@ -173,6 +174,7 @@ public sealed class PrimitiveActionPlanInterpreterTests
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 20 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2))));
         var descriptor = new ActionPlanDescriptor(
             new ActionPlanId("pickup-target"),
@@ -206,6 +208,7 @@ public sealed class PrimitiveActionPlanInterpreterTests
     public void PrimitiveMoveFacingCanFallbackToPickupTargetUsingBlockedEntityTarget()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionFacing(TestWorld.PlayerId, Direction.North);
         var pickup = new ActionPlanDescriptor(
             new ActionPlanId("pickupTarget"),

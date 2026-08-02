@@ -1,0 +1,205 @@
+entityTemplates:
+  canonicalPushOutcomeRoom:
+    name: Canonical Push Outcome Room
+    inventoryWidth: 12
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: pushSuccessActor
+      templateId: canonicalPushSuccessActor
+      coord: { x: 1, y: 1 }
+    - entityId: pushSuccessBlock
+      templateId: canonicalPushSuccessBlock
+      coord: { x: 2, y: 1 }
+    - entityId: pushBlockedDestinationActor
+      templateId: canonicalPushBlockedDestinationActor
+      coord: { x: 1, y: 3 }
+    - entityId: pushBlockedDestinationBlock
+      templateId: canonicalPushBlockedDestinationBlock
+      coord: { x: 2, y: 3 }
+    - entityId: pushDestinationBlocker
+      templateId: canonicalPushDestinationBlocker
+      coord: { x: 3, y: 3 }
+    - entityId: pushTooHeavyActor
+      templateId: canonicalPushTooHeavyActor
+      coord: { x: 5, y: 1 }
+    - entityId: pushTooHeavyBlock
+      templateId: canonicalPushTooHeavyBlock
+      coord: { x: 6, y: 1 }
+    - entityId: pushNonAdjacentActor
+      templateId: canonicalPushNonAdjacentActor
+      coord: { x: 5, y: 4 }
+    - entityId: pushNonAdjacentBlock
+      templateId: canonicalPushNonAdjacentBlock
+      coord: { x: 8, y: 4 }
+  canonicalPushInteractionRoom:
+    name: Canonical Push Interaction Room
+    inventoryWidth: 8
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: playerPushBlock
+      templateId: canonicalPlayerPushBlock
+      coord: { x: 4, y: 2 }
+    - entityId: playerPushSideMarker
+      templateId: canonicalPushDestinationBlocker
+      coord: { x: 4, y: 1 }
+  canonicalPushOutcomeObserver:
+    name: Canonical Push Outcome Observer
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 0
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
+    actionStateDefaults:
+      facing: West
+  canonicalPushSuccessActor:
+    name: Push Success Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalPushForwardPlan
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPushSuccessBlock
+      targetCapabilities:
+      - Push
+      range: 1
+  canonicalPushBlockedDestinationActor:
+    name: Push Blocked Destination Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalPushForwardPlan
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPushBlockedDestinationBlock
+      targetCapabilities:
+      - Push
+      range: 1
+  canonicalPushTooHeavyActor:
+    name: Push Too Heavy Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 2
+    defaultActionPlanId: canonicalPushForwardPlan
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPushTooHeavyBlock
+      range: 1
+  canonicalPushNonAdjacentActor:
+    name: Push Non Adjacent Actor
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalPushForwardPlan
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPushNonAdjacentBlock
+      targetCapabilities:
+      - Push
+      range: 4
+  canonicalPushPlayer:
+    name: Canonical Push Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: canonicalPushPlayerChoices
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetTemplateId: canonicalPlayerPushBlock
+      targetCapabilities:
+      - Push
+      range: 1
+  canonicalPushSuccessBlock: { name: Push Success Block, inventoryWidth: 0, inventoryHeight: 0, weight: 1, carryingCapacity: 0, bulk: 2, aperture: 0 }
+  canonicalPushBlockedDestinationBlock: { name: Push Blocked Destination Block, inventoryWidth: 0, inventoryHeight: 0, weight: 1, carryingCapacity: 0, bulk: 2, aperture: 0 }
+  canonicalPushDestinationBlocker: { name: Push Destination Blocker, inventoryWidth: 0, inventoryHeight: 0, weight: 1, carryingCapacity: 0, bulk: 1, aperture: 0 }
+  canonicalPushTooHeavyBlock: { name: Push Too Heavy Block, inventoryWidth: 0, inventoryHeight: 0, weight: 1, carryingCapacity: 0, bulk: 5, aperture: 0 }
+  canonicalPushNonAdjacentBlock: { name: Push Non Adjacent Block, inventoryWidth: 0, inventoryHeight: 0, weight: 1, carryingCapacity: 0, bulk: 2, aperture: 0 }
+  canonicalPlayerPushBlock: { name: Player Push Block, inventoryWidth: 0, inventoryHeight: 0, weight: 1, carryingCapacity: 0, bulk: 2, aperture: 0 }
+presentations:
+  canonicalPushOutcomeRoom: { glyph: '#', color: Gray }
+  canonicalPushInteractionRoom: { glyph: '#', color: Gray }
+  canonicalPushOutcomeObserver: { glyph: '@', color: Yellow }
+  canonicalPushSuccessActor: { glyph: 's', color: Green }
+  canonicalPushBlockedDestinationActor: { glyph: 'b', color: Earth }
+  canonicalPushTooHeavyActor: { glyph: 'h', color: Earth }
+  canonicalPushNonAdjacentActor: { glyph: 'n', color: Earth }
+  canonicalPushPlayer: { glyph: '@', color: Yellow }
+  canonicalPushSuccessBlock: { glyph: 'S', color: Green }
+  canonicalPushBlockedDestinationBlock: { glyph: 'B', color: Earth }
+  canonicalPushDestinationBlocker: { glyph: 'X', color: Gray }
+  canonicalPushTooHeavyBlock: { glyph: 'H', color: Gray }
+  canonicalPushNonAdjacentBlock: { glyph: 'N', color: Gray }
+  canonicalPlayerPushBlock: { glyph: 'P', color: Cyan }
+actionPlans:
+  canonicalPushForwardPlan:
+    id: canonicalPushForwardPlan
+    behavior:
+      steps:
+      - kind: Push
+        targetSlot: 1
+        directionMode: Forward
+  canonicalPushPlayerChoices:
+    id: canonicalPushPlayerChoices
+    behavior:
+      steps:
+      - kind: Push
+        targetSlot: 1
+        directionMode: Forward
+scenarios:
+  beta-canonical-push-outcomes:
+    name: Beta Canonical Push Outcomes
+    scenarioRootEntityTemplateId: canonicalPushOutcomeRoom
+    playerEntityTemplateId: canonicalPushOutcomeObserver
+    playerEntityId: canonicalPushOutcomeObserver
+    playerStart: { x: 11, y: 6 }
+    playerControls:
+      player-1:
+      - canonicalPushOutcomeObserver
+  beta-canonical-push-player-interaction:
+    name: Beta Canonical Push Player Interaction
+    scenarioRootEntityTemplateId: canonicalPushInteractionRoom
+    playerEntityTemplateId: canonicalPushPlayer
+    playerEntityId: canonicalPushPlayer
+    playerStart: { x: 3, y: 2 }
+    playerControls:
+      player-1:
+      - canonicalPushPlayer

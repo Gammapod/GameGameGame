@@ -511,53 +511,75 @@ actionPlans:
       steps:
       - kind: SeekTarget
         targetLabel: want
+        targetSelf: false
       - kind: PickupTarget
         targetLabel: want
+        targetSelf: false
       - kind: EnterTarget
         targetSlot: 2
+        targetSelf: false
     steps: []
   pocketBazaarSlimeWalkPickupReverse:
     id: pocketBazaarSlimeWalkPickupReverse
     behavior:
       steps:
       - kind: MoveFacing
+        targetSelf: false
       - kind: PickupTarget
+        targetSelf: false
       - kind: ReverseFacing
+        targetSelf: false
   pocketBazaarMoveThenTurnRight:
     id: pocketBazaarMoveThenTurnRight
     behavior:
       steps:
       - kind: MoveFacing
+        targetSelf: false
       - kind: TurnRight
+        targetSelf: false
   pocketBazaarMoveThenTurnLeft:
     id: pocketBazaarMoveThenTurnLeft
     behavior:
       steps:
       - kind: MoveFacing
+        targetSelf: false
       - kind: TurnLeft
+        targetSelf: false
   pocketBazaarStealThenDeposit:
     id: pocketBazaarStealThenDeposit
     behavior:
       steps:
       - kind: SeekTarget
         targetSlot: 1
+        targetSelf: false
       - kind: TakeTarget
         targetSlot: 1
+        targetSelf: false
       - kind: SeekTarget
         targetSlot: 2
+        targetSelf: false
       - kind: GiveTarget
         targetSlot: 2
+        targetSelf: false
   player_Debug:
     id: player_Debug
     behavior:
       steps:
       - kind: Move
+        targetSelf: false
         directionMode: Forward
       - kind: PickupTarget
+        targetSelf: false
       - kind: DropFacing
+        targetSelf: false
       - kind: EnterTarget
+        targetSelf: false
       - kind: ExitFacing
+        targetSelf: false
+      - kind: Push
+        targetSelf: false
       - kind: Transfer
+        targetSelf: false
         directionMode: Forward
         transferDirection: TargetToActor
     steps: []

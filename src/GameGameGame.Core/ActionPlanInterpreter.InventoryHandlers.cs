@@ -48,6 +48,17 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
         }
 
+        if (!PickupDropPortabilityRule.Evaluate(world, actorId, target.Value, out var portabilityTrace))
+        {
+            trace.Add(portabilityTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = portabilityTrace.Reason;
+            trace.Detail = portabilityTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        trace.Add(portabilityTrace);
+
         if (!world.Planes.TryGetValue(inventoryPlaneId, out var inventoryPlane))
         {
             trace.Status = TraceStatus.Failure;
@@ -124,6 +135,17 @@ public sealed partial class ActionPlanInterpreter
             trace.Detail = $"{actorId} carries no entity to drop";
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
+
+        if (!PickupDropPortabilityRule.Evaluate(world, actorId, carried.Value, out var portabilityTrace))
+        {
+            trace.Add(portabilityTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = portabilityTrace.Reason;
+            trace.Detail = portabilityTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
+        trace.Add(portabilityTrace);
 
         var destination = new MovementDestination.AdjacentMovementDestination(actorId, facing.Value);
         var constrainedRelocation = new ConstrainedInventoryRelocationService(_movement, ignoredPolicyOwnerId: actorId);

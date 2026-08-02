@@ -199,6 +199,14 @@ Each decision should include:
 - **Implications:** The MVP Play route renders only the controlled actor's current inventory space through a reusable layered inventory-space component in normal mode. Debug/editor workflows stay accessible but should not define the consumer Play UX. A separate frontend project can be reconsidered later if packaging, asset pipeline, final-engine choice, or product separation requires it.
 - **Status:** Active / implemented by `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`.
 
+### FED-023: Canonical Push uses target-then-direction prompts in Consumer Play mode
+
+- **Decision:** Consumer Play mode presents canonical Push through the existing action-selection stack: choose Push/target from Core `ActionChoiceKind.Push`, then choose a valid target-relative direction from `ActionChoice.PushDirections(targetId)`. If only one valid target and direction exist, the existing candidate auto-submit behavior may submit it directly.
+- **Reasoning:** Push is the first promoted canonical action that needs both an entity target and a target-relative direction while keeping the actor stationary. Reusing the prompt stack preserves Select/Cancel behavior and keeps legality in Core.
+- **Implications:** Future target-plus-parameter actions should copy this pattern only when their parameter facts are exposed by shared Action Choice contracts. Frontend prompts may filter or focus valid options but must not invent legality. Direction keys in a Push direction prompt select the push direction, not actor movement.
+- **Automated trace:** `ConsumerPlayModeSizeCalibrationCanPushNestedBagThroughContextPrompt` and `ConsumerPlayModeCanonicalPushShowcaseCanPushPlayerBlock`.
+- **Status:** Active.
+
 ### FED-023: Consumer Play mode owns fullscreen display chrome and drawable bounds
 
 - **Decision:** Entering the new consumer `Play` route switches fullscreen through SadConsole host APIs, resizes the SadConsole render output with the host, resolves logical play cells from available display pixels divided by the active scaled Candii tile size, and reserves a fixed one-tile outside border buffer. Gameplay/content components receive only the inner drawable bounds. The border buffer uses Candii glyph `181`; normal mode draws it black-on-black and `F12` toggles debug mode by changing the border foreground to red and drawing topmost debug glyph/text aids.

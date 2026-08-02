@@ -1,5 +1,6 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
+using System.Runtime.CompilerServices;
 
 namespace GameGameGame.Tests;
 
@@ -15,6 +16,23 @@ public sealed class ContentRegistryValidationTests
 
         Assert.True(result.IsValid);
         Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void CanonicalDebugStandardPlayerLoadoutIncludesPush()
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", "Debug", "CanonicalDebugRooms.yaml"));
+        var document = EditableContentDocument.LoadYaml(File.ReadAllText(path));
+
+        var step = document
+            .ToRegistry()
+            .GetActionPlanDescriptor(new ActionPlanTemplateId("Player_Debug_Action_Plan"))
+            .Behavior!
+            .Steps
+            .Single(step => step.Kind == ActionPlanBehaviorStepKind.Push);
+
+        Assert.Equal(1, step.TargetSlot);
+        Assert.Equal(ActionPlanMoveDirectionMode.Forward, step.DirectionMode);
     }
 
     [Fact]
@@ -160,6 +178,45 @@ public sealed class ContentRegistryValidationTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.Message.Contains("directionMode"));
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField && diagnostic.Message.Contains("transferDirection"));
+    }
+
+    private static string FindRepositoryFile(string relativePath, [CallerFilePath] string sourceFilePath = "")
+    {
+        var directory = Path.GetDirectoryName(sourceFilePath)!;
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = Directory.GetParent(directory)?.FullName;
+        }
+
+        throw new FileNotFoundException($"Could not find {relativePath} starting from {sourceFilePath}.");
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsCanonicalPushMissingDirectionMode()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("canonicalPushMissingDirectionMode"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Push)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionStepField);
+        Assert.Equal(new ActionPlanId("canonicalPushMissingDirectionMode"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("directionMode", diagnostic.Message);
     }
 
     [Fact]

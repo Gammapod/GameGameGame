@@ -80,6 +80,7 @@ public sealed class ControlledActorCommandServiceTests
     public void ControlledActorCommandPickupReportsTargetAndDestinationAnchors()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
         var destination = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
@@ -91,6 +92,48 @@ public sealed class ControlledActorCommandServiceTests
         Assert.Equal(destination, result.Destination);
         Assert.Equal(destination, world.GetEntityLocation(TestWorld.SlimeId));
         Assert.True(result.AdvancedTurn);
+    }
+
+    [Fact]
+    public void ControlledActorCommandPushMovesTargetAndAdvancesTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var source = world.GetEntityLocation(TestWorld.SlimeId);
+        var destination = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1));
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Push(TestWorld.SlimeId, Direction.West));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(ControlledActorCommandKind.Push, result.Kind);
+        Assert.Equal(Direction.West, result.Direction);
+        Assert.Equal(TestWorld.SlimeId, result.TargetId);
+        Assert.Equal(source, result.Source);
+        Assert.Equal(destination, result.Destination);
+        Assert.Equal(destination, world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
+        Assert.True(result.AdvancedTurn);
+    }
+
+    [Fact]
+    public void ControlledActorCommandFailedPushRecordsFailureWithoutAdvancingTurn()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 1 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 2 };
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+        var startTurn = world.TurnNumber;
+        var startTargetLocation = world.GetEntityLocation(TestWorld.SlimeId);
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Push(TestWorld.SlimeId, Direction.West));
+
+        Assert.False(result.Succeeded);
+        Assert.False(result.AdvancedTurn);
+        Assert.Equal(ControlledActorCommandKind.Push, result.Kind);
+        Assert.Equal(FailureReason.ApertureBlocked, result.FailureReason);
+        Assert.Equal(startTurn, world.TurnNumber);
+        Assert.Equal(startTargetLocation, world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.Equal(result.Trace, world.LastTrace);
     }
 
     private static bool TraceContains(TraceNode trace, string label) =>

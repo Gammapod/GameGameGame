@@ -37,6 +37,7 @@ public sealed class LegacyPlanBuiltInDescriptorTests
     public void PickupEffectUsesRelocationAfterPickupValidation()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 4 };
         var context = new ActionPlanContext();
         context.Set(ActionPlanSlot.Target, new EntityPlanValue(TestWorld.RockId));
         var plan = new ActionPlanDefinition(

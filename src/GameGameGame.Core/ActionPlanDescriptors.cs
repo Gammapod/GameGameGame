@@ -71,6 +71,7 @@ public enum ActionPlanBehaviorStepKind
     MoveFacing,
     PickupTarget,
     DropFacing,
+    Push,
     PushFacing,
     DestroyTarget,
     CreateFacing,

@@ -300,6 +300,22 @@ public sealed class ActionPlanDescriptorAndCatalogTests
         Assert.Contains(inventoryToAdjacent.RequiredState, state => state.Slot == ActionPlanSlot.Facing && state.ValueKind == PlanValueKind.Direction);
     }
 
+    [Fact]
+    public void ActionStepCatalogDescribesCanonicalPushFieldsAndCapability()
+    {
+        var push = ActionStepCatalog.Get(ActionPlanBehaviorStepKind.Push);
+
+        Assert.Equal("Push", push.DisplayName);
+        Assert.Equal(ActionStepAuthoringTier.Stable, push.Tier);
+        Assert.Contains("target", push.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("direction", push.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(push.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Contains(push.DefaultableState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
+        Assert.Equal(ActionPlanBehaviorStepKind.Push, push.TargetCapability);
+        Assert.Contains(push.Fields, field => field.Name == "directionMode" && field.IsRequired);
+        Assert.True(EntityInteractionAffordanceService.IsSupportedTargetCapability(ActionPlanBehaviorStepKind.Push));
+    }
+
     [Theory]
     [InlineData(ActionPlanBehaviorStepKind.PickupTarget)]
     [InlineData(ActionPlanBehaviorStepKind.TransformAdjacentToInventory)]

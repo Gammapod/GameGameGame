@@ -161,7 +161,7 @@ Related frontend-owned items that remain in broader roadmaps because they are wo
 
 ## Proposed implementation slices
 
-Completed low-risk pattern sprint: `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md`.
+Completed low-risk pattern sprint: `docs/Archived/SadConsole-Playmode-Layout-Pattern-Sprint.md`.
 
 Completed linked containment proof-of-concept sprint: `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md` covered the first four slices below and left follow-ups for connector styling, explicit inspected-space selection, and POV-driven automatic inspection policy.
 

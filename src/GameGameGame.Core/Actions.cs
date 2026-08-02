@@ -83,6 +83,84 @@ public sealed record WaitAction : IActionIntent
     }
 }
 
+public sealed record PushAction(EntityId TargetId, Direction TargetMoveDirection) : IActionIntent
+{
+    public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
+    {
+        var trace = new TraceNode($"Push {TargetId} {TargetMoveDirection}", TraceStatus.Info);
+
+        if (!world.Entities.TryGetValue(actorId, out var actor))
+        {
+            return ActionTrace.Fail(trace, FailureReason.ActorMissing, $"actor {actorId} does not exist");
+        }
+
+        trace.Add(TraceNode.Success("Actor exists", world.FormatEntityAddress(actorId)));
+
+        if (!world.Entities.TryGetValue(TargetId, out var target))
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetMissing, $"target {TargetId} does not exist");
+        }
+
+        trace.Add(TraceNode.Success("Target exists", world.FormatEntityAddress(TargetId)));
+
+        if (TargetId == actorId)
+        {
+            return ActionTrace.Fail(trace, FailureReason.TargetIsActor, "actor cannot push itself");
+        }
+
+        var adjacency = movement.EvaluateAdjacency(world, actorId, TargetId);
+        if (!adjacency.AreAdjacent)
+        {
+            var detail = adjacency.FailureDetail is { Length: > 0 }
+                ? $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}: {adjacency.FailureDetail}"
+                : $"{world.FormatEntityAddress(TargetId)} is not adjacent to {world.FormatEntityAddress(actorId)}";
+            return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, detail);
+        }
+
+        trace.Add(TraceNode.Success("Target is adjacent"));
+
+        var aperture = new TraceNode(
+            $"Compare {target.Name} bulk to {actor.Name} aperture",
+            TraceStatus.Info,
+            detail: $"bulk={target.Bulk}, aperture={actor.Aperture}");
+        aperture.SuccessCriteria.Add(new ActionSuccessCriterion(
+            ActionSuccessCriterionKind.Aperture,
+            Satisfied: target.Bulk <= actor.Aperture,
+            SuccessRatio: target.Bulk == 0 ? null : decimal.Divide(actor.Aperture, target.Bulk),
+            RequiredValue: target.Bulk,
+            AvailableValue: actor.Aperture,
+            SubjectEntityId: TargetId,
+            LimitEntityId: actorId,
+            Detail: $"{target.Name} bulk {target.Bulk} vs {actor.Name} aperture {actor.Aperture}"));
+
+        if (target.Bulk > actor.Aperture)
+        {
+            aperture.Status = TraceStatus.Failure;
+            aperture.Reason = FailureReason.ApertureBlocked;
+            trace.Add(aperture);
+            return ActionTrace.Fail(trace, FailureReason.ApertureBlocked, $"{target.Name} bulk {target.Bulk} exceeds {actor.Name} aperture {actor.Aperture}");
+        }
+
+        aperture.Status = TraceStatus.Success;
+        trace.Add(aperture);
+
+        var relocation = movement.EvaluateRelocation(world, TargetId, MovementDestination.AdjacentTo(TargetId, TargetMoveDirection));
+        trace.Add(relocation.Trace);
+        if (!relocation.CanRelocate || relocation.Destination is null)
+        {
+            return ActionTrace.Fail(trace, relocation.Trace.Reason, relocation.Trace.Detail ?? $"cannot push {TargetId} {TargetMoveDirection}");
+        }
+
+        trace.Add(TraceNode.Success("Target destination can accept entity", relocation.Destination.ToString()));
+        trace.Status = TraceStatus.Success;
+        trace.Detail = $"pushed {TargetId} {TargetMoveDirection}";
+        return new ActionEvaluation(true, trace);
+    }
+
+    public void Execute(WorldState world, EntityId actorId, MovementService movement) =>
+        movement.TryMove(world, TargetId, TargetMoveDirection);
+}
+
 public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : IActionIntent
 {
     public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
@@ -127,6 +205,14 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
         }
 
         trace.Add(TraceNode.Success("Destination is inside actor inventory", Destination.ToString()));
+
+        if (!PickupDropPortabilityRule.Evaluate(world, actorId, TargetId, out var portabilityTrace))
+        {
+            trace.Add(portabilityTrace);
+            return ActionTrace.Fail(trace, portabilityTrace.Reason, portabilityTrace.Detail ?? $"cannot pick up {TargetId}");
+        }
+
+        trace.Add(portabilityTrace);
 
         var adjacency = movement.EvaluateAdjacency(world, actorId, TargetId);
         if (!adjacency.AreAdjacent)
@@ -194,6 +280,14 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
         }
 
         trace.Add(TraceNode.Success("Target is in actor inventory", targetLocation.ToString()));
+
+        if (!PickupDropPortabilityRule.Evaluate(world, actorId, TargetId, out var portabilityTrace))
+        {
+            trace.Add(portabilityTrace);
+            return ActionTrace.Fail(trace, portabilityTrace.Reason, portabilityTrace.Detail ?? $"cannot drop {TargetId}");
+        }
+
+        trace.Add(portabilityTrace);
 
         if (Destination.PlaneId != actorLocation.PlaneId)
         {

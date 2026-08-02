@@ -8,6 +8,7 @@ public enum ControlledActorCommandKind
     Enter,
     Exit,
     Transfer,
+    Push,
     Wait
 }
 
@@ -35,6 +36,9 @@ public sealed record ControlledActorCommand(
 
     public static ControlledActorCommand Transfer(EntityId movingEntityId, EntityId counterpartyId) =>
         new ControlledActorCommand(ControlledActorCommandKind.Transfer, TargetId: movingEntityId) with { CounterpartyId = counterpartyId };
+
+    public static ControlledActorCommand Push(EntityId targetId, Direction direction) =>
+        new(ControlledActorCommandKind.Push, Direction: direction, TargetId: targetId);
 
     public static ControlledActorCommand Wait() =>
         new(ControlledActorCommandKind.Wait);
@@ -68,7 +72,9 @@ public sealed class ControlledActorCommandService(
     public ControlledActorCommandResult Execute(WorldState world, EntityId actorId, ControlledActorCommand command)
     {
         var action = CreateAction(command);
+        var source = command.Source ?? ResolveSource(world, command);
         var evaluation = action.Evaluate(world, actorId, movement);
+        var destination = command.Destination ?? ResolveDestination(world, command);
 
         if (!evaluation.CanExecute)
         {
@@ -79,8 +85,8 @@ public sealed class ControlledActorCommandService(
                 command.Kind,
                 command.Direction,
                 command.TargetId,
-                command.Source,
-                command.Destination,
+                source,
+                destination,
                 Succeeded: false,
                 failure.Reason == FailureReason.None ? null : failure.Reason,
                 failure.Detail,
@@ -97,8 +103,8 @@ public sealed class ControlledActorCommandService(
             command.Kind,
             command.Direction,
             command.TargetId,
-            command.Source,
-            command.Destination,
+            source,
+            destination,
             succeeded,
             FailureReason: null,
             FailureDetail: null,
@@ -117,9 +123,27 @@ public sealed class ControlledActorCommandService(
             ControlledActorCommandKind.Enter when command.TargetId is { } targetId => new EnterAction(targetId),
             ControlledActorCommandKind.Exit when command.Direction is { } direction => new ExitAction(direction),
             ControlledActorCommandKind.Transfer when command.TargetId is { } movingEntityId && command.CounterpartyId is { } counterpartyId => CreateTransferAction(command, movingEntityId, counterpartyId),
+            ControlledActorCommandKind.Push when command.TargetId is { } targetId && command.Direction is { } direction => new PushAction(targetId, direction),
             ControlledActorCommandKind.Wait => new WaitAction(),
             _ => throw new InvalidOperationException($"Controlled command {command.Kind} is missing required command data.")
         };
+
+    private static PlaneCoord? ResolveSource(WorldState world, ControlledActorCommand command) =>
+        command.Kind == ControlledActorCommandKind.Push && command.TargetId is { } targetId && world.Entities.ContainsKey(targetId)
+            ? world.GetEntityLocation(targetId)
+            : command.Source;
+
+    private PlaneCoord? ResolveDestination(WorldState world, ControlledActorCommand command)
+    {
+        if (command.Kind == ControlledActorCommandKind.Push && command.TargetId is { } targetId && command.Direction is { } direction && world.Entities.ContainsKey(targetId))
+        {
+            return movement.TryGetMoveDestination(world, targetId, direction, out var destination)
+                ? destination
+                : null;
+        }
+
+        return command.Destination;
+    }
 
     private static IActionIntent CreateTransferAction(ControlledActorCommand command, EntityId movingEntityId, EntityId counterpartyId)
     {

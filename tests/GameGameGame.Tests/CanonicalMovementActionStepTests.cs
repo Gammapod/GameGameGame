@@ -34,6 +34,7 @@ public sealed class CanonicalMovementActionStepTests
     public void BackstepBlockedByEntityWritesTargetAndFallsThrough()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionFacing(TestWorld.PlayerId, Direction.South);
         var plan = new ActionPlanDefinition(
             new ActionPlanId("backstep-then-wait"),

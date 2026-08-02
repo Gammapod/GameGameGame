@@ -77,6 +77,17 @@ public static class ActionStepCatalog
             RequiredState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
         new(
+            ActionPlanBehaviorStepKind.Push,
+            "Push",
+            "Canonical forced target movement. Reads Target, resolves directionMode as the target-relative move direction, and moves only the target when the target bulk fits actor aperture and the target destination is legal/open.",
+            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
+            TargetCapability: ActionPlanBehaviorStepKind.Push,
+            Fields:
+            [
+                Field("directionMode", "Required target-relative direction for the pushed entity to move.")
+            ]),
+        new(
             ActionPlanBehaviorStepKind.PushFacing,
             "Push Facing",
             "Attempts to push the blocking entity in the actor's persistent Facing direction, then moves the actor into the blocker original location; a successful push consumes the turn.",

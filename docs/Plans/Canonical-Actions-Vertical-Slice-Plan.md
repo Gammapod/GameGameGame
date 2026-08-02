@@ -162,6 +162,86 @@ Agent/headless tooling rule: `ggg_*` tools should be structured, agent-accessibl
 
 ## Multi-phase implementation plan
 
+## Selected next slice: canonical `Push`
+
+The next promoted canonical action is a parameterized `Push`, modeled as the other side of canonical `Move`: instead of moving itself, the actor forces a target entity to move one adjacent step from the target's own position/POV. Legacy/prototype `PushFacing` remains compatibility behavior and keeps its current blocker-forward plus actor-follow-through semantics until a later migration explicitly changes it.
+
+Phase-0 decisions:
+
+1. Canonical `Push` has a selected target entity and a target-relative move direction. In the first runtime slice this can be represented directly as a Core action/command shape; descriptor/editor slices will decide the authored field names.
+2. The pushed entity moves one adjacent step from its own location using the shared movement/topology legality rules. The pusher does not move in the first canonical slice.
+3. The size success criterion is `pushedEntity.Bulk <= pusher.Aperture`. It should surface as structured aperture success criteria using `RequiredValue = pushed bulk` and `AvailableValue = pusher aperture`.
+4. The target must be interaction-adjacent/reachable from the pusher. The selected movement direction is from the target's POV and may be any adjacent direction whose destination is legal/open.
+5. Supported first logging outcomes are: success, target too bulky, target missing/invalid, target not adjacent/reachable, target destination blocked/occupied, and target destination out of bounds/invalid topology.
+6. Future Grapple/Pull/Drag variants should reuse the same forced-target-move foundation where possible, but are intentionally out of scope for the first Push slice.
+
+### Canonical Push phase ownership and coordination
+
+Core-owner owns phases 1-4 and the Core side of phase 5:
+
+1. **Phase 1: Core action primitive** - introduce `PushAction` or equivalent runtime primitive, traces, size criterion, target adjacency, target-relative movement, no actor movement.
+2. **Phase 2: Descriptor/catalog materialization** - add canonical `Push` behavior-step descriptor support and catalog metadata while preserving `PushFacing` compatibility.
+3. **Phase 3: Controlled command and Action Choice** - expose Push target and target-relative direction options through Core shared command/choice services.
+4. **Phase 4: Structured outcomes/log projection and scenario runtime reports** - project success and supported failure outcomes without parsing display strings, including aperture criterion facts.
+5. **Phase 5 Core/Content parity** - update Content descriptors, YAML, validation, editor service DTOs, and agent API surfaces enough that Push can be authored without hand-editing unsupported fields.
+
+Coordination needed:
+
+- **content-editor** should own authored scenario fixture content for the canonical Push log-outcome room and player-interaction room, plus content-authoring copy that explains Push design patterns once Core/Content authoring seams are ready.
+- **frontend-owner** should own SadConsole/play-mode UX for presenting Push target selection, target-relative direction selection, blocked destination hints, and graphical treatment decisions. The frontend must consume Core Action Choice/log facts and must not own Push legality.
+- Phase handoff should happen after Core phase 3 DTOs stabilize enough for frontend planning and after phase 5 editor/service seams stabilize enough for content-editor scenario authoring.
+
+### Canonical Push TDD trace
+
+Affected invariants from `docs/Source of Truth/invariants.md`:
+
+- Entity locations are represented by occupancy of nodes in planes, and at most one entity may occupy a node at a time.
+- Plain and directed topology adjacency are authoritative for movement, Action Choice movement destinations, controlled-actor movement affordances, and adjacency-based interactions.
+- Aperture-based action success criteria expose structured satisfaction facts as `SuccessRatio = available aperture / required bulk`.
+- Actions must produce structured traces for failed checks and resolutions.
+- Controlled actor commands and affordance queries expose Core-derived choices and remain authoritative for direct-player execution once Push reaches that phase.
+- Structured action outcome projections derive frontend log rows from structured command/action fields and expose available success/failure criterion ratios.
+- Canonical Action Steps must preserve their documented state contracts.
+- The Action Step/primitive catalog describes every exposed primitive, value kind, implied state contract, and field contract.
+- Content/editor operations must expose supported canonical action-step choices, target-consuming metadata, validation diagnostics, YAML preview, and behavior-chain mutations through shared services.
+
+Existing tests to preserve/revise as compatibility:
+
+- Preserve `PushFacingMovesBlockerAndActorAndConsumesTurn` and `ScenarioRunnerReportsPushFacingScenario` as legacy/prototype compatibility tests; do not rewrite them for canonical Push in phase 1.
+- Preserve movement/topology occupancy tests such as `MovementCannotPlaceEntityOnOccupiedNode`, `DefaultTopologyReportsTwoCornerIntercardinalBlock`, and canonical `Move` tests as shared movement legality evidence.
+- Preserve existing controlled-command/Action Choice tests for Move/Pickup/Drop/Enter/Exit/Transfer until Push-specific equivalents are added in later phases.
+
+New intentionally failing tests before implementation:
+
+- Phase 1 Core primitive:
+  - `CanonicalPushMovesTargetInSelectedTargetRelativeDirection`.
+  - `CanonicalPushDoesNotMoveActor`.
+  - `CanonicalPushFailsWhenTargetBulkExceedsActorAperture`.
+  - `CanonicalPushFailsWhenDestinationIsOccupied`.
+  - `CanonicalPushFailsWhenTargetIsNotAdjacent`.
+- Phase 2 descriptor/catalog/content metadata:
+  - `CanonicalPushDescriptorMaterializesExecutablePush`.
+  - `ActionStepCatalogDescribesCanonicalPushFieldsAndCapability`.
+  - `YamlContentLoaderLoadsCanonicalPushBehavior`.
+  - `PrototypeRegistryValidationReportsMissingPushTargetOrDirection` or equivalent final validation shape.
+- Phase 3 command/choice:
+  - `ControlledActorCommandPushMovesSelectedTargetAndAdvancesTurn`.
+  - `ControlledActorCommandFailedPushRecordsFailureWithoutAdvancingTurn`.
+  - `ActionChoiceRequestExposesPushTargetsAndTargetRelativeDirections`.
+  - `SubmitPushChoiceUsesSelectedTargetAndDirection`.
+- Phase 4 logging/scenario outcomes:
+  - `ActionOutcomeProjectionRendersSuccessfulPushFromStructuredCommandResult`.
+  - `ActionOutcomeProjectionExposesFailedPushApertureDegree`.
+  - `ActionOutcomeProjectionRendersBlockedPushDestination`.
+  - scenario/player narrative tests that exercise success, too bulky, blocked destination, out-of-bounds/invalid destination, and missing/invalid target outcomes.
+- Phase 5 editor/agent authoring:
+  - `ContentEditorListsCanonicalPushMetadata`.
+  - `ContentEditorServiceAuthorsCanonicalPushBehavior`.
+  - `AgentContentEditorApiAuthorsCanonicalPushBehavior`.
+  - `EditableContentDocumentRoundTripsCanonicalPushBehavior`.
+
+Implementation should proceed phase-by-phase. Each phase should first add or revise the relevant intentionally failing tests, then make the smallest Core/Content/Editor change needed for that phase, then run targeted tests and the relevant broader suite.
+
 ## Selected first slice: canonical `Move`
 
 The first promoted canonical action is a new parameterized `Move` Action Step, not a direct promotion of legacy/prototype `MoveFacing` or `Backstep`.

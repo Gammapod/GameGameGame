@@ -9,6 +9,7 @@ public sealed class ActionOutcomeProjectionTests
     public void ActionOutcomeProjectionRendersSuccessfulPickupFromStructuredCommandResult()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
         var destination = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
 
@@ -47,6 +48,7 @@ public sealed class ActionOutcomeProjectionTests
     public void ActionLogProjectionFiltersOutcomesByEntityAndPlaneAnchors()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
         var destination = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
         var outcome = ActionOutcomeProjection.FromCommandResult(
@@ -159,7 +161,7 @@ public sealed class ActionOutcomeProjectionTests
     {
         var world = TestWorld.CreateWorld();
         world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 11 };
-        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 10 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 10, Aperture = 9 };
         var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
 
         var commandResult = service.Execute(
@@ -175,6 +177,69 @@ public sealed class ActionOutcomeProjectionTests
         Assert.Equal(1.1m, criterion.SuccessRatio);
         Assert.Equal(TestWorld.SlimeId, criterion.SubjectEntityId);
         Assert.Equal(TestWorld.PlayerId, criterion.LimitEntityId);
+    }
+
+    [Fact]
+    public void ActionOutcomeProjectionRendersSuccessfulPushFromStructuredCommandResult()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var commandResult = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Push(TestWorld.SlimeId, Direction.West));
+        var outcome = ActionOutcomeProjection.FromCommandResult(world, commandResult);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Equal("push", outcome.ActionKind);
+        Assert.Equal(TestWorld.SlimeId, outcome.TargetId);
+        Assert.Equal(Direction.West, outcome.Direction);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)), outcome.Source);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), outcome.Destination);
+        Assert.Equal("Player pushed Slime West", outcome.Sentence);
+        Assert.Contains(TestWorld.PlayerId, outcome.AnchorEntityIds);
+        Assert.Contains(TestWorld.SlimeId, outcome.AnchorEntityIds);
+    }
+
+    [Fact]
+    public void ActionOutcomeProjectionExposesFailedPushApertureDegree()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 1 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 2 };
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var commandResult = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Push(TestWorld.SlimeId, Direction.West));
+        var outcome = ActionOutcomeProjection.FromCommandResult(world, commandResult);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal("push", outcome.ActionKind);
+        Assert.Equal(FailureReason.ApertureBlocked, outcome.FailureReason);
+        Assert.StartsWith("Player tried to push Slime West, but", outcome.Sentence, StringComparison.Ordinal);
+        var criterion = Assert.Single(outcome.SuccessCriteria, fact => fact.Kind == ActionSuccessCriterionKind.Aperture);
+        Assert.False(criterion.Satisfied);
+        Assert.Equal(2, criterion.RequiredValue);
+        Assert.Equal(1, criterion.AvailableValue);
+        Assert.Equal(0.5m, criterion.SuccessRatio);
+        Assert.Equal(TestWorld.SlimeId, criterion.SubjectEntityId);
+        Assert.Equal(TestWorld.PlayerId, criterion.LimitEntityId);
+    }
+
+    [Fact]
+    public void ActionOutcomeProjectionRendersBlockedPushDestination()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var commandResult = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Push(TestWorld.SlimeId, Direction.East));
+        var outcome = ActionOutcomeProjection.FromCommandResult(world, commandResult);
+
+        Assert.False(outcome.Succeeded);
+        Assert.Equal("push", outcome.ActionKind);
+        Assert.Equal(FailureReason.InvalidPlacement, outcome.FailureReason);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)), outcome.Source);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)), outcome.Destination);
+        Assert.StartsWith("Player tried to push Slime East, but", outcome.Sentence, StringComparison.Ordinal);
+        Assert.Contains(TestWorld.SlimeId, outcome.AnchorEntityIds);
+        Assert.Contains(TestWorld.WorldPlaneId, outcome.AnchorPlaneIds);
     }
 
     private static ActionOutcome Outcome(string sentence, bool succeeded, EntityId actor, PlaneId planeId) => new(

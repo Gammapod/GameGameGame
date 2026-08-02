@@ -1,8 +1,8 @@
 ---
 id: plan.sadconsole-playmode-layout-pattern-sprint
 title: SadConsole Play-Mode Layout Pattern Sprint
-kind: sprint-plan
-status: completed
+kind: archived
+status: archived
 truth_rank: 50
 truth_domains: [planning-priority, frontend-presentation]
 owners: [frontend-owner]
@@ -20,7 +20,7 @@ related:
 
 # SadConsole Play-Mode Layout Pattern Sprint
 
-Status: Completed focused sprint. This is a learning/architecture-prep slice for the existing mock play-mode surface, not the full componentized play-mode rewrite.
+Status: Archived completed focused sprint. This is a learning/architecture-prep slice for the existing mock play-mode surface, not the full componentized play-mode rewrite.
 
 ## Goal
 

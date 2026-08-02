@@ -172,6 +172,56 @@ public sealed partial class ActionPlanInterpreter
         return new PlanEffectResult(true, ConsumesTurn: true, ContinuePlan: false, trace, facing.Value);
     }
 
+    private PlanEffectResult ApplyCanonicalPush(
+        WorldState world,
+        EntityId actorId,
+        ActionPlanContext context,
+        ActionPlanBehaviorStepDescriptor step)
+    {
+        var trace = new TraceNode("Canonical Push", TraceStatus.Info);
+
+        if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var targetReadTrace))
+        {
+            trace.Add(targetReadTrace);
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = targetReadTrace.Detail;
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        trace.Add(targetReadTrace);
+
+        if (step.DirectionMode is not { } mode)
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = "Push requires directionMode";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        if (!TryResolveMoveDirection(mode, context, out var direction, out var directionReadTrace, out var failureDetail))
+        {
+            if (directionReadTrace is not null)
+            {
+                trace.Add(directionReadTrace);
+            }
+
+            trace.Status = TraceStatus.Failure;
+            trace.Detail = failureDetail ?? "unable to resolve Push directionMode";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
+        }
+
+        if (directionReadTrace is not null)
+        {
+            trace.Add(directionReadTrace);
+        }
+
+        var resolution = ((IActionIntent)new PushAction(target.Value, direction)).Resolve(world, actorId, _movement);
+        trace.Add(resolution.Trace);
+        trace.Status = resolution.Succeeded ? TraceStatus.Success : TraceStatus.Failure;
+        trace.Reason = resolution.Trace.Reason;
+        trace.Detail = resolution.Trace.Detail;
+        return new PlanEffectResult(resolution.Succeeded, resolution.ConsumesTurn, resolution.ContinuePlan, trace);
+    }
+
     private PlanEffectResult ApplyCreateFacingPrimitive(
         WorldState world,
         EntityId actorId,

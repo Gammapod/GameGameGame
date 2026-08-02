@@ -528,6 +528,37 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsCanonicalPushBehavior()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              pushPlan:
+                id: pushPlan
+                behavior:
+                  steps:
+                    - kind: Push
+                      targetLabel: foe
+                      directionMode: SouthEast
+            """);
+
+        var registry = document.ToRegistry();
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+
+        var step = registry.GetActionPlanDescriptor(new ActionPlanTemplateId("pushPlan")).Behavior!.Steps[0];
+        Assert.Equal(ActionPlanBehaviorStepKind.Push, step.Kind);
+        Assert.Equal("foe", step.TargetLabel);
+        Assert.Equal(ActionPlanMoveDirectionMode.SouthEast, step.DirectionMode);
+        Assert.Contains("kind: Push", saved);
+        Assert.Contains("targetLabel: foe", saved);
+        Assert.Contains("directionMode: SouthEast", saved);
+        Assert.Equal(ActionPlanMoveDirectionMode.SouthEast, reloaded.GetActionPlanDescriptor(new ActionPlanTemplateId("pushPlan")).Behavior!.Steps[0].DirectionMode);
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsCanonicalActorActionStateDefaults()
     {
         var registry = YamlContentLoader.LoadRegistry(

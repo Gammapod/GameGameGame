@@ -27,7 +27,7 @@ public sealed class CoreBulkApertureTests
         var world = TestWorld.CreateWorld();
         var movement = new MovementService();
         world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 2 };
-        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 2 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 2, Aperture = 9 };
         world.Entities[TestWorld.RockId] = world.Entities[TestWorld.RockId] with { Bulk = 99 };
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
         var action = new PickupAction(TestWorld.SlimeId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
@@ -36,6 +36,56 @@ public sealed class CoreBulkApertureTests
 
         Assert.True(resolution.Succeeded);
         Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.SlimeId));
+    }
+
+    [Fact]
+    public void PickupFailsWhenActorBulkDoesNotExceedTargetAperture()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Bulk = 10, Aperture = 5 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 3, Aperture = 10 };
+        var action = new PickupAction(TestWorld.SlimeId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)));
+
+        var evaluation = action.Evaluate(world, TestWorld.PlayerId, movement);
+
+        Assert.False(evaluation.CanExecute);
+        Assert.Equal(FailureReason.ApertureBlocked, evaluation.Trace.Reason);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.SlimeId));
+    }
+
+    [Fact]
+    public void DropFailsWhenActorBulkDoesNotExceedCarriedTargetAperture()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Bulk = 10, Aperture = 5 };
+        world.Entities[TestWorld.RockId] = world.Entities[TestWorld.RockId] with { Bulk = 3, Aperture = 10 };
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var action = new DropAction(TestWorld.RockId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
+
+        var evaluation = action.Evaluate(world, TestWorld.PlayerId, movement);
+
+        Assert.False(evaluation.CanExecute);
+        Assert.Equal(FailureReason.ApertureBlocked, evaluation.Trace.Reason);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void PickupCapabilityDoesNotMarkEnterableTargetPortable()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Bulk = 10, Aperture = 5 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 3, Aperture = 10 };
+        var service = new EntityInteractionAffordanceService(movement);
+
+        var pickup = service.QueryTargetCapability(world, TestWorld.PlayerId, TestWorld.SlimeId, ActionPlanBehaviorStepKind.PickupTarget);
+        var enter = service.QueryTargetCapability(world, TestWorld.PlayerId, TestWorld.SlimeId, ActionPlanBehaviorStepKind.EnterTarget);
+
+        Assert.False(pickup.CanTarget);
+        Assert.Equal(FailureReason.ApertureBlocked, pickup.FailureReason);
+        Assert.True(enter.CanTarget);
     }
 
     [Fact]

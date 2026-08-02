@@ -882,6 +882,7 @@ internal sealed class ConsumerPlayModeScreen
                 ActionChoiceKind.Enter => EnterCandidates(choice, option => option.Source == contextCoord),
                 ActionChoiceKind.Exit => ExitCandidates(choice, option => option.Direction == direction),
                 ActionChoiceKind.Transfer => TransferCandidates(choice, counterparty => counterparty.Direction == direction),
+                ActionChoiceKind.Push => PushCandidates(choice, option => option.Source == contextCoord),
                 _ => []
             });
         }
@@ -906,6 +907,7 @@ internal sealed class ConsumerPlayModeScreen
                 ActionChoiceKind.Enter => EnterCandidates(choice, _ => true),
                 ActionChoiceKind.Exit => ExitCandidates(choice, _ => true),
                 ActionChoiceKind.Transfer => TransferCandidates(choice, _ => true),
+                ActionChoiceKind.Push => PushCandidates(choice, _ => true),
                 _ => []
             });
         }
@@ -1116,6 +1118,44 @@ internal sealed class ConsumerPlayModeScreen
                 Submit: () => SubmitTransferDirect(counterpartyId, item.MovingEntityId)))
             .ToList();
 
+    private IReadOnlyList<PlayModeActionCandidate> PushCandidates(ActionChoice choice, Func<ControlledActorEntityAffordance, bool> include) =>
+        choice.EntityOptions
+            .Where(option => option.CanExecute && include(option))
+            .Select(target =>
+            {
+                var directions = choice.PushDirections(target.TargetId).Where(direction => direction.CanExecute).ToList();
+                return directions.Count == 1
+                    ? new PlayModeActionCandidate(
+                        $"Push {FormatEntityName(target.TargetId)} {directions[0].Direction}",
+                        IsValid: true,
+                        IsComplete: true,
+                        Submit: () => SubmitPushDirect(target.TargetId, directions[0].Direction),
+                        ShortcutDirection: directions[0].Direction,
+                        FocusCoord: target.Source?.Coord)
+                    : new PlayModeActionCandidate(
+                        $"Push {FormatEntityName(target.TargetId)}",
+                        IsValid: directions.Count > 0,
+                        IsComplete: false,
+                        Explanation: directions.Count == 0 ? "No valid push direction." : "Choose push direction.",
+                        Refine: directions.Count == 0 ? null : () => PushDirectionCandidates(target.TargetId, directions),
+                        RefineTitle: $"Push {FormatEntityName(target.TargetId)}: choose direction",
+                        FocusCoord: target.Source?.Coord);
+            })
+            .Where(candidate => candidate.IsValid)
+            .ToList();
+
+    private IReadOnlyList<PlayModeActionCandidate> PushDirectionCandidates(EntityId targetId, IReadOnlyList<ActionChoicePushDirectionOption> directions) =>
+        directions
+            .Where(direction => direction.CanExecute)
+            .Select(direction => new PlayModeActionCandidate(
+                $"Push {direction.Direction}",
+                IsValid: true,
+                IsComplete: true,
+                Submit: () => SubmitPushDirect(targetId, direction.Direction),
+                ShortcutDirection: direction.Direction,
+                FocusCoord: direction.Destination?.Coord))
+            .ToList();
+
     private IUiComponent TransferPanel(EntityId counterpartyId, IReadOnlyList<ActionChoiceTransferItemOption> items, PlayModePromptLayer prompt, SadConsoleRect drawableBounds)
     {
         var actorId = _sessionController?.PlayerEntityId ?? Session!.PlayerEntityId;
@@ -1229,6 +1269,15 @@ internal sealed class ConsumerPlayModeScreen
         LastActionStatus = result.Succeeded
             ? $"Transferred {FormatEntityName(movingEntityId)} with {FormatEntityName(counterpartyId)}."
             : $"Could not transfer {FormatEntityName(movingEntityId)} with {FormatEntityName(counterpartyId)}: {result.FailureText ?? "failed"}.";
+        return result;
+    }
+
+    private GameplayRuntimeSubmission SubmitPushDirect(EntityId targetId, Direction direction)
+    {
+        var result = _sessionController!.SubmitPushActionChoice(targetId, direction);
+        LastActionStatus = result.Succeeded
+            ? $"Pushed {FormatEntityName(targetId)} {direction}."
+            : $"Could not push {FormatEntityName(targetId)} {direction}: {result.FailureText ?? "failed"}.";
         return result;
     }
 

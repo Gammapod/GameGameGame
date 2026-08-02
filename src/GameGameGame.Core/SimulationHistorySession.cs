@@ -231,6 +231,17 @@ public sealed class SimulationHistorySession
             request,
             () => choices.SubmitTransferChoice(World, request, counterpartyId, movingEntityId, actionPlans, beforePlan));
 
+    public ControlledActorCommandResult SubmitPushActionChoice(
+        ActionChoiceService choices,
+        ActionChoiceRequest request,
+        EntityId targetId,
+        Direction direction,
+        IReadOnlyDictionary<EntityId, IEntityActionPlan> actionPlans,
+        Action<WorldState, EntityId>? beforePlan = null) =>
+        SubmitActionChoiceResult(
+            request,
+            () => choices.SubmitPushChoice(World, request, targetId, direction, actionPlans, beforePlan));
+
     public PlanExecutionResult SubmitAuthoredActionStepChoice(
         ActionChoiceService choices,
         ActionChoiceRequest request,

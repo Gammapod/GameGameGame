@@ -342,6 +342,9 @@ actionPlans:
       - kind: EnterTarget
         targetSlot: 1
       - kind: ExitFacing
+      - kind: Push
+        targetSlot: 1
+        directionMode: Forward
       - kind: Transfer
         targetSlot: 1
         directionMode: Forward

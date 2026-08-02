@@ -18,6 +18,7 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
             or ActionPlanBehaviorStepKind.GiveTarget
             or ActionPlanBehaviorStepKind.TakeTarget
             or ActionPlanBehaviorStepKind.DestroyTarget
+            or ActionPlanBehaviorStepKind.Push
             or ActionPlanBehaviorStepKind.PushFacing;
 
     public EntityInteractionCapabilityResult QueryTargetCapability(
@@ -33,6 +34,7 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
             ActionPlanBehaviorStepKind.GiveTarget => QueryGiveTarget(world, actorId, targetId),
             ActionPlanBehaviorStepKind.TakeTarget => QueryTakeTarget(world, actorId, targetId),
             ActionPlanBehaviorStepKind.DestroyTarget => QueryDestroyTarget(world, actorId, targetId),
+            ActionPlanBehaviorStepKind.Push => QueryPush(world, actorId, targetId),
             ActionPlanBehaviorStepKind.PushFacing => QueryPushFacing(world, actorId, targetId),
             _ => Failure(capability, actorId, targetId, FailureReason.None, $"Action Step {capability} does not expose a target capability.")
         };
@@ -57,6 +59,11 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
         if (world.GetRegisteredInventoryPlaneId(actorId) is not { } inventoryPlaneId || !actor.HasUsableInventory)
         {
             return Failure(capability, actorId, targetId, FailureReason.ActorHasNoInventory, $"{actor.Name} has no usable inventory");
+        }
+
+        if (!PickupDropPortabilityRule.Evaluate(world, actorId, targetId, out var portabilityTrace))
+        {
+            return Failure(capability, actorId, targetId, portabilityTrace.Reason, portabilityTrace.Detail);
         }
 
         return CanRelocateToAnyInventoryCoord(world, targetId, inventoryPlaneId, capability, actorId, targetId);
@@ -178,6 +185,36 @@ public sealed class EntityInteractionAffordanceService(MovementService movement)
         return pushEvaluation.CanRelocate
             ? Success(ActionPlanBehaviorStepKind.PushFacing, actorId, targetId)
             : Failure(ActionPlanBehaviorStepKind.PushFacing, actorId, targetId, pushEvaluation.Trace.Reason, pushEvaluation.Trace.Detail);
+    }
+
+    private EntityInteractionCapabilityResult QueryPush(WorldState world, EntityId actorId, EntityId targetId)
+    {
+        if (!world.Entities.ContainsKey(targetId))
+        {
+            return Failure(ActionPlanBehaviorStepKind.Push, actorId, targetId, FailureReason.TargetMissing, $"target {targetId} does not exist");
+        }
+
+        if (targetId == actorId)
+        {
+            return Failure(ActionPlanBehaviorStepKind.Push, actorId, targetId, FailureReason.TargetIsActor, "actor cannot push itself");
+        }
+
+        var first = new PushAction(targetId, DirectionMath.AllDirections[0]).Evaluate(world, actorId, movement);
+        if (first.Trace.Reason is FailureReason.ActorMissing or FailureReason.TargetNotAdjacent or FailureReason.ApertureBlocked)
+        {
+            return Failure(ActionPlanBehaviorStepKind.Push, actorId, targetId, first.Trace.Reason, first.Trace.Detail, ExtractSuccessCriteria(first.Trace));
+        }
+
+        foreach (var direction in DirectionMath.AllDirections)
+        {
+            var evaluation = new PushAction(targetId, direction).Evaluate(world, actorId, movement);
+            if (evaluation.CanExecute)
+            {
+                return Success(ActionPlanBehaviorStepKind.Push, actorId, targetId, ExtractSuccessCriteria(evaluation.Trace));
+            }
+        }
+
+        return Failure(ActionPlanBehaviorStepKind.Push, actorId, targetId, first.Trace.Reason, first.Trace.Detail, ExtractSuccessCriteria(first.Trace));
     }
 
     private EntityInteractionCapabilityResult CanRelocateToAnyInventoryCoord(

@@ -134,6 +134,7 @@ public static class ActionOutcomeProjection
         "drop" => targetName is { } dropTarget ? $"{actorName} dropped {dropTarget}" : $"{actorName} dropped target",
         "enter" => targetName is { } enterTarget ? $"{actorName} entered {enterTarget}" : $"{actorName} entered target",
         "exit" => direction is { } exitDirection ? $"{actorName} exited {exitDirection}" : $"{actorName} exited",
+        "push" => targetName is { } pushTarget && direction is { } pushDirection ? $"{actorName} pushed {pushTarget} {pushDirection}" : targetName is { } pushTargetOnly ? $"{actorName} pushed {pushTargetOnly}" : $"{actorName} pushed target",
         "wait" => $"{actorName} waited",
         _ => $"{actorName} {actionKind}ed"
     };
@@ -149,6 +150,7 @@ public static class ActionOutcomeProjection
         var target = actionKind switch
         {
             "move" or "exit" when direction is { } concreteDirection => concreteDirection.ToString(),
+            "push" when targetName is { } concreteTargetName && direction is { } concreteDirection => $"{concreteTargetName} {concreteDirection}",
             _ when targetName is { } concreteTargetName => concreteTargetName,
             _ => null
         };

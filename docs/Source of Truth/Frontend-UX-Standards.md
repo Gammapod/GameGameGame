@@ -265,8 +265,13 @@ The SadConsole inventory-space component is the first reusable player-facing sta
    - `0.1` is the HUD/status component. It may summarize current context and controls, but action choices should not be hidden inside HUD rows when a dedicated selector is active.
    - `0.2` is the current-place component. Spatial target/source and world-destination selection should highlight valid Core-projected choices here.
    - `0.2.1` is the action selector opened from `0.2`; Enter/Select chooses the focused action and Esc/Cancel closes or returns according to the prompt stack.
-   - `0.3` is the inspection panel. When selecting from the controlled actor's inventory, it may inspect the controlled actor and highlight valid carried entities or inventory cells.
-   - Movement keys in selection prompts should jump among valid choices rather than move the actor; mouse selection can later be added as a convenience path over the same choice facts.
+    - `0.3` is the inspection panel. When selecting from the controlled actor's inventory, it may inspect the controlled actor and highlight valid carried entities or inventory cells.
+    - Movement keys in selection prompts should jump among valid choices rather than move the actor; mouse selection can later be added as a convenience path over the same choice facts.
+
+8. **Target-plus-direction actions use stacked prompts over Core Action Choice facts.**
+   - Canonical Push establishes the first consumer Play-mode pattern for actions that require both a target entity and a target-relative direction.
+   - The frontend may list valid push targets, refine to valid push directions, and accept direction keys in the direction prompt, but all target/direction validity must come from `ActionChoiceKind.Push` and `ActionChoice.PushDirections(targetId)`.
+   - Movement keys inside the Push direction prompt choose a push direction and must not move the actor.
 
 ## Editor and Simulation mode model
 

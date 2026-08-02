@@ -105,7 +105,7 @@ public sealed class EntityPanelProjectionTests
             playerId: session.PlayerEntityId);
 
         var slimeId = new EntityId("lovingSlime");
-        Assert.Contains(projection.PointOfView!.TargetAdjectives, adjective => adjective.EntityId == slimeId && adjective.Adjective == "portable");
+        Assert.DoesNotContain(projection.PointOfView!.TargetAdjectives, adjective => adjective.EntityId == slimeId && adjective.Adjective == "portable");
         Assert.Contains(projection.PointOfView.TargetAdjectives, adjective => adjective.EntityId == slimeId && adjective.Adjective == "enterable");
         Assert.DoesNotContain(projection.PointOfView.TargetAdjectives, adjective => adjective.EntityId == session.PlayerEntityId);
     }
@@ -220,7 +220,7 @@ public sealed class EntityPanelProjectionTests
             new EntityPresentation('@', PresentationColor.Yellow));
         var slimeTemplateId = document.AddEntityTemplate(
             "Loving Slime",
-            new EntityTemplate("Loving Slime", InventoryWidth: 1, InventoryHeight: 1, Bulk: 1, Aperture: 5, DefaultActionPlanId: slimePlanId),
+            new EntityTemplate("Loving Slime", InventoryWidth: 1, InventoryHeight: 1, Bulk: 6, Aperture: 5, DefaultActionPlanId: slimePlanId),
             new EntityPresentation('s', PresentationColor.Green));
         var roomId = document.AddEntityTemplate(
             "Affordance Room",

@@ -39,7 +39,7 @@ Related source of truth:
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
 - `docs/Plans/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
 - `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md` records the completed focused frontend sprint for the first linked containment-space Play-mode UI slices.
-- `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` records the proposed low-risk mock play-mode pattern sprint.
+- `docs/Archived/SadConsole-Playmode-Layout-Pattern-Sprint.md` records the completed low-risk mock play-mode pattern sprint.
 - `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md` records the completed focused sprint plan for a new consumer-facing Play mode route and reusable inventory-space component.
 - `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md` records the completed focused sprint plan that made the new Play mode playable through abstract intent resolution, contextual prompt stacks, canonical Action Choice consumption, and F12 interaction diagnostics.
 
@@ -259,4 +259,4 @@ Recently completed focused frontend sprint: `docs/Archived/SadConsole-Linked-Con
 
 Recently completed focused frontend sprints: `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md` started the consumer-facing Play mode as an isolated componentized route inside the existing SadConsole project, relabeled the previous play/debug path as `Debug`, introduced a reusable inventory-space renderer for the controlled actor's current space, and stabilized the fullscreen Play shell with a one-tile border buffer plus `F12` debug overlay. `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md` followed through with playable input, contextual Select/Cancel prompts, canonical Action Choice coverage for Move/Pickup/Drop/Enter/Exit/Transfer in the size-calibration testbed, and developer-targeted F12 interaction diagnostics.
 
-If a smaller SadConsole/frontend slice is selected before or around that sprint, use `docs/Plans/SadConsole-Playmode-Layout-Pattern-Sprint.md` as completed/reference layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a future active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.
+If a smaller SadConsole/frontend slice is selected before or around that sprint, use `docs/Archived/SadConsole-Playmode-Layout-Pattern-Sprint.md` as completed/reference layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a future active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.

@@ -34,6 +34,7 @@ public sealed class ControlledActorAffordanceServiceTests
     public void ControlledActorAffordanceQueryReportsPickupSourcesAndDestinations()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         var query = new ControlledActorAffordanceService(new MovementService());
 
         var affordances = query.Query(world, TestWorld.PlayerId);

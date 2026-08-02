@@ -627,6 +627,53 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeSizeCalibrationCanPushNestedBagThroughContextPrompt()
+    {
+        var (path, session) = SizeCalibrationSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        var bag = new EntityId("debugNestedBag1");
+        MoveAdjacentWestOfNestedBag1(screen);
+        var actorBefore = session.World.GetEntityLocation(session.PlayerEntityId);
+
+        var context = screen.SubmitMove(Direction.East);
+        MovePromptSelectionTo(screen, "Push");
+        screen.HandlePromptCommand(UiComponentCommand.Select);
+        screen.HandlePromptDirection(Direction.East);
+
+        Assert.True(context.Succeeded || screen.LastActionStatus.Contains("Push", StringComparison.OrdinalIgnoreCase), screen.LastActionStatus);
+        Assert.False(screen.HasActivePrompt);
+        Assert.Contains("Pushed", screen.LastActionStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(actorBefore, session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.Equal(new GridCoord(5, 5), session.World.GetEntityLocation(bag).Coord);
+    }
+
+    [Fact]
+    public void ConsumerPlayModeCanonicalPushShowcaseCanPushPlayerBlock()
+    {
+        var (path, session) = CanonicalPushSession();
+        var screen = ConsumerPlayModeScreen.FromSession(new ScenarioCatalogEntry(path, session.ScenarioId, session.Name, session.Name), session);
+        var block = new EntityId("playerPushBlock");
+        var actorBefore = session.World.GetEntityLocation(session.PlayerEntityId);
+
+        var context = screen.SubmitMove(Direction.East);
+        if (screen.HasActivePrompt)
+        {
+            MovePromptSelectionTo(screen, "Push");
+            screen.HandlePromptCommand(UiComponentCommand.Select);
+            if (screen.HasActivePrompt)
+            {
+                screen.HandlePromptDirection(Direction.East);
+            }
+        }
+
+        Assert.True(context.Succeeded || screen.LastActionStatus.Contains("Push", StringComparison.OrdinalIgnoreCase), screen.LastActionStatus);
+        Assert.False(screen.HasActivePrompt);
+        Assert.Contains("Pushed", screen.LastActionStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(actorBefore, session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.Equal(new GridCoord(5, 2), session.World.GetEntityLocation(block).Coord);
+    }
+
+    [Fact]
     public void ConsumerPlayModePickupDestinationPromptUsesDirectionKeysForSelectionNotMovement()
     {
         var (path, session) = SizeCalibrationSession();
@@ -659,6 +706,14 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.True(screen.SubmitMove(Direction.North).Succeeded);
         Assert.True(screen.SubmitMove(Direction.North).Succeeded);
         Assert.True(screen.SubmitMove(Direction.West).Succeeded);
+    }
+
+    private static void MoveAdjacentWestOfNestedBag1(ConsumerPlayModeScreen screen)
+    {
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.East).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.East).Succeeded);
+        Assert.True(screen.SubmitMove(Direction.North).Succeeded);
     }
 
     private static void SelectPromptUntilClosed(ConsumerPlayModeScreen screen, int maxSelections = 4)
@@ -704,6 +759,17 @@ public sealed class ConsumerPlayModeScreenTests
             "Debug",
             "CanonicalDebugRooms.yaml");
         return (path, PlayableScenarioLauncher.CreateFromFile(path, "canonical-debug-size-calibration-room"));
+    }
+
+    private static (string Path, PlayableScenarioSession Session) CanonicalPushSession()
+    {
+        var path = Path.Combine(
+            AppContext.BaseDirectory,
+            "Content",
+            "Beta",
+            "CanonicalActions",
+            "CanonicalPushShowcase.yaml");
+        return (path, PlayableScenarioLauncher.CreateFromFile(path, "beta-canonical-push-player-interaction"));
     }
 
     private static (string Path, PlayableScenarioSession Session) LifecycleFlagshipSession()

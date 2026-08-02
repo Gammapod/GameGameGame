@@ -64,6 +64,7 @@ public sealed class CoreActionChoiceTests
     public void ActionChoiceRequestExposesPickupTargetsAndInventoryDestinationsFromAuthoredPickupStep()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
         var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget));
         var service = new ActionChoiceService(new MovementService());
@@ -86,6 +87,7 @@ public sealed class CoreActionChoiceTests
     {
         var movement = new MovementService();
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
         var plan = MovePlan(
@@ -258,6 +260,47 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void ActionChoiceRequestExposesPushTargetsAndTargetRelativeDirections()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Push, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        var service = new ActionChoiceService(new MovementService());
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        Assert.Equal(ActionChoiceKind.Push, choice.Kind);
+        var target = Assert.Single(choice.EntityOptions, option => option.TargetId == TestWorld.SlimeId);
+        Assert.True(target.CanExecute);
+        var west = Assert.Single(choice.PushDirections(TestWorld.SlimeId), option => option.Direction == Direction.West);
+        Assert.True(west.CanExecute);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), west.Destination);
+        var east = Assert.Single(choice.PushDirections(TestWorld.SlimeId), option => option.Direction == Direction.East);
+        Assert.False(east.CanExecute);
+        Assert.Equal(TestWorld.RockId, east.BlockingEntityId);
+    }
+
+    [Fact]
+    public void ActionChoiceRequestMarksTooHeavyPushTargetBlocked()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { Aperture = 1 };
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Bulk = 2 };
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Push, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        var service = new ActionChoiceService(new MovementService());
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan);
+
+        var choice = Assert.Single(request!.Choices);
+        var target = Assert.Single(choice.EntityOptions, option => option.TargetId == TestWorld.SlimeId);
+        Assert.False(target.CanExecute);
+        Assert.Equal(FailureReason.ApertureBlocked, target.FailureReason);
+        Assert.All(choice.PushDirections(TestWorld.SlimeId), option => Assert.False(option.CanExecute));
+    }
+
+    [Fact]
     public void ActionChoiceRequestExposesNonParameterizedAuthoredStepsForCoreSubmission()
     {
         var world = TestWorld.CreateWorld();
@@ -317,6 +360,7 @@ public sealed class CoreActionChoiceTests
     public void SubmitPickupChoiceUsesSelectedTargetAndInventorySlot()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
         var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget));
         var service = new ActionChoiceService(new MovementService());
@@ -459,6 +503,26 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void SubmitPushChoiceUsesSelectedTargetAndDirection()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Push, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        var service = new ActionChoiceService(new MovementService());
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = service.SubmitPushChoice(world, request, TestWorld.SlimeId, Direction.West, new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.AdvancedTurn);
+        Assert.Equal(ControlledActorCommandKind.Push, result.Kind);
+        Assert.Equal(TestWorld.SlimeId, result.TargetId);
+        Assert.Equal(Direction.West, result.Direction);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), world.GetEntityLocation(TestWorld.SlimeId));
+        Assert.Equal(1, world.TurnNumber);
+    }
+
+    [Fact]
     public void SubmitAuthoredStepChoiceExecutesThroughCoreServiceAndAdvancesWhenConsuming()
     {
         var world = TestWorld.CreateWorld();
@@ -506,6 +570,7 @@ public sealed class CoreActionChoiceTests
     public void SubmitPickupChoiceThroughHistoryAdvancesAndLogsStructuredOutcome()
     {
         var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
         var history = SimulationHistorySession.Start(world, TestWorld.PlayerId, TestWorld.WorldPlaneId);
         var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.PickupTarget));
@@ -522,6 +587,28 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(destination, world.GetEntityLocation(TestWorld.SlimeId));
         var interval = Assert.Single(history.Intervals);
         Assert.Equal(ControlledActorCommandKind.Pickup, interval.ControlledResult?.Kind);
+        Assert.Empty(history.CurrentFrameLogEntries);
+    }
+
+    [Fact]
+    public void SubmitPushChoiceThroughHistoryAdvancesAndLogsStructuredOutcome()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var history = SimulationHistorySession.Start(world, TestWorld.PlayerId, TestWorld.WorldPlaneId);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Push, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        var service = new ActionChoiceService(new MovementService());
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+
+        var result = history.SubmitPushActionChoice(service, request, TestWorld.SlimeId, Direction.West, new Dictionary<EntityId, IEntityActionPlan>());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.AdvancedTurn);
+        Assert.Equal(1, history.CurrentFrameIndex);
+        Assert.Equal(1, world.TurnNumber);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), world.GetEntityLocation(TestWorld.SlimeId));
+        var interval = Assert.Single(history.Intervals);
+        Assert.Equal(ControlledActorCommandKind.Push, interval.ControlledResult?.Kind);
         Assert.Empty(history.CurrentFrameLogEntries);
     }
 
