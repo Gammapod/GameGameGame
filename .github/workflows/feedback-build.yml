@@ -76,7 +76,7 @@ jobs:
         run: |
           $butlerZip = Join-Path $env:RUNNER_TEMP "butler.zip"
           $butlerDirectory = Join-Path $env:RUNNER_TEMP "butler"
-          Invoke-WebRequest "https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default" -OutFile $butlerZip
+          Invoke-WebRequest "https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default" -OutFile $butlerZip
           Expand-Archive -LiteralPath $butlerZip -DestinationPath $butlerDirectory -Force
           "butlerDirectory=$butlerDirectory" >> $env:GITHUB_ENV
 
