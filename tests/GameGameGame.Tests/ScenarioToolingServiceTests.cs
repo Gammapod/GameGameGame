@@ -8,6 +8,64 @@ namespace GameGameGame.Tests;
 public sealed class ScenarioToolingServiceTests
 {
     [Fact]
+    public void ScenarioMaterializerPopulatesMergedInventoryLayers()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+            mergedLayers:
+              sharedInterior:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 3, y: 0 }
+            actionPlans: {}
+            scenarios:
+              merged-layer:
+                name: Merged Layer
+                scenarioRootEntityTemplateId: room
+                playerControls: {}
+            """);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "merged-layer");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        var layer = Assert.Single(materialization.World.MergedInventoryLayers);
+        Assert.Equal(new MergedInventoryLayerId("sharedInterior"), layer.Id);
+        Assert.Equal([new EntityId("entityA"), new EntityId("entityB")], layer.Spaces.Select(space => space.OwnerId).ToArray());
+    }
+
+    [Fact]
     public void PlayerNarrativeLogProjectionProjectsStructuredRowsFromHistory()
     {
         var world = TestWorld.CreateWorld();

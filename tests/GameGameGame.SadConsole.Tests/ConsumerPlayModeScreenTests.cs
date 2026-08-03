@@ -96,6 +96,15 @@ public sealed class ConsumerPlayModeScreenTests
         Assert.Contains("L: left region", screen.FooterText);
 
         screen.CycleLeftRegionMode();
+        var currentLayerComponents = screen.Components(drawable);
+
+        Assert.Equal(LeftRegionMode.CurrentLayerLog, screen.LeftRegionMode);
+        var currentLayerLog = Assert.IsType<PanelComponent>(currentLayerComponents.Single(component => component.Id == "actor-pov-left-log-current-layer"));
+        Assert.Equal("Log: Current layer", currentLayerLog.Title);
+        Assert.Equal($"T{screen.WorldTurnNumber}", currentLayerLog.HeaderRight);
+        Assert.Contains(currentLayerLog.BodyRows, row => row.Contains("moved South", StringComparison.OrdinalIgnoreCase));
+
+        screen.CycleLeftRegionMode();
         var currentLocationComponents = screen.Components(drawable);
 
         Assert.Equal(LeftRegionMode.CurrentLocationLog, screen.LeftRegionMode);

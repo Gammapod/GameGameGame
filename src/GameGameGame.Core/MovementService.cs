@@ -12,7 +12,7 @@ public sealed class MovementService
     private readonly ITopologyService topology;
 
     public MovementService()
-        : this(new EntityTopologyService(new DefaultTopologyService()))
+        : this(new MergedInventoryLayerTopologyService(new EntityTopologyService(new DefaultTopologyService())))
     {
     }
 

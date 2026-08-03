@@ -70,6 +70,7 @@ internal sealed class EntityTemplateEditScreen
                 _actionPlans,
                 [],
                 [],
+                [],
                 string.Empty,
                 []),
             _template.TemplateId,

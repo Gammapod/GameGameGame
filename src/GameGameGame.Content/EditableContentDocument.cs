@@ -16,6 +16,20 @@ public sealed partial class EditableContentDocument
 
     public Dictionary<string, ScenarioDefinitionDto> Scenarios { get; set; } = [];
 
+    public Dictionary<string, MergedInventoryLayerDto> MergedLayers { get; set; } = [];
+
+    public sealed class MergedInventoryLayerDto
+    {
+        public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
+    }
+
+    public sealed class MergedInventorySpaceContributionDto
+    {
+        public string? Owner { get; set; }
+
+        public GridCoordDto? Origin { get; set; }
+    }
+
     public sealed class EntityTemplateDto
     {
         public string? Name { get; set; }

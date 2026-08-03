@@ -113,7 +113,7 @@ internal sealed class MixedScaleInventorySpaceRenderer
                 .GroupBy(decorator => decorator.Coord)
                 .ToDictionary(group => group.Key, group => group.OrderByDescending(decorator => decorator.Priority).First())
             : [];
-        foreach (var coord in view.VisibleCoords())
+        foreach (var coord in view.VisibleBackdropCoords())
         {
             var cellBounds = geometry.CellPixelBounds(coord);
             if (occlusionRects.Any(rect => rect.Intersects(cellBounds)))
@@ -174,7 +174,7 @@ internal sealed class MixedScaleInventorySpaceRenderer
             .Where(entity => view.IsVisible(entity.Coord))
             .GroupBy(entity => entity.Coord)
             .ToDictionary(group => group.Key, group => group.First());
-        foreach (var coord in view.VisibleCoords())
+        foreach (var coord in view.VisibleBackdropCoords())
         {
             var bounds = geometry.CellPixelBounds(coord);
             if (occlusionRects.Any(rect => rect.Intersects(bounds)))

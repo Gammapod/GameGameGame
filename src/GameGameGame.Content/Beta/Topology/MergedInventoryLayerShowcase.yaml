@@ -1,0 +1,143 @@
+entityTemplates:
+  mergedLayerAcceptanceYard:
+    name: Merged Layer Acceptance Yard
+    inventoryWidth: 11
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: mergedLayerPlayer
+      templateId: mergedLayerPlayer
+      coord:
+        x: 1
+        y: 3
+      controller: Player
+    - entityId: mergedLayerGateA
+      templateId: mergedLayerGateA
+      coord:
+        x: 2
+        y: 3
+    - entityId: mergedLayerRemoteRoom
+      templateId: mergedLayerRemoteRoom
+      coord:
+        x: 8
+        y: 3
+
+  mergedLayerRemoteRoom:
+    name: Remote Exterior Room
+    inventoryWidth: 11
+    inventoryHeight: 5
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    carriedEntities:
+    - entityId: mergedLayerGateB
+      templateId: mergedLayerGateB
+      coord:
+        x: 7
+        y: 2
+
+  mergedLayerPlayer:
+    name: Merged Layer Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: mergedLayerPlayerMoveEnterExit
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+
+  mergedLayerGateA:
+    name: Gate A
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 10
+    carryingCapacity: 10
+    bulk: 3
+    aperture: 10
+    defaultActionPlanId: mergedLayerGateMoveNorth
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+
+  mergedLayerGateB:
+    name: Gate B
+    inventoryWidth: 2
+    inventoryHeight: 3
+    weight: 10
+    carryingCapacity: 10
+    bulk: 3
+    aperture: 10
+    defaultActionPlanId: mergedLayerGateMoveSouth
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+
+presentations:
+  mergedLayerAcceptanceYard:
+    glyph: '#'
+    color: Gray
+  mergedLayerPlayer:
+    glyph: '@'
+    color: Yellow
+  mergedLayerRemoteRoom:
+    glyph: 'R'
+    color: White
+  mergedLayerGateA:
+    glyph: 'A'
+    color: Cyan
+  mergedLayerGateB:
+    glyph: 'B'
+    color: Green
+
+actionPlans:
+  mergedLayerPlayerMoveEnterExit:
+    id: mergedLayerPlayerMoveEnterExit
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: Forward
+      - kind: EnterTarget
+        targetLabel: target
+      - kind: ExitFacing
+  mergedLayerGateMoveNorth:
+    id: mergedLayerGateMoveNorth
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: North
+  mergedLayerGateMoveSouth:
+    id: mergedLayerGateMoveSouth
+    behavior:
+      steps:
+      - kind: Move
+        directionMode: South
+
+mergedLayers:
+  mergedLayerSharedInterior:
+    spaces:
+    - owner: mergedLayerGateA
+      origin:
+        x: 0
+        y: 0
+    - owner: mergedLayerGateB
+      origin:
+        x: 3
+        y: 1
+
+scenarios:
+  delta-merged-inventory-layer-acceptance:
+    name: Delta Merged Inventory Layer Acceptance
+    scenarioRootEntityTemplateId: mergedLayerAcceptanceYard
+    playerControls:
+      player-1:
+      - mergedLayerPlayer

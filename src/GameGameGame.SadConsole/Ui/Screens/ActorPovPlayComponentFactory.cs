@@ -311,7 +311,7 @@ internal static class ActorPovPlayComponentFactory
                 "layout omitted");
         }
 
-        if (model.CurrentPlace?.InventoryGrid is not { })
+        if (model.CurrentLayerView is null && model.CurrentPlace?.InventoryGrid is not { })
         {
             return new PanelComponent(
                 "actor-pov-current-place-empty",
@@ -322,9 +322,9 @@ internal static class ActorPovPlayComponentFactory
                 "no current place");
         }
 
-        var view = InventorySpaceViewModel.FromProjection(
+        var view = model.CurrentLayerView ?? InventorySpaceViewModel.FromProjection(
             "0.actor-pov.current-place.inventory-space",
-            model.CurrentPlace,
+            model.CurrentPlace!,
             model.ControlledActor.EntityId,
             cellMetrics: InventorySpaceCellMetrics.Default,
             facingByEntityId: model.FacingByEntityId);

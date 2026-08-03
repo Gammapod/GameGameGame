@@ -137,6 +137,10 @@ public sealed record ScenarioDefinition(
     public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
 }
 
+public sealed record MergedInventoryLayerDefinition(
+    MergedInventoryLayerId Id,
+    IReadOnlyList<MergedInventorySpaceContribution> Spaces);
+
 public sealed record CarriedEntityTemplate
 {
     public CarriedEntityTemplate(

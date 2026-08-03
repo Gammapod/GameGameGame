@@ -42,7 +42,8 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             Session.GetYamlPreview(),
             Session.GetYamlDiff().Lines,
             Session.Editor.Validate(),
-            Session.Document.ValidateCanonicalAuthoring());
+            Session.Document.ValidateCanonicalAuthoring(),
+            Session.Editor.ListMergedInventoryLayers());
 
     public AgentApiResult<ContentValidationResult> Validate() =>
         AgentApiResult<ContentValidationResult>.Success(Session.Editor.Validate());
@@ -144,6 +145,9 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
 
     public AgentApiResult SetCarriedEntityController(EntityTemplateId parentTemplateId, EntityId entityId, EntityController? controller) =>
         Try("SetCarriedEntityControllerFailed", () => Session.Editor.SetCarriedEntityController(parentTemplateId, entityId, controller));
+
+    public AgentApiResult UpsertMergedInventoryLayer(AgentMergedInventoryLayerDefinition layer) =>
+        Try("UpsertMergedInventoryLayerFailed", () => Session.Editor.UpsertMergedInventoryLayer(layer.ToContentDefinition()));
 
     public AgentApiResult<ActionPlanTemplateId> CreateActionPlan(string name) =>
         Try("CreateActionPlanFailed", () => Session.Editor.CreateActionPlan(name));
@@ -360,7 +364,18 @@ public sealed record AgentDocumentSnapshot(
     string YamlPreview,
     IReadOnlyList<string> YamlDiffLines,
     ContentValidationResult Validation,
-    ContentValidationResult CanonicalValidation);
+    ContentValidationResult CanonicalValidation,
+    IReadOnlyList<MergedInventoryLayerDefinition> MergedInventoryLayers);
+
+public sealed record AgentMergedInventoryLayerDefinition(
+    MergedInventoryLayerId Id,
+    IReadOnlyList<AgentMergedInventorySpaceContribution> Spaces)
+{
+    public MergedInventoryLayerDefinition ToContentDefinition() =>
+        new(Id, Spaces.Select(space => new MergedInventorySpaceContribution(space.OwnerId, space.Origin)).ToList());
+}
+
+public sealed record AgentMergedInventorySpaceContribution(EntityId OwnerId, GridCoord Origin);
 
 public sealed record AgentEntityTemplateUpdate(
     string? Name = null,

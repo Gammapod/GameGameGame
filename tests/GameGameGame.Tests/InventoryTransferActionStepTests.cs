@@ -179,6 +179,29 @@ public sealed class InventoryTransferActionStepTests
     }
 
     [Fact]
+    public void ExitFacingFromMergedLayerUsesCurrentContributionOwner()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("shared-interior"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        var movement = new MovementService();
+        world.SetActionFacing(TestWorld.RockId, Direction.East);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        var plan = CreateBehaviorPlan("exit-facing-merged", ActionPlanBehaviorStepKind.ExitFacing);
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.RockId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceDetailContains(result.Trace, "exited rock (Rock) from slime (Slime) to (2,1)"));
+    }
+
+    [Fact]
     public void EnterAndExitActionsAreUsableAsPlayerActionIntents()
     {
         var world = TestWorld.CreateWorld();

@@ -603,6 +603,7 @@ public sealed class SadConsoleEntityTemplateEditScreenTests
         }],
         [],
         [],
+        [],
         "yaml",
         []);
 

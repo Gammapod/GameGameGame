@@ -46,6 +46,60 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentRoundTripsMergedInventoryLayers()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+            mergedLayers:
+              sharedInterior:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 3, y: 0 }
+            actionPlans: {}
+            """);
+
+        var saved = document.SaveYaml();
+        var reloaded = EditableContentDocument.LoadYaml(saved).ToRegistry();
+
+        Assert.Contains("mergedLayers:", saved);
+        var layer = Assert.Single(reloaded.MergedInventoryLayers).Value;
+        Assert.Equal(new MergedInventoryLayerId("sharedInterior"), layer.Id);
+        Assert.Equal(new GridCoord(3, 0), layer.Spaces[1].Origin);
+    }
+
+    [Fact]
     public void EditableContentDocumentCanCreateEntityTemplateWithGeneratedStableId()
     {
         var document = EditableContentDocument.LoadYaml(

@@ -39,7 +39,7 @@ internal sealed class GameplaySessionController
         AdvanceUntilPlayerChoice(0);
         RefreshDisplayTargets();
         RefreshActionChoiceRequest();
-        ActionLog = ActionLogProjection.FromHistory(_history);
+        ActionLog = BuildActionLog(_history);
     }
 
     public PlayableScenarioSession Session { get; }
@@ -119,7 +119,6 @@ internal sealed class GameplaySessionController
 
     public GameplayRuntimeSubmission SubmitMove(Direction direction)
     {
-        RefreshActionChoiceRequest();
         var usedCoreChoice = CurrentActionChoiceRequest is { } request
             && request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move);
         EnsureHistoryControlledActor(_activeControlledActorId);
@@ -372,9 +371,46 @@ internal sealed class GameplaySessionController
     private void RefreshAfterRuntimeSubmission()
     {
         RefreshRuntimeActorFacts();
-        ActionLog = ActionLogProjection.FromHistory(_history);
+        ActionLog = BuildActionLog(_history);
         RefreshDisplayTargets();
         RefreshActionChoiceRequest();
+    }
+
+    private static ActionLogProjection BuildActionLog(SimulationHistorySession history)
+    {
+        var outcomes = new List<ActionOutcome>();
+        var intervalsByFromFrameIndex = history.Intervals
+            .GroupBy(interval => interval.FromFrameIndex)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        foreach (var frame in history.Frames)
+        {
+            outcomes.AddRange(history
+                .GetFrameLogEntries(frame.FrameIndex)
+                .Select(entry => ActionOutcomeProjection.FromCommandResult(frame.Snapshot, entry.ControlledResult)));
+
+            if (!intervalsByFromFrameIndex.TryGetValue(frame.FrameIndex, out var intervals))
+            {
+                continue;
+            }
+
+            foreach (var interval in intervals)
+            {
+                var intervalFrame = history.Frames[interval.ToFrameIndex];
+                var intervalSnapshot = intervalFrame.Snapshot;
+                var turnNumber = interval.ControlledResult?.TurnReport?.TurnNumber ?? intervalFrame.WorldTurnNumber;
+                if (interval.ControlledResult is { } controlled)
+                {
+                    outcomes.Add(ActionOutcomeProjection.FromCommandResult(intervalSnapshot, controlled));
+                }
+
+                outcomes.AddRange(interval.ActorLogs
+                    .Where(log => interval.ControlledResult?.ActorId != log.ActorId)
+                    .Select(log => ActionOutcomeProjection.FromActorLog(intervalSnapshot, turnNumber, log)));
+            }
+        }
+
+        return ActionLogProjection.FromOutcomes(outcomes);
     }
 
     private void RefreshRuntimeActorFacts()

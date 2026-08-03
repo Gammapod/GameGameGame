@@ -17,9 +17,13 @@ internal sealed record InventorySpaceViewModel(
     InventorySpaceBackdropLayer Backdrop,
     IReadOnlyList<InventorySpaceEntityVisual> Entities,
     IReadOnlyList<InventorySpaceDecorator> Decorators,
-    InventorySpaceFrame Frame)
+    InventorySpaceFrame Frame,
+    IReadOnlySet<GridCoord>? BackdropCoords = null)
 {
     public bool IsVisible(GridCoord coord) => Viewport.Contains(coord);
+
+    public bool HasBackdrop(GridCoord coord) =>
+        IsVisible(coord) && (BackdropCoords is null || BackdropCoords.Contains(coord));
 
     public SadConsoleRect CellBounds(GridCoord coord)
     {
@@ -55,6 +59,11 @@ internal sealed record InventorySpaceViewModel(
 
         return coords;
     }
+
+    public IReadOnlyList<GridCoord> VisibleBackdropCoords() =>
+        BackdropCoords is null
+            ? VisibleCoords()
+            : VisibleCoords().Where(BackdropCoords.Contains).ToList();
 
     public static InventorySpaceViewModel FromProjection(
         string id,
@@ -143,6 +152,123 @@ internal sealed record InventorySpaceViewModel(
             decorators,
             new InventorySpaceFrame(showFrame, projection.Name, PresentationColor.Yellow));
     }
+
+    public static InventorySpaceViewModel FromMergedLayer(
+        string id,
+        WorldState world,
+        MergedInventoryLayer layer,
+        EntityId? controlledEntityId = null,
+        InventorySpaceCellMetrics? cellMetrics = null,
+        InventorySpaceViewport? viewport = null,
+        IReadOnlyDictionary<EntityId, Direction>? facingByEntityId = null,
+        Func<EntityId, EntityInspectionAppearance>? getAppearance = null)
+    {
+        var contributions = layer.Spaces
+            .Where(space => world.Entities.ContainsKey(space.OwnerId) && world.GetRegisteredInventoryPlaneId(space.OwnerId) is not null)
+            .ToList();
+        if (contributions.Count == 0)
+        {
+            return new InventorySpaceViewModel(
+                id,
+                $"Merged layer: {layer.Id}",
+                new PlaneId($"merged:{layer.Id.Value}"),
+                0,
+                0,
+                cellMetrics ?? InventorySpaceCellMetrics.Default,
+                viewport ?? InventorySpaceViewport.Full(0, 0),
+                new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
+                [],
+                [],
+                new InventorySpaceFrame(true, $"Merged layer: {layer.Id}", PresentationColor.Yellow),
+                new HashSet<GridCoord>());
+        }
+
+        var layerCells = new List<(MergedInventorySpaceContribution Space, PlaneId PlaneId, GridCoord SourceCoord, GridCoord LayerCoord)>();
+        foreach (var space in contributions)
+        {
+            var owner = world.Entities[space.OwnerId];
+            var planeId = world.GetRegisteredInventoryPlaneId(space.OwnerId)!.Value;
+            for (var y = 0; y < owner.InventoryHeight; y++)
+            {
+                for (var x = 0; x < owner.InventoryWidth; x++)
+                {
+                    var source = new GridCoord(x, y);
+                    layerCells.Add((space, planeId, source, new GridCoord(space.Origin.X + x, space.Origin.Y + y)));
+                }
+            }
+        }
+
+        var minX = layerCells.Min(cell => cell.LayerCoord.X);
+        var minY = layerCells.Min(cell => cell.LayerCoord.Y);
+        var maxX = layerCells.Max(cell => cell.LayerCoord.X);
+        var maxY = layerCells.Max(cell => cell.LayerCoord.Y);
+        var width = Math.Max(0, maxX - minX + 1);
+        var height = Math.Max(0, maxY - minY + 1);
+        var backdropCoords = layerCells
+            .Select(cell => Normalize(cell.LayerCoord, minX, minY))
+            .ToHashSet();
+        var metrics = cellMetrics ?? InventorySpaceCellMetrics.Default;
+        var visibleViewport = viewport ?? InventorySpaceViewport.Full(width, height);
+        var facingFacts = facingByEntityId is null
+            ? new Dictionary<EntityId, Direction>()
+            : new Dictionary<EntityId, Direction>(facingByEntityId);
+        var entities = new List<InventorySpaceEntityVisual>();
+        var decorators = new List<InventorySpaceDecorator>();
+        var displayCoordBySourceCoord = layerCells.ToDictionary(
+            cell => new PlaneCoord(cell.PlaneId, cell.SourceCoord),
+            cell => Normalize(cell.LayerCoord, minX, minY));
+
+        foreach (var (nodeId, entityId) in world.Occupancy)
+        {
+            if (!world.Nodes.TryGetValue(nodeId, out var node) ||
+                !displayCoordBySourceCoord.TryGetValue(new PlaneCoord(node.PlaneId, node.Coord), out var displayCoord) ||
+                !world.Entities.TryGetValue(entityId, out var entity))
+            {
+                continue;
+            }
+
+            var appearance = getAppearance?.Invoke(entityId) ?? new EntityInspectionAppearance('?', PresentationColor.Gray);
+            entities.Add(new InventorySpaceEntityVisual(
+                displayCoord,
+                entityId,
+                new InventorySpaceVisualLayer(appearance.Glyph, appearance.Color),
+                Accent: null,
+                InventorySpaceVisualPlacement.Default,
+                entity.Name));
+
+            if (controlledEntityId == entityId)
+            {
+                decorators.Add(new InventorySpaceDecorator(
+                    displayCoord,
+                    InventorySpaceDecoratorRole.Controlled,
+                    EntityId: entityId,
+                    Style: new InventorySpaceVisualLayer('*', PresentationColor.Yellow),
+                    Priority: 100));
+            }
+
+            if (facingFacts.TryGetValue(entityId, out var facing))
+            {
+                decorators.Add(FacingDecorator(displayCoord, entityId, facing));
+            }
+        }
+
+        return new InventorySpaceViewModel(
+            id,
+            $"Merged layer: {layer.Id}",
+            new PlaneId($"merged:{layer.Id.Value}"),
+            width,
+            height,
+            metrics,
+            visibleViewport,
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
+            entities,
+            decorators,
+            new InventorySpaceFrame(true, $"Merged layer: {layer.Id}", PresentationColor.Yellow),
+            backdropCoords);
+    }
+
+    private static GridCoord Normalize(GridCoord coord, int minX, int minY) =>
+        new(coord.X - minX, coord.Y - minY);
 
     public static InventorySpaceDecorator FacingDecorator(GridCoord coord, EntityId entityId, Direction direction)
     {

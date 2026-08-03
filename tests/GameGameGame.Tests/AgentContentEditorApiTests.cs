@@ -212,6 +212,34 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsMergedInventoryLayerPlacements()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("Merged Room"));
+        var spaceAId = AssertSuccess(api.CreateEntityTemplate("Space A"));
+        var spaceBId = AssertSuccess(api.CreateEntityTemplate("Space B"));
+        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(InventoryWidth: 3, InventoryHeight: 3, Bulk: 10, Aperture: 10)));
+        AssertSuccess(api.UpdateEntityTemplate(spaceAId, new AgentEntityTemplateUpdate(InventoryWidth: 3, InventoryHeight: 3, Bulk: 1, Aperture: 10)));
+        AssertSuccess(api.UpdateEntityTemplate(spaceBId, new AgentEntityTemplateUpdate(InventoryWidth: 2, InventoryHeight: 2, Bulk: 1, Aperture: 10)));
+        AssertSuccess(api.PlaceCarriedEntity(roomId, new EntityId("entityA"), spaceAId, new GridCoord(0, 0)));
+        AssertSuccess(api.PlaceCarriedEntity(roomId, new EntityId("entityB"), spaceBId, new GridCoord(1, 0)));
+
+        AssertSuccess(api.UpsertMergedInventoryLayer(new AgentMergedInventoryLayerDefinition(
+            new MergedInventoryLayerId("sharedInterior"),
+            [
+                new AgentMergedInventorySpaceContribution(new EntityId("entityA"), new GridCoord(0, 0)),
+                new AgentMergedInventorySpaceContribution(new EntityId("entityB"), new GridCoord(3, 0))
+            ])));
+        var snapshot = api.GetDocumentSnapshot();
+
+        Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
+        Assert.Contains(snapshot.MergedInventoryLayers, layer => layer.Id == new MergedInventoryLayerId("sharedInterior"));
+        Assert.Contains("mergedLayers:", snapshot.YamlPreview);
+        Assert.Contains("owner: entityB", snapshot.YamlPreview);
+        Assert.Contains("x: 3", snapshot.YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiRejectsLegacySetVariableAuthoring()
     {
         var api = AgentContentEditorApi.CreateNew();

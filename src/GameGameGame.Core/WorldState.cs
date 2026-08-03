@@ -20,6 +20,8 @@ public sealed class WorldState
 
     public Dictionary<EntityId, PlaneId> InventoryPlanes { get; } = [];
 
+    public List<MergedInventoryLayer> MergedInventoryLayers { get; } = [];
+
     public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
 
     public Dictionary<string, RuntimeEntityTemplate> RuntimeEntityTemplates { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -72,6 +74,9 @@ public sealed class WorldState
         {
             InventoryPlanes[entityId] = planeId;
         }
+
+        MergedInventoryLayers.Clear();
+        MergedInventoryLayers.AddRange(source.MergedInventoryLayers);
 
         ActionStates.Clear();
         foreach (var (entityId, state) in source.ActionStates)
@@ -367,6 +372,21 @@ public sealed class WorldState
         return InventoryPlanes.TryGetValue(entityId, out var planeId) ? planeId : null;
     }
 
+    public bool TryFindMergedInventoryLayerContribution(EntityId entityId, out MergedInventoryLayer layer)
+    {
+        foreach (var candidate in MergedInventoryLayers)
+        {
+            if (candidate.Spaces.Any(space => space.OwnerId == entityId))
+            {
+                layer = candidate;
+                return true;
+            }
+        }
+
+        layer = default!;
+        return false;
+    }
+
     public IReadOnlyList<EntityId> DestroyEntityRecursive(EntityId entityId)
     {
         var destroyed = new List<EntityId>();
@@ -376,7 +396,7 @@ public sealed class WorldState
 
     private void DestroyEntityRecursive(EntityId entityId, List<EntityId> destroyed, HashSet<EntityId> visited)
     {
-        if (!visited.Add(entityId) || !Entities.TryGetValue(entityId, out var entity))
+        if (!visited.Add(entityId) || !Entities.TryGetValue(entityId, out var entity) || TryFindMergedInventoryLayerContribution(entityId, out _))
         {
             return;
         }

@@ -13,7 +13,9 @@ internal sealed record ActorPovPlayScreenModel(
     IReadOnlyList<ActorPovPlayScreenDiagnostic> Diagnostics,
     IReadOnlyDictionary<EntityId, Direction> FacingByEntityId,
     IReadOnlyDictionary<EntityId, IReadOnlyList<EntityId>> TargetsByEntityId,
-    InventorySpaceRootCellMetrics RootCellMetrics)
+    InventorySpaceRootCellMetrics RootCellMetrics,
+    InventorySpaceViewModel? CurrentLayerView,
+    IReadOnlySet<PlaneId> CurrentLayerPlaneIds)
 {
     public EntityPanelProjection ControlledActor => Projection.ControlledActor;
     public EntityPanelProjection? CurrentPlace => Projection.CurrentPlace;
@@ -80,7 +82,49 @@ internal static class ActorPovPlayScreenModelBuilder
             BuildDiagnostics(layout, projection),
             BuildFacingFacts(world),
             BuildTargetFacts(world),
-            resolvedRootCellMetrics);
+            resolvedRootCellMetrics,
+            BuildCurrentLayerView(world, controlledActorId, getAppearance),
+            BuildCurrentLayerPlaneIds(world, controlledActorId, projection));
+    }
+
+    private static InventorySpaceViewModel? BuildCurrentLayerView(
+        WorldState world,
+        EntityId controlledActorId,
+        Func<EntityId, EntityInspectionAppearance>? getAppearance)
+    {
+        if (!world.Entities.ContainsKey(controlledActorId) ||
+            !MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(controlledActorId), out var cell))
+        {
+            return null;
+        }
+
+        return InventorySpaceViewModel.FromMergedLayer(
+            "0.actor-pov.current-layer.inventory-space",
+            world,
+            cell.Layer,
+            controlledActorId,
+            cellMetrics: InventorySpaceCellMetrics.Default,
+            facingByEntityId: BuildFacingFacts(world),
+            getAppearance: getAppearance);
+    }
+
+    private static IReadOnlySet<PlaneId> BuildCurrentLayerPlaneIds(
+        WorldState world,
+        EntityId controlledActorId,
+        ActorPovPlayProjection projection)
+    {
+        if (world.Entities.ContainsKey(controlledActorId) &&
+            MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(controlledActorId), out var cell))
+        {
+            return cell.Layer.Spaces
+                .Select(space => world.GetRegisteredInventoryPlaneId(space.OwnerId))
+                .OfType<PlaneId>()
+                .ToHashSet();
+        }
+
+        return projection.CurrentPlace?.InventoryGrid is { } grid
+            ? new HashSet<PlaneId> { grid.PlaneId }
+            : new HashSet<PlaneId>();
     }
 
     private static IReadOnlyDictionary<EntityId, Direction> BuildFacingFacts(WorldState world) =>

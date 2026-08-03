@@ -665,7 +665,7 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
         }
 
         var actorLocation = world.GetEntityLocation(actorId);
-        if (!InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId) ||
+        if (!MergedInventoryLayerResolver.TryFindLocalOwner(world, actorLocation, out var containerId) ||
             !world.Entities.TryGetValue(containerId, out var container))
         {
             return ActionTrace.Fail(trace, FailureReason.TargetNotInInventory, $"{actor.Name} is not inside an entity inventory plane");
@@ -688,7 +688,7 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
     public void Execute(WorldState world, EntityId actorId, MovementService movement)
     {
         var actorLocation = world.GetEntityLocation(actorId);
-        if (InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId))
+        if (MergedInventoryLayerResolver.TryFindLocalOwner(world, actorLocation, out var containerId))
         {
             new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId)
                 .TryRelocate(world, actorId, MovementDestination.AdjacentTo(containerId, Direction));

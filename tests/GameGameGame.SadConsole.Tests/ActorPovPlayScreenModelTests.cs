@@ -190,6 +190,39 @@ public sealed class ActorPovPlayScreenModelTests
     }
 
     [Fact]
+    public void CurrentPlaceComponentRendersMergedCurrentLayerAsSparseInventoryView()
+    {
+        var fixture = ActorPovFixture.Create();
+        fixture.World.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("sharedInterior"),
+            [
+                new MergedInventorySpaceContribution(fixture.RoomId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(fixture.ChestId, new GridCoord(5, 1))
+            ]));
+
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor);
+
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        Assert.NotNull(model.CurrentLayerView);
+        Assert.Equal("Merged layer: sharedInterior", component.View.Title);
+        Assert.Equal(6, component.View.Width);
+        Assert.Equal(2, component.View.Height);
+        Assert.Contains(new GridCoord(5, 1), component.View.BackdropCoords!);
+        Assert.DoesNotContain(new GridCoord(5, 0), component.View.BackdropCoords!);
+        Assert.Contains(component.View.Entities, entity => entity.EntityId == fixture.ActorId && entity.Coord == new GridCoord(1, 0));
+        Assert.Equal(2, model.CurrentLayerPlaneIds.Count);
+        Assert.Contains(new PlaneId("roomPlane"), model.CurrentLayerPlaneIds);
+        Assert.Contains(new PlaneId("chestInventory"), model.CurrentLayerPlaneIds);
+    }
+
+    [Fact]
     public void CurrentRegionActivityComponentPinsToBottomOfCurrentPlaceRegion()
     {
         var fixture = ActorPovFixture.Create();

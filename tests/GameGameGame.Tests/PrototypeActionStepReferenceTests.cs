@@ -385,6 +385,31 @@ public sealed partial class PrototypeActionStepReferenceTests
     }
 
     [Fact]
+    public void DestroyTargetFailsForMergedLayerContributingOwner()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("shared-interior"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        world.SetActionTarget(TestWorld.PlayerId, TestWorld.SlimeId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("destroy-target-merged-contributor"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget)]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.True(world.Entities.ContainsKey(TestWorld.SlimeId));
+        Assert.True(world.Planes.ContainsKey(TestWorld.SlimeInventoryPlaneId));
+        Assert.True(TraceHasReason(result.Trace, FailureReason.InventoryPolicyBlocked));
+        Assert.True(TraceDetailContains(result.Trace, "contributes to merged inventory layer shared-interior"));
+    }
+
+    [Fact]
     public void CreateFacingCreatesPlaceholderRockEntityInFacingDirection()
     {
         var world = TestWorld.CreateWorld();

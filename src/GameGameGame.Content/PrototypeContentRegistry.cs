@@ -7,7 +7,8 @@ public sealed class PrototypeContentRegistry(
     IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> actionPlanTemplates,
     IReadOnlyDictionary<EntityTemplateId, EntityPresentation> presentations,
     IReadOnlyDictionary<PresentationId, PresentationDefinition>? presentationCatalog = null,
-    IReadOnlyDictionary<PaletteId, PaletteDefinition>? paletteCatalog = null)
+    IReadOnlyDictionary<PaletteId, PaletteDefinition>? paletteCatalog = null,
+    IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition>? mergedInventoryLayers = null)
 {
     private readonly Dictionary<EntityId, EntityTemplateId> _entityTemplateAssignments = [];
 
@@ -20,6 +21,8 @@ public sealed class PrototypeContentRegistry(
     public IReadOnlyDictionary<PresentationId, PresentationDefinition> PresentationCatalog { get; } = presentationCatalog ?? BuiltInPresentationCatalog.Presentations;
 
     public IReadOnlyDictionary<PaletteId, PaletteDefinition> PaletteCatalog { get; } = paletteCatalog ?? BuiltInPresentationCatalog.Palettes;
+
+    public IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition> MergedInventoryLayers { get; } = mergedInventoryLayers ?? new Dictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition>();
 
     public EntityTemplate GetEntityTemplate(EntityTemplateId id) => entityTemplates[id];
 
@@ -99,7 +102,7 @@ public sealed class PrototypeContentRegistry(
             [id] = template
         };
 
-        return new PrototypeContentRegistry(templates, actionPlanTemplates, presentations, PresentationCatalog, PaletteCatalog);
+        return new PrototypeContentRegistry(templates, actionPlanTemplates, presentations, PresentationCatalog, PaletteCatalog, MergedInventoryLayers);
     }
 
     public PrototypeContentRegistry WithPresentation(EntityTemplateId id, EntityPresentation presentation)
@@ -109,7 +112,7 @@ public sealed class PrototypeContentRegistry(
             [id] = presentation
         };
 
-        return new PrototypeContentRegistry(entityTemplates, actionPlanTemplates, updated, PresentationCatalog, PaletteCatalog);
+        return new PrototypeContentRegistry(entityTemplates, actionPlanTemplates, updated, PresentationCatalog, PaletteCatalog, MergedInventoryLayers);
     }
 
     public PrototypeContentRegistry WithActionPlanDescriptor(ActionPlanTemplateId id, ActionPlanDescriptor descriptor)
@@ -119,7 +122,7 @@ public sealed class PrototypeContentRegistry(
             [id] = descriptor
         };
 
-        return new PrototypeContentRegistry(entityTemplates, updated, presentations, PresentationCatalog, PaletteCatalog);
+        return new PrototypeContentRegistry(entityTemplates, updated, presentations, PresentationCatalog, PaletteCatalog, MergedInventoryLayers);
     }
 
     public ContentValidationResult Validate()
@@ -129,6 +132,7 @@ public sealed class PrototypeContentRegistry(
         ValidateEntityTemplates(errors, diagnostics);
         ValidatePresentations(diagnostics);
         ValidateActionPlans(errors, diagnostics);
+        ValidateMergedInventoryLayers(errors);
 
         diagnostics.AddRange(errors.Select(error => ContentDiagnostic.Error(ContentDiagnosticCode.General, error)));
         return new ContentValidationResult(diagnostics);
@@ -219,7 +223,112 @@ public sealed class PrototypeContentRegistry(
         }
     }
 
+    private void ValidateMergedInventoryLayers(List<string> errors)
+    {
+        var entityTemplatesByAuthoredEntityId = CollectAuthoredEntityTemplates();
+        foreach (var (layerId, layer) in MergedInventoryLayers)
+        {
+            if (layer.Spaces.Count < 2)
+            {
+                errors.Add($"Merged inventory layer {layerId} must declare at least 2 spaces; found {layer.Spaces.Count}.");
+            }
 
+            var occupiedLayerCells = new Dictionary<GridCoord, EntityId>();
+            var hasInvalidSpace = false;
+            foreach (var space in layer.Spaces)
+            {
+                if (!entityTemplatesByAuthoredEntityId.TryGetValue(space.OwnerId, out var templateId) || !entityTemplates.TryGetValue(templateId, out var template))
+                {
+                    errors.Add($"Merged inventory layer {layerId} references unknown owner entity {space.OwnerId}.");
+                    hasInvalidSpace = true;
+                    continue;
+                }
+
+                if (!template.HasUsableInventory())
+                {
+                    errors.Add($"Merged inventory layer {layerId} owner {space.OwnerId} template {templateId} has no usable inventory space.");
+                    hasInvalidSpace = true;
+                    continue;
+                }
+
+                for (var y = 0; y < template.InventoryHeight; y++)
+                {
+                    for (var x = 0; x < template.InventoryWidth; x++)
+                    {
+                        var layerCoord = new GridCoord(space.Origin.X + x, space.Origin.Y + y);
+                        if (occupiedLayerCells.TryGetValue(layerCoord, out var previousOwner))
+                        {
+                            errors.Add($"Merged inventory layer {layerId} has overlap at {layerCoord} between {previousOwner} and {space.OwnerId}.");
+                        }
+                        else
+                        {
+                            occupiedLayerCells[layerCoord] = space.OwnerId;
+                        }
+                    }
+                }
+            }
+
+            if (!hasInvalidSpace && occupiedLayerCells.Count > 0 && !IsConnected(occupiedLayerCells.Keys.ToHashSet()))
+            {
+                errors.Add($"Merged inventory layer {layerId} is disconnected; MVP placements must form one connected layer.");
+            }
+        }
+    }
+
+    private Dictionary<EntityId, EntityTemplateId> CollectAuthoredEntityTemplates()
+    {
+        var result = new Dictionary<EntityId, EntityTemplateId>();
+        var visited = new HashSet<EntityTemplateId>();
+        foreach (var templateId in entityTemplates.Keys)
+        {
+            Collect(templateId, visited);
+        }
+
+        return result;
+
+        void Collect(EntityTemplateId templateId, HashSet<EntityTemplateId> ancestry)
+        {
+            if (!entityTemplates.TryGetValue(templateId, out var template) || template.CarriedEntities is null || !ancestry.Add(templateId))
+            {
+                return;
+            }
+
+            foreach (var carried in template.CarriedEntities)
+            {
+                if (carried.TemplateId is { } carriedTemplateId)
+                {
+                    result[carried.EntityId] = carriedTemplateId;
+                    Collect(carriedTemplateId, ancestry);
+                }
+            }
+
+            ancestry.Remove(templateId);
+        }
+    }
+
+    private static bool IsConnected(HashSet<GridCoord> cells)
+    {
+        var visited = new HashSet<GridCoord>();
+        var queue = new Queue<GridCoord>();
+        var start = cells.First();
+        visited.Add(start);
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var direction in DirectionMath.AllDirections)
+            {
+                var next = current.Offset(direction);
+                if (cells.Contains(next) && visited.Add(next))
+                {
+                    queue.Enqueue(next);
+                }
+            }
+        }
+
+        return visited.Count == cells.Count;
+    }
     private static void ApplyActionStateDefaults(ActionPlanContext context, ActorActionStateDefaults? defaults)
     {
         if (defaults?.Facing is { } facing)
@@ -233,4 +342,9 @@ public sealed class PrototypeContentRegistry(
         }
     }
 
+}
+
+internal static class EntityTemplateExtensions
+{
+    public static bool HasUsableInventory(this EntityTemplate template) => template.InventoryWidth > 0 && template.InventoryHeight > 0;
 }

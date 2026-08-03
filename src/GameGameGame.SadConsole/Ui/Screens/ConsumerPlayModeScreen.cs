@@ -77,13 +77,15 @@ internal sealed class ConsumerPlayModeScreen
         LeftRegionMode = LeftRegionMode switch
         {
             LeftRegionMode.ParentLocationChain => LeftRegionMode.GlobalLog,
-            LeftRegionMode.GlobalLog => LeftRegionMode.CurrentLocationLog,
+            LeftRegionMode.GlobalLog => LeftRegionMode.CurrentLayerLog,
+            LeftRegionMode.CurrentLayerLog => LeftRegionMode.CurrentLocationLog,
             _ => LeftRegionMode.ParentLocationChain
         };
         LastActionStatus = LeftRegionMode switch
         {
             LeftRegionMode.ParentLocationChain => "Left region: parent/location chain.",
             LeftRegionMode.GlobalLog => "Left region: full log history.",
+            LeftRegionMode.CurrentLayerLog => "Left region: current-layer log history.",
             LeftRegionMode.CurrentLocationLog => "Left region: current-location log history.",
             _ => "Left region changed."
         };
@@ -417,22 +419,34 @@ internal sealed class ConsumerPlayModeScreen
             : region.Bounds;
         var maxRows = Math.Max(0, bounds.Height - 2);
         var currentPlacePlaneId = model.CurrentPlace?.InventoryGrid?.PlaneId;
-        var scope = LeftRegionMode == LeftRegionMode.CurrentLocationLog
-            ? PlayLogScope.CurrentLocation
-            : PlayLogScope.Global;
+        var scope = LeftRegionMode switch
+        {
+            LeftRegionMode.CurrentLayerLog => PlayLogScope.CurrentLayer,
+            LeftRegionMode.CurrentLocationLog => PlayLogScope.CurrentLocation,
+            _ => PlayLogScope.Global
+        };
         var rows = PlayLogViewBuilder.Build(
                 _sessionController?.ActionLog,
                 scope,
                 currentPlacePlaneId,
-                maxRows)
+                maxRows,
+                model.CurrentLayerPlaneIds)
             .Select(row => row.Text)
             .ToList();
-        var title = LeftRegionMode == LeftRegionMode.CurrentLocationLog
-            ? "Log: Current location"
-            : "Log: All";
+        var title = LeftRegionMode switch
+        {
+            LeftRegionMode.CurrentLayerLog => "Log: Current layer",
+            LeftRegionMode.CurrentLocationLog => "Log: Current location",
+            _ => "Log: All"
+        };
 
         return [new PanelComponent(
-            LeftRegionMode == LeftRegionMode.CurrentLocationLog ? "actor-pov-left-log-current-location" : "actor-pov-left-log-global",
+            LeftRegionMode switch
+            {
+                LeftRegionMode.CurrentLayerLog => "actor-pov-left-log-current-layer",
+                LeftRegionMode.CurrentLocationLog => "actor-pov-left-log-current-location",
+                _ => "actor-pov-left-log-global"
+            },
             title,
             bounds,
             rows,

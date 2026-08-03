@@ -386,6 +386,13 @@ sections:
     status: active-delta
     tags: [delta, topology, movement, containment, player-interaction, spike]
     source: docs/Plans/Topology-Service-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerShowcase.yaml
+    scenarioId: delta-merged-inventory-layer-acceptance
+    name: Merged Inventory Layer Acceptance
+    description: Delta merged-inventory-layer MVP room with unequal Gate A/Gate B interiors, an offset seam, and Gate B authored inside a separate remote exterior room; reviewers should enter A, move south/east across the durable fused interior seam into B-owned cells, then exit east from Gate B.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, containment, movement, player-interaction, vertical-slice]
+    source: docs/Plans/Merged-Inventory-Layer-Vertical-Slice-Sprint-Plan.md
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
     scenarioId: delta-create-destroy-polymorph-flagship-room
     name: Create Destroy Polymorph Flagship Room

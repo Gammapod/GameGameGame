@@ -220,6 +220,7 @@ public sealed class SadConsoleActionPlanEditScreenTests
                 new FrontendEditorActionPlanStepSummary(1, default, "Wait")
             ],
             ["Move", "Wait"])],
+        [],
         [
             new FrontendEditorAvailableActionStepSummary(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target", "Flee a target."),
             new FrontendEditorAvailableActionStepSummary(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target", "Seek a target.")

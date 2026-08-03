@@ -137,6 +137,7 @@ public static class ScenarioMaterializer
                     InventoryPlaneId: scenarioPlaneId,
                     InventoryPlaneName: "Scenario Space"));
             AddActionPlans(actionPlans, rootSpawn.ActionPlans);
+            PopulateMergedInventoryLayers(world, registry);
         }
         catch (Exception ex)
         {
@@ -366,6 +367,14 @@ public static class ScenarioMaterializer
                 template.EnterPolicy,
                 template.ExitPolicy,
                 template.TopologyPolicy);
+        }
+    }
+
+    private static void PopulateMergedInventoryLayers(WorldState world, PrototypeContentRegistry registry)
+    {
+        foreach (var layer in registry.MergedInventoryLayers.Values)
+        {
+            world.MergedInventoryLayers.Add(new MergedInventoryLayer(layer.Id, layer.Spaces));
         }
     }
 

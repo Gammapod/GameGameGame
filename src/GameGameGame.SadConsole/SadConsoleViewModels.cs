@@ -302,6 +302,7 @@ internal sealed record LocalActivityRow(string Text, bool IsHeader = false, bool
 internal enum PlayLogScope
 {
     Global,
+    CurrentLayer,
     CurrentLocation
 }
 
@@ -309,6 +310,7 @@ internal enum LeftRegionMode
 {
     ParentLocationChain,
     GlobalLog,
+    CurrentLayerLog,
     CurrentLocationLog
 }
 
@@ -463,7 +465,8 @@ internal static class PlayLogViewBuilder
         ActionLogProjection? actionLog,
         PlayLogScope scope,
         PlaneId? currentLocationPlaneId,
-        int maxRows)
+        int maxRows,
+        IReadOnlySet<PlaneId>? currentLayerPlaneIds = null)
     {
         if (maxRows <= 0)
         {
@@ -475,12 +478,16 @@ internal static class PlayLogViewBuilder
             return [new PlayLogRow(EmptyText, Succeeded: true, IsMuted: true)];
         }
 
+        var planeAnchors = PlaneAnchors(scope, currentLocationPlaneId, currentLayerPlaneIds);
+        if ((scope == PlayLogScope.CurrentLayer || scope == PlayLogScope.CurrentLocation) && planeAnchors is { Count: 0 })
+        {
+            return [new PlayLogRow(EmptyText, Succeeded: true, IsMuted: true)];
+        }
+
         var rows = ActionLogQueryService.Select(
             actionLog,
             new ActionLogQuery(
-                PlaneAnchors: scope == PlayLogScope.CurrentLocation && currentLocationPlaneId is { } planeId
-                    ? new HashSet<PlaneId> { planeId }
-                    : null,
+                PlaneAnchors: planeAnchors,
                 Order: ActionLogOrder.NewestFirst,
                 MaxRows: maxRows));
 
@@ -496,6 +503,19 @@ internal static class PlayLogViewBuilder
                 outcome.ActorId))
             .ToList();
     }
+
+    private static IReadOnlySet<PlaneId>? PlaneAnchors(
+        PlayLogScope scope,
+        PlaneId? currentLocationPlaneId,
+        IReadOnlySet<PlaneId>? currentLayerPlaneIds) => scope switch
+    {
+        PlayLogScope.Global => null,
+        PlayLogScope.CurrentLocation => currentLocationPlaneId is { } planeId ? new HashSet<PlaneId> { planeId } : new HashSet<PlaneId>(),
+        PlayLogScope.CurrentLayer => currentLayerPlaneIds is { Count: > 0 }
+            ? currentLayerPlaneIds
+            : currentLocationPlaneId is { } planeId ? new HashSet<PlaneId> { planeId } : new HashSet<PlaneId>(),
+        _ => null
+    };
 }
 
 internal static class CurrentRegionActivityViewBuilder

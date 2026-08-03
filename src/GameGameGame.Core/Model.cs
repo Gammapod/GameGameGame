@@ -10,6 +10,11 @@ public readonly record struct PlaneId(string Value)
     public override string ToString() => Value;
 }
 
+public readonly record struct MergedInventoryLayerId(string Value)
+{
+    public override string ToString() => Value;
+}
+
 public readonly record struct NodeId(string Value)
 {
     public override string ToString() => Value;
@@ -37,6 +42,12 @@ public readonly record struct PlaneCoord(PlaneId PlaneId, GridCoord Coord)
 {
     public override string ToString() => $"{PlaneId}{Coord}";
 }
+
+public sealed record MergedInventorySpaceContribution(EntityId OwnerId, GridCoord Origin);
+
+public sealed record MergedInventoryLayer(
+    MergedInventoryLayerId Id,
+    IReadOnlyList<MergedInventorySpaceContribution> Spaces);
 
 public enum Direction
 {

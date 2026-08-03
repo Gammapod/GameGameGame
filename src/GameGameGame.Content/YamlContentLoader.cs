@@ -32,7 +32,27 @@ public static class YamlContentLoader
             MaterializeActionPlans(document.ActionPlans),
             MaterializePresentations(document.Presentations),
             MaterializePresentationCatalog(document.PresentationCatalog),
-            MaterializePaletteCatalog(document.Palettes));
+            MaterializePaletteCatalog(document.Palettes),
+            MaterializeMergedInventoryLayers(document.MergedLayers));
+    }
+
+    private static IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition> MaterializeMergedInventoryLayers(
+        Dictionary<string, MergedInventoryLayerDto>? layers)
+    {
+        var result = new Dictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition>();
+        foreach (var (id, layer) in layers ?? [])
+        {
+            var layerId = new MergedInventoryLayerId(id);
+            result[layerId] = new MergedInventoryLayerDefinition(
+                layerId,
+                (layer.Spaces ?? [])
+                    .Select(space => new MergedInventorySpaceContribution(
+                        new EntityId(Required(space.Owner, nameof(space.Owner))),
+                        MaterializeCoord(space.Origin)))
+                    .ToList());
+        }
+
+        return result;
     }
 
     private static IReadOnlyDictionary<PresentationId, PresentationDefinition> MaterializePresentationCatalog(
@@ -376,6 +396,20 @@ public static class YamlContentLoader
         public Dictionary<string, PaletteDefinitionDto>? Palettes { get; set; }
 
         public Dictionary<string, ActionPlanDescriptorDto>? ActionPlans { get; set; }
+
+        public Dictionary<string, MergedInventoryLayerDto>? MergedLayers { get; set; }
+    }
+
+    private sealed class MergedInventoryLayerDto
+    {
+        public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
+    }
+
+    private sealed class MergedInventorySpaceContributionDto
+    {
+        public string? Owner { get; set; }
+
+        public GridCoordDto? Origin { get; set; }
     }
 
     private sealed class PresentationDefinitionDto

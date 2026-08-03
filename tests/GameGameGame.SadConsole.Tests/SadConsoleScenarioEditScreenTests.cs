@@ -298,6 +298,7 @@ public sealed class SadConsoleScenarioEditScreenTests
         [new FrontendEditorActionPlanSummary("wander", "canonical", [new FrontendEditorActionPlanStepSummary(0, default, "Move")], ["Move"])],
         [],
         [],
+        [],
         "yaml",
         []);
 }

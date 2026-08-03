@@ -19,6 +19,7 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
             ListScenarios(),
             ListEntityTemplates(diagnostics),
             ListActionPlans(),
+            ListMergedInventoryLayers(),
             ListAvailableActionSteps(),
             diagnostics,
             session.GetYamlPreview(),
@@ -46,6 +47,15 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     AuthoredPlayerStart = scenario.PlayerStart
                 };
             })
+            .ToList();
+
+    private IReadOnlyList<FrontendEditorMergedInventoryLayerSummary> ListMergedInventoryLayers() =>
+        session.Editor.ListMergedInventoryLayers()
+            .Select(layer => new FrontendEditorMergedInventoryLayerSummary(
+                layer.Id.Value,
+                layer.Spaces
+                    .Select(space => new FrontendEditorMergedInventorySpaceSummary(space.OwnerId.Value, space.Origin))
+                    .ToList()))
             .ToList();
 
     private IReadOnlyList<FrontendEditorEntityTemplateSummary> ListEntityTemplates(IReadOnlyList<FrontendEditorDiagnostic> diagnostics) =>

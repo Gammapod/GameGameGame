@@ -4,7 +4,8 @@ public enum TopologyEdgeKind
 {
     DefaultGrid,
     DirectedOverlay,
-    EntityTopologyPolicy
+    EntityTopologyPolicy,
+    MergedInventoryLayer
 }
 
 public sealed record TopologyNeighbor(
@@ -28,6 +29,12 @@ public sealed record TopologyFloodStep(
     PlaneCoord? From,
     Direction? Direction,
     TopologyEdgeKind? Kind);
+
+public sealed record MergedInventoryLayerCell(
+    MergedInventoryLayer Layer,
+    MergedInventorySpaceContribution Space,
+    PlaneCoord SourceCoord,
+    GridCoord LayerCoord);
 
 public interface ITopologyService
 {
@@ -437,6 +444,178 @@ public sealed class EntityTopologyService(ITopologyService inner) : ITopologySer
         direction = resolved.Value;
         return true;
     }
+}
+
+public static class MergedInventoryLayerResolver
+{
+    public static bool TryFindLocalOwner(WorldState world, PlaneCoord sourceCoord, out EntityId ownerId)
+    {
+        if (TryResolveCell(world, sourceCoord, out var cell))
+        {
+            ownerId = cell.Space.OwnerId;
+            return true;
+        }
+
+        return InventoryPlaneOwnership.TryFindOwner(world, sourceCoord.PlaneId, out ownerId);
+    }
+
+    public static bool TryResolveCell(WorldState world, PlaneCoord sourceCoord, out MergedInventoryLayerCell cell)
+    {
+        foreach (var layer in world.MergedInventoryLayers)
+        {
+            foreach (var space in layer.Spaces)
+            {
+                if (world.GetRegisteredInventoryPlaneId(space.OwnerId) != sourceCoord.PlaneId ||
+                    !world.Entities.TryGetValue(space.OwnerId, out var owner) ||
+                    !IsWithinInventory(sourceCoord.Coord, owner))
+                {
+                    continue;
+                }
+
+                cell = new MergedInventoryLayerCell(
+                    layer,
+                    space,
+                    sourceCoord,
+                    new GridCoord(space.Origin.X + sourceCoord.Coord.X, space.Origin.Y + sourceCoord.Coord.Y));
+                return true;
+            }
+        }
+
+        cell = default!;
+        return false;
+    }
+
+    public static bool TryResolveLayerCoord(
+        WorldState world,
+        MergedInventoryLayer layer,
+        GridCoord layerCoord,
+        out MergedInventoryLayerCell cell)
+    {
+        foreach (var space in layer.Spaces)
+        {
+            if (!world.Entities.TryGetValue(space.OwnerId, out var owner) ||
+                world.GetRegisteredInventoryPlaneId(space.OwnerId) is not { } inventoryPlaneId)
+            {
+                continue;
+            }
+
+            var sourceCoord = new GridCoord(layerCoord.X - space.Origin.X, layerCoord.Y - space.Origin.Y);
+            if (!IsWithinInventory(sourceCoord, owner))
+            {
+                continue;
+            }
+
+            var planeCoord = new PlaneCoord(inventoryPlaneId, sourceCoord);
+            if (!world.Planes.TryGetValue(inventoryPlaneId, out var plane) ||
+                !plane.Contains(sourceCoord) ||
+                !world.TryGetNodeId(planeCoord, out _))
+            {
+                continue;
+            }
+
+            cell = new MergedInventoryLayerCell(layer, space, planeCoord, layerCoord);
+            return true;
+        }
+
+        cell = default!;
+        return false;
+    }
+
+    private static bool IsWithinInventory(GridCoord coord, Entity owner) =>
+        coord.X >= 0 && coord.Y >= 0 && coord.X < owner.InventoryWidth && coord.Y < owner.InventoryHeight;
+}
+
+public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) : ITopologyService
+{
+    public bool TryGetNeighbor(WorldState world, PlaneCoord origin, Direction direction, out TopologyNeighbor neighbor)
+    {
+        if (!MergedInventoryLayerResolver.TryResolveCell(world, origin, out var originCell))
+        {
+            return inner.TryGetNeighbor(world, origin, direction, out neighbor);
+        }
+
+        var destinationLayerCoord = originCell.LayerCoord.Offset(direction);
+        if (!MergedInventoryLayerResolver.TryResolveLayerCoord(world, originCell.Layer, destinationLayerCoord, out var destinationCell))
+        {
+            neighbor = new TopologyNeighbor(
+                new PlaneCoord(origin.PlaneId, origin.Coord.Offset(direction)),
+                direction,
+                TopologyEdgeKind.MergedInventoryLayer,
+                IsBlocked: true,
+                FailureReason.MoveOutOfBounds,
+                $"merged inventory layer {originCell.Layer.Id} has no cell at {destinationLayerCoord}");
+            return false;
+        }
+
+        if (DirectionMath.OrthogonalCorners(direction) is { } corners &&
+            IsOccupiedLayerCoord(world, originCell.Layer, originCell.LayerCoord.Offset(corners.First)) &&
+            IsOccupiedLayerCoord(world, originCell.Layer, originCell.LayerCoord.Offset(corners.Second)))
+        {
+            neighbor = new TopologyNeighbor(
+                destinationCell.SourceCoord,
+                direction,
+                TopologyEdgeKind.MergedInventoryLayer,
+                IsBlocked: true,
+                FailureReason.MoveBlocked,
+                $"merged inventory layer intercardinal adjacency {direction} is blocked by both orthogonal corners");
+            return false;
+        }
+
+        neighbor = new TopologyNeighbor(
+            destinationCell.SourceCoord,
+            direction,
+            TopologyEdgeKind.MergedInventoryLayer,
+            IsBlocked: false,
+            FailureReason: null,
+            FailureDetail: null);
+        return true;
+    }
+
+    public IReadOnlyList<TopologyNeighbor> GetNeighbors(WorldState world, PlaneCoord origin) =>
+        DirectionMath.AllDirections.Select(direction =>
+        {
+            TryGetNeighbor(world, origin, direction, out var neighbor);
+            return neighbor;
+        }).ToList();
+
+    public AdjacencyEvaluation EvaluateAdjacency(WorldState world, PlaneCoord first, PlaneCoord second)
+    {
+        if (!MergedInventoryLayerResolver.TryResolveCell(world, first, out var firstCell) ||
+            !MergedInventoryLayerResolver.TryResolveCell(world, second, out var secondCell) ||
+            firstCell.Layer.Id != secondCell.Layer.Id)
+        {
+            return inner.EvaluateAdjacency(world, first, second);
+        }
+
+        var deltaX = secondCell.LayerCoord.X - firstCell.LayerCoord.X;
+        var deltaY = secondCell.LayerCoord.Y - firstCell.LayerCoord.Y;
+        if (Math.Max(Math.Abs(deltaX), Math.Abs(deltaY)) != 1 ||
+            DirectionFromDelta(deltaX, deltaY) is not { } direction)
+        {
+            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not adjacent to {first} in merged inventory layer {firstCell.Layer.Id}");
+        }
+
+        var found = TryGetNeighbor(world, first, direction, out var neighbor);
+        return found && neighbor.Destination == second
+            ? new AdjacencyEvaluation(true, direction, DirectionMath.OrthogonalCorners(direction) is not null, null, null)
+            : new AdjacencyEvaluation(false, direction, DirectionMath.OrthogonalCorners(direction) is not null, neighbor.FailureReason, neighbor.FailureDetail);
+    }
+
+    private static bool IsOccupiedLayerCoord(WorldState world, MergedInventoryLayer layer, GridCoord layerCoord) =>
+        MergedInventoryLayerResolver.TryResolveLayerCoord(world, layer, layerCoord, out var cell) && world.GetOccupant(cell.SourceCoord) is not null;
+
+    private static Direction? DirectionFromDelta(int deltaX, int deltaY) => (deltaX, deltaY) switch
+    {
+        (0, -1) => Direction.North,
+        (1, -1) => Direction.NorthEast,
+        (1, 0) => Direction.East,
+        (1, 1) => Direction.SouthEast,
+        (0, 1) => Direction.South,
+        (-1, 1) => Direction.SouthWest,
+        (-1, 0) => Direction.West,
+        (-1, -1) => Direction.NorthWest,
+        _ => null
+    };
 }
 
 public sealed class DefaultTopologyService : ITopologyService

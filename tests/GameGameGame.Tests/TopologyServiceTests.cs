@@ -230,6 +230,177 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
+    public void MergedInventoryLayerConnectsTwoPlacedInventorySpacesAsOneTopology()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("shared-interior"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        ITopologyService topology = new MergedInventoryLayerTopologyService(new DefaultTopologyService());
+        var playerEastEdge = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0));
+        var slimeWestEdge = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+
+        var found = topology.TryGetNeighbor(world, playerEastEdge, Direction.East, out var neighbor);
+        var adjacency = topology.EvaluateAdjacency(world, playerEastEdge, slimeWestEdge);
+        var notAdjacent = topology.EvaluateAdjacency(world, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), slimeWestEdge);
+
+        Assert.True(found);
+        Assert.Equal(slimeWestEdge, neighbor.Destination);
+        Assert.Equal(Direction.East, neighbor.Direction);
+        Assert.Equal(TopologyEdgeKind.MergedInventoryLayer, neighbor.Kind);
+        Assert.False(neighbor.IsBlocked);
+        Assert.True(adjacency.AreAdjacent);
+        Assert.Equal(Direction.East, adjacency.Direction);
+        Assert.False(notAdjacent.AreAdjacent);
+    }
+
+    [Fact]
+    public void MergedInventoryLayerDistanceTreatsPlacedSpacesAsOneRigidLayer()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("shared-interior"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        ITopologyService topology = new MergedInventoryLayerTopologyService(new DefaultTopologyService());
+        var traversal = new TopologyTraversalService(topology);
+        var origin = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0));
+        var destination = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+
+        var beforeMove = traversal.Flood(world, origin, maxDepth: 3);
+        var movedExternally = new MovementService().TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)));
+        var afterMove = traversal.Flood(world, origin, maxDepth: 3);
+
+        Assert.Contains(beforeMove, step => step.Coord == destination && step.Distance == 3);
+        Assert.True(movedExternally);
+        Assert.Contains(afterMove, step => step.Coord == destination && step.Distance == 3);
+    }
+
+    [Fact]
+    public void MergedInventoryLayerMovementCrossesSeamAndUpdatesLocalOwner()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("shared-interior"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        var movement = new MovementService();
+        var origin = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0));
+        var destination = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, origin));
+
+        var moved = movement.TryMove(world, TestWorld.RockId, Direction.East);
+        var resolved = MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(TestWorld.RockId), out var cell);
+
+        Assert.True(moved);
+        Assert.Equal(destination, world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(resolved);
+        Assert.Equal(TestWorld.SlimeId, cell.Space.OwnerId);
+        Assert.Equal(new GridCoord(3, 0), cell.LayerCoord);
+    }
+
+    [Fact]
+    public void MergedInventoryLayerSupportsDifferentInventoryDimensionsAndOffsets()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("different-dimensions"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 1))
+            ]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1))));
+
+        var moved = movement.TryMove(world, TestWorld.RockId, Direction.East);
+
+        Assert.True(moved);
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(TestWorld.RockId), out var cell));
+        Assert.Equal(TestWorld.SlimeId, cell.Space.OwnerId);
+        Assert.Equal(new GridCoord(3, 1), cell.LayerCoord);
+    }
+
+    [Fact]
+    public void MergedInventoryLayerSupportsOwnersInDifferentExteriorRooms()
+    {
+        var world = TestWorld.CreateWorld();
+        var otherRoomId = new PlaneId("other-room");
+        AddPlane(world, new Plane(otherRoomId, "Other Room", 5, 5));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(otherRoomId, new GridCoord(2, 2))));
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("different-rooms"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+
+        var exit = new ExitAction(Direction.East).Resolve(world, TestWorld.RockId, movement);
+
+        Assert.True(exit.Succeeded);
+        Assert.Equal(new PlaneCoord(otherRoomId, new GridCoord(3, 2)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void MergedInventoryLayerCoreTopologySupportsThreeContributingSpaces()
+    {
+        var world = TestWorld.CreateWorld();
+        var gateCId = new EntityId("gate-c");
+        var gateCPlaneId = new PlaneId("gate-c-inventory");
+        AddPlane(world, new Plane(gateCPlaneId, "Gate C Inventory", 1, 1));
+        AddEntity(world, gateCId, "Gate C", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 1, inventoryHeight: 1, bulk: 1, aperture: 10);
+        world.RegisterInventoryPlane(gateCId, gateCPlaneId);
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("three-space-core"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0)),
+                new MergedInventorySpaceContribution(gateCId, new GridCoord(4, 0))
+            ]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
+
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+
+        Assert.Equal(new PlaneCoord(gateCPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(TestWorld.RockId), out var cell));
+        Assert.Equal(gateCId, cell.Space.OwnerId);
+    }
+
+    [Fact]
+    public void MergedInventoryLayerRemainsRigidWhenBothOwnersMoveExternally()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("moving-owners"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 4))));
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4))));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
+
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        var exit = new ExitAction(Direction.West).Resolve(world, TestWorld.RockId, movement);
+
+        Assert.True(exit.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
     public void EntityTopologyPolicyConnectsInventoryEdgeOutwardToExteriorAdjacency()
     {
         var world = TestWorld.CreateWorld();
@@ -304,5 +475,32 @@ public sealed class TopologyServiceTests
         var nodeId = world.GetNodeId(location);
         world.Entities.Add(entityId, new Entity(entityId, name, nodeId, 0, 0, 1, 1));
         world.Occupancy.Add(nodeId, entityId);
+    }
+
+    private static void AddEntity(
+        WorldState world,
+        EntityId entityId,
+        string name,
+        PlaneCoord location,
+        int inventoryWidth,
+        int inventoryHeight,
+        int bulk,
+        int aperture)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, bulk, aperture));
+        world.Occupancy.Add(nodeId, entityId);
+    }
+
+    private static void AddPlane(WorldState world, Plane plane)
+    {
+        world.Planes.Add(plane.Id, plane);
+        for (var y = 0; y < plane.Height; y++)
+        {
+            for (var x = 0; x < plane.Width; x++)
+            {
+                world.AddNode(plane.Id, new GridCoord(x, y));
+            }
+        }
     }
 }

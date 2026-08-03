@@ -377,7 +377,7 @@ internal sealed class SadConsoleComponentRenderer
             .GroupBy(decorator => decorator.Coord)
             .ToDictionary(group => group.Key, group => group.OrderByDescending(decorator => decorator.Priority).ToList());
 
-        foreach (var coord in view.VisibleCoords())
+        foreach (var coord in view.VisibleBackdropCoords())
         {
             var relative = view.CellBounds(coord);
             var cellRect = SadConsoleRect.FromSize(gridLeft + relative.Left, gridTop + relative.Top, relative.Width, relative.Height);

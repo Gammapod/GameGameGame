@@ -21,6 +21,24 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public ContentValidationResult Validate() => Document.ToRegistry().Validate();
 
+    public void UpsertMergedInventoryLayer(MergedInventoryLayerDefinition layer)
+    {
+        Document.MergedLayers[layer.Id.Value] = new EditableContentDocument.MergedInventoryLayerDto
+        {
+            Spaces = layer.Spaces
+                .Select(space => new EditableContentDocument.MergedInventorySpaceContributionDto
+                {
+                    Owner = space.OwnerId.Value,
+                    Origin = EditableContentDocument.GridCoordDto.From(space.Origin)
+                })
+                .ToList()
+        };
+        onChanged?.Invoke();
+    }
+
+    public IReadOnlyList<MergedInventoryLayerDefinition> ListMergedInventoryLayers() =>
+        Document.ToRegistry().MergedInventoryLayers.Values.OrderBy(layer => layer.Id.Value, StringComparer.Ordinal).ToList();
+
     public void UpsertScenario(ScenarioDefinition scenario)
     {
         Document.UpsertScenario(scenario);

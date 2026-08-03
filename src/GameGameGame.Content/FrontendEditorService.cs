@@ -310,6 +310,7 @@ public sealed record FrontendEditorSnapshot(
     IReadOnlyList<FrontendEditorScenarioSummary> Scenarios,
     IReadOnlyList<FrontendEditorEntityTemplateSummary> EntityTemplates,
     IReadOnlyList<FrontendEditorActionPlanSummary> ActionPlans,
+    IReadOnlyList<FrontendEditorMergedInventoryLayerSummary> MergedInventoryLayers,
     IReadOnlyList<FrontendEditorAvailableActionStepSummary> AvailableActionSteps,
     IReadOnlyList<FrontendEditorDiagnostic> ValidationDiagnostics,
     string YamlPreview,
@@ -326,6 +327,12 @@ public sealed record FrontendEditorScenarioSummary(
 {
     public GridCoord? AuthoredPlayerStart { get; init; }
 }
+
+public sealed record FrontendEditorMergedInventoryLayerSummary(
+    string LayerId,
+    IReadOnlyList<FrontendEditorMergedInventorySpaceSummary> Spaces);
+
+public sealed record FrontendEditorMergedInventorySpaceSummary(string OwnerEntityId, GridCoord Origin);
 
 public sealed record FrontendEditorEntityTemplateSummary(
     string TemplateId,

@@ -124,6 +124,190 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsMergedInventoryLayerPlacements()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+            mergedLayers:
+              sharedInterior:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 3, y: 0 }
+            actionPlans: {}
+            """);
+
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+
+        Assert.True(registry.Validate().IsValid);
+        Assert.Equal(new MergedInventoryLayerId("sharedInterior"), layer.Id);
+        Assert.Equal([TestWorldEntity("entityA"), TestWorldEntity("entityB")], layer.Spaces.Select(space => space.OwnerId).ToArray());
+        Assert.Equal(new GridCoord(3, 0), layer.Spaces[1].Origin);
+    }
+
+    [Fact]
+    public void ContentValidationRejectsMergedLayerOverlapDisconnectedOrInvalidOwner()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+            mergedLayers:
+              overlapping:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 2, y: 0 }
+              disconnected:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 10, y: 10 }
+              invalidOwner:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: missingEntity
+                  origin: { x: 3, y: 0 }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("overlapping", StringComparison.Ordinal) && error.Contains("overlap", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(validation.Errors, error => error.Contains("disconnected", StringComparison.Ordinal) && error.Contains("disconnected", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(validation.Errors, error => error.Contains("invalidOwner", StringComparison.Ordinal) && error.Contains("missingEntity", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ContentValidationAllowsMergedLayerWithThreeContributors()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+                - entityId: entityC
+                  templateId: spaceC
+                  coord: { x: 2, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+              spaceC:
+                name: Space C
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+              spaceC: { glyph: C, color: Yellow }
+            mergedLayers:
+              sharedInterior:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 1, y: 0 }
+                - owner: entityC
+                  origin: { x: 2, y: 0 }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.Equal(3, layer.Spaces.Count);
+    }
+
+    private static EntityId TestWorldEntity(string id) => new(id);
+
+    [Fact]
     public void YamlContentLoaderDefaultsMissingEntityPoliciesToNullWithEffectiveSimplePolicies()
     {
         var registry = YamlContentLoader.LoadRegistry(

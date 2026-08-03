@@ -313,6 +313,14 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
+        if (world.TryFindMergedInventoryLayerContribution(target.Value, out var layer))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.InventoryPolicyBlocked;
+            trace.Detail = $"target {target.Value} contributes to merged inventory layer {layer.Id} and cannot be destroyed while the layer is active";
+            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+        }
+
         var destroyed = world.DestroyEntityRecursive(target.Value);
         trace.Status = TraceStatus.Success;
         trace.Detail = $"destroyed {string.Join(", ", destroyed)}";

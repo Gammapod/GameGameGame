@@ -53,6 +53,29 @@ public sealed class PlayLogViewBuilderTests
     }
 
     [Fact]
+    public void BuildCurrentLayerFiltersByAllContributingPlaneAnchors()
+    {
+        var localRoom = new PlaneId("local-room");
+        var linkedRoom = new PlaneId("linked-room");
+        var otherRoom = new PlaneId("other-room");
+        var actor = new EntityId("actor");
+        var log = ActionLogProjection.FromOutcomes([
+            Outcome("local success", true, actor, localRoom, 1),
+            Outcome("linked success", true, actor, linkedRoom, 2),
+            Outcome("other success", true, actor, otherRoom, 3)
+        ]);
+
+        var rows = PlayLogViewBuilder.Build(
+            log,
+            PlayLogScope.CurrentLayer,
+            currentLocationPlaneId: localRoom,
+            maxRows: 5,
+            currentLayerPlaneIds: new HashSet<PlaneId> { localRoom, linkedRoom });
+
+        Assert.Equal(["T2: OK: linked success (no turn)", "T1: OK: local success (no turn)"], rows.Select(row => row.Text));
+    }
+
+    [Fact]
     public void BuildCurrentLocationWithoutPlaneDoesNotFallBackToGlobalLog()
     {
         var log = ActionLogProjection.FromOutcomes([
