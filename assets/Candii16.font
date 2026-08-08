@@ -1,0 +1,10 @@
+{
+    "$type": "SadConsole.SadFont, SadConsole",
+    "Name": "Candii16",
+    "FilePath": "Candii16.png",
+    "GlyphHeight": 16,
+    "GlyphPadding": 0,
+    "GlyphWidth": 16,
+    "SolidGlyphIndex": 181,
+    "Columns": 16
+}
