@@ -139,7 +139,11 @@ public sealed record ScenarioDefinition(
 
 public sealed record MergedInventoryLayerDefinition(
     MergedInventoryLayerId Id,
-    IReadOnlyList<MergedInventorySpaceContribution> Spaces);
+    IReadOnlyList<MergedInventorySpaceContribution> Spaces,
+    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null)
+{
+    public IReadOnlyList<MergedInventoryLayerSeam> Seams { get; } = Seams ?? [];
+}
 
 public sealed record CarriedEntityTemplate
 {

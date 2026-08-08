@@ -31,9 +31,22 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
                     Owner = space.OwnerId.Value,
                     Origin = EditableContentDocument.GridCoordDto.From(space.Origin)
                 })
-                .ToList()
+                .ToList(),
+            Seams = layer.Seams.Count == 0
+                ? null
+                : layer.Seams.Select(seam => new EditableContentDocument.MergedInventoryLayerSeamDto
+                {
+                    First = ToDto(seam.First),
+                    Second = ToDto(seam.Second)
+                }).ToList()
         };
         onChanged?.Invoke();
+
+        static EditableContentDocument.MergedInventoryLayerEdgeDto ToDto(MergedInventoryLayerEdge edge) => new()
+        {
+            Owner = edge.OwnerId.Value,
+            Edge = edge.Edge
+        };
     }
 
     public IReadOnlyList<MergedInventoryLayerDefinition> ListMergedInventoryLayers() =>

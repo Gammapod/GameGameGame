@@ -45,9 +45,17 @@ public readonly record struct PlaneCoord(PlaneId PlaneId, GridCoord Coord)
 
 public sealed record MergedInventorySpaceContribution(EntityId OwnerId, GridCoord Origin);
 
+public sealed record MergedInventoryLayerEdge(EntityId OwnerId, Direction Edge);
+
+public sealed record MergedInventoryLayerSeam(MergedInventoryLayerEdge First, MergedInventoryLayerEdge Second);
+
 public sealed record MergedInventoryLayer(
     MergedInventoryLayerId Id,
-    IReadOnlyList<MergedInventorySpaceContribution> Spaces);
+    IReadOnlyList<MergedInventorySpaceContribution> Spaces,
+    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null)
+{
+    public IReadOnlyList<MergedInventoryLayerSeam> Seams { get; } = Seams ?? [];
+}
 
 public enum Direction
 {

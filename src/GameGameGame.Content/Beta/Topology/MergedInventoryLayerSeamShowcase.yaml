@@ -1,0 +1,264 @@
+entityTemplates:
+  seamSharedPlayer:
+    name: Seam Shared Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: seamPlayerMoveEnterExit
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+  seamWrapYard:
+    name: Seam Wrap Yard
+    inventoryWidth: 7
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: seamWrapPlayer
+      templateId: seamSharedPlayer
+      coord:
+        x: 1
+        y: 2
+      controller: Player
+    - entityId: seamWrapRoomA
+      templateId: seamWrapRoomA
+      coord:
+        x: 2
+        y: 2
+  seamWrapRoomA:
+    name: Seam Wrap Room A
+    inventoryWidth: 4
+    inventoryHeight: 4
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamRotYard:
+    name: Seam Rotation Yard
+    inventoryWidth: 7
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: seamRotPlayer
+      templateId: seamSharedPlayer
+      coord:
+        x: 1
+        y: 2
+      controller: Player
+    - entityId: seamRotRoomA
+      templateId: seamRotRoomA
+      coord:
+        x: 2
+        y: 2
+  seamRotRoomA:
+    name: Seam Rotation Room A
+    inventoryWidth: 4
+    inventoryHeight: 4
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamMultiYard:
+    name: Seam Multi Edge Yard
+    inventoryWidth: 10
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: seamMultiPlayer
+      templateId: seamSharedPlayer
+      coord:
+        x: 1
+        y: 2
+      controller: Player
+    - entityId: seamMultiRoomA
+      templateId: seamMultiRoomA
+      coord:
+        x: 2
+        y: 2
+    - entityId: seamMultiRoomB
+      templateId: seamMultiRoomB
+      coord:
+        x: 5
+        y: 2
+    - entityId: seamMultiRoomC
+      templateId: seamMultiRoomC
+      coord:
+        x: 5
+        y: 4
+  seamMultiRoomA:
+    name: Seam Multi Room A
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamMultiRoomB:
+    name: Seam Multi Room B
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamMultiRoomC:
+    name: Seam Multi Room C
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+presentations:
+  seamSharedPlayer:
+    glyph: '@'
+    color: Yellow
+  seamWrapYard:
+    glyph: '#'
+    color: Gray
+  seamWrapRoomA:
+    glyph: A
+    color: Cyan
+  seamRotYard:
+    glyph: '#'
+    color: Gray
+  seamRotRoomA:
+    glyph: R
+    color: White
+  seamMultiYard:
+    glyph: '#'
+    color: Gray
+  seamMultiRoomA:
+    glyph: A
+    color: Cyan
+  seamMultiRoomB:
+    glyph: B
+    color: Green
+  seamMultiRoomC:
+    glyph: C
+    color: White
+actionPlans:
+  seamPlayerMoveEnterExit:
+    id: seamPlayerMoveEnterExit
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: EnterTarget
+        targetLabel: target
+        targetSelf: false
+      - kind: ExitFacing
+        targetSelf: false
+scenarios:
+  delta-merged-layer-seam-pacman-wrap:
+    name: Delta Merged Layer Seam Pacman Wrap
+    scenarioRootEntityTemplateId: seamWrapYard
+    playerControls:
+      player-1:
+      - seamWrapPlayer
+  delta-merged-layer-seam-rotational-self:
+    name: Delta Merged Layer Seam Rotational Self
+    scenarioRootEntityTemplateId: seamRotYard
+    playerControls:
+      player-1:
+      - seamRotPlayer
+  delta-merged-layer-seam-multi-edge:
+    name: Delta Merged Layer Seam Multi Edge
+    scenarioRootEntityTemplateId: seamMultiYard
+    playerControls:
+      player-1:
+      - seamMultiPlayer
+mergedLayers:
+  seamWrapInterior:
+    spaces:
+    - owner: seamWrapRoomA
+      origin:
+        x: 0
+        y: 0
+    seams:
+    - first:
+        owner: seamWrapRoomA
+        edge: East
+      second:
+        owner: seamWrapRoomA
+        edge: West
+    - first:
+        owner: seamWrapRoomA
+        edge: North
+      second:
+        owner: seamWrapRoomA
+        edge: South
+  seamRotInterior:
+    spaces:
+    - owner: seamRotRoomA
+      origin:
+        x: 0
+        y: 0
+    seams:
+    - first:
+        owner: seamRotRoomA
+        edge: East
+      second:
+        owner: seamRotRoomA
+        edge: North
+  seamMultiInterior:
+    spaces:
+    - owner: seamMultiRoomA
+      origin:
+        x: 0
+        y: 0
+    - owner: seamMultiRoomB
+      origin:
+        x: 3
+        y: 0
+    - owner: seamMultiRoomC
+      origin:
+        x: 3
+        y: 3
+    seams:
+    - first:
+        owner: seamMultiRoomA
+        edge: East
+      second:
+        owner: seamMultiRoomB
+        edge: West
+    - first:
+        owner: seamMultiRoomB
+        edge: East
+      second:
+        owner: seamMultiRoomA
+        edge: West
+    - first:
+        owner: seamMultiRoomB
+        edge: South
+      second:
+        owner: seamMultiRoomC
+        edge: North

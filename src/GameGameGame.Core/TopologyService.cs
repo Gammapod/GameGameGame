@@ -521,6 +521,42 @@ public static class MergedInventoryLayerResolver
         return false;
     }
 
+    public static bool TryResolveSourceCoord(
+        WorldState world,
+        MergedInventoryLayer layer,
+        EntityId ownerId,
+        GridCoord sourceCoord,
+        out MergedInventoryLayerCell cell)
+    {
+        foreach (var space in layer.Spaces.Where(space => space.OwnerId == ownerId))
+        {
+            if (!world.Entities.TryGetValue(ownerId, out var owner) ||
+                world.GetRegisteredInventoryPlaneId(ownerId) is not { } inventoryPlaneId ||
+                !IsWithinInventory(sourceCoord, owner))
+            {
+                continue;
+            }
+
+            var planeCoord = new PlaneCoord(inventoryPlaneId, sourceCoord);
+            if (!world.Planes.TryGetValue(inventoryPlaneId, out var plane) ||
+                !plane.Contains(sourceCoord) ||
+                !world.TryGetNodeId(planeCoord, out _))
+            {
+                continue;
+            }
+
+            cell = new MergedInventoryLayerCell(
+                layer,
+                space,
+                planeCoord,
+                new GridCoord(space.Origin.X + sourceCoord.X, space.Origin.Y + sourceCoord.Y));
+            return true;
+        }
+
+        cell = default!;
+        return false;
+    }
+
     private static bool IsWithinInventory(GridCoord coord, Entity owner) =>
         coord.X >= 0 && coord.Y >= 0 && coord.X < owner.InventoryWidth && coord.Y < owner.InventoryHeight;
 }
@@ -532,6 +568,11 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
         if (!MergedInventoryLayerResolver.TryResolveCell(world, origin, out var originCell))
         {
             return inner.TryGetNeighbor(world, origin, direction, out neighbor);
+        }
+
+        if (TryGetSeamNeighbor(world, originCell, direction, out neighbor))
+        {
+            return !neighbor.IsBlocked;
         }
 
         var destinationLayerCoord = originCell.LayerCoord.Offset(direction);
@@ -587,6 +628,14 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
             return inner.EvaluateAdjacency(world, first, second);
         }
 
+        foreach (var candidateDirection in DirectionMath.AllDirections)
+        {
+            if (TryGetNeighbor(world, first, candidateDirection, out var candidateNeighbor) && candidateNeighbor.Destination == second)
+            {
+                return new(true, candidateDirection, DirectionMath.OrthogonalCorners(candidateDirection) is not null, null, null);
+            }
+        }
+
         var deltaX = secondCell.LayerCoord.X - firstCell.LayerCoord.X;
         var deltaY = secondCell.LayerCoord.Y - firstCell.LayerCoord.Y;
         if (Math.Max(Math.Abs(deltaX), Math.Abs(deltaY)) != 1 ||
@@ -603,6 +652,82 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
 
     private static bool IsOccupiedLayerCoord(WorldState world, MergedInventoryLayer layer, GridCoord layerCoord) =>
         MergedInventoryLayerResolver.TryResolveLayerCoord(world, layer, layerCoord, out var cell) && world.GetOccupant(cell.SourceCoord) is not null;
+
+    private static bool TryGetSeamNeighbor(WorldState world, MergedInventoryLayerCell originCell, Direction direction, out TopologyNeighbor neighbor)
+    {
+        foreach (var seam in originCell.Layer.Seams)
+        {
+            if (TryGetSeamEndpointNeighbor(world, originCell, direction, seam.First, seam.Second, out neighbor) ||
+                TryGetSeamEndpointNeighbor(world, originCell, direction, seam.Second, seam.First, out neighbor))
+            {
+                return true;
+            }
+        }
+
+        neighbor = default!;
+        return false;
+    }
+
+    private static bool TryGetSeamEndpointNeighbor(
+        WorldState world,
+        MergedInventoryLayerCell originCell,
+        Direction direction,
+        MergedInventoryLayerEdge from,
+        MergedInventoryLayerEdge to,
+        out TopologyNeighbor neighbor)
+    {
+        neighbor = default!;
+        if (originCell.Space.OwnerId != from.OwnerId || direction != from.Edge || !world.Entities.TryGetValue(from.OwnerId, out var fromOwner))
+        {
+            return false;
+        }
+
+        var index = EdgeIndex(originCell.SourceCoord.Coord, fromOwner.InventoryWidth, fromOwner.InventoryHeight, from.Edge);
+        if (index is null || !world.Entities.TryGetValue(to.OwnerId, out var toOwner))
+        {
+            return false;
+        }
+
+        var destinationCoord = EdgeCoord(index.Value, toOwner.InventoryWidth, toOwner.InventoryHeight, to.Edge);
+        if (destinationCoord is null || !MergedInventoryLayerResolver.TryResolveSourceCoord(world, originCell.Layer, to.OwnerId, destinationCoord.Value, out var destinationCell))
+        {
+            neighbor = new TopologyNeighbor(
+                originCell.SourceCoord,
+                direction,
+                TopologyEdgeKind.MergedInventoryLayer,
+                IsBlocked: true,
+                FailureReason.MoveOutOfBounds,
+                $"merged inventory layer seam from {from.OwnerId}.{from.Edge} to {to.OwnerId}.{to.Edge} cannot resolve matching edge cell {index}");
+            return true;
+        }
+
+        neighbor = new TopologyNeighbor(
+            destinationCell.SourceCoord,
+            direction,
+            TopologyEdgeKind.MergedInventoryLayer,
+            IsBlocked: false,
+            FailureReason: null,
+            FailureDetail: null);
+        return true;
+    }
+
+    private static int? EdgeIndex(GridCoord coord, int width, int height, Direction edge) => edge switch
+    {
+        Direction.North when coord.Y == 0 => coord.X,
+        Direction.East when coord.X == width - 1 => coord.Y,
+        Direction.South when coord.Y == height - 1 => coord.X,
+        Direction.West when coord.X == 0 => coord.Y,
+        _ => null
+    };
+
+    private static GridCoord? EdgeCoord(int index, int width, int height, Direction edge) => edge switch
+    {
+        Direction.North when index >= 0 && index < width => new GridCoord(index, 0),
+        Direction.East when index >= 0 && index < height => new GridCoord(width - 1, index),
+        Direction.South when index >= 0 && index < width => new GridCoord(index, height - 1),
+        Direction.West when index >= 0 && index < height => new GridCoord(0, index),
+        _ => null
+    };
 
     private static Direction? DirectionFromDelta(int deltaX, int deltaY) => (deltaX, deltaY) switch
     {

@@ -305,6 +305,274 @@ public sealed class YamlContentLoaderTests
         Assert.Equal(3, layer.Spaces.Count);
     }
 
+    [Fact]
+    public void ContentValidationRejectsMergedLayerDuplicateOrMultiLayerOwner()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+                - entityId: entityC
+                  templateId: spaceC
+                  coord: { x: 2, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+              spaceC:
+                name: Space C
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+              spaceC: { glyph: C, color: Yellow }
+            mergedLayers:
+              duplicateOwner:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityA
+                  origin: { x: 1, y: 0 }
+              firstLayer:
+                spaces:
+                - owner: entityB
+                  origin: { x: 0, y: 0 }
+                - owner: entityC
+                  origin: { x: 1, y: 0 }
+              secondLayer:
+                spaces:
+                - owner: entityB
+                  origin: { x: 0, y: 0 }
+                - owner: entityA
+                  origin: { x: 1, y: 0 }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("duplicateOwner", StringComparison.Ordinal) && error.Contains("entityA", StringComparison.Ordinal) && error.Contains("more than once", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(validation.Errors, error => error.Contains("entityB", StringComparison.Ordinal) && error.Contains("more than one merged inventory layer", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void YamlContentLoaderLoadsMergedLayerSeams()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+            mergedLayers:
+              wrappedInterior:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                seams:
+                - first: { owner: entityA, edge: East }
+                  second: { owner: entityA, edge: West }
+                - first: { owner: entityA, edge: North }
+                  second: { owner: entityA, edge: South }
+            actionPlans: {}
+            """);
+
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+
+        Assert.True(registry.Validate().IsValid, string.Join(Environment.NewLine, registry.Validate().Errors));
+        Assert.Equal(2, layer.Seams.Count);
+        Assert.Equal(new MergedInventoryLayerEdge(new EntityId("entityA"), Direction.East), layer.Seams[0].First);
+    }
+
+    [Fact]
+    public void ContentValidationRejectsMergedLayerSeamDirectionalConflictsAndLengthMismatch()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+                - entityId: entityC
+                  templateId: spaceC
+                  coord: { x: 2, y: 0 }
+                - entityId: entityD
+                  templateId: spaceD
+                  coord: { x: 0, y: 1 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceC:
+                name: Space C
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceD:
+                name: Space D
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+              spaceC: { glyph: C, color: Yellow }
+              spaceD: { glyph: D, color: White }
+            mergedLayers:
+              conflicted:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 10, y: 0 }
+                - owner: entityC
+                  origin: { x: 20, y: 0 }
+                - owner: entityD
+                  origin: { x: 30, y: 0 }
+                seams:
+                - first: { owner: entityA, edge: East }
+                  second: { owner: entityB, edge: West }
+                - first: { owner: entityA, edge: East }
+                  second: { owner: entityC, edge: West }
+                - first: { owner: entityB, edge: North }
+                  second: { owner: entityD, edge: West }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("conflicted", StringComparison.Ordinal) && error.Contains("directional conflict", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(validation.Errors, error => error.Contains("conflicted", StringComparison.Ordinal) && error.Contains("edge length", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ContentValidationRejectsMergedLayerSeamConflictsWithEuclideanPlacementAdjacency()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+                - entityId: entityC
+                  templateId: spaceC
+                  coord: { x: 2, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceC:
+                name: Space C
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+              spaceC: { glyph: C, color: Yellow }
+            mergedLayers:
+              conflicted:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 3, y: 0 }
+                - owner: entityC
+                  origin: { x: 10, y: 0 }
+                seams:
+                - first: { owner: entityA, edge: East }
+                  second: { owner: entityC, edge: West }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("conflicted", StringComparison.Ordinal) && error.Contains("Euclidean placement neighbor", StringComparison.Ordinal));
+    }
+
     private static EntityId TestWorldEntity(string id) => new(id);
 
     [Fact]

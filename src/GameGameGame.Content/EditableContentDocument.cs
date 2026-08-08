@@ -21,6 +21,8 @@ public sealed partial class EditableContentDocument
     public sealed class MergedInventoryLayerDto
     {
         public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
+
+        public List<MergedInventoryLayerSeamDto>? Seams { get; set; }
     }
 
     public sealed class MergedInventorySpaceContributionDto
@@ -28,6 +30,20 @@ public sealed partial class EditableContentDocument
         public string? Owner { get; set; }
 
         public GridCoordDto? Origin { get; set; }
+    }
+
+    public sealed class MergedInventoryLayerSeamDto
+    {
+        public MergedInventoryLayerEdgeDto? First { get; set; }
+
+        public MergedInventoryLayerEdgeDto? Second { get; set; }
+    }
+
+    public sealed class MergedInventoryLayerEdgeDto
+    {
+        public string? Owner { get; set; }
+
+        public Direction? Edge { get; set; }
     }
 
     public sealed class EntityTemplateDto

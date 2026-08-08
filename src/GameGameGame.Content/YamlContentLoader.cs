@@ -49,11 +49,21 @@ public static class YamlContentLoader
                     .Select(space => new MergedInventorySpaceContribution(
                         new EntityId(Required(space.Owner, nameof(space.Owner))),
                         MaterializeCoord(space.Origin)))
+                    .ToList(),
+                (layer.Seams ?? [])
+                    .Select(seam => new MergedInventoryLayerSeam(
+                        MaterializeLayerEdge(seam.First),
+                        MaterializeLayerEdge(seam.Second)))
                     .ToList());
         }
 
         return result;
     }
+
+    private static MergedInventoryLayerEdge MaterializeLayerEdge(MergedInventoryLayerEdgeDto? edge) =>
+        edge is null
+            ? throw Missing(nameof(edge))
+            : new MergedInventoryLayerEdge(new EntityId(Required(edge.Owner, nameof(edge.Owner))), edge.Edge ?? throw Missing(nameof(edge.Edge)));
 
     private static IReadOnlyDictionary<PresentationId, PresentationDefinition> MaterializePresentationCatalog(
         Dictionary<string, PresentationDefinitionDto>? catalog)
@@ -403,6 +413,8 @@ public static class YamlContentLoader
     private sealed class MergedInventoryLayerDto
     {
         public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
+
+        public List<MergedInventoryLayerSeamDto>? Seams { get; set; }
     }
 
     private sealed class MergedInventorySpaceContributionDto
@@ -410,6 +422,20 @@ public static class YamlContentLoader
         public string? Owner { get; set; }
 
         public GridCoordDto? Origin { get; set; }
+    }
+
+    private sealed class MergedInventoryLayerSeamDto
+    {
+        public MergedInventoryLayerEdgeDto? First { get; set; }
+
+        public MergedInventoryLayerEdgeDto? Second { get; set; }
+    }
+
+    private sealed class MergedInventoryLayerEdgeDto
+    {
+        public string? Owner { get; set; }
+
+        public Direction? Edge { get; set; }
     }
 
     private sealed class PresentationDefinitionDto

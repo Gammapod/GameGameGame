@@ -374,7 +374,7 @@ public static class ScenarioMaterializer
     {
         foreach (var layer in registry.MergedInventoryLayers.Values)
         {
-            world.MergedInventoryLayers.Add(new MergedInventoryLayer(layer.Id, layer.Spaces));
+            world.MergedInventoryLayers.Add(new MergedInventoryLayer(layer.Id, layer.Spaces, layer.Seams));
         }
     }
 

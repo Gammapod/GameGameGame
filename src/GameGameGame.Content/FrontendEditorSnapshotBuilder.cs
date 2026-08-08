@@ -55,7 +55,14 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                 layer.Id.Value,
                 layer.Spaces
                     .Select(space => new FrontendEditorMergedInventorySpaceSummary(space.OwnerId.Value, space.Origin))
-                    .ToList()))
+                    .ToList())
+            {
+                Seams = layer.Seams
+                    .Select(seam => new FrontendEditorMergedInventoryLayerSeamSummary(
+                        new FrontendEditorMergedInventoryLayerEdgeSummary(seam.First.OwnerId.Value, seam.First.Edge),
+                        new FrontendEditorMergedInventoryLayerEdgeSummary(seam.Second.OwnerId.Value, seam.Second.Edge)))
+                    .ToList()
+            })
             .ToList();
 
     private IReadOnlyList<FrontendEditorEntityTemplateSummary> ListEntityTemplates(IReadOnlyList<FrontendEditorDiagnostic> diagnostics) =>

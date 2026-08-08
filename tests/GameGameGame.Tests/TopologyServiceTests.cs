@@ -401,6 +401,86 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
+    public void MergedInventoryLayerSeamsSupportPacmanStyleSelfWrapping()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("pacman-wrap"),
+            [new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0))],
+            [
+                new MergedInventoryLayerSeam(
+                    new MergedInventoryLayerEdge(TestWorld.PlayerId, Direction.East),
+                    new MergedInventoryLayerEdge(TestWorld.PlayerId, Direction.West)),
+                new MergedInventoryLayerSeam(
+                    new MergedInventoryLayerEdge(TestWorld.PlayerId, Direction.North),
+                    new MergedInventoryLayerEdge(TestWorld.PlayerId, Direction.South))
+            ]));
+        var movement = new MovementService();
+
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 1)), world.GetEntityLocation(TestWorld.RockId));
+
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 0))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.North));
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(1, 1)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void MergedInventoryLayerSeamsSupportRotationalSelfMapping()
+    {
+        var world = TestWorld.CreateWorld();
+        var gateId = new EntityId("rotating-room");
+        var gatePlaneId = new PlaneId("rotating-room-inventory");
+        AddPlane(world, new Plane(gatePlaneId, "Rotating Room Inventory", 3, 3));
+        AddEntity(world, gateId, "Rotating Room", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 3, inventoryHeight: 3, bulk: 1, aperture: 10);
+        world.RegisterInventoryPlane(gateId, gatePlaneId);
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("rotational"),
+            [new MergedInventorySpaceContribution(gateId, new GridCoord(0, 0))],
+            [new MergedInventoryLayerSeam(
+                new MergedInventoryLayerEdge(gateId, Direction.East),
+                new MergedInventoryLayerEdge(gateId, Direction.North))]));
+        var movement = new MovementService();
+
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(gatePlaneId, new GridCoord(2, 1))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        Assert.Equal(new PlaneCoord(gatePlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.RockId));
+
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.North));
+        Assert.Equal(new PlaneCoord(gatePlaneId, new GridCoord(2, 1)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void MergedInventoryLayerSeamsSupportMultipleEdgesConnectingSameTwoSpaces()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("multi-edge"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(10, 10))
+            ],
+            [
+                new MergedInventoryLayerSeam(
+                    new MergedInventoryLayerEdge(TestWorld.PlayerId, Direction.East),
+                    new MergedInventoryLayerEdge(TestWorld.SlimeId, Direction.West)),
+                new MergedInventoryLayerSeam(
+                    new MergedInventoryLayerEdge(TestWorld.PlayerId, Direction.North),
+                    new MergedInventoryLayerEdge(TestWorld.SlimeId, Direction.South))
+            ]));
+        var movement = new MovementService();
+
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.North));
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
     public void EntityTopologyPolicyConnectsInventoryEdgeOutwardToExteriorAdjacency()
     {
         var world = TestWorld.CreateWorld();

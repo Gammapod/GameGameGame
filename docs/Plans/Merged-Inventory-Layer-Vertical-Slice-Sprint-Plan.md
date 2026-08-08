@@ -280,6 +280,7 @@ Any revised test must be made intentionally failing for the new planned behavior
 - What deterministic edge-join shorthand should the editor expose first: Start/Center/End alignment, explicit offset, or both?
 - Should generated corridors be represented by synthetic owner entities, layer-owned neutral cells, or required author-supplied corridor owners?
 - How should SadConsole visualize merged layers and ownership boundaries without duplicating Core topology semantics?
+- For future non-Euclidean seam/link authoring and generated connections, every resolved `(cell, direction)` must still have zero or one neighbor before Core consumes the layer. Prototype Euclidean placement enforces this conservatively by rejecting duplicate or multi-layer source-space ownership; later graph/seam slices should reject directional conflicts or require explicit deterministic conflict resolution.
 
 ## Implementation notes and friction log
 
@@ -324,3 +325,24 @@ Any revised test must be made intentionally failing for the new planned behavior
 - Added an intentionally failing Content test for a valid three-contributor merged layer, then relaxed `PrototypeContentRegistry` validation from exactly two spaces to at least two spaces.
 - Validation still checks the important authoring invariants for every contributor count: each owner entity ID must resolve from authored carried layouts, owners must have usable inventory spaces, layer cells must not overlap, and the final layer must be connected.
 - Verification: `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~YamlContentLoaderTests.ContentValidationAllowsMergedLayerWithThreeContributors|FullyQualifiedName~YamlContentLoaderTests.ContentValidationRejectsMergedLayerOverlapDisconnectedOrInvalidOwner"` passed.
+
+### Topology invariant hardening turn: directional uniqueness
+
+- Promoted directional uniqueness to a hard topology invariant: every resolved `(cell, direction)` may have zero or one neighbor. Future seam/generator authoring must reject or explicitly resolve conflicts before Core movement, distance, POV, targeting, or interaction semantics consume the topology.
+- For the current prototype, ambiguous source-space participation is the practical conflict class: if one owner inventory appears more than once in a layer or in more than one layer, the same source cell can map to multiple layer cells and therefore multiple possible directional neighborhoods. Validation now rejects those cases instead of relying on resolver enumeration order.
+
+### Non-Euclidean seam experiment turn: Core seam links
+
+- Added a Core-only seam experiment on `MergedInventoryLayer`: `MergedInventoryLayerSeam` connects two owner edges and creates symmetric edge-to-edge traversal. This is not yet YAML/editor authored.
+- Verified prototype support for pacman-style self wrapping, rotational self mapping such as East edge to North edge, and multiple different edges connecting the same two spaces while preserving one neighbor per `(cell, direction)` in the tested cases.
+- Current seam mapping is deterministic same-index edge mapping and supports cardinal edges only. Different edge lengths currently produce a blocked unresolved seam neighbor rather than generated interpolation or stretching.
+- Verification: `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~TopologyServiceTests"` passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Core"` passed.
+- Follow-up before content authoring: add seam validation for directional conflicts, edge-length mismatch diagnostics, cardinal-edge-only diagnostics, and YAML/editor authoring shape. The hard invariant remains that conflicts must be rejected or explicitly resolved before Core consumers see the layer.
+
+### Non-Euclidean seam authoring turn: YAML/editor parity
+
+- Added intentionally failing Content tests for YAML seam load/materialization and seam validation diagnostics, including seam-vs-seam conflicts, seam-vs-Euclidean placement conflicts, and edge-length mismatches.
+- Implemented `mergedLayers.*.seams` across YAML DTOs, editable documents, editor service save/list operations, agent snapshots, frontend editor summaries, and scenario materialization into `WorldState.MergedInventoryLayers`.
+- Validation now allows a one-space layer only when it has self-connected seams, rejects non-cardinal seam endpoints, missing/non-contributing seam owners, edge-length mismatches, duplicate/multi-layer source ownership, and directional conflicts before Core consumes authored topology. Connectivity considers both ordinary placement adjacency and seam links.
+- Added compact Beta showcase scenarios for pacman wrap, rotational self mapping, and multi-edge three-room seams in `MergedInventoryLayerSeamShowcase.yaml` and the Beta manifest.
+- Verification: targeted seam YAML tests passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Core"` passed; `dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj` passed.

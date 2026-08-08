@@ -407,6 +407,27 @@ sections:
     status: active-delta
     tags: [delta, topology, merged-inventory-layer, containment, movement, player-interaction, three-contributor]
     source: User-requested merged inventory layer validation showcase
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerSeamShowcase.yaml
+    scenarioId: delta-merged-layer-seam-pacman-wrap
+    name: Merged Layer Seam Pacman Wrap
+    description: Compact single-space merged-layer seam room where Room A east wraps to west and north wraps to south; reviewers should enter A, cross both wrapped edges as ordinary movement, then use ExitFacing to leave.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, seams, wrap, movement, containment, player-interaction]
+    source: User-requested merged-layer seam authoring capability test
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerSeamShowcase.yaml
+    scenarioId: delta-merged-layer-seam-rotational-self
+    name: Merged Layer Seam Rotational Self
+    description: Compact single-space merged-layer seam room where Room A east edge connects to its north edge with same-index mapping; reviewers should enter A and cross the rotational self seam to confirm non-opposite cardinal edge authoring.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, seams, rotation, movement, containment, player-interaction]
+    source: User-requested merged-layer seam authoring capability test
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerSeamShowcase.yaml
+    scenarioId: delta-merged-layer-seam-multi-edge
+    name: Merged Layer Seam Multi Edge
+    description: Compact three-space merged-layer seam room connecting A east to B west, B east to A west, and B south to C north; reviewers should enter A, traverse both horizontal seams and the B-to-C south seam, then exit.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, seams, movement, containment, player-interaction, three-contributor]
+    source: User-requested merged-layer seam authoring capability test
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
     scenarioId: delta-create-destroy-polymorph-flagship-room
     name: Create Destroy Polymorph Flagship Room

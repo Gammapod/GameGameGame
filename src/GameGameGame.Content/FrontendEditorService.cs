@@ -330,9 +330,18 @@ public sealed record FrontendEditorScenarioSummary(
 
 public sealed record FrontendEditorMergedInventoryLayerSummary(
     string LayerId,
-    IReadOnlyList<FrontendEditorMergedInventorySpaceSummary> Spaces);
+    IReadOnlyList<FrontendEditorMergedInventorySpaceSummary> Spaces)
+{
+    public IReadOnlyList<FrontendEditorMergedInventoryLayerSeamSummary> Seams { get; init; } = [];
+}
 
 public sealed record FrontendEditorMergedInventorySpaceSummary(string OwnerEntityId, GridCoord Origin);
+
+public sealed record FrontendEditorMergedInventoryLayerSeamSummary(
+    FrontendEditorMergedInventoryLayerEdgeSummary First,
+    FrontendEditorMergedInventoryLayerEdgeSummary Second);
+
+public sealed record FrontendEditorMergedInventoryLayerEdgeSummary(string OwnerEntityId, Direction Edge);
 
 public sealed record FrontendEditorEntityTemplateSummary(
     string TemplateId,
