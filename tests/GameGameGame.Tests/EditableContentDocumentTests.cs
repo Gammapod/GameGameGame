@@ -100,6 +100,26 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void MergedInventoryLayerDocumentMapperRoundTripsCurrentTopologyDtoShape()
+    {
+        var layer = new MergedInventoryLayerDefinition(
+            new MergedInventoryLayerId("sharedInterior"),
+            [
+                new MergedInventorySpaceContribution(new EntityId("entityA"), new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(new EntityId("entityB"), new GridCoord(3, 1))
+            ]);
+
+        var dto = MergedInventoryLayerDocumentMapper.ToDto(layer);
+        var roundTripped = MergedInventoryLayerDocumentMapper.ToDefinition(layer.Id, dto);
+
+        Assert.Equal("entityA", dto.Spaces![0].Owner);
+        Assert.Equal(3, dto.Spaces[1].Origin!.X);
+        Assert.Equal(1, dto.Spaces[1].Origin!.Y);
+        Assert.Equal(layer.Id, roundTripped.Id);
+        Assert.Equal(layer.Spaces, roundTripped.Spaces);
+    }
+
+    [Fact]
     public void EditableContentDocumentCanCreateEntityTemplateWithGeneratedStableId()
     {
         var document = EditableContentDocument.LoadYaml(

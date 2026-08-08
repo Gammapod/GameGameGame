@@ -23,16 +23,7 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
 
     public void UpsertMergedInventoryLayer(MergedInventoryLayerDefinition layer)
     {
-        Document.MergedLayers[layer.Id.Value] = new EditableContentDocument.MergedInventoryLayerDto
-        {
-            Spaces = layer.Spaces
-                .Select(space => new EditableContentDocument.MergedInventorySpaceContributionDto
-                {
-                    Owner = space.OwnerId.Value,
-                    Origin = EditableContentDocument.GridCoordDto.From(space.Origin)
-                })
-                .ToList()
-        };
+        Document.MergedLayers[layer.Id.Value] = MergedInventoryLayerDocumentMapper.ToDto(layer);
         onChanged?.Invoke();
     }
 

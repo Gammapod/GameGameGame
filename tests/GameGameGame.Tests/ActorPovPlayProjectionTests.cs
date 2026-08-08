@@ -68,6 +68,32 @@ public sealed class ActorPovPlayProjectionTests
         Assert.Contains(projection.Diagnostics, diagnostic => diagnostic.Code == PointOfViewDiagnosticCode.CurrentPlaceNotFound);
     }
 
+    [Fact]
+    public void TopologyVisibilityProjectionReportsDepthLimitedReachabilityWithoutClaimingLineOfSight()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new TopologyVisibilityProjectionService(new DefaultTopologyService());
+
+        var projection = service.Project(world, TestWorld.PlayerId, maxDepth: 1);
+
+        Assert.Equal(TestWorld.PlayerId, projection.ObserverEntityId);
+        Assert.Equal(new TopologyCellRef(world.GetEntityLocation(TestWorld.PlayerId)), projection.Origin);
+        Assert.Contains(projection.VisibleCells, cell => cell.Cell == projection.Origin && cell.Distance == 0);
+        Assert.Contains(projection.VisibleCells, cell => cell.Direction == Direction.East && cell.Distance == 1 && cell.Kind == TopologyEdgeKind.DefaultGrid);
+        Assert.Contains(projection.Diagnostics, diagnostic => diagnostic.Code == TopologyVisibilityDiagnosticCode.LineOfSightNotImplemented);
+    }
+
+    [Fact]
+    public void TopologyVisibilityProjectionReportsMissingObserverWithoutFrontendGuessing()
+    {
+        var service = new TopologyVisibilityProjectionService(new DefaultTopologyService());
+
+        var projection = service.Project(TestWorld.CreateWorld(), new EntityId("missing"), maxDepth: 1);
+
+        Assert.Empty(projection.VisibleCells);
+        Assert.Contains(projection.Diagnostics, diagnostic => diagnostic.Code == TopologyVisibilityDiagnosticCode.ObserverNotFound);
+    }
+
     private sealed record ActorPovFixture(
         WorldState World,
         EntityId ScenarioHostId,

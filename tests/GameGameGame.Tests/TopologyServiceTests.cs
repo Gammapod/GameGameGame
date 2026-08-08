@@ -29,6 +29,108 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
+    public void TopologyEdgeFactRoundTripsDefaultNeighborFactsWithoutChangingSemantics()
+    {
+        var world = TestWorld.CreateWorld();
+        ITopologyService topology = new DefaultTopologyService();
+        var origin = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0));
+
+        var found = topology.TryGetNeighbor(world, origin, Direction.West, out var neighbor);
+        var fact = TopologyEdgeFact.FromNeighbor(origin, neighbor);
+        var roundTripped = fact.ToNeighbor();
+
+        Assert.False(found);
+        Assert.Equal(new TopologyCellRef(origin), fact.Source);
+        Assert.Equal(new TopologyCellRef(neighbor.Destination), fact.Destination);
+        Assert.Equal(neighbor.Direction, fact.Direction);
+        Assert.Equal(neighbor.Kind, fact.Kind);
+        Assert.Equal(neighbor.IsBlocked, fact.IsBlocked);
+        Assert.Equal(neighbor.FailureReason, fact.FailureReason);
+        Assert.Equal(neighbor.FailureDetail, fact.FailureDetail);
+        Assert.Equal(neighbor, roundTripped);
+    }
+
+    [Fact]
+    public void TopologyEdgeFactRoundTripsDirectedOverlayNeighborFactsWithoutChangingSemantics()
+    {
+        var world = TestWorld.CreateWorld();
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var remote = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        ITopologyService topology = new DirectedOverlayTopologyService(
+            new DefaultTopologyService(),
+            [new DirectedTopologyEdge(origin, Direction.North, remote)]);
+
+        var found = topology.TryGetNeighbor(world, origin, Direction.North, out var neighbor);
+        var fact = TopologyEdgeFact.FromNeighbor(origin, neighbor);
+
+        Assert.True(found);
+        Assert.Equal(new TopologyCellRef(origin), fact.Source);
+        Assert.Equal(new TopologyCellRef(remote), fact.Destination);
+        Assert.Equal(Direction.North, fact.Direction);
+        Assert.Equal(TopologyEdgeKind.DirectedOverlay, fact.Kind);
+        Assert.False(fact.IsBlocked);
+        Assert.Null(fact.FailureReason);
+        Assert.Null(fact.FailureDetail);
+        Assert.Equal(neighbor, fact.ToNeighbor());
+    }
+
+    [Fact]
+    public void TopologyDirectionalUniquenessAcceptsUniqueAndDuplicateIdenticalEdges()
+    {
+        var source = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)));
+        var destination = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)));
+        var northDestination = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 0)));
+        var edges = new[]
+        {
+            new TopologyDirectedEdgeFact(source, Direction.East, destination),
+            new TopologyDirectedEdgeFact(source, Direction.East, destination),
+            new TopologyDirectedEdgeFact(source, Direction.North, northDestination)
+        };
+
+        var result = TopologyDirectionalUniqueness.Validate(edges);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Conflicts);
+    }
+
+    [Fact]
+    public void TopologyDirectionalUniquenessRejectsConflictingDestinationsForSameCellAndDirection()
+    {
+        var source = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 1)));
+        var firstDestination = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 1)));
+        var secondDestination = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)));
+        var edges = new[]
+        {
+            new TopologyDirectedEdgeFact(source, Direction.East, firstDestination),
+            new TopologyDirectedEdgeFact(source, Direction.East, secondDestination)
+        };
+
+        var result = TopologyDirectionalUniqueness.Validate(edges);
+        var conflict = Assert.Single(result.Conflicts);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(source, conflict.Source);
+        Assert.Equal(Direction.East, conflict.Direction);
+        Assert.Equal(firstDestination, conflict.FirstDestination);
+        Assert.Equal(secondDestination, conflict.ConflictingDestination);
+    }
+
+    [Fact]
+    public void TopologyCoordinateVocabularyDistinguishesSourceLayoutAndDisplayCoordinates()
+    {
+        var source = new TopologyCellRef(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)));
+        var layout = new TopologyLayoutCoord(new GridCoord(1, 2));
+        var display = new TopologyDisplayCoord(new GridCoord(1, 2));
+
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), source.SourceCoord);
+        Assert.Equal(new GridCoord(1, 2), layout.Coord);
+        Assert.Equal(new GridCoord(1, 2), display.Coord);
+        Assert.Equal("world(1,2)", source.ToString());
+        Assert.Equal("layout(1,2)", layout.ToString());
+        Assert.Equal("display(1,2)", display.ToString());
+    }
+
+    [Fact]
     public void DefaultTopologyReturnsUnblockedIntercardinalNeighbor()
     {
         var world = TestWorld.CreateWorld();

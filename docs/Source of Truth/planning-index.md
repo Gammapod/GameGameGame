@@ -70,8 +70,8 @@ Do not read when:
    - Active focused sprint plan for canonical pathfinding-backed target movement: `TargetPathMove`, distance-to-adjacency semantics, seek/flee/maintain/orbit modes, hidden legacy target-movement steps, Core/Content/Editor parity, and user-facing failure/maze/orbit scenarios.
 9. `docs/Plans/Cost-System-Vertical-Slice-Sprint-Plan.md`
    - Active focused sprint plan for optional entity-inventory Action Step costs: recursive actor-inventory cost lookup by runtime template ID, missing-cost fallthrough, post-success recursive cost destruction, Core/Content/Editor parity, and per-phase TDD traces.
-10. `docs/Plans/Merged-Inventory-Layer-Vertical-Slice-Sprint-Plan.md`
-    - Active focused sprint plan for MVP merged inventory topology layers: two explicitly placed entity-owned inventory spaces resolved into one durable topology, seam traversal as ordinary movement, local owner derivation from the current source cell, Enter/Exit through local owners only at exterior boundaries, destroy guards for active contributors, and Core/Content/Editor TDD trace.
+10. `docs/Plans/Merged-Topology-Refactor-Sprint-Plan.md`
+     - Active behavior-preserving refactor sprint plan preparing for clean merged inventory topology implementation: topology identity/fact vocabulary, directional uniqueness helper, topology identity versus layout/render coordinate naming, Content/editor topology plumbing seams, and a frontend-neutral topology visibility projection seam stub.
 11. `docs/Plans/SadConsole-Play-Mode-Logging-Sprint-Plan.md`
       - Active focused frontend sprint plan for Play-mode logging: `L` left-region cycling between parent/location chain, global log, and current-location log; persistent current-region success activity; and stretch mouse hover tooltips over structured action-log projection.
 12. `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`

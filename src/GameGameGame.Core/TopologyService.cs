@@ -16,6 +16,89 @@ public sealed record TopologyNeighbor(
     FailureReason? FailureReason,
     string? FailureDetail);
 
+public readonly record struct TopologyCellRef(PlaneCoord SourceCoord)
+{
+    public override string ToString() => SourceCoord.ToString();
+}
+
+public readonly record struct TopologyLayoutCoord(GridCoord Coord)
+{
+    public override string ToString() => $"layout{Coord}";
+}
+
+public readonly record struct TopologyDisplayCoord(GridCoord Coord)
+{
+    public override string ToString() => $"display{Coord}";
+}
+
+public sealed record TopologyEdgeFact(
+    TopologyCellRef Source,
+    Direction Direction,
+    TopologyCellRef Destination,
+    TopologyEdgeKind Kind,
+    bool IsBlocked,
+    FailureReason? FailureReason,
+    string? FailureDetail)
+{
+    public static TopologyEdgeFact FromNeighbor(PlaneCoord source, TopologyNeighbor neighbor) =>
+        new(
+            new TopologyCellRef(source),
+            neighbor.Direction,
+            new TopologyCellRef(neighbor.Destination),
+            neighbor.Kind,
+            neighbor.IsBlocked,
+            neighbor.FailureReason,
+            neighbor.FailureDetail);
+
+    public TopologyNeighbor ToNeighbor() =>
+        new(Destination.SourceCoord, Direction, Kind, IsBlocked, FailureReason, FailureDetail);
+}
+
+public sealed record TopologyDirectedEdgeFact(
+    TopologyCellRef Source,
+    Direction Direction,
+    TopologyCellRef Destination);
+
+public sealed record TopologyDirectionalUniquenessConflict(
+    TopologyCellRef Source,
+    Direction Direction,
+    TopologyCellRef FirstDestination,
+    TopologyCellRef ConflictingDestination);
+
+public sealed record TopologyDirectionalUniquenessResult(IReadOnlyList<TopologyDirectionalUniquenessConflict> Conflicts)
+{
+    public bool IsValid => Conflicts.Count == 0;
+}
+
+public static class TopologyDirectionalUniqueness
+{
+    public static TopologyDirectionalUniquenessResult Validate(IEnumerable<TopologyDirectedEdgeFact> edges)
+    {
+        var destinationsBySourceDirection = new Dictionary<(TopologyCellRef Source, Direction Direction), TopologyCellRef>();
+        var conflicts = new List<TopologyDirectionalUniquenessConflict>();
+        foreach (var edge in edges)
+        {
+            var key = (edge.Source, edge.Direction);
+            if (!destinationsBySourceDirection.TryGetValue(key, out var existingDestination))
+            {
+                destinationsBySourceDirection[key] = edge.Destination;
+                continue;
+            }
+
+            if (existingDestination != edge.Destination)
+            {
+                conflicts.Add(new TopologyDirectionalUniquenessConflict(
+                    edge.Source,
+                    edge.Direction,
+                    existingDestination,
+                    edge.Destination));
+            }
+        }
+
+        return new TopologyDirectionalUniquenessResult(conflicts);
+    }
+}
+
 public sealed record TopologyRayStep(
     int StepIndex,
     PlaneCoord Origin,
