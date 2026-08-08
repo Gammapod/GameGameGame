@@ -13,18 +13,17 @@ entityTemplates:
       coord:
         x: 1
         y: 3
-      controller: Player
     - entityId: mergedLayerGateA
       templateId: mergedLayerGateA
       coord:
         x: 2
         y: 3
+      controller: Player
     - entityId: mergedLayerRemoteRoom
       templateId: mergedLayerRemoteRoom
       coord:
         x: 8
         y: 3
-
   mergedLayerRemoteRoom:
     name: Remote Exterior Room
     inventoryWidth: 11
@@ -39,7 +38,6 @@ entityTemplates:
       coord:
         x: 7
         y: 2
-
   mergedLayerPlayer:
     name: Merged Layer Player
     inventoryWidth: 1
@@ -57,7 +55,6 @@ entityTemplates:
       targetCapabilities:
       - EnterTarget
       range: 1
-
   mergedLayerGateA:
     name: Gate A
     inventoryWidth: 3
@@ -66,10 +63,11 @@ entityTemplates:
     carryingCapacity: 10
     bulk: 3
     aperture: 10
-    defaultActionPlanId: mergedLayerGateMoveNorth
     enterPolicy: FirstUnoccupiedRowMajor
     exitPolicy: AnyCell
-
+    defaultActionPlanId: mergedLayerPlayerMoveEnterExit
+    actionStateDefaults:
+      facing: West
   mergedLayerGateB:
     name: Gate B
     inventoryWidth: 2
@@ -78,10 +76,9 @@ entityTemplates:
     carryingCapacity: 10
     bulk: 3
     aperture: 10
-    defaultActionPlanId: mergedLayerGateMoveSouth
     enterPolicy: FirstUnoccupiedRowMajor
     exitPolicy: AnyCell
-
+    defaultActionPlanId: mergedLayerGateMoveSouth
 presentations:
   mergedLayerAcceptanceYard:
     glyph: '#'
@@ -90,38 +87,48 @@ presentations:
     glyph: '@'
     color: Yellow
   mergedLayerRemoteRoom:
-    glyph: 'R'
+    glyph: R
     color: White
   mergedLayerGateA:
-    glyph: 'A'
+    glyph: A
     color: Cyan
   mergedLayerGateB:
-    glyph: 'B'
+    glyph: B
     color: Green
-
 actionPlans:
   mergedLayerPlayerMoveEnterExit:
     id: mergedLayerPlayerMoveEnterExit
     behavior:
       steps:
       - kind: Move
+        targetSelf: false
         directionMode: Forward
       - kind: EnterTarget
         targetLabel: target
+        targetSelf: false
       - kind: ExitFacing
+        targetSelf: false
   mergedLayerGateMoveNorth:
     id: mergedLayerGateMoveNorth
     behavior:
       steps:
       - kind: Move
+        targetSelf: false
         directionMode: North
   mergedLayerGateMoveSouth:
     id: mergedLayerGateMoveSouth
     behavior:
       steps:
       - kind: Move
+        targetSelf: false
         directionMode: South
-
+scenarios:
+  delta-merged-inventory-layer-acceptance:
+    name: Delta Merged Inventory Layer Acceptance
+    scenarioRootEntityTemplateId: mergedLayerAcceptanceYard
+    playerControls:
+      player-1:
+      - mergedLayerPlayer
 mergedLayers:
   mergedLayerSharedInterior:
     spaces:
@@ -133,11 +140,3 @@ mergedLayers:
       origin:
         x: 3
         y: 1
-
-scenarios:
-  delta-merged-inventory-layer-acceptance:
-    name: Delta Merged Inventory Layer Acceptance
-    scenarioRootEntityTemplateId: mergedLayerAcceptanceYard
-    playerControls:
-      player-1:
-      - mergedLayerPlayer

@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$FontPath,
 
-    [string]$OutputDir = "C:\Users\Scramble\AppData\Local\Temp\opencode\tileset-inspection",
+    [string]$OutputDir = "C:\Dev\GameGameGame\assets",
 
     [int]$Scale = 4,
 

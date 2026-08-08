@@ -30,6 +30,9 @@
   },
   "roles": {
     "colorSample": 181,
+    "gridDotted": 223,
+    "gridSolid": 224,
+    "gridIce": 225,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

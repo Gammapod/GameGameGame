@@ -1,0 +1,221 @@
+entityTemplates:
+  threeRoomLinearYard:
+    name: Three Room Linear Yard
+    inventoryWidth: 11
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: threeRoomLinearPlayer
+      templateId: threeRoomLayerPlayer
+      coord:
+        x: 1
+        y: 2
+      controller: Player
+    - entityId: threeRoomLinearRoomA
+      templateId: threeRoomLinearRoomA
+      coord:
+        x: 2
+        y: 2
+    - entityId: threeRoomLinearRoomB
+      templateId: threeRoomLinearRoomB
+      coord:
+        x: 5
+        y: 2
+    - entityId: threeRoomLinearRoomC
+      templateId: threeRoomLinearRoomC
+      coord:
+        x: 8
+        y: 2
+  threeRoomBentYard:
+    name: Three Room Bent Yard
+    inventoryWidth: 9
+    inventoryHeight: 8
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: threeRoomBentPlayer
+      templateId: threeRoomLayerPlayer
+      coord:
+        x: 1
+        y: 2
+      controller: Player
+    - entityId: threeRoomBentRoomA
+      templateId: threeRoomBentRoomA
+      coord:
+        x: 2
+        y: 2
+    - entityId: threeRoomBentRoomB
+      templateId: threeRoomBentRoomB
+      coord:
+        x: 5
+        y: 2
+    - entityId: threeRoomBentRoomC
+      templateId: threeRoomBentRoomC
+      coord:
+        x: 5
+        y: 5
+  threeRoomLinearRoomA:
+    name: Linear Room A
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  threeRoomLinearRoomB:
+    name: Linear Room B
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  threeRoomLinearRoomC:
+    name: Linear Room C
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  threeRoomBentRoomA:
+    name: Bent Room A
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  threeRoomBentRoomB:
+    name: Bent Room B
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  threeRoomBentRoomC:
+    name: Bent Room C
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  threeRoomLayerPlayer:
+    name: Three Room Layer Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: threeRoomLayerPlayerMoveEnterExit
+    actionStateDefaults:
+      facing: East
+    targetingRules:
+    - slot: 1
+      label: target
+      targetCapabilities:
+      - EnterTarget
+      range: 1
+presentations:
+  threeRoomLinearYard:
+    glyph: '#'
+    color: Gray
+  threeRoomBentYard:
+    glyph: '#'
+    color: Gray
+  threeRoomLinearRoomA:
+    glyph: A
+    color: Cyan
+  threeRoomLinearRoomB:
+    glyph: B
+    color: Green
+  threeRoomLinearRoomC:
+    glyph: C
+    color: White
+  threeRoomBentRoomA:
+    glyph: A
+    color: Cyan
+  threeRoomBentRoomB:
+    glyph: B
+    color: Green
+  threeRoomBentRoomC:
+    glyph: C
+    color: White
+  threeRoomLayerPlayer:
+    glyph: '@'
+    color: Yellow
+actionPlans:
+  threeRoomLayerPlayerMoveEnterExit:
+    id: threeRoomLayerPlayerMoveEnterExit
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: EnterTarget
+        targetLabel: target
+        targetSelf: false
+      - kind: ExitFacing
+        targetSelf: false
+scenarios:
+  delta-merged-inventory-layer-three-room-linear:
+    name: Delta Merged Inventory Layer Three Room Linear
+    scenarioRootEntityTemplateId: threeRoomLinearYard
+    playerControls:
+      player-1:
+      - threeRoomLinearPlayer
+  delta-merged-inventory-layer-three-room-bent:
+    name: Delta Merged Inventory Layer Three Room Bent
+    scenarioRootEntityTemplateId: threeRoomBentYard
+    playerControls:
+      player-1:
+      - threeRoomBentPlayer
+mergedLayers:
+  threeRoomLinearSharedInterior:
+    spaces:
+    - owner: threeRoomLinearRoomA
+      origin:
+        x: 0
+        y: 0
+    - owner: threeRoomLinearRoomB
+      origin:
+        x: 3
+        y: 0
+    - owner: threeRoomLinearRoomC
+      origin:
+        x: 6
+        y: 0
+  threeRoomBentSharedInterior:
+    spaces:
+    - owner: threeRoomBentRoomA
+      origin:
+        x: 0
+        y: 0
+    - owner: threeRoomBentRoomB
+      origin:
+        x: 3
+        y: 0
+    - owner: threeRoomBentRoomC
+      origin:
+        x: 3
+        y: 3

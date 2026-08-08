@@ -393,6 +393,20 @@ sections:
     status: active-delta
     tags: [delta, topology, merged-inventory-layer, containment, movement, player-interaction, vertical-slice]
     source: docs/Plans/Merged-Inventory-Layer-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerThreeRoomShowcase.yaml
+    scenarioId: delta-merged-inventory-layer-three-room-linear
+    name: Merged Inventory Layer Three Room Linear
+    description: Compact three-contributor merged-inventory-layer room with Room A east side fused to Room B west side and Room B east side fused to Room C west side; reviewers should enter A, walk east through B into C, then exit east from C.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, containment, movement, player-interaction, three-contributor]
+    source: User-requested merged inventory layer validation showcase
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerThreeRoomShowcase.yaml
+    scenarioId: delta-merged-inventory-layer-three-room-bent
+    name: Merged Inventory Layer Three Room Bent
+    description: Compact three-contributor merged-inventory-layer room with Room A east side fused to Room B west side and Room B south side fused to Room C north side; reviewers should enter A, walk east into B, turn south into C, then exit south from C.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, containment, movement, player-interaction, three-contributor]
+    source: User-requested merged inventory layer validation showcase
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
     scenarioId: delta-create-destroy-polymorph-flagship-room
     name: Create Destroy Polymorph Flagship Room
