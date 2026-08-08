@@ -46,7 +46,8 @@ internal static class ActorPovPlayScreenModelBuilder
         ActorPovPlayPresentationState? presentationState = null,
         EntityId? controlledActorId = null,
         ActionLogProjection? actionLog = null,
-        InventorySpaceRootCellMetrics? rootCellMetrics = null) =>
+        InventorySpaceRootCellMetrics? rootCellMetrics = null,
+        int? topologyPovDepth = null) =>
         Build(
             session.World,
             controlledActorId ?? session.PlayerEntityId,
@@ -56,7 +57,8 @@ internal static class ActorPovPlayScreenModelBuilder
             ResolveActionPlanDescriptor(session),
             presentationState,
             actionLog,
-            rootCellMetrics);
+            rootCellMetrics,
+            topologyPovDepth);
 
     public static ActorPovPlayScreenModel Build(
         WorldState world,
@@ -67,7 +69,8 @@ internal static class ActorPovPlayScreenModelBuilder
         Func<EntityId, ActionPlanDescriptor?>? getActionPlanDescriptor = null,
         ActorPovPlayPresentationState? presentationState = null,
         ActionLogProjection? actionLog = null,
-        InventorySpaceRootCellMetrics? rootCellMetrics = null)
+        InventorySpaceRootCellMetrics? rootCellMetrics = null,
+        int? topologyPovDepth = null)
     {
         var layout = ActorPovPlayLayoutResolver.Resolve(drawableBounds);
         var projection = new ActorPovPlayProjectionService(getAppearance, getActionPlanDescriptor)
@@ -83,15 +86,28 @@ internal static class ActorPovPlayScreenModelBuilder
             BuildFacingFacts(world),
             BuildTargetFacts(world),
             resolvedRootCellMetrics,
-            BuildCurrentLayerView(world, controlledActorId, getAppearance),
+            BuildCurrentLayerView(world, controlledActorId, getAppearance, topologyPovDepth),
             BuildCurrentLayerPlaneIds(world, controlledActorId, projection));
     }
 
     private static InventorySpaceViewModel? BuildCurrentLayerView(
         WorldState world,
         EntityId controlledActorId,
-        Func<EntityId, EntityInspectionAppearance>? getAppearance)
+        Func<EntityId, EntityInspectionAppearance>? getAppearance,
+        int? topologyPovDepth)
     {
+        if (topologyPovDepth is { } depth && world.Entities.ContainsKey(controlledActorId))
+        {
+            return InventorySpaceViewModel.FromActorTopologyFlood(
+                "0.actor-pov.current-layer.topology-flood",
+                world,
+                controlledActorId,
+                depth,
+                cellMetrics: InventorySpaceCellMetrics.Default,
+                facingByEntityId: BuildFacingFacts(world),
+                getAppearance: getAppearance);
+        }
+
         if (!world.Entities.ContainsKey(controlledActorId) ||
             !MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(controlledActorId), out var cell))
         {

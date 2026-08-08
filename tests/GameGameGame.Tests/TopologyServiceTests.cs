@@ -481,6 +481,117 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
+    public void MergedInventoryLayerOverlappingLayoutLoopTraversesExplicitSeamsBackToStart()
+    {
+        var world = TestWorld.CreateWorld();
+        var roomIds = Enumerable.Range(0, 8).Select(index => new EntityId($"loop-room-{(char)('A' + index)}")).ToArray();
+        var planeIds = Enumerable.Range(0, 8).Select(index => new PlaneId($"loop-room-{(char)('A' + index)}-inventory")).ToArray();
+        for (var index = 0; index < roomIds.Length; index++)
+        {
+            AddPlane(world, new Plane(planeIds[index], $"Loop Room {(char)('A' + index)} Inventory", 1, 1));
+            AddEntity(
+                world,
+                roomIds[index],
+                $"Loop Room {(char)('A' + index)}",
+                new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(index % 5, 4 - (index / 5))),
+                inventoryWidth: 1,
+                inventoryHeight: 1,
+                bulk: 1,
+                aperture: 10);
+            world.RegisterInventoryPlane(roomIds[index], planeIds[index]);
+        }
+
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("overlap-loop"),
+            roomIds.Select(roomId => new MergedInventorySpaceContribution(roomId, new GridCoord(0, 0))).ToList(),
+            [
+                Seam(0, Direction.East, 1, Direction.West),
+                Seam(1, Direction.South, 2, Direction.North),
+                Seam(2, Direction.West, 3, Direction.East),
+                Seam(3, Direction.North, 4, Direction.South),
+                Seam(4, Direction.East, 5, Direction.West),
+                Seam(5, Direction.South, 6, Direction.North),
+                Seam(6, Direction.West, 7, Direction.East),
+                Seam(7, Direction.North, 0, Direction.South)
+            ],
+            AllowLayoutOverlap: true));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(planeIds[0], new GridCoord(0, 0))));
+
+        foreach (var direction in new[] { Direction.East, Direction.South, Direction.West, Direction.North, Direction.East, Direction.South, Direction.West, Direction.North })
+        {
+            Assert.True(movement.TryMove(world, TestWorld.RockId, direction));
+        }
+
+        Assert.Equal(new PlaneCoord(planeIds[0], new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+
+        MergedInventoryLayerSeam Seam(int fromIndex, Direction fromEdge, int toIndex, Direction toEdge) =>
+            new(new MergedInventoryLayerEdge(roomIds[fromIndex], fromEdge), new MergedInventoryLayerEdge(roomIds[toIndex], toEdge));
+    }
+
+    [Fact]
+    public void MergedInventoryLayerCellLinksConnectMismatchedRoomAndHallwayDoorways()
+    {
+        var world = TestWorld.CreateWorld();
+        var roomId = new EntityId("room-a");
+        var roomPlaneId = new PlaneId("room-a-inventory");
+        var hallId = new EntityId("hall-ab");
+        var hallPlaneId = new PlaneId("hall-ab-inventory");
+        AddPlane(world, new Plane(roomPlaneId, "Room A Inventory", 3, 3));
+        AddPlane(world, new Plane(hallPlaneId, "Hall AB Inventory", 5, 1));
+        AddEntity(world, roomId, "Room A", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 4)), inventoryWidth: 3, inventoryHeight: 3, bulk: 1, aperture: 10);
+        AddEntity(world, hallId, "Hall AB", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 5, inventoryHeight: 1, bulk: 1, aperture: 10);
+        world.RegisterInventoryPlane(roomId, roomPlaneId);
+        world.RegisterInventoryPlane(hallId, hallPlaneId);
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("room-hall-link"),
+            [
+                new MergedInventorySpaceContribution(roomId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(hallId, new GridCoord(10, 10))
+            ],
+            CellLinks:
+            [
+                new MergedInventoryLayerCellLink(
+                    new MergedInventoryLayerCellEndpoint(roomId, new GridCoord(2, 1)), Direction.East,
+                    new MergedInventoryLayerCellEndpoint(hallId, new GridCoord(0, 0)), Direction.West)
+            ]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(roomPlaneId, new GridCoord(2, 1))));
+
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        Assert.Equal(new PlaneCoord(hallPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.West));
+        Assert.Equal(new PlaneCoord(roomPlaneId, new GridCoord(2, 1)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void MergedInventoryLayerOverlapModePreservesInternalContributorMovement()
+    {
+        var world = TestWorld.CreateWorld();
+        var hallId = new EntityId("overlap-hall");
+        var hallPlaneId = new PlaneId("overlap-hall-inventory");
+        AddPlane(world, new Plane(hallPlaneId, "Overlap Hall Inventory", 5, 1));
+        AddEntity(world, hallId, "Overlap Hall", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 5, inventoryHeight: 1, bulk: 1, aperture: 10);
+        world.RegisterInventoryPlane(hallId, hallPlaneId);
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("overlap-hall-layer"),
+            [new MergedInventorySpaceContribution(hallId, new GridCoord(0, 0))],
+            AllowLayoutOverlap: true,
+            CellLinks:
+            [
+                new MergedInventoryLayerCellLink(
+                    new MergedInventoryLayerCellEndpoint(hallId, new GridCoord(4, 0)), Direction.East,
+                    new MergedInventoryLayerCellEndpoint(hallId, new GridCoord(0, 0)), Direction.West)
+            ]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(hallPlaneId, new GridCoord(0, 0))));
+
+        Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
+        Assert.Equal(new PlaneCoord(hallPlaneId, new GridCoord(1, 0)), world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
     public void EntityTopologyPolicyConnectsInventoryEdgeOutwardToExteriorAdjacency()
     {
         var world = TestWorld.CreateWorld();

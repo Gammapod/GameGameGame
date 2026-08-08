@@ -23,6 +23,12 @@ public sealed partial class EditableContentDocument
         public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
 
         public List<MergedInventoryLayerSeamDto>? Seams { get; set; }
+
+        public List<MergedInventoryLayerCellLinkDto>? CellLinks { get; set; }
+
+        public List<MergedInventoryLayerJoinDto>? Joins { get; set; }
+
+        public bool AllowLayoutOverlap { get; set; }
     }
 
     public sealed class MergedInventorySpaceContributionDto
@@ -44,6 +50,37 @@ public sealed partial class EditableContentDocument
         public string? Owner { get; set; }
 
         public Direction? Edge { get; set; }
+    }
+
+    public sealed class MergedInventoryLayerCellLinkDto
+    {
+        public MergedInventoryLayerCellEndpointDto? First { get; set; }
+
+        public Direction? FirstDirection { get; set; }
+
+        public MergedInventoryLayerCellEndpointDto? Second { get; set; }
+
+        public Direction? SecondDirection { get; set; }
+    }
+
+    public sealed class MergedInventoryLayerCellEndpointDto
+    {
+        public string? Owner { get; set; }
+
+        public GridCoordDto? Coord { get; set; }
+    }
+
+    public sealed class MergedInventoryLayerJoinDto
+    {
+        public MergedInventoryLayerEdgeDto? From { get; set; }
+
+        public MergedInventoryLayerEdgeDto? To { get; set; }
+
+        public MergedInventoryLayerJoinAlignment? Align { get; set; }
+
+        public int? Offset { get; set; }
+
+        public int? Length { get; set; }
     }
 
     public sealed class EntityTemplateDto

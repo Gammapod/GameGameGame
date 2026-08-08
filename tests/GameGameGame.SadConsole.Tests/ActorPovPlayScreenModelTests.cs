@@ -223,6 +223,145 @@ public sealed class ActorPovPlayScreenModelTests
     }
 
     [Fact]
+    public void CurrentPlaceComponentCanRenderDepthOneActorRelativeTopologyPov()
+    {
+        var fixture = ActorPovFixture.Create();
+        fixture.World.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("wrap"),
+            [new MergedInventorySpaceContribution(fixture.RoomId, new GridCoord(0, 0))],
+            [new MergedInventoryLayerSeam(
+                new MergedInventoryLayerEdge(fixture.RoomId, Direction.East),
+                new MergedInventoryLayerEdge(fixture.RoomId, Direction.West))]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(fixture.World, fixture.ActorId, new PlaneCoord(new PlaneId("roomPlane"), new GridCoord(4, 0))));
+        Assert.True(movement.TryPlace(fixture.World, fixture.ChestId, new PlaneCoord(new PlaneId("roomPlane"), new GridCoord(0, 0))));
+
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor,
+            topologyPovDepth: 1);
+
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        Assert.Equal("Actor topology POV d1", component.View.Title);
+        Assert.Equal(3, component.View.Width);
+        Assert.Equal(3, component.View.Height);
+        Assert.Contains(component.View.Entities, entity => entity.EntityId == fixture.ActorId && entity.Coord == new GridCoord(1, 1));
+        Assert.Contains(component.View.Entities, entity => entity.EntityId == fixture.ChestId && entity.Coord == new GridCoord(2, 1));
+        Assert.Contains(new GridCoord(2, 1), component.View.BackdropCoords!);
+    }
+
+    [Fact]
+    public void CurrentPlaceComponentMarksDepthTwoActorRelativeTopologyOverlaps()
+    {
+        var world = new WorldState();
+        var actorId = new EntityId("actor");
+        var roomIds = new[]
+        {
+            new EntityId("room-a"),
+            new EntityId("room-b"),
+            new EntityId("room-c"),
+            new EntityId("room-d"),
+            new EntityId("room-g")
+        };
+        var planeIds = roomIds.Select(room => new PlaneId($"{room.Value}-inventory")).ToArray();
+        AddPlane(new PlaneId("outer"), 5, 1);
+        for (var index = 0; index < roomIds.Length; index++)
+        {
+            AddPlane(planeIds[index]);
+            AddEntity(roomIds[index], $"Room {(char)('A' + index)}", new PlaneCoord(new PlaneId("outer"), new GridCoord(index, 0)), inventoryWidth: 1, inventoryHeight: 1);
+            world.RegisterInventoryPlane(roomIds[index], planeIds[index]);
+        }
+
+        AddEntity(actorId, "Actor", new PlaneCoord(planeIds[0], new GridCoord(0, 0)), inventoryWidth: 1, inventoryHeight: 1);
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("branch-overlap"),
+            roomIds.Select(room => new MergedInventorySpaceContribution(room, new GridCoord(0, 0))).ToList(),
+            [
+                new MergedInventoryLayerSeam(new MergedInventoryLayerEdge(roomIds[0], Direction.East), new MergedInventoryLayerEdge(roomIds[1], Direction.West)),
+                new MergedInventoryLayerSeam(new MergedInventoryLayerEdge(roomIds[1], Direction.South), new MergedInventoryLayerEdge(roomIds[2], Direction.North)),
+                new MergedInventoryLayerSeam(new MergedInventoryLayerEdge(roomIds[0], Direction.South), new MergedInventoryLayerEdge(roomIds[3], Direction.North)),
+                new MergedInventoryLayerSeam(new MergedInventoryLayerEdge(roomIds[3], Direction.East), new MergedInventoryLayerEdge(roomIds[4], Direction.West))
+            ],
+            AllowLayoutOverlap: true));
+
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            world,
+            actorId,
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            entityId => entityId == actorId ? new EntityInspectionAppearance('@', PresentationColor.Yellow) : new EntityInspectionAppearance('#', PresentationColor.Gray),
+            _ => null,
+            topologyPovDepth: 2);
+
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        Assert.Equal("Actor topology POV d2", component.View.Title);
+        Assert.Equal(5, component.View.Width);
+        Assert.Equal(5, component.View.Height);
+        Assert.Contains(component.View.Entities, entity => entity.EntityId == actorId && entity.Coord == new GridCoord(2, 2));
+        Assert.Contains(component.View.Entities, entity =>
+            entity.Coord == new GridCoord(3, 3) &&
+            entity.EntityId.Value.StartsWith("topology-overlap:", StringComparison.Ordinal) &&
+            entity.DisplayName?.Contains("overlapping topology cells", StringComparison.Ordinal) == true);
+        Assert.Contains(component.View.Decorators, decorator => decorator.Coord == new GridCoord(3, 3) && decorator.Role == InventorySpaceDecoratorRole.Warning);
+
+        void AddPlane(PlaneId planeId, int width = 1, int height = 1)
+        {
+            world.Planes.Add(planeId, new Plane(planeId, planeId.Value, width, height));
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    world.AddNode(planeId, new GridCoord(x, y));
+                }
+            }
+        }
+
+        void AddEntity(EntityId entityId, string name, PlaneCoord location, int inventoryWidth, int inventoryHeight)
+        {
+            var nodeId = world.GetNodeId(location);
+            world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, 1, 10));
+            world.Occupancy.Add(nodeId, entityId);
+        }
+    }
+
+    [Fact]
+    public void CurrentPlaceComponentDoesNotMarkMultipleRoutesToSameTopologyCellAsOverlap()
+    {
+        var fixture = ActorPovFixture.Create();
+        fixture.World.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("wrap"),
+            [new MergedInventorySpaceContribution(fixture.RoomId, new GridCoord(0, 0))],
+            [new MergedInventoryLayerSeam(
+                new MergedInventoryLayerEdge(fixture.RoomId, Direction.East),
+                new MergedInventoryLayerEdge(fixture.RoomId, Direction.West))]));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(fixture.World, fixture.ActorId, new PlaneCoord(new PlaneId("roomPlane"), new GridCoord(4, 0))));
+
+        var model = ActorPovPlayScreenModelBuilder.Build(
+            fixture.World,
+            fixture.ActorId,
+            fixture.ActionPlans,
+            SadConsoleRect.FromSize(1, 1, 118, 38),
+            fixture.Appearance,
+            fixture.ActionPlanDescriptor,
+            topologyPovDepth: 2);
+
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        Assert.Contains(new GridCoord(3, 3), component.View.BackdropCoords!);
+        Assert.DoesNotContain(component.View.Entities, entity =>
+            entity.Coord == new GridCoord(3, 3) &&
+            entity.EntityId.Value.StartsWith("topology-overlap:", StringComparison.Ordinal));
+        Assert.DoesNotContain(component.View.Decorators, decorator => decorator.Coord == new GridCoord(3, 3) && decorator.Role == InventorySpaceDecoratorRole.Warning);
+    }
+
+    [Fact]
     public void CurrentRegionActivityComponentPinsToBottomOfCurrentPlaceRegion()
     {
         var fixture = ActorPovFixture.Create();

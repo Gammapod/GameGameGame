@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using GameGameGame.Content;
 using GameGameGame.Core;
 using GameGameGame.SadConsoleApp.Ui.Presentation;
@@ -266,6 +267,173 @@ internal sealed record InventorySpaceViewModel(
             new InventorySpaceFrame(true, $"Merged layer: {layer.Id}", PresentationColor.Yellow),
             backdropCoords);
     }
+
+    public static InventorySpaceViewModel FromActorTopologyFlood(
+        string id,
+        WorldState world,
+        EntityId controlledEntityId,
+        int maxDepth,
+        InventorySpaceCellMetrics? cellMetrics = null,
+        IReadOnlyDictionary<EntityId, Direction>? facingByEntityId = null,
+        Func<EntityId, EntityInspectionAppearance>? getAppearance = null)
+    {
+        if (!world.Entities.ContainsKey(controlledEntityId))
+        {
+            throw new ArgumentException($"Controlled entity {controlledEntityId} does not exist.", nameof(controlledEntityId));
+        }
+
+        var depth = Math.Clamp(maxDepth, 0, 10);
+        var size = (depth * 2) + 1;
+        var center = new GridCoord(depth, depth);
+        var origin = world.GetEntityLocation(controlledEntityId);
+        var topology = new MergedInventoryLayerTopologyService(new EntityTopologyService(new DefaultTopologyService()));
+        var pathNodes = BuildActorTopologyPathNodes(world, topology, origin, center, depth, size);
+        var pathNodesByDisplayCoord = pathNodes
+            .GroupBy(node => node.DisplayCoord)
+            .ToDictionary(group => group.Key, group => group.OrderBy(node => node.Distance).ThenBy(node => string.Join(",", node.Path)).ToList());
+        var conflictedDisplayCoords = pathNodesByDisplayCoord
+            .Select(group => new
+            {
+                group.Key,
+                DistinctCoords = group.Value.Select(node => node.Coord).Distinct().ToList()
+            })
+            .Where(group => group.DistinctCoords.Count > 1)
+            .ToDictionary(group => group.Key, group => group.DistinctCoords);
+
+        var facingFacts = facingByEntityId is null
+            ? new Dictionary<EntityId, Direction>()
+            : new Dictionary<EntityId, Direction>(facingByEntityId);
+        var entities = new List<InventorySpaceEntityVisual>();
+        var decorators = new List<InventorySpaceDecorator>();
+        foreach (var (displayCoord, nodes) in pathNodesByDisplayCoord.OrderBy(pair => pair.Key.Y).ThenBy(pair => pair.Key.X))
+        {
+            if (conflictedDisplayCoords.TryGetValue(displayCoord, out var conflictCoords))
+            {
+                var count = Math.Min(9, conflictCoords.Count);
+                entities.Add(new InventorySpaceEntityVisual(
+                    displayCoord,
+                    new EntityId($"topology-overlap:{controlledEntityId.Value}:{displayCoord.X},{displayCoord.Y}"),
+                    new InventorySpaceVisualLayer('0' + count, PresentationColor.Yellow),
+                    Accent: null,
+                    InventorySpaceVisualPlacement.Default,
+                    $"{conflictCoords.Count} overlapping topology cells"));
+                decorators.Add(new InventorySpaceDecorator(
+                    displayCoord,
+                    InventorySpaceDecoratorRole.Warning,
+                    EntityId: null,
+                    Style: new InventorySpaceVisualLayer('!', PresentationColor.Yellow),
+                    Priority: 95));
+                continue;
+            }
+
+            var coord = nodes[0].Coord;
+            var entityId = world.GetOccupant(coord);
+            if (entityId is null || !world.Entities.TryGetValue(entityId.Value, out var entity))
+            {
+                continue;
+            }
+
+            var appearance = getAppearance?.Invoke(entityId.Value) ?? new EntityInspectionAppearance('?', PresentationColor.Gray);
+            entities.Add(new InventorySpaceEntityVisual(
+                displayCoord,
+                entityId.Value,
+                new InventorySpaceVisualLayer(appearance.Glyph, appearance.Color),
+                Accent: null,
+                InventorySpaceVisualPlacement.Default,
+                entity.Name));
+
+            if (entityId.Value == controlledEntityId)
+            {
+                decorators.Add(new InventorySpaceDecorator(
+                    displayCoord,
+                    InventorySpaceDecoratorRole.Controlled,
+                    EntityId: entityId.Value,
+                    Style: new InventorySpaceVisualLayer('*', PresentationColor.Yellow),
+                    Priority: 100));
+            }
+
+            if (facingFacts.TryGetValue(entityId.Value, out var facing))
+            {
+                decorators.Add(FacingDecorator(displayCoord, entityId.Value, facing));
+            }
+        }
+
+        return new InventorySpaceViewModel(
+            id,
+            $"Actor topology POV d{depth}",
+            new PlaneId($"actor-pov:{controlledEntityId.Value}:d{depth}"),
+            size,
+            size,
+            cellMetrics ?? InventorySpaceCellMetrics.Default,
+            InventorySpaceViewport.Full(size, size),
+            new InventorySpaceBackdropLayer(new InventorySpaceVisualLayer(223, PresentationColor.Gray, ForegroundRgb: 0x808080, BackgroundRgb: 0x404040)),
+            entities,
+            decorators,
+            new InventorySpaceFrame(true, $"Actor topology POV d{depth}", PresentationColor.Yellow),
+            pathNodesByDisplayCoord.Keys.ToHashSet());
+    }
+
+    private static IReadOnlyList<ActorTopologyPathNode> BuildActorTopologyPathNodes(
+        WorldState world,
+        ITopologyService topology,
+        PlaneCoord origin,
+        GridCoord center,
+        int maxDepth,
+        int size)
+    {
+        var result = new List<ActorTopologyPathNode>
+        {
+            new(origin, center, 0, [], ImmutableHashSet.Create(origin))
+        };
+        var queue = new Queue<ActorTopologyPathNode>();
+        queue.Enqueue(result[0]);
+        var visitedPaths = new HashSet<string> { PathKey(origin, []) };
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (current.Distance >= maxDepth)
+            {
+                continue;
+            }
+
+            foreach (var neighbor in topology.GetNeighbors(world, current.Coord).Where(neighbor => !neighbor.IsBlocked))
+            {
+                if (current.PathCoords.Contains(neighbor.Destination))
+                {
+                    continue;
+                }
+
+                var display = current.DisplayCoord.Offset(neighbor.Direction);
+                if (display.X < 0 || display.Y < 0 || display.X >= size || display.Y >= size)
+                {
+                    continue;
+                }
+
+                var path = current.Path.Concat([neighbor.Direction]).ToList();
+                if (!visitedPaths.Add(PathKey(neighbor.Destination, path)))
+                {
+                    continue;
+                }
+
+                var next = new ActorTopologyPathNode(neighbor.Destination, display, current.Distance + 1, path, current.PathCoords.Add(neighbor.Destination));
+                result.Add(next);
+                queue.Enqueue(next);
+            }
+        }
+
+        return result;
+    }
+
+    private static string PathKey(PlaneCoord coord, IReadOnlyList<Direction> path) =>
+        $"{coord.PlaneId.Value}:{coord.Coord.X},{coord.Coord.Y}:{string.Join(",", path)}";
+
+    private sealed record ActorTopologyPathNode(
+        PlaneCoord Coord,
+        GridCoord DisplayCoord,
+        int Distance,
+        IReadOnlyList<Direction> Path,
+        IImmutableSet<PlaneCoord> PathCoords);
 
     private static GridCoord Normalize(GridCoord coord, int minX, int minY) =>
         new(coord.X - minX, coord.Y - minY);

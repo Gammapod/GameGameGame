@@ -41,6 +41,7 @@ internal sealed class ConsumerPlayModeScreen
     public (int X, int Y)? HoverCell { get; private set; }
     public bool HoverTooltipReady { get; private set; }
     public bool DebugLinesVisible { get; private set; }
+    public bool TopologyPovExperimentVisible { get; private set; }
     private TimeSpan _hoverElapsed;
     public bool HasActivePrompt => _intentController.CurrentPrompt is not null;
     public IReadOnlyList<string> ActivePromptChoiceLabels => _intentController.CurrentPrompt?.Choices.Select(choice => choice.Label).ToList() ?? [];
@@ -50,7 +51,7 @@ internal sealed class ConsumerPlayModeScreen
     public int WorldTurnNumber => (_sessionController?.World ?? Session?.World)?.TurnNumber ?? 0;
     public string Title => "New Play Mode";
     public string Purpose => "Consumer-facing Play mode skeleton. Current-space component is active.";
-    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | L: left region | U: undo | F9: debug lines | F10: capture | F12: debug | Esc: return";
+    public string FooterText => "Arrows/Numpad: move | Space/5: wait | Enter: action | L: left region | U: undo | F8: topology POV | F9: debug lines | F10: capture | F12: debug | Esc: return";
 
     public static ConsumerPlayModeScreen Open(ScenarioCatalogEntry catalogEntry)
     {
@@ -99,6 +100,15 @@ internal sealed class ConsumerPlayModeScreen
             ? "Debug lines visible: cyan containment, orange targeting."
             : "Debug lines hidden.";
         return DebugLinesVisible;
+    }
+
+    public bool ToggleTopologyPovExperiment()
+    {
+        TopologyPovExperimentVisible = !TopologyPovExperimentVisible;
+        LastActionStatus = TopologyPovExperimentVisible
+            ? "Topology POV visible: current-place grid shows depth-2 actor-relative topology; overlapping cells use count markers."
+            : "Adjacent topology POV hidden: current-place grid shows current layer/place.";
+        return TopologyPovExperimentVisible;
     }
 
     public bool SetHoverCell(int x, int y)
@@ -474,7 +484,8 @@ internal sealed class ConsumerPlayModeScreen
             ResolveInspectionAppearance,
             GetActionPlanDescriptorForEntity,
             actionLog: _sessionController?.ActionLog,
-            rootCellMetrics: rootCellMetrics);
+            rootCellMetrics: rootCellMetrics,
+            topologyPovDepth: TopologyPovExperimentVisible ? 2 : null);
     }
 
     public IUiComponent? ActorPovCurrentPlaceComponent(SadConsoleRect drawableBounds, bool showDebugLabels, InventorySpaceRootCellMetrics? rootCellMetrics = null)

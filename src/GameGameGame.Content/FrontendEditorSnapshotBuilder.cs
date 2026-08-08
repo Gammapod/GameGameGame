@@ -61,7 +61,23 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     .Select(seam => new FrontendEditorMergedInventoryLayerSeamSummary(
                         new FrontendEditorMergedInventoryLayerEdgeSummary(seam.First.OwnerId.Value, seam.First.Edge),
                         new FrontendEditorMergedInventoryLayerEdgeSummary(seam.Second.OwnerId.Value, seam.Second.Edge)))
-                    .ToList()
+                    .ToList(),
+                CellLinks = layer.CellLinks
+                    .Select(link => new FrontendEditorMergedInventoryLayerCellLinkSummary(
+                        new FrontendEditorMergedInventoryLayerCellEndpointSummary(link.First.OwnerId.Value, link.First.Coord),
+                        link.FirstDirection,
+                        new FrontendEditorMergedInventoryLayerCellEndpointSummary(link.Second.OwnerId.Value, link.Second.Coord),
+                        link.SecondDirection))
+                    .ToList(),
+                Joins = layer.Joins
+                    .Select(join => new FrontendEditorMergedInventoryLayerJoinSummary(
+                        new FrontendEditorMergedInventoryLayerEdgeSummary(join.From.OwnerId.Value, join.From.Edge),
+                        new FrontendEditorMergedInventoryLayerEdgeSummary(join.To.OwnerId.Value, join.To.Edge),
+                        join.Align,
+                        join.Offset,
+                        join.Length))
+                    .ToList(),
+                AllowLayoutOverlap = layer.AllowLayoutOverlap
             })
             .ToList();
 

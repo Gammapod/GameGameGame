@@ -573,6 +573,215 @@ public sealed class YamlContentLoaderTests
         Assert.Contains(validation.Errors, error => error.Contains("conflicted", StringComparison.Ordinal) && error.Contains("Euclidean placement neighbor", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void YamlContentLoaderAllowsOverlapLayoutLoopWhenExplicitlyEnabled()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 8
+                inventoryHeight: 1
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - { entityId: roomA, templateId: cellRoom, coord: { x: 0, y: 0 } }
+                - { entityId: roomB, templateId: cellRoom, coord: { x: 1, y: 0 } }
+                - { entityId: roomC, templateId: cellRoom, coord: { x: 2, y: 0 } }
+                - { entityId: roomD, templateId: cellRoom, coord: { x: 3, y: 0 } }
+                - { entityId: roomE, templateId: cellRoom, coord: { x: 4, y: 0 } }
+                - { entityId: roomF, templateId: cellRoom, coord: { x: 5, y: 0 } }
+                - { entityId: roomG, templateId: cellRoom, coord: { x: 6, y: 0 } }
+                - { entityId: roomH, templateId: cellRoom, coord: { x: 7, y: 0 } }
+              cellRoom:
+                name: Cell Room
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              cellRoom: { glyph: C, color: Cyan }
+            mergedLayers:
+              overlapLoop:
+                allowLayoutOverlap: true
+                spaces:
+                - { owner: roomA, origin: { x: 0, y: 0 } }
+                - { owner: roomB, origin: { x: 0, y: 0 } }
+                - { owner: roomC, origin: { x: 0, y: 0 } }
+                - { owner: roomD, origin: { x: 0, y: 0 } }
+                - { owner: roomE, origin: { x: 0, y: 0 } }
+                - { owner: roomF, origin: { x: 0, y: 0 } }
+                - { owner: roomG, origin: { x: 0, y: 0 } }
+                - { owner: roomH, origin: { x: 0, y: 0 } }
+                seams:
+                - { first: { owner: roomA, edge: East }, second: { owner: roomB, edge: West } }
+                - { first: { owner: roomB, edge: South }, second: { owner: roomC, edge: North } }
+                - { first: { owner: roomC, edge: West }, second: { owner: roomD, edge: East } }
+                - { first: { owner: roomD, edge: North }, second: { owner: roomE, edge: South } }
+                - { first: { owner: roomE, edge: East }, second: { owner: roomF, edge: West } }
+                - { first: { owner: roomF, edge: South }, second: { owner: roomG, edge: North } }
+                - { first: { owner: roomG, edge: West }, second: { owner: roomH, edge: East } }
+                - { first: { owner: roomH, edge: North }, second: { owner: roomA, edge: South } }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        Assert.True(layer.AllowLayoutOverlap);
+        Assert.Equal(8, layer.Spaces.Count);
+        Assert.Equal(8, layer.Seams.Count);
+    }
+
+    [Fact]
+    public void ContentValidationStillRejectsMergedLayerOverlapWithoutExplicitOptIn()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 2
+                inventoryHeight: 1
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - { entityId: roomA, templateId: cellRoom, coord: { x: 0, y: 0 } }
+                - { entityId: roomB, templateId: cellRoom, coord: { x: 1, y: 0 } }
+              cellRoom:
+                name: Cell Room
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              cellRoom: { glyph: C, color: Cyan }
+            mergedLayers:
+              overlapped:
+                spaces:
+                - { owner: roomA, origin: { x: 0, y: 0 } }
+                - { owner: roomB, origin: { x: 0, y: 0 } }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("overlapped", StringComparison.Ordinal) && error.Contains("overlap", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void YamlContentLoaderResolvesAlignedMergedLayerJoinBetweenMismatchedRoomAndHallwayEdges()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              house:
+                name: House
+                inventoryWidth: 2
+                inventoryHeight: 1
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - { entityId: roomA, templateId: room3x3, coord: { x: 0, y: 0 } }
+                - { entityId: hallAB, templateId: hallway5x1, coord: { x: 1, y: 0 } }
+              room3x3:
+                name: Room 3x3
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              hallway5x1:
+                name: Hallway 5x1
+                inventoryWidth: 5
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              house: { glyph: H, color: Gray }
+              room3x3: { glyph: R, color: Cyan }
+              hallway5x1: { glyph: '-', color: White }
+            mergedLayers:
+              roomHall:
+                spaces:
+                - { owner: roomA, origin: { x: 0, y: 0 } }
+                - { owner: hallAB, origin: { x: 10, y: 10 } }
+                joins:
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAB, edge: West }
+                  align: Center
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        var link = Assert.Single(layer.CellLinks);
+        Assert.Equal(new MergedInventoryLayerCellEndpoint(new EntityId("roomA"), new GridCoord(2, 1)), link.First);
+        Assert.Equal(Direction.East, link.FirstDirection);
+        Assert.Equal(new MergedInventoryLayerCellEndpoint(new EntityId("hallAB"), new GridCoord(0, 0)), link.Second);
+        Assert.Equal(Direction.West, link.SecondDirection);
+    }
+
+    [Fact]
+    public void ContentValidationRejectsAlignedMergedLayerJoinDirectionalConflicts()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              house:
+                name: House
+                inventoryWidth: 3
+                inventoryHeight: 1
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - { entityId: roomA, templateId: room3x3, coord: { x: 0, y: 0 } }
+                - { entityId: hallAB, templateId: hallway5x1, coord: { x: 1, y: 0 } }
+                - { entityId: hallAC, templateId: hallway5x1, coord: { x: 2, y: 0 } }
+              room3x3:
+                name: Room 3x3
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              hallway5x1:
+                name: Hallway 5x1
+                inventoryWidth: 5
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              house: { glyph: H, color: Gray }
+              room3x3: { glyph: R, color: Cyan }
+              hallway5x1: { glyph: '-', color: White }
+            mergedLayers:
+              conflicted:
+                spaces:
+                - { owner: roomA, origin: { x: 0, y: 0 } }
+                - { owner: hallAB, origin: { x: 10, y: 10 } }
+                - { owner: hallAC, origin: { x: 20, y: 20 } }
+                joins:
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAB, edge: West }
+                  align: Center
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAC, edge: West }
+                  align: Center
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("conflicted", StringComparison.Ordinal) && error.Contains("directional conflict", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static EntityId TestWorldEntity(string id) => new(id);
 
     [Fact]

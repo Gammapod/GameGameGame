@@ -54,6 +54,18 @@ public static class YamlContentLoader
                     .Select(seam => new MergedInventoryLayerSeam(
                         MaterializeLayerEdge(seam.First),
                         MaterializeLayerEdge(seam.Second)))
+                    .ToList(),
+                layer.AllowLayoutOverlap,
+                (layer.CellLinks ?? [])
+                    .Select(MaterializeCellLink)
+                    .ToList(),
+                (layer.Joins ?? [])
+                    .Select(join => new MergedInventoryLayerJoin(
+                        MaterializeLayerEdge(join.From),
+                        MaterializeLayerEdge(join.To),
+                        join.Align ?? MergedInventoryLayerJoinAlignment.Center,
+                        join.Offset,
+                        join.Length))
                     .ToList());
         }
 
@@ -64,6 +76,18 @@ public static class YamlContentLoader
         edge is null
             ? throw Missing(nameof(edge))
             : new MergedInventoryLayerEdge(new EntityId(Required(edge.Owner, nameof(edge.Owner))), edge.Edge ?? throw Missing(nameof(edge.Edge)));
+
+    private static MergedInventoryLayerCellLink MaterializeCellLink(MergedInventoryLayerCellLinkDto link) =>
+        new(
+            MaterializeCellEndpoint(link.First),
+            link.FirstDirection ?? throw Missing(nameof(link.FirstDirection)),
+            MaterializeCellEndpoint(link.Second),
+            link.SecondDirection ?? throw Missing(nameof(link.SecondDirection)));
+
+    private static MergedInventoryLayerCellEndpoint MaterializeCellEndpoint(MergedInventoryLayerCellEndpointDto? endpoint) =>
+        endpoint is null
+            ? throw Missing(nameof(endpoint))
+            : new MergedInventoryLayerCellEndpoint(new EntityId(Required(endpoint.Owner, nameof(endpoint.Owner))), MaterializeCoord(endpoint.Coord));
 
     private static IReadOnlyDictionary<PresentationId, PresentationDefinition> MaterializePresentationCatalog(
         Dictionary<string, PresentationDefinitionDto>? catalog)
@@ -415,6 +439,12 @@ public static class YamlContentLoader
         public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
 
         public List<MergedInventoryLayerSeamDto>? Seams { get; set; }
+
+        public List<MergedInventoryLayerCellLinkDto>? CellLinks { get; set; }
+
+        public List<MergedInventoryLayerJoinDto>? Joins { get; set; }
+
+        public bool AllowLayoutOverlap { get; set; }
     }
 
     private sealed class MergedInventorySpaceContributionDto
@@ -436,6 +466,37 @@ public static class YamlContentLoader
         public string? Owner { get; set; }
 
         public Direction? Edge { get; set; }
+    }
+
+    private sealed class MergedInventoryLayerCellLinkDto
+    {
+        public MergedInventoryLayerCellEndpointDto? First { get; set; }
+
+        public Direction? FirstDirection { get; set; }
+
+        public MergedInventoryLayerCellEndpointDto? Second { get; set; }
+
+        public Direction? SecondDirection { get; set; }
+    }
+
+    private sealed class MergedInventoryLayerCellEndpointDto
+    {
+        public string? Owner { get; set; }
+
+        public GridCoordDto? Coord { get; set; }
+    }
+
+    private sealed class MergedInventoryLayerJoinDto
+    {
+        public MergedInventoryLayerEdgeDto? From { get; set; }
+
+        public MergedInventoryLayerEdgeDto? To { get; set; }
+
+        public MergedInventoryLayerJoinAlignment? Align { get; set; }
+
+        public int? Offset { get; set; }
+
+        public int? Length { get; set; }
     }
 
     private sealed class PresentationDefinitionDto

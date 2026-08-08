@@ -136,6 +136,390 @@ entityTemplates:
     aperture: 100
     enterPolicy: FirstUnoccupiedRowMajor
     exitPolicy: AnyCell
+  seamOverlapLoopYard:
+    name: Seam Overlap Loop Yard
+    inventoryWidth: 12
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: seamOverlapLoopPlayer
+      templateId: seamSharedPlayer
+      coord:
+        x: 1
+        y: 4
+      controller: Player
+    - entityId: seamOverlapLoopRoomA
+      templateId: seamOverlapLoopRoomA
+      coord:
+        x: 2
+        y: 4
+    - entityId: seamOverlapLoopRoomB
+      templateId: seamOverlapLoopRoomB
+      coord:
+        x: 4
+        y: 1
+    - entityId: seamOverlapLoopRoomC
+      templateId: seamOverlapLoopRoomC
+      coord:
+        x: 5
+        y: 1
+    - entityId: seamOverlapLoopRoomD
+      templateId: seamOverlapLoopRoomD
+      coord:
+        x: 6
+        y: 1
+    - entityId: seamOverlapLoopRoomE
+      templateId: seamOverlapLoopRoomE
+      coord:
+        x: 7
+        y: 1
+    - entityId: seamOverlapLoopRoomF
+      templateId: seamOverlapLoopRoomF
+      coord:
+        x: 8
+        y: 1
+    - entityId: seamOverlapLoopRoomG
+      templateId: seamOverlapLoopRoomG
+      coord:
+        x: 9
+        y: 1
+    - entityId: seamOverlapLoopRoomH
+      templateId: seamOverlapLoopRoomH
+      coord:
+        x: 10
+        y: 1
+  seamOverlapLoopRoomA:
+    name: Seam Overlap Loop Room A
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomB:
+    name: Seam Overlap Loop Room B
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomC:
+    name: Seam Overlap Loop Room C
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomD:
+    name: Seam Overlap Loop Room D
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomE:
+    name: Seam Overlap Loop Room E
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomF:
+    name: Seam Overlap Loop Room F
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomG:
+    name: Seam Overlap Loop Room G
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  seamOverlapLoopRoomH:
+    name: Seam Overlap Loop Room H
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  flagshipFoldedHouseYard:
+    name: Flagship Folded House Yard
+    inventoryWidth: 16
+    inventoryHeight: 16
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: flagshipFoldedHousePlayer
+      templateId: seamSharedPlayer
+      coord:
+        x: 1
+        y: 8
+      controller: Player
+    - entityId: flagshipFoldedHouseRoomA
+      templateId: flagshipFoldedHouseRoomA
+      coord:
+        x: 2
+        y: 8
+    - entityId: flagshipFoldedHouseHallAB
+      templateId: flagshipFoldedHouseHallLongEastWest
+      coord:
+        x: 5
+        y: 8
+    - entityId: flagshipFoldedHouseRoomB
+      templateId: flagshipFoldedHouseRoomB
+      coord:
+        x: 10
+        y: 8
+    - entityId: flagshipFoldedHouseHallBC
+      templateId: flagshipFoldedHouseHallShort
+      coord:
+        x: 10
+        y: 11
+    - entityId: flagshipFoldedHouseRoomC
+      templateId: flagshipFoldedHouseRoomC
+      coord:
+        x: 10
+        y: 12
+    - entityId: flagshipFoldedHouseHallCD
+      templateId: flagshipFoldedHouseHallShort
+      coord:
+        x: 9
+        y: 12
+    - entityId: flagshipFoldedHouseRoomD
+      templateId: flagshipFoldedHouseRoomD
+      coord:
+        x: 6
+        y: 12
+    - entityId: flagshipFoldedHouseHallDE
+      templateId: flagshipFoldedHouseHallLongNorthSouth
+      coord:
+        x: 6
+        y: 7
+    - entityId: flagshipFoldedHouseRoomE
+      templateId: flagshipFoldedHouseRoomE
+      coord:
+        x: 6
+        y: 4
+    - entityId: flagshipFoldedHouseHallEF
+      templateId: flagshipFoldedHouseHallShort
+      coord:
+        x: 5
+        y: 4
+    - entityId: flagshipFoldedHouseRoomF
+      templateId: flagshipFoldedHouseRoomF
+      coord:
+        x: 2
+        y: 4
+    - entityId: flagshipFoldedHouseHallFA
+      templateId: flagshipFoldedHouseHallLongNorthSouth
+      coord:
+        x: 2
+        y: 7
+  flagshipFoldedHouseRoomA:
+    name: Flagship Folded House Room A
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: flagshipFoldedHouseAmberKey
+      templateId: flagshipFoldedHouseAmberKey
+      coord:
+        x: 0
+        y: 0
+  flagshipFoldedHouseRoomB:
+    name: Flagship Folded House Room B
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: flagshipFoldedHouseBlueVase
+      templateId: flagshipFoldedHouseBlueVase
+      coord:
+        x: 2
+        y: 0
+  flagshipFoldedHouseRoomC:
+    name: Flagship Folded House Room C
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: flagshipFoldedHouseCopperLantern
+      templateId: flagshipFoldedHouseCopperLantern
+      coord:
+        x: 2
+        y: 2
+  flagshipFoldedHouseRoomD:
+    name: Flagship Folded House Room D
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: flagshipFoldedHouseDustyBook
+      templateId: flagshipFoldedHouseDustyBook
+      coord:
+        x: 0
+        y: 2
+  flagshipFoldedHouseRoomE:
+    name: Flagship Folded House Room E
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: flagshipFoldedHouseEmeraldIdol
+      templateId: flagshipFoldedHouseEmeraldIdol
+      coord:
+        x: 0
+        y: 0
+  flagshipFoldedHouseRoomF:
+    name: Flagship Folded House Room F
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+    carriedEntities:
+    - entityId: flagshipFoldedHouseFrostGem
+      templateId: flagshipFoldedHouseFrostGem
+      coord:
+        x: 2
+        y: 2
+  flagshipFoldedHouseHallShort:
+    name: Flagship Folded House Short Hallway
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  flagshipFoldedHouseHallLongEastWest:
+    name: Flagship Folded House Long East-West Hallway
+    inventoryWidth: 5
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  flagshipFoldedHouseHallLongNorthSouth:
+    name: Flagship Folded House Long North-South Hallway
+    inventoryWidth: 1
+    inventoryHeight: 5
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    enterPolicy: FirstUnoccupiedRowMajor
+    exitPolicy: AnyCell
+  flagshipFoldedHouseAmberKey:
+    name: Amber Key
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  flagshipFoldedHouseBlueVase:
+    name: Blue Vase
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  flagshipFoldedHouseCopperLantern:
+    name: Copper Lantern
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  flagshipFoldedHouseDustyBook:
+    name: Dusty Book
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  flagshipFoldedHouseEmeraldIdol:
+    name: Emerald Idol
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
+  flagshipFoldedHouseFrostGem:
+    name: Frost Gem
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 0
 presentations:
   seamSharedPlayer:
     glyph: '@'
@@ -164,6 +548,81 @@ presentations:
   seamMultiRoomC:
     glyph: C
     color: White
+  seamOverlapLoopYard:
+    glyph: '#'
+    color: Gray
+  seamOverlapLoopRoomA:
+    glyph: A
+    color: Cyan
+  seamOverlapLoopRoomB:
+    glyph: B
+    color: Green
+  seamOverlapLoopRoomC:
+    glyph: C
+    color: White
+  seamOverlapLoopRoomD:
+    glyph: D
+    color: Earth
+  seamOverlapLoopRoomE:
+    glyph: E
+    color: Yellow
+  seamOverlapLoopRoomF:
+    glyph: F
+    color: Cyan
+  seamOverlapLoopRoomG:
+    glyph: G
+    color: Green
+  seamOverlapLoopRoomH:
+    glyph: H
+    color: Earth
+  flagshipFoldedHouseYard:
+    glyph: '#'
+    color: Gray
+  flagshipFoldedHouseRoomA:
+    glyph: A
+    color: Cyan
+  flagshipFoldedHouseRoomB:
+    glyph: B
+    color: Green
+  flagshipFoldedHouseRoomC:
+    glyph: C
+    color: White
+  flagshipFoldedHouseRoomD:
+    glyph: D
+    color: Earth
+  flagshipFoldedHouseRoomE:
+    glyph: E
+    color: Yellow
+  flagshipFoldedHouseRoomF:
+    glyph: F
+    color: Cyan
+  flagshipFoldedHouseHallShort:
+    glyph: '.'
+    color: Gray
+  flagshipFoldedHouseHallLongEastWest:
+    glyph: '-'
+    color: Gray
+  flagshipFoldedHouseHallLongNorthSouth:
+    glyph: '|'
+    color: Gray
+  flagshipFoldedHouseAmberKey:
+    glyph: k
+    color: Yellow
+  flagshipFoldedHouseBlueVase:
+    glyph: v
+    color: Cyan
+  flagshipFoldedHouseCopperLantern:
+    glyph: l
+    color: Earth
+  flagshipFoldedHouseDustyBook:
+    glyph: b
+    color: White
+  flagshipFoldedHouseEmeraldIdol:
+    glyph: i
+    color: Green
+  flagshipFoldedHouseFrostGem:
+    glyph: g
+    color: Cyan
 actionPlans:
   seamPlayerMoveEnterExit:
     id: seamPlayerMoveEnterExit
@@ -196,6 +655,18 @@ scenarios:
     playerControls:
       player-1:
       - seamMultiPlayer
+  delta-merged-layer-overlap-loop:
+    name: Delta Merged Layer Overlap Loop
+    scenarioRootEntityTemplateId: seamOverlapLoopYard
+    playerControls:
+      player-1:
+      - seamOverlapLoopPlayer
+  delta-merged-layer-flagship-folded-house:
+    name: Delta Merged Layer Flagship Folded House
+    scenarioRootEntityTemplateId: flagshipFoldedHouseYard
+    playerControls:
+      player-1:
+      - flagshipFoldedHousePlayer
 mergedLayers:
   seamWrapInterior:
     spaces:
@@ -262,3 +733,223 @@ mergedLayers:
       second:
         owner: seamMultiRoomC
         edge: North
+  seamOverlapLoopInterior:
+    allowLayoutOverlap: true
+    spaces:
+    - owner: seamOverlapLoopRoomA
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomB
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomC
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomD
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomE
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomF
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomG
+      origin:
+        x: 0
+        y: 0
+    - owner: seamOverlapLoopRoomH
+      origin:
+        x: 0
+        y: 0
+    seams:
+    - first:
+        owner: seamOverlapLoopRoomA
+        edge: East
+      second:
+        owner: seamOverlapLoopRoomB
+        edge: West
+    - first:
+        owner: seamOverlapLoopRoomB
+        edge: South
+      second:
+        owner: seamOverlapLoopRoomC
+        edge: North
+    - first:
+        owner: seamOverlapLoopRoomC
+        edge: West
+      second:
+        owner: seamOverlapLoopRoomD
+        edge: East
+    - first:
+        owner: seamOverlapLoopRoomD
+        edge: North
+      second:
+        owner: seamOverlapLoopRoomE
+        edge: South
+    - first:
+        owner: seamOverlapLoopRoomE
+        edge: East
+      second:
+        owner: seamOverlapLoopRoomF
+        edge: West
+    - first:
+        owner: seamOverlapLoopRoomF
+        edge: South
+      second:
+        owner: seamOverlapLoopRoomG
+        edge: North
+    - first:
+        owner: seamOverlapLoopRoomG
+        edge: West
+      second:
+        owner: seamOverlapLoopRoomH
+        edge: East
+    - first:
+        owner: seamOverlapLoopRoomH
+        edge: North
+      second:
+        owner: seamOverlapLoopRoomA
+        edge: South
+  flagshipFoldedHouseInterior:
+    allowLayoutOverlap: true
+    spaces:
+    - owner: flagshipFoldedHouseRoomA
+      origin:
+        x: 0
+        y: 6
+    - owner: flagshipFoldedHouseHallAB
+      origin:
+        x: 3
+        y: 7
+    - owner: flagshipFoldedHouseRoomB
+      origin:
+        x: 8
+        y: 6
+    - owner: flagshipFoldedHouseHallBC
+      origin:
+        x: 9
+        y: 9
+    - owner: flagshipFoldedHouseRoomC
+      origin:
+        x: 8
+        y: 10
+    - owner: flagshipFoldedHouseHallCD
+      origin:
+        x: 7
+        y: 11
+    - owner: flagshipFoldedHouseRoomD
+      origin:
+        x: 4
+        y: 10
+    - owner: flagshipFoldedHouseHallDE
+      origin:
+        x: 5
+        y: 5
+    - owner: flagshipFoldedHouseRoomE
+      origin:
+        x: 4
+        y: 2
+    - owner: flagshipFoldedHouseHallEF
+      origin:
+        x: 3
+        y: 3
+    - owner: flagshipFoldedHouseRoomF
+      origin:
+        x: 0
+        y: 2
+    - owner: flagshipFoldedHouseHallFA
+      origin:
+        x: 1
+        y: 5
+    joins:
+    - from:
+        owner: flagshipFoldedHouseRoomA
+        edge: East
+      to:
+        owner: flagshipFoldedHouseHallAB
+        edge: West
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseHallAB
+        edge: East
+      to:
+        owner: flagshipFoldedHouseRoomB
+        edge: West
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseRoomB
+        edge: South
+      to:
+        owner: flagshipFoldedHouseHallBC
+        edge: North
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseHallBC
+        edge: South
+      to:
+        owner: flagshipFoldedHouseRoomC
+        edge: North
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseRoomC
+        edge: West
+      to:
+        owner: flagshipFoldedHouseHallCD
+        edge: East
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseHallCD
+        edge: West
+      to:
+        owner: flagshipFoldedHouseRoomD
+        edge: East
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseRoomD
+        edge: North
+      to:
+        owner: flagshipFoldedHouseHallDE
+        edge: South
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseHallDE
+        edge: North
+      to:
+        owner: flagshipFoldedHouseRoomE
+        edge: South
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseRoomE
+        edge: West
+      to:
+        owner: flagshipFoldedHouseHallEF
+        edge: East
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseHallEF
+        edge: West
+      to:
+        owner: flagshipFoldedHouseRoomF
+        edge: East
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseRoomF
+        edge: South
+      to:
+        owner: flagshipFoldedHouseHallFA
+        edge: North
+      align: Center
+    - from:
+        owner: flagshipFoldedHouseHallFA
+        edge: South
+      to:
+        owner: flagshipFoldedHouseRoomA
+        edge: North
+      align: Center

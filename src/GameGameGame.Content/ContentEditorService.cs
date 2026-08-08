@@ -36,16 +36,42 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
                 ? null
                 : layer.Seams.Select(seam => new EditableContentDocument.MergedInventoryLayerSeamDto
                 {
-                    First = ToDto(seam.First),
-                    Second = ToDto(seam.Second)
-                }).ToList()
+                    First = ToEdgeDto(seam.First),
+                    Second = ToEdgeDto(seam.Second)
+                }).ToList(),
+            CellLinks = layer.CellLinks.Count == 0
+                ? null
+                : layer.CellLinks.Select(link => new EditableContentDocument.MergedInventoryLayerCellLinkDto
+                {
+                    First = ToCellDto(link.First),
+                    FirstDirection = link.FirstDirection,
+                    Second = ToCellDto(link.Second),
+                    SecondDirection = link.SecondDirection
+                }).ToList(),
+            Joins = layer.Joins.Count == 0
+                ? null
+                : layer.Joins.Select(join => new EditableContentDocument.MergedInventoryLayerJoinDto
+                {
+                    From = ToEdgeDto(join.From),
+                    To = ToEdgeDto(join.To),
+                    Align = join.Align,
+                    Offset = join.Offset,
+                    Length = join.Length
+                }).ToList(),
+            AllowLayoutOverlap = layer.AllowLayoutOverlap
         };
         onChanged?.Invoke();
 
-        static EditableContentDocument.MergedInventoryLayerEdgeDto ToDto(MergedInventoryLayerEdge edge) => new()
+        static EditableContentDocument.MergedInventoryLayerEdgeDto ToEdgeDto(MergedInventoryLayerEdge edge) => new()
         {
             Owner = edge.OwnerId.Value,
             Edge = edge.Edge
+        };
+
+        static EditableContentDocument.MergedInventoryLayerCellEndpointDto ToCellDto(MergedInventoryLayerCellEndpoint endpoint) => new()
+        {
+            Owner = endpoint.OwnerId.Value,
+            Coord = EditableContentDocument.GridCoordDto.From(endpoint.Coord)
         };
     }
 

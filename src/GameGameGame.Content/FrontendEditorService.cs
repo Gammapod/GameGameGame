@@ -333,6 +333,12 @@ public sealed record FrontendEditorMergedInventoryLayerSummary(
     IReadOnlyList<FrontendEditorMergedInventorySpaceSummary> Spaces)
 {
     public IReadOnlyList<FrontendEditorMergedInventoryLayerSeamSummary> Seams { get; init; } = [];
+
+    public IReadOnlyList<FrontendEditorMergedInventoryLayerCellLinkSummary> CellLinks { get; init; } = [];
+
+    public IReadOnlyList<FrontendEditorMergedInventoryLayerJoinSummary> Joins { get; init; } = [];
+
+    public bool AllowLayoutOverlap { get; init; }
 }
 
 public sealed record FrontendEditorMergedInventorySpaceSummary(string OwnerEntityId, GridCoord Origin);
@@ -342,6 +348,21 @@ public sealed record FrontendEditorMergedInventoryLayerSeamSummary(
     FrontendEditorMergedInventoryLayerEdgeSummary Second);
 
 public sealed record FrontendEditorMergedInventoryLayerEdgeSummary(string OwnerEntityId, Direction Edge);
+
+public sealed record FrontendEditorMergedInventoryLayerCellLinkSummary(
+    FrontendEditorMergedInventoryLayerCellEndpointSummary First,
+    Direction FirstDirection,
+    FrontendEditorMergedInventoryLayerCellEndpointSummary Second,
+    Direction SecondDirection);
+
+public sealed record FrontendEditorMergedInventoryLayerCellEndpointSummary(string OwnerEntityId, GridCoord Coord);
+
+public sealed record FrontendEditorMergedInventoryLayerJoinSummary(
+    FrontendEditorMergedInventoryLayerEdgeSummary From,
+    FrontendEditorMergedInventoryLayerEdgeSummary To,
+    MergedInventoryLayerJoinAlignment Align,
+    int? Offset,
+    int? Length);
 
 public sealed record FrontendEditorEntityTemplateSummary(
     string TemplateId,

@@ -71,6 +71,28 @@ public sealed class ConsumerPlayModeScreenTests
     }
 
     [Fact]
+    public void ConsumerPlayModeCanToggleAdjacentTopologyPovExperiment()
+    {
+        var session = PlayableScenarioLauncher.CreatePrototype();
+        var screen = ConsumerPlayModeScreen.FromSession(DemoEntry(), session);
+        var drawable = SadConsoleRect.FromSize(1, 1, 118, 40);
+
+        Assert.Contains("F8: topology POV", screen.FooterText);
+        Assert.False(screen.TopologyPovExperimentVisible);
+
+        var visible = screen.ToggleTopologyPovExperiment();
+        var model = screen.ActorPovModel(drawable)!;
+        var component = Assert.IsType<InventorySpaceComponent>(ActorPovPlayComponentFactory.CurrentPlaceComponent(model));
+
+        Assert.True(visible);
+        Assert.True(screen.TopologyPovExperimentVisible);
+        Assert.Equal("Actor topology POV d2", component.View.Title);
+        Assert.Equal(5, component.View.Width);
+        Assert.Equal(5, component.View.Height);
+        Assert.Contains(component.View.Entities, entity => entity.EntityId == session.PlayerEntityId && entity.Coord == new GridCoord(2, 2));
+    }
+
+    [Fact]
     public void ConsumerPlayModeCyclesLeftRegionBetweenParentChainAndLogPanels()
     {
         var session = PlayableScenarioLauncher.CreatePrototype();

@@ -428,6 +428,20 @@ sections:
     status: active-delta
     tags: [delta, topology, merged-inventory-layer, seams, movement, containment, player-interaction, three-contributor]
     source: User-requested merged-layer seam authoring capability test
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerSeamShowcase.yaml
+    scenarioId: delta-merged-layer-overlap-loop
+    name: Merged Layer Overlap Loop
+    description: Compact overlap-enabled merged-layer loop with eight 1x1 rooms intentionally sharing one layout origin and movement constrained to explicit seams; reviewers should enter A, follow east/south/west/north/east/south/west/north through A-H back to A, then exit.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, seams, overlap, loop, movement, containment, player-interaction]
+    source: User-requested overlap-enabled merged-layer loop experiment
+  - contentPath: src\GameGameGame.Content\Beta\Topology\MergedInventoryLayerSeamShowcase.yaml
+    scenarioId: delta-merged-layer-flagship-folded-house
+    name: Merged Layer Flagship Folded House
+    description: Flagship Beta topology spike scenario using merged-layer aligned joins to fold six 3x3 rooms, 1x1 short hallways, and 1x5/5x1 long hallways into an explicit traversal loop; reviewers should enter Room A from outside, follow A east through a long hall to B, south through a short hall to C, west through a short hall to D, north through a long hall to E, west through a short hall to F, south through a long hall back to A, observe each room's distinct corner object, then exit.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, joins, aligned-joins, overlap, loop, flagship, movement, containment, player-interaction]
+    source: User-requested merged-layer aligned joins flagship spike
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
     scenarioId: delta-create-destroy-polymorph-flagship-room
     name: Create Destroy Polymorph Flagship Room

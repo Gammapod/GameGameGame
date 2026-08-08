@@ -49,12 +49,24 @@ public sealed record MergedInventoryLayerEdge(EntityId OwnerId, Direction Edge);
 
 public sealed record MergedInventoryLayerSeam(MergedInventoryLayerEdge First, MergedInventoryLayerEdge Second);
 
+public sealed record MergedInventoryLayerCellEndpoint(EntityId OwnerId, GridCoord Coord);
+
+public sealed record MergedInventoryLayerCellLink(
+    MergedInventoryLayerCellEndpoint First,
+    Direction FirstDirection,
+    MergedInventoryLayerCellEndpoint Second,
+    Direction SecondDirection);
+
 public sealed record MergedInventoryLayer(
     MergedInventoryLayerId Id,
     IReadOnlyList<MergedInventorySpaceContribution> Spaces,
-    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null)
+    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null,
+    bool AllowLayoutOverlap = false,
+    IReadOnlyList<MergedInventoryLayerCellLink>? CellLinks = null)
 {
     public IReadOnlyList<MergedInventoryLayerSeam> Seams { get; } = Seams ?? [];
+
+    public IReadOnlyList<MergedInventoryLayerCellLink> CellLinks { get; } = CellLinks ?? [];
 }
 
 public enum Direction

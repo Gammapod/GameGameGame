@@ -177,6 +177,13 @@ internal sealed class ConsumerPlayModeConsole : Console
             return true;
         }
 
+        if (keyboard.IsKeyReleased(Keys.F8))
+        {
+            _screen.ToggleTopologyPovExperiment();
+            Redraw();
+            return true;
+        }
+
         if (keyboard.IsKeyReleased(Keys.F10))
         {
             ToggleCaptureRecording();

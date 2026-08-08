@@ -22,7 +22,7 @@ public sealed class PrototypeContentRegistry(
 
     public IReadOnlyDictionary<PaletteId, PaletteDefinition> PaletteCatalog { get; } = paletteCatalog ?? BuiltInPresentationCatalog.Palettes;
 
-    public IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition> MergedInventoryLayers { get; } = mergedInventoryLayers ?? new Dictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition>();
+    public IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition> MergedInventoryLayers { get; } = ResolveMergedInventoryLayerDefinitions(entityTemplates, mergedInventoryLayers);
 
     public EntityTemplate GetEntityTemplate(EntityTemplateId id) => entityTemplates[id];
 
@@ -33,6 +33,113 @@ public sealed class PrototypeContentRegistry(
 
     public EntityPresentation GetPresentationForEntity(WorldState world, EntityId entityId) =>
         presentations[GetTemplateIdForEntity(world, entityId)];
+
+    private static IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition> ResolveMergedInventoryLayerDefinitions(
+        IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates,
+        IReadOnlyDictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition>? layers)
+    {
+        if (layers is null)
+        {
+            return new Dictionary<MergedInventoryLayerId, MergedInventoryLayerDefinition>();
+        }
+
+        var templatesByEntity = CollectAuthoredEntityTemplates(entityTemplates);
+        return layers.ToDictionary(entry => entry.Key, entry => ResolveLayer(entry.Value, entityTemplates, templatesByEntity));
+    }
+
+    private static MergedInventoryLayerDefinition ResolveLayer(
+        MergedInventoryLayerDefinition layer,
+        IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates,
+        IReadOnlyDictionary<EntityId, EntityTemplateId> templatesByEntity)
+    {
+        if (layer.Joins.Count == 0)
+        {
+            return layer;
+        }
+
+        var resolvedLinks = layer.CellLinks.ToList();
+        foreach (var join in layer.Joins)
+        {
+            if (!TryResolveJoinLinks(join, entityTemplates, templatesByEntity, out var links))
+            {
+                continue;
+            }
+
+            resolvedLinks.AddRange(links);
+        }
+
+        return new MergedInventoryLayerDefinition(layer.Id, layer.Spaces, layer.Seams, layer.AllowLayoutOverlap, resolvedLinks, layer.Joins);
+    }
+
+    private static bool TryResolveJoinLinks(
+        MergedInventoryLayerJoin join,
+        IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates,
+        IReadOnlyDictionary<EntityId, EntityTemplateId> templatesByEntity,
+        out IReadOnlyList<MergedInventoryLayerCellLink> links)
+    {
+        links = [];
+        if (!TryGetTemplate(join.From.OwnerId, entityTemplates, templatesByEntity, out var fromTemplate) ||
+            !TryGetTemplate(join.To.OwnerId, entityTemplates, templatesByEntity, out var toTemplate) ||
+            !IsCardinal(join.From.Edge) ||
+            !IsCardinal(join.To.Edge))
+        {
+            return false;
+        }
+
+        var fromLength = EdgeLength(fromTemplate, join.From.Edge);
+        var toLength = EdgeLength(toTemplate, join.To.Edge);
+        var spanLength = join.Length ?? Math.Min(fromLength, toLength);
+        if (spanLength <= 0 || spanLength > fromLength || spanLength > toLength)
+        {
+            return false;
+        }
+
+        var fromOffset = join.Offset ?? AlignedOffset(fromLength, spanLength, join.Align);
+        var toOffset = AlignedOffset(toLength, spanLength, join.Align);
+        if (fromOffset < 0 || toOffset < 0 || fromOffset + spanLength > fromLength || toOffset + spanLength > toLength)
+        {
+            return false;
+        }
+
+        var result = new List<MergedInventoryLayerCellLink>();
+        for (var index = 0; index < spanLength; index++)
+        {
+            result.Add(new MergedInventoryLayerCellLink(
+                new MergedInventoryLayerCellEndpoint(join.From.OwnerId, EdgeCoord(fromOffset + index, fromTemplate, join.From.Edge)),
+                join.From.Edge,
+                new MergedInventoryLayerCellEndpoint(join.To.OwnerId, EdgeCoord(toOffset + index, toTemplate, join.To.Edge)),
+                join.To.Edge));
+        }
+
+        links = result;
+        return true;
+    }
+
+    private static bool TryGetTemplate(
+        EntityId ownerId,
+        IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates,
+        IReadOnlyDictionary<EntityId, EntityTemplateId> templatesByEntity,
+        out EntityTemplate template)
+    {
+        if (templatesByEntity.TryGetValue(ownerId, out var templateId) && entityTemplates.TryGetValue(templateId, out template!))
+        {
+            return true;
+        }
+
+        template = default!;
+        return false;
+    }
+
+    private static int EdgeLength(EntityTemplate template, Direction edge) =>
+        edge is Direction.North or Direction.South ? template.InventoryWidth : template.InventoryHeight;
+
+    private static int AlignedOffset(int edgeLength, int spanLength, MergedInventoryLayerJoinAlignment align) => align switch
+    {
+        MergedInventoryLayerJoinAlignment.Start => 0,
+        MergedInventoryLayerJoinAlignment.Center => (edgeLength - spanLength) / 2,
+        MergedInventoryLayerJoinAlignment.End => edgeLength - spanLength,
+        _ => 0
+    };
 
     public EntityTemplateId GetTemplateIdForEntity(EntityId entityId) =>
         _entityTemplateAssignments.TryGetValue(entityId, out var templateId)
@@ -235,7 +342,8 @@ public sealed class PrototypeContentRegistry(
             }
 
             var ownersInLayer = new HashSet<EntityId>();
-            var occupiedLayerCells = new Dictionary<GridCoord, LayerCell>();
+            var cellsByLayerCoord = new Dictionary<GridCoord, List<LayerCell>>();
+            var layerCoordsByCell = new Dictionary<LayerCell, GridCoord>();
             var templatesByOwner = new Dictionary<EntityId, EntityTemplate>();
             var hasInvalidSpace = false;
             foreach (var space in layer.Spaces)
@@ -275,22 +383,30 @@ public sealed class PrototypeContentRegistry(
                     for (var x = 0; x < template.InventoryWidth; x++)
                     {
                         var layerCoord = new GridCoord(space.Origin.X + x, space.Origin.Y + y);
-                        if (occupiedLayerCells.TryGetValue(layerCoord, out var previousOwner))
+                        var layerCell = new LayerCell(space.OwnerId, new GridCoord(x, y));
+                        if (!cellsByLayerCoord.TryGetValue(layerCoord, out var layerCells))
                         {
-                            errors.Add($"Merged inventory layer {layerId} has overlap at {layerCoord} between {previousOwner.OwnerId} and {space.OwnerId}.");
+                            layerCells = [];
+                            cellsByLayerCoord[layerCoord] = layerCells;
                         }
-                        else
+
+                        if (layerCells.Count > 0 && !layer.AllowLayoutOverlap)
                         {
-                            occupiedLayerCells[layerCoord] = new LayerCell(space.OwnerId, new GridCoord(x, y));
+                            errors.Add($"Merged inventory layer {layerId} has overlap at {layerCoord} between {layerCells[0].OwnerId} and {space.OwnerId}; set allowLayoutOverlap when overlap is intentional and all movement is explicit seam topology.");
                         }
+
+                        layerCells.Add(layerCell);
+                        layerCoordsByCell[layerCell] = layerCoord;
                     }
                 }
             }
 
+            ValidateMergedInventoryLayerJoins(errors, layerId, layer, ownersInLayer, templatesByOwner);
+
             IReadOnlyList<(LayerCell From, LayerCell To)> seamEdges = hasInvalidSpace
                 ? []
-                : ValidateMergedInventoryLayerSeams(errors, layerId, layer, ownersInLayer, templatesByOwner, occupiedLayerCells);
-            if (!hasInvalidSpace && occupiedLayerCells.Count > 0 && !IsConnected(occupiedLayerCells, seamEdges))
+                : ValidateMergedInventoryLayerSeams(errors, layerId, layer, ownersInLayer, templatesByOwner, layerCoordsByCell, cellsByLayerCoord);
+            if (!hasInvalidSpace && layerCoordsByCell.Count > 0 && !IsConnected(layerCoordsByCell, cellsByLayerCoord, seamEdges, layer.AllowLayoutOverlap))
             {
                 errors.Add($"Merged inventory layer {layerId} is disconnected; placements and seams must form one connected layer.");
             }
@@ -302,17 +418,75 @@ public sealed class PrototypeContentRegistry(
         }
     }
 
+    private static void ValidateMergedInventoryLayerJoins(
+        List<string> errors,
+        MergedInventoryLayerId layerId,
+        MergedInventoryLayerDefinition layer,
+        HashSet<EntityId> ownersInLayer,
+        Dictionary<EntityId, EntityTemplate> templatesByOwner)
+    {
+        foreach (var join in layer.Joins)
+        {
+            ValidateEndpoint(join.From);
+            ValidateEndpoint(join.To);
+            if (!TryGetEdgeLength(join.From, templatesByOwner, out var fromLength) ||
+                !TryGetEdgeLength(join.To, templatesByOwner, out var toLength))
+            {
+                continue;
+            }
+
+            var spanLength = join.Length ?? Math.Min(fromLength, toLength);
+            if (spanLength <= 0 || spanLength > fromLength || spanLength > toLength)
+            {
+                errors.Add($"Merged inventory layer {layerId} join {Format(join)} has invalid length {spanLength}; it must fit both edges.");
+                continue;
+            }
+
+            var fromOffset = join.Offset ?? AlignedOffset(fromLength, spanLength, join.Align);
+            var toOffset = AlignedOffset(toLength, spanLength, join.Align);
+            if (fromOffset < 0 || fromOffset + spanLength > fromLength || toOffset < 0 || toOffset + spanLength > toLength)
+            {
+                errors.Add($"Merged inventory layer {layerId} join {Format(join)} has invalid offset/alignment for edge lengths {fromLength} and {toLength}.");
+            }
+        }
+
+        void ValidateEndpoint(MergedInventoryLayerEdge edge)
+        {
+            if (!IsCardinal(edge.Edge))
+            {
+                errors.Add($"Merged inventory layer {layerId} join endpoint {edge.OwnerId}.{edge.Edge} is invalid; joins currently support cardinal edges only.");
+            }
+
+            if (!ownersInLayer.Contains(edge.OwnerId))
+            {
+                errors.Add($"Merged inventory layer {layerId} join endpoint references owner {edge.OwnerId}, but that owner does not contribute to the layer.");
+            }
+        }
+    }
+
     private static IReadOnlyList<(LayerCell From, LayerCell To)> ValidateMergedInventoryLayerSeams(
         List<string> errors,
         MergedInventoryLayerId layerId,
         MergedInventoryLayerDefinition layer,
         HashSet<EntityId> ownersInLayer,
         Dictionary<EntityId, EntityTemplate> templatesByOwner,
-        Dictionary<GridCoord, LayerCell> occupiedLayerCells)
+        Dictionary<LayerCell, GridCoord> layerCoordsByCell,
+        Dictionary<GridCoord, List<LayerCell>> cellsByLayerCoord)
     {
         var result = new List<(LayerCell From, LayerCell To)>();
         var directionalNeighbors = new Dictionary<(LayerCell Cell, Direction Direction), LayerCell>();
-        var layerCoordsByCell = occupiedLayerCells.ToDictionary(entry => entry.Value, entry => entry.Key);
+        foreach (var link in layer.CellLinks)
+        {
+            var firstCell = new LayerCell(link.First.OwnerId, link.First.Coord);
+            var secondCell = new LayerCell(link.Second.OwnerId, link.Second.Coord);
+            ValidateCellEndpoint(link.First);
+            ValidateCellEndpoint(link.Second);
+            AddDirectional(firstCell, link.FirstDirection, secondCell, Format(link));
+            AddDirectional(secondCell, link.SecondDirection, firstCell, Format(link));
+            result.Add((firstCell, secondCell));
+            result.Add((secondCell, firstCell));
+        }
+
         foreach (var seam in layer.Seams)
         {
             ValidateEndpoint(seam.First);
@@ -333,8 +507,8 @@ public sealed class PrototypeContentRegistry(
             {
                 var firstCell = new LayerCell(seam.First.OwnerId, EdgeCoord(index, templatesByOwner[seam.First.OwnerId], seam.First.Edge));
                 var secondCell = new LayerCell(seam.Second.OwnerId, EdgeCoord(index, templatesByOwner[seam.Second.OwnerId], seam.Second.Edge));
-                AddDirectional(firstCell, seam.First.Edge, secondCell, seam);
-                AddDirectional(secondCell, seam.Second.Edge, firstCell, seam);
+                AddDirectional(firstCell, seam.First.Edge, secondCell, Format(seam));
+                AddDirectional(secondCell, seam.Second.Edge, firstCell, Format(seam));
                 result.Add((firstCell, secondCell));
                 result.Add((secondCell, firstCell));
             }
@@ -355,20 +529,36 @@ public sealed class PrototypeContentRegistry(
             }
         }
 
-        void AddDirectional(LayerCell from, Direction direction, LayerCell to, MergedInventoryLayerSeam seam)
+        void ValidateCellEndpoint(MergedInventoryLayerCellEndpoint endpoint)
+        {
+            if (!ownersInLayer.Contains(endpoint.OwnerId))
+            {
+                errors.Add($"Merged inventory layer {layerId} cell link endpoint references owner {endpoint.OwnerId}, but that owner does not contribute to the layer.");
+                return;
+            }
+
+            if (!templatesByOwner.TryGetValue(endpoint.OwnerId, out var template) || !IsWithinTemplate(endpoint.Coord, template))
+            {
+                errors.Add($"Merged inventory layer {layerId} cell link endpoint {endpoint.OwnerId}{endpoint.Coord} is outside that owner's inventory space.");
+            }
+        }
+
+        void AddDirectional(LayerCell from, Direction direction, LayerCell to, string source)
         {
             var key = (from, direction);
-            if (layerCoordsByCell.TryGetValue(from, out var fromLayerCoord) &&
-                occupiedLayerCells.TryGetValue(fromLayerCoord.Offset(direction), out var euclideanNeighbor) &&
-                euclideanNeighbor != to)
+            if (!layer.AllowLayoutOverlap &&
+                layerCoordsByCell.TryGetValue(from, out var fromLayerCoord) &&
+                cellsByLayerCoord.TryGetValue(fromLayerCoord.Offset(direction), out var euclideanNeighbors) &&
+                (euclideanNeighbors.Count != 1 || euclideanNeighbors[0] != to))
             {
-                errors.Add($"Merged inventory layer {layerId} has directional conflict at {from.OwnerId}{from.Coord}.{direction}: Euclidean placement neighbor {euclideanNeighbor.OwnerId}{euclideanNeighbor.Coord} conflicts with seam neighbor {to.OwnerId}{to.Coord}. Conflicting seam: {Format(seam)}.");
+                var neighborText = string.Join(", ", euclideanNeighbors.Select(neighbor => $"{neighbor.OwnerId}{neighbor.Coord}"));
+                errors.Add($"Merged inventory layer {layerId} has directional conflict at {from.OwnerId}{from.Coord}.{direction}: Euclidean placement neighbor {neighborText} conflicts with linked neighbor {to.OwnerId}{to.Coord}. Conflicting link: {source}.");
                 return;
             }
 
             if (directionalNeighbors.TryGetValue(key, out var existing) && existing != to)
             {
-                errors.Add($"Merged inventory layer {layerId} has directional conflict at {from.OwnerId}{from.Coord}.{direction}: both {existing.OwnerId}{existing.Coord} and {to.OwnerId}{to.Coord} are seam neighbors. Conflicting seam: {Format(seam)}.");
+                errors.Add($"Merged inventory layer {layerId} has directional conflict at {from.OwnerId}{from.Coord}.{direction}: both {existing.OwnerId}{existing.Coord} and {to.OwnerId}{to.Coord} are linked neighbors. Conflicting link: {source}.");
                 return;
             }
 
@@ -377,6 +567,11 @@ public sealed class PrototypeContentRegistry(
     }
 
     private Dictionary<EntityId, EntityTemplateId> CollectAuthoredEntityTemplates()
+    {
+        return CollectAuthoredEntityTemplates(entityTemplates);
+    }
+
+    private static Dictionary<EntityId, EntityTemplateId> CollectAuthoredEntityTemplates(IReadOnlyDictionary<EntityTemplateId, EntityTemplate> entityTemplates)
     {
         var result = new Dictionary<EntityId, EntityTemplateId>();
         var visited = new HashSet<EntityTemplateId>();
@@ -407,9 +602,12 @@ public sealed class PrototypeContentRegistry(
         }
     }
 
-    private static bool IsConnected(Dictionary<GridCoord, LayerCell> cellsByLayerCoord, IReadOnlyList<(LayerCell From, LayerCell To)> seamEdges)
+    private static bool IsConnected(
+        Dictionary<LayerCell, GridCoord> layerCoordsByCell,
+        Dictionary<GridCoord, List<LayerCell>> cellsByLayerCoord,
+        IReadOnlyList<(LayerCell From, LayerCell To)> seamEdges,
+        bool seamOnlyTopology)
     {
-        var layerCoordsByCell = cellsByLayerCoord.ToDictionary(entry => entry.Value, entry => entry.Key);
         var cells = layerCoordsByCell.Keys.ToHashSet();
         var seamNeighbors = seamEdges
             .GroupBy(edge => edge.From)
@@ -423,13 +621,27 @@ public sealed class PrototypeContentRegistry(
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            var currentLayerCoord = layerCoordsByCell[current];
-            foreach (var direction in DirectionMath.AllDirections)
+            if (!seamOnlyTopology)
             {
-                var nextLayerCoord = currentLayerCoord.Offset(direction);
-                if (cellsByLayerCoord.TryGetValue(nextLayerCoord, out var next) && visited.Add(next))
+                var currentLayerCoord = layerCoordsByCell[current];
+                foreach (var direction in DirectionMath.AllDirections)
                 {
-                    queue.Enqueue(next);
+                    var nextLayerCoord = currentLayerCoord.Offset(direction);
+                    if (cellsByLayerCoord.TryGetValue(nextLayerCoord, out var nextCells) && nextCells.Count == 1 && visited.Add(nextCells[0]))
+                    {
+                        queue.Enqueue(nextCells[0]);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var direction in DirectionMath.AllDirections)
+                {
+                    var next = new LayerCell(current.OwnerId, current.Coord.Offset(direction));
+                    if (cells.Contains(next) && visited.Add(next))
+                    {
+                        queue.Enqueue(next);
+                    }
                 }
             }
 
@@ -469,8 +681,17 @@ public sealed class PrototypeContentRegistry(
     private static bool IsCardinal(Direction direction) =>
         direction is Direction.North or Direction.East or Direction.South or Direction.West;
 
+    private static bool IsWithinTemplate(GridCoord coord, EntityTemplate template) =>
+        coord.X >= 0 && coord.Y >= 0 && coord.X < template.InventoryWidth && coord.Y < template.InventoryHeight;
+
     private static string Format(MergedInventoryLayerSeam seam) =>
         $"{seam.First.OwnerId}.{seam.First.Edge}<->{seam.Second.OwnerId}.{seam.Second.Edge}";
+
+    private static string Format(MergedInventoryLayerCellLink link) =>
+        $"{link.First.OwnerId}{link.First.Coord}.{link.FirstDirection}<->{link.Second.OwnerId}{link.Second.Coord}.{link.SecondDirection}";
+
+    private static string Format(MergedInventoryLayerJoin join) =>
+        $"{join.From.OwnerId}.{join.From.Edge}<->{join.To.OwnerId}.{join.To.Edge}";
 
     private sealed record LayerCell(EntityId OwnerId, GridCoord Coord);
     private static void ApplyActionStateDefaults(ActionPlanContext context, ActorActionStateDefaults? defaults)

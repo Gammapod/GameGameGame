@@ -370,10 +370,13 @@ public sealed record AgentDocumentSnapshot(
 public sealed record AgentMergedInventoryLayerDefinition(
     MergedInventoryLayerId Id,
     IReadOnlyList<AgentMergedInventorySpaceContribution> Spaces,
-    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null)
+    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null,
+    bool AllowLayoutOverlap = false,
+    IReadOnlyList<MergedInventoryLayerCellLink>? CellLinks = null,
+    IReadOnlyList<MergedInventoryLayerJoin>? Joins = null)
 {
     public MergedInventoryLayerDefinition ToContentDefinition() =>
-        new(Id, Spaces.Select(space => new MergedInventorySpaceContribution(space.OwnerId, space.Origin)).ToList(), Seams);
+        new(Id, Spaces.Select(space => new MergedInventorySpaceContribution(space.OwnerId, space.Origin)).ToList(), Seams, AllowLayoutOverlap, CellLinks, Joins);
 }
 
 public sealed record AgentMergedInventorySpaceContribution(EntityId OwnerId, GridCoord Origin);

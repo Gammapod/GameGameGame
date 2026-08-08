@@ -2,7 +2,7 @@
 id: plan.merged-inventory-layer-vertical-slice-sprint
 title: Merged Inventory Layer Vertical Slice Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 40
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]
@@ -21,7 +21,7 @@ related:
 
 # Merged Inventory Layer Vertical Slice Sprint Plan
 
-Status: Active focused sprint plan for proving the first Core/Content/Editor slice of merged inventory topology. This plan records the agreed design direction before implementation; production code changes must follow the TDD workflow in `docs/Source of Truth/testing-charter.md`.
+Status: Archived sprint/spike implementation log for the first Core/Content/Editor merged inventory topology slice. The spike proved explicit merged inventory layers, seams, overlap-enabled topology, aligned joins, and the flagship folded-house scenario. Current findings and wrap-up recommendations live in `docs/Plans/Merged-Inventory-Topology-Spike-Findings.md`; production code changes must still follow the TDD workflow in `docs/Source of Truth/testing-charter.md`.
 
 ## Goal
 
@@ -346,3 +346,74 @@ Any revised test must be made intentionally failing for the new planned behavior
 - Validation now allows a one-space layer only when it has self-connected seams, rejects non-cardinal seam endpoints, missing/non-contributing seam owners, edge-length mismatches, duplicate/multi-layer source ownership, and directional conflicts before Core consumes authored topology. Connectivity considers both ordinary placement adjacency and seam links.
 - Added compact Beta showcase scenarios for pacman wrap, rotational self mapping, and multi-edge three-room seams in `MergedInventoryLayerSeamShowcase.yaml` and the Beta manifest.
 - Verification: targeted seam YAML tests passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Core"` passed; `dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj` passed.
+
+### Planned overlap/Möbius loop experiment
+
+Testable outcomes before implementation:
+
+1. Core can traverse an explicitly linked overlapping-layout loop: A east to B, B south to C, C west to D, D north to E, E east to F, F south to G, G west to H, H north to A, returning to A after eight moves.
+2. Content YAML can author that shape with overlapping layout origins and validate/materialize it into `WorldState.MergedInventoryLayers`.
+3. Validation still rejects directional conflicts, including explicit links that would conflict with another link or with ordinary placement adjacency when ordinary placement adjacency is enabled.
+
+Invariant/test trace:
+
+- Affected invariant: `Resolved topology adjacency must be directionally unique...` Existing tests: `ContentValidationRejectsMergedLayerDuplicateOrMultiLayerOwner`, `ContentValidationRejectsMergedLayerSeamDirectionalConflictsAndLengthMismatch`, `ContentValidationRejectsMergedLayerSeamConflictsWithEuclideanPlacementAdjacency`, and Core seam traversal tests in `TopologyServiceTests`.
+- Affected invariant: `YAML content loads from strings and files into registries that can be validated.` Existing tests: `YamlContentLoaderLoadsMergedLayerSeams`, `PrototypeRegistryValidationPassesForBuiltInContent`.
+- Affected invariant: `Editable content documents round-trip through materialization and saved YAML.` Existing tests: merged-layer editable document roundtrip tests should keep preserving newly added fields.
+- New tests needed: a Core overlapping-loop traversal test, a YAML load/materialization/validation test for overlap-enabled linked loops, and a validation test proving overlapping placement remains rejected unless the author explicitly opts into overlap-layout topology.
+
+Initial experiment constraints:
+
+- Treat overlap as layout/presentation overlap, not merged cell identity. Runtime cell identity remains the contributing owner inventory cell.
+- Use current cardinal edge-to-edge same-index seam semantics for the first loop; true Möbius index reversal/facing transforms remain follow-up unless the 1x1 loop proves insufficient.
+- To avoid ambiguous coordinate-derived neighbors, overlap-enabled layers disable ordinary Euclidean placement adjacency and rely on explicit seam/link topology for internal movement/connectivity.
+- Frontend topology-aware rendering is out of this Core/Content slice; frontend can later hide cells outside the actor's current range/POV using shared projection facts.
+
+### Overlap/Möbius loop experiment turn: explicit seam-only overlap topology
+
+- Added an intentionally failing Core test for the eight-room loop `A east -> B south -> C west -> D north -> E east -> F south -> G west -> H north -> A`, with all 1x1 room contributions sharing the same layout origin.
+- Added intentionally failing Content tests for `allowLayoutOverlap: true` YAML authoring and for preserving the default overlap rejection when that explicit opt-in is absent.
+- Implemented `MergedInventoryLayer.AllowLayoutOverlap` across Core model, Content definition/YAML, editable DTOs, editor-service upsert/list, agent definitions, frontend editor summaries, and scenario materialization.
+- Runtime rule: when `AllowLayoutOverlap` is true, normal Euclidean placement adjacency inside the layer is disabled; movement and adjacency use explicit seams only. This keeps overlapped layout coordinates presentation-only and avoids coordinate-derived ambiguity.
+- Validation rule: overlap remains rejected by default. When enabled, connectivity is seam-only; seam validation still enforces cardinal endpoints, edge-length matches, owner membership, duplicate/multi-layer owner rejection, and one seam neighbor per `(source cell, direction)`.
+- Added Beta scenario `delta-merged-layer-overlap-loop` to `MergedInventoryLayerSeamShowcase.yaml` and the Beta manifest for manual review.
+- Verification: targeted overlap tests passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Core"` passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed; `dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj` passed after stopping an existing locked SadConsole process.
+
+### Planned aligned-join / partial-doorway experiment
+
+Testable outcomes before implementation:
+
+1. Core can traverse an explicit source-cell link from the center east doorway of a 3x3 room into the west end of a 5x1 hallway, then back again.
+2. Content YAML can author a higher-level `joins` entry such as `roomA.East -> hallAB.West align: Center` even though the full edge lengths differ, and resolve it into deterministic source-cell links.
+3. Validation rejects ambiguous aligned joins that would produce more than one neighbor for one `(source cell, direction)` and still rejects malformed endpoints/missing owners.
+
+Invariant/test trace:
+
+- Affected invariant: `Resolved topology adjacency must be directionally unique...` Existing tests: `ContentValidationRejectsMergedLayerDuplicateOrMultiLayerOwner`, `ContentValidationRejectsMergedLayerSeamDirectionalConflictsAndLengthMismatch`, `ContentValidationRejectsMergedLayerSeamConflictsWithEuclideanPlacementAdjacency`, overlap loop tests, and Core seam traversal tests in `TopologyServiceTests`.
+- Affected invariant: `YAML content loads from strings and files into registries that can be validated.` Existing tests: `YamlContentLoaderLoadsMergedLayerSeams`, `YamlContentLoaderAllowsOverlapLayoutLoopWhenExplicitlyEnabled`, `PrototypeRegistryValidationPassesForBuiltInContent`.
+- Affected invariant: `Editable content documents round-trip through materialization and saved YAML.` Existing merged-layer editable document roundtrip tests should continue preserving newly added fields.
+- New tests needed: a Core cell-link traversal test for 3x3 room to 5x1 hallway, a YAML aligned-join load/validation test, and a validation conflict test for aligned joins.
+
+Initial experiment constraints:
+
+- Add lower-level explicit source-cell links as the runtime representation. This keeps Core independent from authoring sugar and gives validation one shared directional-conflict surface for seams and joins.
+- Add Content `joins` as author-facing sugar that resolves edge endpoints plus `align: Start|Center|End` or optional `offset` into one or more source-cell links. For the first slice, unequal edge lengths resolve to the shorter edge length centered/start/end-aligned on the longer edge; exact span semantics beyond that remain spike-local.
+- Keep random placement/generation out of this slice.
+
+### Aligned-join / partial-doorway experiment turn
+
+- Added an intentionally failing Core test for a `MergedInventoryLayerCellLink` connecting the center east cell of a 3x3 room to the west end of a 5x1 hallway, proving the required room/hall doorway traversal without whole-edge length matching.
+- Added intentionally failing Content tests for YAML `joins` resolving `roomA.East -> hallAB.West align: Center` into a deterministic cell link, and for rejecting directional conflicts when two joins target the same `(source cell, direction)`.
+- Implemented lower-level Core `MergedInventoryLayerCellEndpoint` and `MergedInventoryLayerCellLink` support. Cell links are bidirectional records with an explicit direction from each endpoint, and Core topology checks them before seam or Euclidean placement adjacency.
+- Implemented Content `MergedInventoryLayerJoin` authoring with `align: Start|Center|End`, optional `offset`, and optional `length`. Joins resolve to source-cell links during registry construction. Unequal edge joins use the shorter edge span and deterministic alignment; for 3x3 room edge to 1-wide hallway end, `Center` selects the room edge middle cell.
+- Tightened overlap-mode runtime/validation semantics for larger contributors: overlap-enabled layers still disable coordinate-derived cross-contributor Euclidean adjacency, but preserve ordinary internal movement within each contributor's own inventory cells. This lets 3x3 rooms and 1x5/5x1 halls remain walkable inside an overlap-enabled non-Euclidean layer.
+- Extended YAML DTOs, editable document DTOs, editor-service upsert/list, agent definitions, frontend editor summaries, scenario materialization, and validation to carry cell links and joins.
+- Verification: targeted aligned-join tests passed; editor/API/frontend snapshot test group passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Core"` passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed; `dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj` passed.
+
+### Flagship folded-house content turn
+
+- Added Beta scenario `delta-merged-layer-flagship-folded-house` using the aligned-join model: six 3x3 rooms, 1x1 short halls, 5x1 east-west long hall, 1x5 north-south long halls, and `allowLayoutOverlap: true` with explicit `joins` for all room/hall doorways.
+- Manual flow: enter Room A, travel east through a long hall to B, south through a short hall to C, west through a short hall to D, north through a long hall to E, west through a short hall to F, then south through a long hall back to A.
+- Each room contains a distinct corner object to make the folded loop reviewable as place content rather than only topology plumbing.
+- Content-editor validation reported content valid, manifest valid, materialization playable with zero diagnostics/failures/gaps, 12 authored joins resolving to 12 cell links, and the expected Room A east-middle to Hall AB west link.
+- Verification after content authoring: `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed; `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Core"` passed; `dotnet build src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj` passed.

@@ -140,9 +140,30 @@ public sealed record ScenarioDefinition(
 public sealed record MergedInventoryLayerDefinition(
     MergedInventoryLayerId Id,
     IReadOnlyList<MergedInventorySpaceContribution> Spaces,
-    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null)
+    IReadOnlyList<MergedInventoryLayerSeam>? Seams = null,
+    bool AllowLayoutOverlap = false,
+    IReadOnlyList<MergedInventoryLayerCellLink>? CellLinks = null,
+    IReadOnlyList<MergedInventoryLayerJoin>? Joins = null)
 {
     public IReadOnlyList<MergedInventoryLayerSeam> Seams { get; } = Seams ?? [];
+
+    public IReadOnlyList<MergedInventoryLayerCellLink> CellLinks { get; } = CellLinks ?? [];
+
+    public IReadOnlyList<MergedInventoryLayerJoin> Joins { get; } = Joins ?? [];
+}
+
+public sealed record MergedInventoryLayerJoin(
+    MergedInventoryLayerEdge From,
+    MergedInventoryLayerEdge To,
+    MergedInventoryLayerJoinAlignment Align = MergedInventoryLayerJoinAlignment.Center,
+    int? Offset = null,
+    int? Length = null);
+
+public enum MergedInventoryLayerJoinAlignment
+{
+    Start,
+    Center,
+    End
 }
 
 public sealed record CarriedEntityTemplate

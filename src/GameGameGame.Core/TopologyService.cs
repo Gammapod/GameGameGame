@@ -570,9 +570,27 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
             return inner.TryGetNeighbor(world, origin, direction, out neighbor);
         }
 
-        if (TryGetSeamNeighbor(world, originCell, direction, out neighbor))
+        if (TryGetCellLinkNeighbor(world, originCell, direction, out neighbor) ||
+            TryGetSeamNeighbor(world, originCell, direction, out neighbor))
         {
             return !neighbor.IsBlocked;
+        }
+
+        if (originCell.Layer.AllowLayoutOverlap && TryGetInternalContributionNeighbor(world, originCell, direction, out neighbor))
+        {
+            return !neighbor.IsBlocked;
+        }
+
+        if (originCell.Layer.AllowLayoutOverlap)
+        {
+            neighbor = new TopologyNeighbor(
+                originCell.SourceCoord,
+                direction,
+                TopologyEdgeKind.MergedInventoryLayer,
+                IsBlocked: true,
+                FailureReason.MoveOutOfBounds,
+                $"merged inventory layer {originCell.Layer.Id} has layout overlap enabled; movement requires an explicit seam in direction {direction}");
+            return false;
         }
 
         var destinationLayerCoord = originCell.LayerCoord.Offset(direction);
@@ -636,6 +654,11 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
             }
         }
 
+        if (firstCell.Layer.AllowLayoutOverlap)
+        {
+            return new(false, null, false, FailureReason.TargetNotAdjacent, $"{second} is not explicitly linked from {first} in merged inventory layer {firstCell.Layer.Id}");
+        }
+
         var deltaX = secondCell.LayerCoord.X - firstCell.LayerCoord.X;
         var deltaY = secondCell.LayerCoord.Y - firstCell.LayerCoord.Y;
         if (Math.Max(Math.Abs(deltaX), Math.Abs(deltaY)) != 1 ||
@@ -652,6 +675,95 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
 
     private static bool IsOccupiedLayerCoord(WorldState world, MergedInventoryLayer layer, GridCoord layerCoord) =>
         MergedInventoryLayerResolver.TryResolveLayerCoord(world, layer, layerCoord, out var cell) && world.GetOccupant(cell.SourceCoord) is not null;
+
+    private static bool TryGetInternalContributionNeighbor(WorldState world, MergedInventoryLayerCell originCell, Direction direction, out TopologyNeighbor neighbor)
+    {
+        var destinationSourceCoord = originCell.SourceCoord.Coord.Offset(direction);
+        if (!MergedInventoryLayerResolver.TryResolveSourceCoord(world, originCell.Layer, originCell.Space.OwnerId, destinationSourceCoord, out var destinationCell))
+        {
+            neighbor = default!;
+            return false;
+        }
+
+        if (DirectionMath.OrthogonalCorners(direction) is { } corners &&
+            IsOccupiedSourceCoord(world, originCell, originCell.SourceCoord.Coord.Offset(corners.First)) &&
+            IsOccupiedSourceCoord(world, originCell, originCell.SourceCoord.Coord.Offset(corners.Second)))
+        {
+            neighbor = new TopologyNeighbor(
+                destinationCell.SourceCoord,
+                direction,
+                TopologyEdgeKind.MergedInventoryLayer,
+                IsBlocked: true,
+                FailureReason.MoveBlocked,
+                $"merged inventory layer internal intercardinal adjacency {direction} is blocked by both orthogonal corners");
+            return true;
+        }
+
+        neighbor = new TopologyNeighbor(
+            destinationCell.SourceCoord,
+            direction,
+            TopologyEdgeKind.MergedInventoryLayer,
+            IsBlocked: false,
+            FailureReason: null,
+            FailureDetail: null);
+        return true;
+    }
+
+    private static bool IsOccupiedSourceCoord(WorldState world, MergedInventoryLayerCell originCell, GridCoord sourceCoord) =>
+        MergedInventoryLayerResolver.TryResolveSourceCoord(world, originCell.Layer, originCell.Space.OwnerId, sourceCoord, out var cell) &&
+        world.GetOccupant(cell.SourceCoord) is not null;
+
+    private static bool TryGetCellLinkNeighbor(WorldState world, MergedInventoryLayerCell originCell, Direction direction, out TopologyNeighbor neighbor)
+    {
+        foreach (var link in originCell.Layer.CellLinks)
+        {
+            if (TryGetCellLinkEndpointNeighbor(world, originCell, direction, link.First, link.FirstDirection, link.Second, out neighbor) ||
+                TryGetCellLinkEndpointNeighbor(world, originCell, direction, link.Second, link.SecondDirection, link.First, out neighbor))
+            {
+                return true;
+            }
+        }
+
+        neighbor = default!;
+        return false;
+    }
+
+    private static bool TryGetCellLinkEndpointNeighbor(
+        WorldState world,
+        MergedInventoryLayerCell originCell,
+        Direction direction,
+        MergedInventoryLayerCellEndpoint from,
+        Direction fromDirection,
+        MergedInventoryLayerCellEndpoint to,
+        out TopologyNeighbor neighbor)
+    {
+        neighbor = default!;
+        if (originCell.Space.OwnerId != from.OwnerId || originCell.SourceCoord.Coord != from.Coord || direction != fromDirection)
+        {
+            return false;
+        }
+
+        if (!MergedInventoryLayerResolver.TryResolveSourceCoord(world, originCell.Layer, to.OwnerId, to.Coord, out var destinationCell))
+        {
+            neighbor = new TopologyNeighbor(
+                originCell.SourceCoord,
+                direction,
+                TopologyEdgeKind.MergedInventoryLayer,
+                IsBlocked: true,
+                FailureReason.MoveOutOfBounds,
+                $"merged inventory layer cell link from {from.OwnerId}{from.Coord}.{fromDirection} to {to.OwnerId}{to.Coord} cannot resolve destination cell");
+            return true;
+        }
+
+        neighbor = new TopologyNeighbor(
+            destinationCell.SourceCoord,
+            direction,
+            TopologyEdgeKind.MergedInventoryLayer,
+            IsBlocked: false,
+            FailureReason: null,
+            FailureDetail: null);
+        return true;
+    }
 
     private static bool TryGetSeamNeighbor(WorldState world, MergedInventoryLayerCell originCell, Direction direction, out TopologyNeighbor neighbor)
     {
