@@ -137,9 +137,22 @@ public sealed record ScenarioDefinition(
     public IReadOnlyDictionary<string, IReadOnlyList<EntityId>> PlayerControls { get; } = PlayerControls ?? new Dictionary<string, IReadOnlyList<EntityId>>();
 }
 
+public enum MergedInventoryJoinAlignment
+{
+    Center
+}
+
+public sealed record MergedInventoryJoinEndpoint(EntityId OwnerId, Direction Edge);
+
+public sealed record MergedInventoryAlignedJoin(
+    MergedInventoryJoinEndpoint From,
+    MergedInventoryJoinEndpoint To,
+    MergedInventoryJoinAlignment Align);
+
 public sealed record MergedInventoryLayerDefinition(
     MergedInventoryLayerId Id,
-    IReadOnlyList<MergedInventorySpaceContribution> Spaces);
+    IReadOnlyList<MergedInventorySpaceContribution> Spaces,
+    IReadOnlyList<MergedInventoryAlignedJoin>? Joins = null);
 
 public sealed record CarriedEntityTemplate
 {

@@ -21,6 +21,8 @@ public sealed partial class EditableContentDocument
     public sealed class MergedInventoryLayerDto
     {
         public List<MergedInventorySpaceContributionDto>? Spaces { get; set; }
+
+        public List<MergedInventoryAlignedJoinDto>? Joins { get; set; }
     }
 
     public sealed class MergedInventorySpaceContributionDto
@@ -28,6 +30,22 @@ public sealed partial class EditableContentDocument
         public string? Owner { get; set; }
 
         public GridCoordDto? Origin { get; set; }
+    }
+
+    public sealed class MergedInventoryAlignedJoinDto
+    {
+        public MergedInventoryJoinEndpointDto? From { get; set; }
+
+        public MergedInventoryJoinEndpointDto? To { get; set; }
+
+        public MergedInventoryJoinAlignment Align { get; set; } = MergedInventoryJoinAlignment.Center;
+    }
+
+    public sealed class MergedInventoryJoinEndpointDto
+    {
+        public string? Owner { get; set; }
+
+        public Direction Edge { get; set; }
     }
 
     public sealed class EntityTemplateDto

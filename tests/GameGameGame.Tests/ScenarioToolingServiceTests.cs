@@ -66,6 +66,70 @@ public sealed class ScenarioToolingServiceTests
     }
 
     [Fact]
+    public void ScenarioMaterializerResolvesAlignedMergedLayerJoinsToSourceCellLinks()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              root:
+                name: Root
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: roomA
+                  templateId: roomSpace
+                  coord: { x: 0, y: 0 }
+                - entityId: hallAB
+                  templateId: hallSpace
+                  coord: { x: 1, y: 0 }
+              roomSpace:
+                name: Room Space
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              hallSpace:
+                name: Hall Space
+                inventoryWidth: 5
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              root: { glyph: R, color: Gray }
+              roomSpace: { glyph: A, color: Cyan }
+              hallSpace: { glyph: H, color: Green }
+            mergedLayers:
+              roomHall:
+                spaces:
+                - owner: roomA
+                  origin: { x: 0, y: 0 }
+                - owner: hallAB
+                  origin: { x: 10, y: 0 }
+                joins:
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAB, edge: West }
+                  align: Center
+            actionPlans: {}
+            scenarios:
+              room-hall:
+                name: Room Hall
+                scenarioRootEntityTemplateId: root
+                playerControls: {}
+            """);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "room-hall");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        var link = Assert.Single(materialization.World.SourceCellLinks);
+        Assert.Equal(new PlaneCoord(new PlaneId("roomA"), new GridCoord(2, 1)), link.FirstSource);
+        Assert.Equal(Direction.East, link.FirstDirection);
+        Assert.Equal(new PlaneCoord(new PlaneId("hallAB"), new GridCoord(0, 0)), link.SecondSource);
+        Assert.Equal(Direction.West, link.SecondDirection);
+    }
+
+    [Fact]
     public void PlayerNarrativeLogProjectionProjectsStructuredRowsFromHistory()
     {
         var world = TestWorld.CreateWorld();

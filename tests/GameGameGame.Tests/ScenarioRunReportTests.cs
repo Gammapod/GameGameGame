@@ -153,6 +153,26 @@ public sealed class ScenarioRunReportTests
     }
 
     [Fact]
+    public void RoomHallAlignedJoinShowcaseLoadsValidatesAndMaterializesSourceCellLink()
+    {
+        var path = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Beta", "Topology", "RoomHallAlignedJoinShowcase.yaml"));
+        var document = EditableContentDocument.LoadYaml(File.ReadAllText(path));
+        var validation = new ContentEditorService(document).Validate();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "beta-room-hall-aligned-join");
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.Empty(materialization.RuntimeFailures);
+        var link = Assert.Single(materialization.World.SourceCellLinks);
+        Assert.Equal(new PlaneCoord(new PlaneId("roomHallRoomA"), new GridCoord(2, 1)), link.FirstSource);
+        Assert.Equal(Direction.East, link.FirstDirection);
+        Assert.Equal(new PlaneCoord(new PlaneId("roomHallHallAB"), new GridCoord(0, 0)), link.SecondSource);
+        Assert.Equal(Direction.West, link.SecondDirection);
+    }
+
+    [Fact]
     public void TargetPathMovementFailureScenarioEmitsDistinctStructuredLogs()
     {
         var document = CreateTargetPathFailureScenarioDocument();

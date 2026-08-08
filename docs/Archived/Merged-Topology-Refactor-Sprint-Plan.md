@@ -2,7 +2,7 @@
 id: plan.merged-topology-refactor-sprint
 title: Merged Topology Refactor Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 40
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]
@@ -20,7 +20,7 @@ related:
 
 # Merged Topology Refactor Sprint Plan
 
-Status: Active behavior-preserving refactor sprint plan. This sprint prepares the codebase for a clean merged inventory topology implementation, based on spike findings, without adding merged-layer behavior yet.
+Status: Archived behavior-preserving refactor sprint plan. This sprint prepared the codebase for a clean merged inventory topology implementation, based on spike findings, without adding merged-layer behavior yet.
 
 The spike findings are expected to live in `docs/Plans/Merged-Inventory-Topology-Spike-Findings.md` or an archived equivalent if saved from the spike branch. The implementation log for the earlier topology service refactor is `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 

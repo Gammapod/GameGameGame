@@ -107,6 +107,12 @@ public sealed class EditableContentDocumentTests
             [
                 new MergedInventorySpaceContribution(new EntityId("entityA"), new GridCoord(0, 0)),
                 new MergedInventorySpaceContribution(new EntityId("entityB"), new GridCoord(3, 1))
+            ],
+            [
+                new MergedInventoryAlignedJoin(
+                    new MergedInventoryJoinEndpoint(new EntityId("entityA"), Direction.East),
+                    new MergedInventoryJoinEndpoint(new EntityId("entityB"), Direction.West),
+                    MergedInventoryJoinAlignment.Center)
             ]);
 
         var dto = MergedInventoryLayerDocumentMapper.ToDto(layer);
@@ -117,6 +123,13 @@ public sealed class EditableContentDocumentTests
         Assert.Equal(1, dto.Spaces[1].Origin!.Y);
         Assert.Equal(layer.Id, roundTripped.Id);
         Assert.Equal(layer.Spaces, roundTripped.Spaces);
+        var dtoJoin = Assert.Single(dto.Joins!);
+        Assert.Equal("entityA", dtoJoin.From!.Owner);
+        Assert.Equal(Direction.East, dtoJoin.From.Edge);
+        Assert.Equal("entityB", dtoJoin.To!.Owner);
+        Assert.Equal(Direction.West, dtoJoin.To.Edge);
+        Assert.Equal(MergedInventoryJoinAlignment.Center, dtoJoin.Align);
+        Assert.Equal(layer.Joins, roundTripped.Joins);
     }
 
     [Fact]

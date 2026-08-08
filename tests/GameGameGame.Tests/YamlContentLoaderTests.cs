@@ -305,6 +305,129 @@ public sealed class YamlContentLoaderTests
         Assert.Equal(3, layer.Spaces.Count);
     }
 
+    [Fact]
+    public void YamlContentLoaderLoadsAlignedMergedLayerJoin()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              root:
+                name: Root
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: roomA
+                  templateId: roomSpace
+                  coord: { x: 0, y: 0 }
+                - entityId: hallAB
+                  templateId: hallSpace
+                  coord: { x: 1, y: 0 }
+              roomSpace:
+                name: Room Space
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              hallSpace:
+                name: Hall Space
+                inventoryWidth: 5
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              root: { glyph: R, color: Gray }
+              roomSpace: { glyph: A, color: Cyan }
+              hallSpace: { glyph: H, color: Green }
+            mergedLayers:
+              roomHall:
+                spaces:
+                - owner: roomA
+                  origin: { x: 0, y: 0 }
+                - owner: hallAB
+                  origin: { x: 10, y: 0 }
+                joins:
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAB, edge: West }
+                  align: Center
+            actionPlans: {}
+            """);
+
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+        var join = Assert.Single(layer.Joins!);
+
+        Assert.True(registry.Validate().IsValid, string.Join(Environment.NewLine, registry.Validate().Errors));
+        Assert.Equal(new EntityId("roomA"), join.From.OwnerId);
+        Assert.Equal(Direction.East, join.From.Edge);
+        Assert.Equal(new EntityId("hallAB"), join.To.OwnerId);
+        Assert.Equal(Direction.West, join.To.Edge);
+        Assert.Equal(MergedInventoryJoinAlignment.Center, join.Align);
+    }
+
+    [Fact]
+    public void ContentValidationRejectsMergedLayerJoinDirectionalConflict()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              root:
+                name: Root
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: roomA
+                  templateId: roomSpace
+                  coord: { x: 0, y: 0 }
+                - entityId: hallAB
+                  templateId: hallSpace
+                  coord: { x: 1, y: 0 }
+                - entityId: hallAC
+                  templateId: hallSpace
+                  coord: { x: 2, y: 0 }
+              roomSpace:
+                name: Room Space
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              hallSpace:
+                name: Hall Space
+                inventoryWidth: 5
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              root: { glyph: R, color: Gray }
+              roomSpace: { glyph: A, color: Cyan }
+              hallSpace: { glyph: H, color: Green }
+            mergedLayers:
+              roomHallConflict:
+                spaces:
+                - owner: roomA
+                  origin: { x: 0, y: 0 }
+                - owner: hallAB
+                  origin: { x: 10, y: 0 }
+                - owner: hallAC
+                  origin: { x: 20, y: 0 }
+                joins:
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAB, edge: West }
+                  align: Center
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAC, edge: West }
+                  align: Center
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error => error.Contains("roomHallConflict", StringComparison.Ordinal) && error.Contains("directional conflict", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static EntityId TestWorldEntity(string id) => new(id);
 
     [Fact]

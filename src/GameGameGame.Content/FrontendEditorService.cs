@@ -330,9 +330,17 @@ public sealed record FrontendEditorScenarioSummary(
 
 public sealed record FrontendEditorMergedInventoryLayerSummary(
     string LayerId,
-    IReadOnlyList<FrontendEditorMergedInventorySpaceSummary> Spaces);
+    IReadOnlyList<FrontendEditorMergedInventorySpaceSummary> Spaces,
+    IReadOnlyList<FrontendEditorMergedInventoryAlignedJoinSummary> Joins);
 
 public sealed record FrontendEditorMergedInventorySpaceSummary(string OwnerEntityId, GridCoord Origin);
+
+public sealed record FrontendEditorMergedInventoryAlignedJoinSummary(
+    FrontendEditorMergedInventoryJoinEndpointSummary From,
+    FrontendEditorMergedInventoryJoinEndpointSummary To,
+    MergedInventoryJoinAlignment Align);
+
+public sealed record FrontendEditorMergedInventoryJoinEndpointSummary(string OwnerEntityId, Direction Edge);
 
 public sealed record FrontendEditorEntityTemplateSummary(
     string TemplateId,

@@ -229,14 +229,27 @@ public sealed class AgentContentEditorApiTests
             [
                 new AgentMergedInventorySpaceContribution(new EntityId("entityA"), new GridCoord(0, 0)),
                 new AgentMergedInventorySpaceContribution(new EntityId("entityB"), new GridCoord(3, 0))
+            ],
+            [
+                new AgentMergedInventoryAlignedJoin(
+                    new AgentMergedInventoryJoinEndpoint(new EntityId("entityA"), Direction.East),
+                    new AgentMergedInventoryJoinEndpoint(new EntityId("entityB"), Direction.West),
+                    MergedInventoryJoinAlignment.Center)
             ])));
         var snapshot = api.GetDocumentSnapshot();
 
         Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
-        Assert.Contains(snapshot.MergedInventoryLayers, layer => layer.Id == new MergedInventoryLayerId("sharedInterior"));
+        var layer = Assert.Single(snapshot.MergedInventoryLayers, layer => layer.Id == new MergedInventoryLayerId("sharedInterior"));
+        var join = Assert.Single(layer.Joins!);
+        Assert.Equal(new EntityId("entityA"), join.From.OwnerId);
+        Assert.Equal(Direction.East, join.From.Edge);
+        Assert.Equal(new EntityId("entityB"), join.To.OwnerId);
+        Assert.Equal(Direction.West, join.To.Edge);
         Assert.Contains("mergedLayers:", snapshot.YamlPreview);
         Assert.Contains("owner: entityB", snapshot.YamlPreview);
         Assert.Contains("x: 3", snapshot.YamlPreview);
+        Assert.Contains("joins:", snapshot.YamlPreview);
+        Assert.Contains("edge: East", snapshot.YamlPreview);
     }
 
     [Fact]

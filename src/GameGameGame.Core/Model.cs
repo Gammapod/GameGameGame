@@ -49,6 +49,12 @@ public sealed record MergedInventoryLayer(
     MergedInventoryLayerId Id,
     IReadOnlyList<MergedInventorySpaceContribution> Spaces);
 
+public sealed record SourceCellLink(
+    PlaneCoord FirstSource,
+    Direction FirstDirection,
+    PlaneCoord SecondSource,
+    Direction SecondDirection);
+
 public enum Direction
 {
     North,

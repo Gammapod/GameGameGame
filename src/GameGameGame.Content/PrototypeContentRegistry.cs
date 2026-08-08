@@ -270,8 +270,58 @@ public sealed class PrototypeContentRegistry(
 
             if (!hasInvalidSpace && occupiedLayerCells.Count > 0 && !IsConnected(occupiedLayerCells.Keys.ToHashSet()))
             {
-                errors.Add($"Merged inventory layer {layerId} is disconnected; MVP placements must form one connected layer.");
+                if ((layer.Joins ?? []).Count == 0)
+                {
+                    errors.Add($"Merged inventory layer {layerId} is disconnected; MVP placements must form one connected layer unless aligned joins declare semantic adjacency.");
+                }
             }
+
+            if (!hasInvalidSpace)
+            {
+                ValidateMergedInventoryLayerJoins(layer, entityTemplatesByAuthoredEntityId, errors);
+            }
+        }
+    }
+
+    private void ValidateMergedInventoryLayerJoins(
+        MergedInventoryLayerDefinition layer,
+        IReadOnlyDictionary<EntityId, EntityTemplateId> entityTemplatesByAuthoredEntityId,
+        List<string> errors)
+    {
+        if ((layer.Joins ?? []).Count == 0)
+        {
+            return;
+        }
+
+        var templatesByOwnerId = new Dictionary<EntityId, EntityTemplate>();
+        foreach (var (ownerId, templateId) in entityTemplatesByAuthoredEntityId)
+        {
+            if (entityTemplates.TryGetValue(templateId, out var template))
+            {
+                templatesByOwnerId[ownerId] = template;
+            }
+        }
+
+        var joinErrors = new List<string>();
+        var links = MergedInventoryAlignedJoinResolver.Resolve(layer, templatesByOwnerId, joinErrors);
+        errors.AddRange(joinErrors);
+
+        var directedEdges = links.SelectMany(link => new[]
+        {
+            new TopologyDirectedEdgeFact(
+                new TopologyCellRef(new PlaneCoord(new PlaneId(link.First.OwnerId.Value), link.First.SourceCoord)),
+                link.First.Direction,
+                new TopologyCellRef(new PlaneCoord(new PlaneId(link.Second.OwnerId.Value), link.Second.SourceCoord))),
+            new TopologyDirectedEdgeFact(
+                new TopologyCellRef(new PlaneCoord(new PlaneId(link.Second.OwnerId.Value), link.Second.SourceCoord)),
+                link.Second.Direction,
+                new TopologyCellRef(new PlaneCoord(new PlaneId(link.First.OwnerId.Value), link.First.SourceCoord)))
+        });
+
+        var uniqueness = TopologyDirectionalUniqueness.Validate(directedEdges);
+        foreach (var conflict in uniqueness.Conflicts)
+        {
+            errors.Add($"Merged inventory layer {layer.Id} has directional conflict from {conflict.Source} {conflict.Direction}: {conflict.FirstDestination} conflicts with {conflict.ConflictingDestination}.");
         }
     }
 

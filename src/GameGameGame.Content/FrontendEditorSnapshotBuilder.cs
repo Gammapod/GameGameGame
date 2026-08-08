@@ -55,6 +55,12 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                 layer.Id.Value,
                 layer.Spaces
                     .Select(space => new FrontendEditorMergedInventorySpaceSummary(space.OwnerId.Value, space.Origin))
+                    .ToList(),
+                (layer.Joins ?? [])
+                    .Select(join => new FrontendEditorMergedInventoryAlignedJoinSummary(
+                        new FrontendEditorMergedInventoryJoinEndpointSummary(join.From.OwnerId.Value, join.From.Edge),
+                        new FrontendEditorMergedInventoryJoinEndpointSummary(join.To.OwnerId.Value, join.To.Edge),
+                        join.Align))
                     .ToList()))
             .ToList();
 

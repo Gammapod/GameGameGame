@@ -369,13 +369,29 @@ public sealed record AgentDocumentSnapshot(
 
 public sealed record AgentMergedInventoryLayerDefinition(
     MergedInventoryLayerId Id,
-    IReadOnlyList<AgentMergedInventorySpaceContribution> Spaces)
+    IReadOnlyList<AgentMergedInventorySpaceContribution> Spaces,
+    IReadOnlyList<AgentMergedInventoryAlignedJoin>? Joins = null)
 {
     public MergedInventoryLayerDefinition ToContentDefinition() =>
-        new(Id, Spaces.Select(space => new MergedInventorySpaceContribution(space.OwnerId, space.Origin)).ToList());
+        new(
+            Id,
+            Spaces.Select(space => new MergedInventorySpaceContribution(space.OwnerId, space.Origin)).ToList(),
+            (Joins ?? [])
+                .Select(join => new MergedInventoryAlignedJoin(
+                    new MergedInventoryJoinEndpoint(join.From.OwnerId, join.From.Edge),
+                    new MergedInventoryJoinEndpoint(join.To.OwnerId, join.To.Edge),
+                    join.Align))
+                .ToList());
 }
 
 public sealed record AgentMergedInventorySpaceContribution(EntityId OwnerId, GridCoord Origin);
+
+public sealed record AgentMergedInventoryAlignedJoin(
+    AgentMergedInventoryJoinEndpoint From,
+    AgentMergedInventoryJoinEndpoint To,
+    MergedInventoryJoinAlignment Align);
+
+public sealed record AgentMergedInventoryJoinEndpoint(EntityId OwnerId, Direction Edge);
 
 public sealed record AgentEntityTemplateUpdate(
     string? Name = null,

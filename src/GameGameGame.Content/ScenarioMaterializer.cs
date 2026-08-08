@@ -375,6 +375,55 @@ public static class ScenarioMaterializer
         foreach (var layer in registry.MergedInventoryLayers.Values)
         {
             world.MergedInventoryLayers.Add(new MergedInventoryLayer(layer.Id, layer.Spaces));
+
+            var templatesByOwnerId = CollectAuthoredEntityTemplates(registry);
+            foreach (var link in MergedInventoryAlignedJoinResolver.Resolve(layer, templatesByOwnerId))
+            {
+                if (world.GetRegisteredInventoryPlaneId(link.First.OwnerId) is not { } firstPlaneId ||
+                    world.GetRegisteredInventoryPlaneId(link.Second.OwnerId) is not { } secondPlaneId)
+                {
+                    continue;
+                }
+
+                world.SourceCellLinks.Add(new SourceCellLink(
+                    new PlaneCoord(firstPlaneId, link.First.SourceCoord),
+                    link.First.Direction,
+                    new PlaneCoord(secondPlaneId, link.Second.SourceCoord),
+                    link.Second.Direction));
+            }
+        }
+    }
+
+    private static Dictionary<EntityId, EntityTemplate> CollectAuthoredEntityTemplates(PrototypeContentRegistry registry)
+    {
+        var result = new Dictionary<EntityId, EntityTemplate>();
+        var visited = new HashSet<EntityTemplateId>();
+        foreach (var templateId in registry.EntityTemplates.Keys)
+        {
+            Collect(templateId, visited);
+        }
+
+        return result;
+
+        void Collect(EntityTemplateId templateId, HashSet<EntityTemplateId> ancestry)
+        {
+            if (!registry.EntityTemplates.TryGetValue(templateId, out var template) ||
+                template.CarriedEntities is null ||
+                !ancestry.Add(templateId))
+            {
+                return;
+            }
+
+            foreach (var carried in template.CarriedEntities)
+            {
+                if (carried.TemplateId is { } carriedTemplateId && registry.EntityTemplates.TryGetValue(carriedTemplateId, out var carriedTemplate))
+                {
+                    result[carried.EntityId] = carriedTemplate;
+                    Collect(carriedTemplateId, ancestry);
+                }
+            }
+
+            ancestry.Remove(templateId);
         }
     }
 

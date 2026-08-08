@@ -5,7 +5,8 @@ public enum TopologyEdgeKind
     DefaultGrid,
     DirectedOverlay,
     EntityTopologyPolicy,
-    MergedInventoryLayer
+    MergedInventoryLayer,
+    SourceCellLink
 }
 
 public sealed record TopologyNeighbor(
@@ -699,6 +700,90 @@ public sealed class MergedInventoryLayerTopologyService(ITopologyService inner) 
         (-1, -1) => Direction.NorthWest,
         _ => null
     };
+}
+
+public sealed class SourceCellLinkTopologyService(ITopologyService inner) : ITopologyService
+{
+    public bool TryGetNeighbor(WorldState world, PlaneCoord origin, Direction direction, out TopologyNeighbor neighbor)
+    {
+        if (!TryFindLinkDestination(world, origin, direction, out var destination))
+        {
+            return inner.TryGetNeighbor(world, origin, direction, out neighbor);
+        }
+
+        neighbor = CreateSourceCellLinkNeighbor(world, destination, direction);
+        return !neighbor.IsBlocked;
+    }
+
+    public IReadOnlyList<TopologyNeighbor> GetNeighbors(WorldState world, PlaneCoord origin) =>
+        DirectionMath.AllDirections.Select(direction =>
+        {
+            TryGetNeighbor(world, origin, direction, out var neighbor);
+            return neighbor;
+        }).ToList();
+
+    public AdjacencyEvaluation EvaluateAdjacency(WorldState world, PlaneCoord first, PlaneCoord second)
+    {
+        foreach (var direction in DirectionMath.AllDirections)
+        {
+            if (!TryFindLinkDestination(world, first, direction, out var destination) || destination != second)
+            {
+                continue;
+            }
+
+            var found = TryGetNeighbor(world, first, direction, out var neighbor);
+            return found
+                ? new AdjacencyEvaluation(true, direction, DirectionMath.OrthogonalCorners(direction) is not null, null, null)
+                : new AdjacencyEvaluation(false, direction, DirectionMath.OrthogonalCorners(direction) is not null, neighbor.FailureReason, neighbor.FailureDetail);
+        }
+
+        return inner.EvaluateAdjacency(world, first, second);
+    }
+
+    private static bool TryFindLinkDestination(WorldState world, PlaneCoord origin, Direction direction, out PlaneCoord destination)
+    {
+        foreach (var link in world.SourceCellLinks)
+        {
+            if (link.FirstSource == origin && link.FirstDirection == direction)
+            {
+                destination = link.SecondSource;
+                return true;
+            }
+
+            if (link.SecondSource == origin && link.SecondDirection == direction)
+            {
+                destination = link.FirstSource;
+                return true;
+            }
+        }
+
+        destination = default;
+        return false;
+    }
+
+    private static TopologyNeighbor CreateSourceCellLinkNeighbor(WorldState world, PlaneCoord destination, Direction direction)
+    {
+        if (!world.Planes.TryGetValue(destination.PlaneId, out var plane) ||
+            !plane.Contains(destination.Coord) ||
+            !world.TryGetNodeId(destination, out _))
+        {
+            return new TopologyNeighbor(
+                destination,
+                direction,
+                TopologyEdgeKind.SourceCellLink,
+                IsBlocked: true,
+                FailureReason.MoveOutOfBounds,
+                $"source-cell link destination {destination} is not a valid node");
+        }
+
+        return new TopologyNeighbor(
+            destination,
+            direction,
+            TopologyEdgeKind.SourceCellLink,
+            IsBlocked: false,
+            FailureReason: null,
+            FailureDetail: null);
+    }
 }
 
 public sealed class DefaultTopologyService : ITopologyService

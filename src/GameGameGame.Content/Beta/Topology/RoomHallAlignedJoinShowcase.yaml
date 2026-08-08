@@ -1,0 +1,106 @@
+entityTemplates:
+  roomHallShowcaseRoot:
+    name: Room Hall Aligned Join Showcase Root
+    inventoryWidth: 7
+    inventoryHeight: 3
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: roomHallRoomA
+      templateId: roomHallRoomA
+      coord:
+        x: 1
+        y: 1
+    - entityId: roomHallHallAB
+      templateId: roomHallHallAB
+      coord:
+        x: 4
+        y: 1
+  roomHallRoomA:
+    name: Room A
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+    carriedEntities:
+    - entityId: roomHallPlayer
+      templateId: roomHallPlayer
+      coord:
+        x: 1
+        y: 1
+      controller: Player
+  roomHallHallAB:
+    name: Hall AB
+    inventoryWidth: 5
+    inventoryHeight: 1
+    weight: 100
+    carryingCapacity: 100
+    bulk: 10
+    aperture: 100
+  roomHallPlayer:
+    name: Room Hall Player
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: roomHallPlayerMove
+    actionStateDefaults:
+      facing: East
+presentations:
+  roomHallShowcaseRoot:
+    glyph: '#'
+    color: Gray
+  roomHallRoomA:
+    glyph: A
+    color: Cyan
+  roomHallHallAB:
+    glyph: =
+    color: White
+  roomHallPlayer:
+    glyph: '@'
+    color: Yellow
+actionPlans:
+  roomHallPlayerMove:
+    id: roomHallPlayerMove
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: EnterTarget
+        targetSelf: false
+      - kind: ExitFacing
+        targetSelf: false
+    steps: []
+scenarios:
+  beta-room-hall-aligned-join:
+    name: Room Hall Aligned Join
+    scenarioRootEntityTemplateId: roomHallShowcaseRoot
+    playerControls:
+      player-1:
+      - roomHallPlayer
+mergedLayers:
+  roomHallAlignedJoinLayer:
+    spaces:
+    - owner: roomHallRoomA
+      origin:
+        x: 0
+        y: 0
+    - owner: roomHallHallAB
+      origin:
+        x: 4
+        y: 1
+    joins:
+    - from:
+        owner: roomHallRoomA
+        edge: East
+      to:
+        owner: roomHallHallAB
+        edge: West
+      align: Center

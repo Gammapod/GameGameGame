@@ -22,6 +22,8 @@ public sealed class WorldState
 
     public List<MergedInventoryLayer> MergedInventoryLayers { get; } = [];
 
+    public List<SourceCellLink> SourceCellLinks { get; } = [];
+
     public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
 
     public Dictionary<string, RuntimeEntityTemplate> RuntimeEntityTemplates { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -77,6 +79,9 @@ public sealed class WorldState
 
         MergedInventoryLayers.Clear();
         MergedInventoryLayers.AddRange(source.MergedInventoryLayers);
+
+        SourceCellLinks.Clear();
+        SourceCellLinks.AddRange(source.SourceCellLinks);
 
         ActionStates.Clear();
         foreach (var (entityId, state) in source.ActionStates)

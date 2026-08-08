@@ -71,6 +71,77 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void SnapshotIncludesMergedInventoryLayerJoinSummaries()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              root:
+                name: Root
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: roomA
+                  templateId: roomSpace
+                  coord: { x: 0, y: 0 }
+                - entityId: hallAB
+                  templateId: hallSpace
+                  coord: { x: 1, y: 0 }
+              roomSpace:
+                name: Room Space
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              hallSpace:
+                name: Hall Space
+                inventoryWidth: 5
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              root: { glyph: R, color: Gray }
+              roomSpace: { glyph: A, color: Cyan }
+              hallSpace: { glyph: H, color: Green }
+            mergedLayers:
+              roomHall:
+                spaces:
+                - owner: roomA
+                  origin: { x: 0, y: 0 }
+                - owner: hallAB
+                  origin: { x: 10, y: 0 }
+                joins:
+                - from: { owner: roomA, edge: East }
+                  to: { owner: hallAB, edge: West }
+                  align: Center
+            actionPlans: {}
+            scenarios: {}
+            """);
+
+        try
+        {
+            var open = FrontendEditorService.OpenFile(path);
+            Assert.True(open.IsSuccess, open.ErrorMessage);
+
+            var layer = Assert.Single(open.Service!.GetSnapshot().MergedInventoryLayers);
+            var join = Assert.Single(layer.Joins);
+
+            Assert.Equal("roomHall", layer.LayerId);
+            Assert.Equal("roomA", join.From.OwnerEntityId);
+            Assert.Equal(Direction.East, join.From.Edge);
+            Assert.Equal("hallAB", join.To.OwnerEntityId);
+            Assert.Equal(Direction.West, join.To.Edge);
+            Assert.Equal(MergedInventoryJoinAlignment.Center, join.Align);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void SnapshotGroupsTemplateAndCarriedEntityDiagnosticsForEntityTemplatePanels()
     {
         var path = WriteTempContentFile(

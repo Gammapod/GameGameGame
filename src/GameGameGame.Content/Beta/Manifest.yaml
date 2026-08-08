@@ -393,6 +393,13 @@ sections:
     status: active-delta
     tags: [delta, topology, merged-inventory-layer, containment, movement, player-interaction, vertical-slice]
     source: docs/Plans/Merged-Inventory-Layer-Vertical-Slice-Sprint-Plan.md
+  - contentPath: src\GameGameGame.Content\Beta\Topology\RoomHallAlignedJoinShowcase.yaml
+    scenarioId: beta-room-hall-aligned-join
+    name: Room Hall Aligned Join
+    description: Small Phase 4 topology showcase proving semantic merged-layer joins from the Room A east-center cell to the Hall AB west endpoint; reviewers can move the player east through the authored source-cell link.
+    status: active-delta
+    tags: [delta, topology, merged-inventory-layer, aligned-join, movement, player-interaction]
+    source: docs/Plans/Merged-Topology-Clean-Implementation-Sprint-Plan.md
   - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\CreateDestroyPolymorphShowcase.yaml
     scenarioId: delta-create-destroy-polymorph-flagship-room
     name: Create Destroy Polymorph Flagship Room

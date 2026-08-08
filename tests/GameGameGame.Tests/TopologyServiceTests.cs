@@ -360,6 +360,38 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
+    public void SourceCellLinksConnectAuthoredInventoryCellsBidirectionally()
+    {
+        var world = new WorldState();
+        var roomId = new EntityId("room-a");
+        var hallwayId = new EntityId("hall-ab");
+        var roomPlaneId = new PlaneId("room-a-inventory");
+        var hallwayPlaneId = new PlaneId("hall-ab-inventory");
+        AddPlane(world, new Plane(TestWorld.WorldPlaneId, "World", 5, 5));
+        AddPlane(world, new Plane(roomPlaneId, "Room A Inventory", 3, 3));
+        AddPlane(world, new Plane(hallwayPlaneId, "Hall AB Inventory", 5, 1));
+        AddEntity(world, roomId, "Room A", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0)), inventoryWidth: 3, inventoryHeight: 3, bulk: 100, aperture: 100);
+        AddEntity(world, hallwayId, "Hall AB", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 0)), inventoryWidth: 5, inventoryHeight: 1, bulk: 100, aperture: 100);
+        AddEntity(world, TestWorld.RockId, "Rock", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 0, inventoryHeight: 0, bulk: 1, aperture: 1);
+        world.RegisterInventoryPlane(roomId, roomPlaneId);
+        world.RegisterInventoryPlane(hallwayId, hallwayPlaneId);
+        var roomDoor = new PlaneCoord(roomPlaneId, new GridCoord(2, 1));
+        var hallwayDoor = new PlaneCoord(hallwayPlaneId, new GridCoord(0, 0));
+        world.SourceCellLinks.Add(new SourceCellLink(roomDoor, Direction.East, hallwayDoor, Direction.West));
+        var movement = new MovementService();
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, roomDoor));
+
+        var movedEast = movement.TryMove(world, TestWorld.RockId, Direction.East);
+
+        Assert.True(movedEast);
+        Assert.Equal(hallwayDoor, world.GetEntityLocation(TestWorld.RockId));
+        var movedWest = movement.TryMove(world, TestWorld.RockId, Direction.West);
+
+        Assert.True(movedWest);
+        Assert.Equal(roomDoor, world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
     public void MergedInventoryLayerDistanceTreatsPlacedSpacesAsOneRigidLayer()
     {
         var world = TestWorld.CreateWorld();
