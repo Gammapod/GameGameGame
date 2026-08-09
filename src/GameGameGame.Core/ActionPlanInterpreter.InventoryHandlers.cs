@@ -78,7 +78,7 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: true, trace);
         }
 
-        trace.Add(TraceNode.Success("Target is adjacent"));
+        trace.Add(TraceNode.Success("Target is adjacent", ActionTrace.FormatAdjacencyFacts(adjacency)));
 
         var policyService = new InventoryBoundaryPolicyService();
         foreach (var candidate in policyService.OrderedEnterPolicyDestinations(world, actorId, actorId))

@@ -139,47 +139,6 @@ public static class ActionStepCatalog
             DefaultableState: [State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)]),
         new(
-            ActionPlanBehaviorStepKind.AcquireNearestTarget,
-            "Acquire Nearest Target",
-            "Selects the nearest same-plane entity other than self by Manhattan distance, breaking ties by row-major coordinate order, writes it to Target, and continues to the next Action Step.",
-            StateWrites: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            Tier: ActionStepAuthoringTier.Legacy),
-        new(
-            ActionPlanBehaviorStepKind.SeekTarget,
-            "Seek Target",
-            "Reads the persistent Target and greedily moves one cardinal step that reduces Manhattan distance, breaking ties North, South, West, East; preserves Target on failure/contact.",
-            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            Tier: ActionStepAuthoringTier.Legacy),
-        new(
-            ActionPlanBehaviorStepKind.FleeTarget,
-            "Flee Target",
-            "Reads the persistent Target and greedily moves one cardinal step that increases Manhattan distance, breaking ties North, South, West, East; preserves Target on success/failure.",
-            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            Tier: ActionStepAuthoringTier.Legacy),
-        new(
-            ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo,
-            "Maintain Chebyshev Distance Two",
-            "Reads the persistent Target and moves one cardinal step toward Chebyshev distance 2, backing away when too close and closing when too far; falls through at exact distance 2 and preserves Target.",
-            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            Tier: ActionStepAuthoringTier.Legacy),
-        new(
-            ActionPlanBehaviorStepKind.StrafeClockwise,
-            "Strafe Clockwise",
-            "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the clockwise perpendicular cardinal move; preserves Target on success/failure.",
-            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            Tier: ActionStepAuthoringTier.Legacy),
-        new(
-            ActionPlanBehaviorStepKind.StrafeAnticlockwise,
-            "Strafe Anticlockwise",
-            "Reads the persistent Target, selects the same primary seek direction as SeekTarget, then attempts the anticlockwise perpendicular cardinal move; preserves Target on success/failure.",
-            RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity)],
-            Tier: ActionStepAuthoringTier.Legacy),
-        new(
             ActionPlanBehaviorStepKind.GiveTarget,
             "Give Target",
             "Transfers the first carried entity from actor inventory into the persistent Target inventory using deterministic row-major source and destination order; falls through when transfer cannot be completed.",
@@ -260,10 +219,11 @@ public static class ActionStepCatalog
         Steps.Single(step => step.Kind == kind);
 
     public static bool IsStableAuthoringStep(ActionPlanBehaviorStepKind kind) =>
-        Get(kind).Tier == ActionStepAuthoringTier.Stable || IsTargetMovementCompatibilityStep(kind);
+        Get(kind).Tier == ActionStepAuthoringTier.Stable;
 
-    private static bool IsTargetMovementCompatibilityStep(ActionPlanBehaviorStepKind kind) =>
-        kind is ActionPlanBehaviorStepKind.SeekTarget
+    public static bool IsRetiredLegacyTargetingOrCoordinateMovementStep(ActionPlanBehaviorStepKind kind) =>
+        kind is ActionPlanBehaviorStepKind.AcquireNearestTarget
+            or ActionPlanBehaviorStepKind.SeekTarget
             or ActionPlanBehaviorStepKind.FleeTarget
             or ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo
             or ActionPlanBehaviorStepKind.StrafeClockwise

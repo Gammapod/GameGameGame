@@ -323,15 +323,8 @@ public sealed partial class ActionPlanInterpreter
 
     private IEnumerable<PlaneCoord> GetLegalTargetAdjacency(WorldState world, EntityId movingEntityId, PlaneCoord targetLocation)
     {
-        foreach (var direction in DirectionMath.AllDirections)
-        {
-            var destination = new PlaneCoord(targetLocation.PlaneId, targetLocation.Coord.Offset(direction));
-            var adjacency = _movement.EvaluateAdjacency(world, targetLocation, destination);
-            if (adjacency.AreAdjacent && _movement.CanOccupyForPath(world, movingEntityId, destination))
-            {
-                yield return destination;
-            }
-        }
+        return _movement.GetLegalMovementNeighbors(world, movingEntityId, targetLocation)
+            .Select(neighbor => neighbor.Destination);
     }
 
     private int? DistanceToAny(WorldState world, EntityId actorId, PlaneCoord start, HashSet<PlaneCoord> goals)
@@ -342,41 +335,18 @@ public sealed partial class ActionPlanInterpreter
 
     private int? HalfStepDistanceToAny(WorldState world, EntityId actorId, PlaneCoord start, HashSet<PlaneCoord> goals)
     {
-        if (goals.Contains(start))
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        if (!TryGetTopologyNodeId(world, start, out var startNodeId) || !TryGetTopologyNodeIds(world, goals, out var goalNodeIds))
         {
-            return 0;
+            return null;
         }
 
-        var bestDistances = new Dictionary<PlaneCoord, int> { [start] = 0 };
-        var queue = new PriorityQueue<PlaneCoord, int>();
-        queue.Enqueue(start, 0);
-
-        while (queue.TryDequeue(out var current, out var currentDistance))
-        {
-            if (bestDistances[current] != currentDistance)
-            {
-                continue;
-            }
-
-            if (goals.Contains(current))
-            {
-                return currentDistance;
-            }
-
-            foreach (var neighbor in _movement.GetLegalMovementNeighbors(world, actorId, current))
-            {
-                var nextDistance = currentDistance + HalfStepCost(neighbor.Direction);
-                if (bestDistances.TryGetValue(neighbor.Destination, out var knownDistance) && knownDistance <= nextDistance)
-                {
-                    continue;
-                }
-
-                bestDistances[neighbor.Destination] = nextDistance;
-                queue.Enqueue(neighbor.Destination, nextDistance);
-            }
-        }
-
-        return null;
+        return TopologyGraphTraversalService.HalfStepDistanceToAny(
+            graph,
+            startNodeId,
+            goalNodeIds,
+            edge => CanTraverseForTargetPath(world, graph, actorId, edge),
+            HalfStepCost);
     }
 
     private static int HalfStepCost(Direction direction) => DirectionMath.OrthogonalCorners(direction) is null ? 2 : 3;
@@ -435,56 +405,53 @@ public sealed partial class ActionPlanInterpreter
 
     private List<TargetPathStep>? FindShortestPathToAny(WorldState world, EntityId actorId, PlaneCoord start, HashSet<PlaneCoord> goals)
     {
-        if (goals.Contains(start))
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        if (!TryGetTopologyNodeId(world, start, out var startNodeId) || !TryGetTopologyNodeIds(world, goals, out var goalNodeIds))
         {
-            return [];
+            return null;
         }
 
-        var visited = new HashSet<PlaneCoord> { start };
-        var previous = new Dictionary<PlaneCoord, (PlaneCoord From, Direction Direction)>();
-        var queue = new Queue<PlaneCoord>();
-        queue.Enqueue(start);
+        var path = TopologyGraphTraversalService.ShortestPathToAny(
+            graph,
+            startNodeId,
+            goalNodeIds,
+            edge => CanTraverseForTargetPath(world, graph, actorId, edge));
 
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            foreach (var neighbor in _movement.GetLegalMovementNeighbors(world, actorId, current))
-            {
-                if (!visited.Add(neighbor.Destination))
-                {
-                    continue;
-                }
-
-                previous[neighbor.Destination] = (current, neighbor.Direction);
-                if (goals.Contains(neighbor.Destination))
-                {
-                    return ReconstructPath(start, neighbor.Destination, previous);
-                }
-
-                queue.Enqueue(neighbor.Destination);
-            }
-        }
-
-        return null;
+        return path?.Select(step => new TargetPathStep(step.SourceCoord, step.Direction)).ToList();
     }
 
-    private static List<TargetPathStep> ReconstructPath(
-        PlaneCoord start,
-        PlaneCoord goal,
-        Dictionary<PlaneCoord, (PlaneCoord From, Direction Direction)> previous)
+    private static bool TryGetTopologyNodeId(WorldState world, PlaneCoord coord, out TopologyNodeId topologyNodeId)
     {
-        var path = new List<TargetPathStep>();
-        var current = goal;
-        while (current != start)
+        if (world.TryGetNodeId(coord, out var nodeId))
         {
-            var edge = previous[current];
-            path.Add(new TargetPathStep(current, edge.Direction));
-            current = edge.From;
+            topologyNodeId = new TopologyNodeId(nodeId.Value);
+            return true;
         }
 
-        path.Reverse();
-        return path;
+        topologyNodeId = default;
+        return false;
     }
+
+    private static bool TryGetTopologyNodeIds(WorldState world, IEnumerable<PlaneCoord> coords, out HashSet<TopologyNodeId> topologyNodeIds)
+    {
+        topologyNodeIds = [];
+        foreach (var coord in coords)
+        {
+            if (!TryGetTopologyNodeId(world, coord, out var topologyNodeId))
+            {
+                return false;
+            }
+
+            topologyNodeIds.Add(topologyNodeId);
+        }
+
+        return topologyNodeIds.Count > 0;
+    }
+
+    private bool CanTraverseForTargetPath(WorldState world, TopologyGraph graph, EntityId actorId, TopologyGraphEdge edge) =>
+        !edge.IsBlocked &&
+        graph.TryGetNode(edge.DestinationNodeId, out var destinationNode) &&
+        _movement.CanOccupyForPath(world, actorId, destinationNode.SourceCoord);
 
     private static PlanEffectResult UnsupportedTargetPathMode(ActionPlanTargetPathMode mode, TraceNode trace)
     {

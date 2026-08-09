@@ -247,6 +247,11 @@ internal sealed class EntityTemplateEditorService(EditableContentDocument docume
 
         foreach (var step in behavior.Steps)
         {
+            if (ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
+            {
+                continue;
+            }
+
             var metadata = ActionStepCatalog.Get(step.Kind);
             foreach (var defaultable in metadata.DefaultableState)
             {

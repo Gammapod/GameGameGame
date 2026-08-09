@@ -58,6 +58,39 @@ public sealed class TargetPathMovementActionStepTests
     }
 
     [Fact]
+    public void TargetPathMoveSeekTreatsSourceCellLinkAsTargetAdjacency()
+    {
+        var world = CreateWorld(7, 4, actor: new GridCoord(1, 1), target: new GridCoord(5, 1));
+        foreach (var direction in DirectionMath.AllDirections)
+        {
+            AddBlocker(world, $"target-ring-{direction}", new GridCoord(5, 1).Offset(direction));
+        }
+
+        var actorLocation = world.GetEntityLocation(ActorId);
+        var targetLocation = world.GetEntityLocation(TargetId);
+        world.SourceCellLinks.Add(new SourceCellLink(targetLocation, Direction.West, actorLocation, Direction.East));
+        world.SetActionTarget(ActorId, TargetId);
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("target-path-source-link-then-destroy"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor(
+            [
+                TargetPathStep(ActionPlanTargetPathMode.SeekAdjacency),
+                new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DestroyTarget)
+            ]));
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(world, ActorId, plan, new ActionPlanContext());
+        var summary = BehaviorChainTraceFormatter.Format(result);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.False(world.Entities.ContainsKey(TargetId));
+        Assert.Equal(actorLocation, world.GetEntityLocation(ActorId));
+        Assert.Contains(summary, line => line == "1. TargetPathMove: Failure; reason=TargetNotAdjacent; fallback=continued");
+        Assert.Contains(summary, line => line == "2. DestroyTarget: Success; fallback=stopped");
+    }
+
+    [Fact]
     public void TargetPathMoveFleeChoosesIncreasingPathDistanceFromAdjacency()
     {
         var world = CreateWorld(5, 5, actor: new GridCoord(1, 2), target: new GridCoord(3, 2));

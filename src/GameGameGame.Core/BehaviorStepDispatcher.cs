@@ -47,12 +47,12 @@ public sealed partial class ActionPlanInterpreter
         return step.Kind switch
         {
             ActionPlanBehaviorStepKind.Move => ApplyCanonicalMove(world, actorId, context, step),
-            ActionPlanBehaviorStepKind.AcquireNearestTarget => ApplyAcquireNearestTarget(world, actorId, context),
-            ActionPlanBehaviorStepKind.SeekTarget => ApplySeekTarget(world, actorId, context),
-            ActionPlanBehaviorStepKind.FleeTarget => ApplyFleeTarget(world, actorId, context),
-            ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo => ApplyMaintainChebyshevDistanceTwo(world, actorId, context),
-            ActionPlanBehaviorStepKind.StrafeClockwise => ApplyStrafeTarget(world, actorId, context, clockwise: true),
-            ActionPlanBehaviorStepKind.StrafeAnticlockwise => ApplyStrafeTarget(world, actorId, context, clockwise: false),
+            ActionPlanBehaviorStepKind.AcquireNearestTarget
+                or ActionPlanBehaviorStepKind.SeekTarget
+                or ActionPlanBehaviorStepKind.FleeTarget
+                or ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo
+                or ActionPlanBehaviorStepKind.StrafeClockwise
+                or ActionPlanBehaviorStepKind.StrafeAnticlockwise => RetiredLegacyTargetingOrCoordinateTargetMovement(step.Kind),
             ActionPlanBehaviorStepKind.GiveTarget => ApplyGiveTargetPrimitive(world, actorId, context),
             ActionPlanBehaviorStepKind.TakeTarget => ApplyTakeTargetPrimitive(world, actorId, context),
             ActionPlanBehaviorStepKind.EnterTarget => ApplyEnterTargetPrimitive(world, actorId, context),
@@ -68,4 +68,7 @@ public sealed partial class ActionPlanInterpreter
             _ => ApplyPrimitive(world, actorId, context, primitive!)
         };
     }
+
+    private static PlanEffectResult RetiredLegacyTargetingOrCoordinateTargetMovement(ActionPlanBehaviorStepKind kind) =>
+        throw new InvalidOperationException($"Action step {kind} is retired legacy targeting/coordinate target movement; use graph-first targeting rules and graph-native TargetPathMove instead.");
 }

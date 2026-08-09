@@ -701,6 +701,11 @@ public sealed class ContentEditorServiceTests
 
         Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.AcquireNearestTarget));
         Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.TurnLeft));
+        Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.SeekTarget));
+        Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.FleeTarget));
+        Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo));
+        Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.StrafeClockwise));
+        Assert.Throws<InvalidOperationException>(() => editor.AddActionPlanBehaviorStep(new ActionPlanTemplateId("behavior"), ActionPlanBehaviorStepKind.StrafeAnticlockwise));
     }
 
     [Fact]

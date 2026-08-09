@@ -256,14 +256,7 @@ public sealed class PrototypeContentRegistry(
                     for (var x = 0; x < template.InventoryWidth; x++)
                     {
                         var layerCoord = new GridCoord(space.Origin.X + x, space.Origin.Y + y);
-                        if (occupiedLayerCells.TryGetValue(layerCoord, out var previousOwner))
-                        {
-                            errors.Add($"Merged inventory layer {layerId} has overlap at {layerCoord} between {previousOwner} and {space.OwnerId}.");
-                        }
-                        else
-                        {
-                            occupiedLayerCells[layerCoord] = space.OwnerId;
-                        }
+                        occupiedLayerCells.TryAdd(layerCoord, space.OwnerId);
                     }
                 }
             }

@@ -105,10 +105,8 @@ public sealed class ControlledActorAffordanceServiceTests
     {
         var world = TestWorld.CreateWorld();
         var topologyDestination = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 3));
-        var movement = new MovementService(new OverrideNeighborTopologyService(
-            world.GetEntityLocation(TestWorld.SlimeId),
-            Direction.South,
-            topologyDestination));
+        world.SourceCellLinks.Add(new SourceCellLink(world.GetEntityLocation(TestWorld.SlimeId), Direction.South, topologyDestination, Direction.North));
+        var movement = new MovementService();
         Assert.True(new EnterAction(TestWorld.SlimeId).ExecuteForTest(world, TestWorld.PlayerId, movement));
         var query = new ControlledActorAffordanceService(movement);
 
@@ -134,6 +132,28 @@ public sealed class ControlledActorAffordanceServiceTests
         var east = Assert.Single(affordances.MovementDirections, option => option.Direction == Direction.East);
         Assert.True(east.CanExecute);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), east.Destination);
+        Assert.Equal(new TopologyNodeId("world:2,2"), east.DestinationNodeId);
+        Assert.Equal(TopologyEdgeKind.EntityTopologyPolicy, east.EdgeKind);
+    }
+
+    [Fact]
+    public void ControlledActorAffordancePickupSourceReportsGraphAdjacencyFacts()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.SlimeId] = world.Entities[TestWorld.SlimeId] with { Aperture = 9 };
+        var movement = new MovementService();
+        var remoteSlime = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4));
+        Assert.True(movement.TryPlace(world, TestWorld.SlimeId, remoteSlime));
+        world.SourceCellLinks.Add(new SourceCellLink(world.GetEntityLocation(TestWorld.PlayerId), Direction.East, remoteSlime, Direction.West));
+        var query = new ControlledActorAffordanceService(movement);
+
+        var affordances = query.Query(world, TestWorld.PlayerId);
+
+        var source = Assert.Single(affordances.PickupSources, candidate => candidate.TargetId == TestWorld.SlimeId);
+        Assert.True(source.CanExecute);
+        Assert.Equal(remoteSlime, source.Source);
+        Assert.Equal(new TopologyNodeId("world:4,4"), source.SourceNodeId);
+        Assert.Equal(TopologyEdgeKind.SourceCellLink, source.EdgeKind);
     }
 
     [Fact]

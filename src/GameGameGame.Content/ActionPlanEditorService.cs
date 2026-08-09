@@ -357,6 +357,11 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
 
         foreach (var step in behavior.Steps)
         {
+            if (ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
+            {
+                continue;
+            }
+
             var metadata = ActionStepCatalog.Get(step.Kind);
             foreach (var defaultable in metadata.DefaultableState)
             {

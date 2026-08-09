@@ -72,7 +72,7 @@ public sealed class ActorPovPlayProjectionTests
     public void TopologyVisibilityProjectionReportsDepthLimitedReachabilityWithoutClaimingLineOfSight()
     {
         var world = TestWorld.CreateWorld();
-        var service = new TopologyVisibilityProjectionService(new DefaultTopologyService());
+        var service = new TopologyVisibilityProjectionService();
 
         var projection = service.Project(world, TestWorld.PlayerId, maxDepth: 1);
 
@@ -86,12 +86,40 @@ public sealed class ActorPovPlayProjectionTests
     [Fact]
     public void TopologyVisibilityProjectionReportsMissingObserverWithoutFrontendGuessing()
     {
-        var service = new TopologyVisibilityProjectionService(new DefaultTopologyService());
+        var service = new TopologyVisibilityProjectionService();
 
         var projection = service.Project(TestWorld.CreateWorld(), new EntityId("missing"), maxDepth: 1);
 
         Assert.Empty(projection.VisibleCells);
         Assert.Contains(projection.Diagnostics, diagnostic => diagnostic.Code == TopologyVisibilityDiagnosticCode.ObserverNotFound);
+    }
+
+    [Fact]
+    public void TopologyVisibilityProjectionReportsDistinctGraphNodesForOverlappingLayoutReachability()
+    {
+        var world = TestWorld.CreateWorld();
+        var observerId = new EntityId("observer");
+        var observerSource = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0));
+        var linkedSource = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+        MoveEntity(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)));
+        AddEntity(world, observerId, "Observer", observerSource);
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("visibility-overlap"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(2, 0))
+            ]));
+        world.SourceCellLinks.Add(new SourceCellLink(observerSource, Direction.East, linkedSource, Direction.West));
+        var service = new TopologyVisibilityProjectionService();
+
+        var projection = service.Project(world, observerId, maxDepth: 1);
+        var overlappingCells = projection.VisibleCells
+            .Where(cell => cell.LayoutCoord == new TopologyLayoutCoord(new GridCoord(2, 0)))
+            .ToList();
+
+        Assert.Contains(overlappingCells, cell => cell.Cell == new TopologyCellRef(observerSource));
+        Assert.Contains(overlappingCells, cell => cell.Cell == new TopologyCellRef(linkedSource));
+        Assert.Equal(2, overlappingCells.Select(cell => cell.NodeId).Distinct().Count());
     }
 
     private sealed record ActorPovFixture(
@@ -183,5 +211,21 @@ public sealed class ActorPovPlayProjectionTests
             world.Entities.Add(entityId, new Entity(entityId, name, nodeId, inventoryWidth, inventoryHeight, bulk, aperture));
             world.Occupancy.Add(nodeId, entityId);
         }
+    }
+
+    private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1));
+        world.Occupancy.Add(nodeId, entityId);
+    }
+
+    private static void MoveEntity(WorldState world, EntityId entityId, PlaneCoord destination)
+    {
+        var entity = world.Entities[entityId];
+        world.Occupancy.Remove(entity.OccupiedNodeId);
+        var nodeId = world.GetNodeId(destination);
+        world.Occupancy.Add(nodeId, entityId);
+        world.Entities[entityId] = entity with { OccupiedNodeId = nodeId };
     }
 }

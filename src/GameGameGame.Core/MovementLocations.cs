@@ -19,4 +19,9 @@ public abstract record MovementDestination
     public sealed record AdjacentMovementDestination(EntityId AnchorId, Direction Direction) : MovementDestination;
 }
 
-public sealed record RelocationEvaluation(bool CanRelocate, PlaneCoord? Destination, TraceNode Trace);
+public sealed record RelocationEvaluation(
+    bool CanRelocate,
+    PlaneCoord? Destination,
+    TraceNode Trace,
+    TopologyNodeId? DestinationNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);

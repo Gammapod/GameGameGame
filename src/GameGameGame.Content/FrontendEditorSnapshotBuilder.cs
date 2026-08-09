@@ -245,13 +245,15 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
             return descriptor.Behavior.Steps
                 .Select((step, index) =>
                 {
-                    var metadata = ActionStepCatalog.Get(step.Kind);
-                    var consumesTargetReference = metadata.RequiredState
-                        .Any(state => state.Slot == ActionPlanSlot.Target);
+                    var isRetired = ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind);
+                    var metadata = isRetired ? null : ActionStepCatalog.Get(step.Kind);
+                    var consumesTargetReference = isRetired
+                        ? step.Kind != ActionPlanBehaviorStepKind.AcquireNearestTarget
+                        : metadata!.RequiredState.Any(state => state.Slot == ActionPlanSlot.Target);
                     return new FrontendEditorActionPlanStepSummary(
                         index,
                         step.Kind,
-                        metadata.DisplayName,
+                        metadata?.DisplayName ?? step.Kind.ToString(),
                         step.TargetLabel,
                         step.TargetSlot,
                         step.TargetSelf,
@@ -283,7 +285,9 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
         if (descriptor.Behavior?.Steps.Count > 0)
         {
             return descriptor.Behavior.Steps
-                .Select(step => ActionStepCatalog.Get(step.Kind).DisplayName)
+                .Select(step => ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind)
+                    ? step.Kind.ToString()
+                    : ActionStepCatalog.Get(step.Kind).DisplayName)
                 .ToList();
         }
 

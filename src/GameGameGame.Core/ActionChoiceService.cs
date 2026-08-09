@@ -19,7 +19,9 @@ public sealed record ActionChoicePushDirectionOption(
     bool CanExecute,
     FailureReason? FailureReason,
     string? FailureDetail,
-    EntityId? BlockingEntityId = null);
+    EntityId? BlockingEntityId = null,
+    TopologyNodeId? DestinationNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);
 
 public sealed record ActionChoiceTransferCounterpartyOption(
     EntityId CounterpartyId,
@@ -27,7 +29,9 @@ public sealed record ActionChoiceTransferCounterpartyOption(
     PlaneCoord Source,
     bool CanExecute,
     FailureReason? FailureReason,
-    string? FailureDetail);
+    string? FailureDetail,
+    TopologyNodeId? SourceNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);
 
 public sealed record ActionChoiceTransferItemOption(
     EntityId CounterpartyId,
@@ -46,7 +50,9 @@ public sealed record ActionChoiceDirectionOption(
     bool CanExecute,
     FailureReason? FailureReason,
     string? FailureDetail,
-    EntityId? BlockingEntityId = null);
+    EntityId? BlockingEntityId = null,
+    TopologyNodeId? DestinationNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);
 
 public sealed record ActionChoice(
     ActionChoiceKind Kind,
@@ -341,9 +347,15 @@ public sealed class ActionChoiceService(MovementService movement)
         DirectionMath.AllDirections.Select(direction =>
         {
             var evaluation = new MoveAction(direction).Evaluate(world, actorId, movement);
-            var destination = movement.TryGetMoveDestination(world, actorId, direction, out var resolvedDestination)
-                ? resolvedDestination
+            var movementEdge = movement.TryGetMovementEdge(world, actorId, direction, out var resolvedMovementEdge)
+                ? resolvedMovementEdge
+                : null;
+            var destination = movementEdge is { IsBlocked: false }
+                ? movementEdge.Destination
                 : (PlaneCoord?)null;
+            var destinationNodeId = movementEdge is { IsBlocked: false }
+                ? movementEdge.DestinationNodeId
+                : (TopologyNodeId?)null;
             var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
             var blockingEntity = destination is { } concreteDestination ? world.GetOccupant(concreteDestination) : null;
             return new ActionChoiceDirectionOption(
@@ -352,7 +364,9 @@ public sealed class ActionChoiceService(MovementService movement)
                 evaluation.CanExecute,
                 failure?.Reason == FailureReason.None ? null : failure?.Reason,
                 failure?.Detail,
-                blockingEntity);
+                blockingEntity,
+                destinationNodeId,
+                movementEdge?.Kind);
         }).ToList();
 
     private static ActionChoiceDirectionOption ToDirectionOption(ControlledActorDirectionAffordance affordance) =>
@@ -362,7 +376,9 @@ public sealed class ActionChoiceService(MovementService movement)
             affordance.CanExecute,
             affordance.FailureReason,
             affordance.FailureDetail,
-            affordance.BlockingEntityId);
+            affordance.BlockingEntityId,
+            affordance.DestinationNodeId,
+            affordance.EdgeKind);
 
     private IReadOnlyList<ControlledActorEntityAffordance> QueryPushTargets(
         WorldState world,
@@ -374,17 +390,17 @@ public sealed class ActionChoiceService(MovementService movement)
             return [];
         }
 
-        var actorLocation = world.GetEntityLocation(actorId);
         var adjacentTargets = world.Occupancy.Values
             .Where(targetId => targetId != actorId)
-            .Where(targetId => world.GetEntityLocation(targetId).PlaneId == actorLocation.PlaneId && movement.AreAdjacent(world, actorId, targetId))
-            .OrderBy(targetId => world.GetEntityLocation(targetId).Coord.Y)
-            .ThenBy(targetId => world.GetEntityLocation(targetId).Coord.X)
-            .ThenBy(targetId => targetId.Value)
+            .Select(targetId => (TargetId: targetId, Adjacency: movement.EvaluateAdjacency(world, actorId, targetId)))
+            .Where(candidate => candidate.Adjacency.AreAdjacent)
+            .OrderBy(candidate => world.GetEntityLocation(candidate.TargetId).Coord.Y)
+            .ThenBy(candidate => world.GetEntityLocation(candidate.TargetId).Coord.X)
+            .ThenBy(candidate => candidate.TargetId.Value)
             .ToList();
 
         var result = new List<ControlledActorEntityAffordance>();
-        foreach (var targetId in adjacentTargets)
+        foreach (var (targetId, adjacency) in adjacentTargets)
         {
             var directions = QueryPushDirections(world, actorId, targetId);
             directionsByTargetId[targetId] = directions;
@@ -394,7 +410,9 @@ public sealed class ActionChoiceService(MovementService movement)
                 world.GetEntityLocation(targetId),
                 directions.Any(direction => direction.CanExecute),
                 firstFailure?.FailureReason,
-                firstFailure?.FailureDetail));
+                firstFailure?.FailureDetail,
+                adjacency.DestinationNodeId,
+                adjacency.EdgeKind));
         }
 
         return result;
@@ -403,9 +421,15 @@ public sealed class ActionChoiceService(MovementService movement)
     private IReadOnlyList<ActionChoicePushDirectionOption> QueryPushDirections(WorldState world, EntityId actorId, EntityId targetId) =>
         DirectionMath.AllDirections.Select(direction =>
         {
-            var destination = world.Entities.ContainsKey(targetId) && movement.TryGetMoveDestination(world, targetId, direction, out var resolvedDestination)
-                ? resolvedDestination
+            var movementEdge = world.Entities.ContainsKey(targetId) && movement.TryGetMovementEdge(world, targetId, direction, out var resolvedMovementEdge)
+                ? resolvedMovementEdge
+                : null;
+            var destination = movementEdge is { IsBlocked: false }
+                ? movementEdge.Destination
                 : (PlaneCoord?)null;
+            var destinationNodeId = movementEdge is { IsBlocked: false }
+                ? movementEdge.DestinationNodeId
+                : (TopologyNodeId?)null;
             var evaluation = new PushAction(targetId, direction).Evaluate(world, actorId, movement);
             var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
             var blockingEntity = destination is { } concreteDestination ? world.GetOccupant(concreteDestination) : null;
@@ -416,7 +440,9 @@ public sealed class ActionChoiceService(MovementService movement)
                 evaluation.CanExecute,
                 failure?.Reason == FailureReason.None ? null : failure?.Reason,
                 failure?.Detail,
-                blockingEntity);
+                blockingEntity,
+                destinationNodeId,
+                movementEdge?.Kind);
         }).ToList();
 
     private IReadOnlyDictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>> QueryAdjacentDropDestinations(
@@ -435,7 +461,13 @@ public sealed class ActionChoiceService(MovementService movement)
     private IReadOnlyList<ControlledActorDestinationAffordance> QueryAdjacentDropDestinations(WorldState world, EntityId actorId, EntityId targetId) =>
         DirectionMath.AllDirections.Select(direction =>
         {
-            movement.TryGetMoveDestination(world, actorId, direction, out var destination);
+            var movementEdge = movement.TryGetMovementEdge(world, actorId, direction, out var resolvedMovementEdge)
+                ? resolvedMovementEdge
+                : null;
+            var destination = movementEdge?.Destination ?? ResolveProjectedMoveDestination(world, actorId, direction);
+            var destinationNodeId = movementEdge is { IsBlocked: false }
+                ? movementEdge.DestinationNodeId
+                : (TopologyNodeId?)null;
             var evaluation = new DropAction(targetId, destination).Evaluate(world, actorId, movement);
             var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
             return new ControlledActorDestinationAffordance(
@@ -444,7 +476,9 @@ public sealed class ActionChoiceService(MovementService movement)
                 evaluation.CanExecute,
                 failure?.Reason == FailureReason.None ? null : failure?.Reason,
                 failure?.Detail,
-                world.GetOccupant(destination));
+                world.GetOccupant(destination),
+                destinationNodeId,
+                movementEdge?.Kind);
         }).ToList();
 
     private IReadOnlyList<ActionChoiceTransferCounterpartyOption> QueryTransferCounterparties(WorldState world, EntityId actorId)
@@ -456,7 +490,10 @@ public sealed class ActionChoiceService(MovementService movement)
 
         return DirectionMath.AllDirections.Select(direction =>
             {
-                movement.TryGetMoveDestination(world, actorId, direction, out var coord);
+                var movementEdge = movement.TryGetMovementEdge(world, actorId, direction, out var resolvedMovementEdge)
+                    ? resolvedMovementEdge
+                    : null;
+                var coord = movementEdge?.Destination ?? ResolveProjectedMoveDestination(world, actorId, direction);
                 var occupant = world.GetOccupant(coord);
                 if (occupant is null || !world.Entities.TryGetValue(occupant.Value, out var entity))
                 {
@@ -464,17 +501,26 @@ public sealed class ActionChoiceService(MovementService movement)
                 }
 
                 var canExecute = entity.HasUsableInventory && world.GetRegisteredInventoryPlaneId(occupant.Value) is not null;
+                var sourceNodeId = movementEdge?.DestinationNodeId ?? (world.TryGetNodeId(coord, out var nodeId) ? new TopologyNodeId(nodeId.Value) : (TopologyNodeId?)null);
                 return new ActionChoiceTransferCounterpartyOption(
                     occupant.Value,
                     direction,
                     coord,
                     canExecute,
                     canExecute ? null : FailureReason.TargetHasNoInventory,
-                    canExecute ? null : $"{entity.Name} has no usable inventory");
+                    canExecute ? null : $"{entity.Name} has no usable inventory",
+                    sourceNodeId,
+                    movementEdge?.Kind);
             })
             .Where(option => option is not null)
             .Cast<ActionChoiceTransferCounterpartyOption>()
             .ToList();
+    }
+
+    private PlaneCoord ResolveProjectedMoveDestination(WorldState world, EntityId actorId, Direction direction)
+    {
+        movement.TryGetMoveDestination(world, actorId, direction, out var destination);
+        return destination;
     }
 
     private IReadOnlyList<ActionChoiceTransferItemOption> QueryTransferItems(WorldState world, EntityId actorId, ActionChoiceTransferCounterpartyOption counterparty)

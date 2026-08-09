@@ -52,37 +52,6 @@ public sealed class ActionStepAttemptProjectionTests
     }
 
     [Fact]
-    public void ProjectTreatsSuccessfulAcquireNearestTargetBeforeAnotherStepAsContinued()
-    {
-        var trace = new TraceNode("Plan test", TraceStatus.Success);
-        var acquire = new TraceNode("Action Step AcquireNearestTarget", TraceStatus.Success);
-        acquire.Add(TraceNode.Success("Primitive AcquireNearestTarget", "selected slime"));
-        var seek = new TraceNode("Action Step SeekTarget", TraceStatus.Success);
-        seek.Add(TraceNode.Success("Primitive SeekTarget", "moved East"));
-        trace.Add(acquire);
-        trace.Add(seek);
-
-        var attempts = ActionStepAttemptProjection.Project(trace);
-
-        Assert.Collection(
-            attempts,
-            attempt =>
-            {
-                Assert.Equal("AcquireNearestTarget", attempt.StepKind);
-                Assert.True(attempt.Continued);
-                Assert.False(attempt.Stopped);
-                Assert.Equal(["selected slime"], attempt.Results);
-            },
-            attempt =>
-            {
-                Assert.Equal("SeekTarget", attempt.StepKind);
-                Assert.False(attempt.Continued);
-                Assert.True(attempt.Stopped);
-                Assert.Equal(["moved East"], attempt.Results);
-            });
-    }
-
-    [Fact]
     public void ProjectIgnoresNonActionStepTraceChildren()
     {
         var trace = new TraceNode("Plan test", TraceStatus.Success);

@@ -48,8 +48,7 @@ public static class ActionStepAttemptProjection
 
     private static bool ShouldContinue(TraceNode step, int index, int actionStepCount) =>
         index < actionStepCount - 1
-        && (step.Status == TraceStatus.Failure
-            || Descendants(step).Any(trace => trace.Label == "Primitive AcquireNearestTarget" && trace.Status == TraceStatus.Success));
+        && step.Status == TraceStatus.Failure;
 
     private static IReadOnlyList<string> FindStateReads(TraceNode node) =>
         Descendants(node)
@@ -75,12 +74,6 @@ public static class ActionStepAttemptProjection
     private static bool IsProjectedResultPrimitive(string label) =>
         label is "Primitive Backstep"
             or "Primitive PickupTarget"
-            or "Primitive AcquireNearestTarget"
-            or "Primitive SeekTarget"
-            or "Primitive FleeTarget"
-            or "Primitive MaintainChebyshevDistanceTwo"
-            or "Primitive StrafeClockwise"
-            or "Primitive StrafeAnticlockwise"
             or "Primitive TargetPathMove"
             or "Primitive GiveTarget"
             or "Primitive TakeTarget"

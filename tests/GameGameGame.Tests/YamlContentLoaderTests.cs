@@ -177,7 +177,7 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
-    public void ContentValidationRejectsMergedLayerOverlapDisconnectedOrInvalidOwner()
+    public void ContentValidationAllowsMergedLayerOverlapAsProjectionMetadata()
     {
         var registry = YamlContentLoader.LoadRegistry(
             """
@@ -218,6 +218,213 @@ public sealed class YamlContentLoaderTests
                   origin: { x: 0, y: 0 }
                 - owner: entityB
                   origin: { x: 2, y: 0 }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.True(validation.IsValid, string.Join(Environment.NewLine, validation.Errors));
+        var layer = Assert.Single(registry.MergedInventoryLayers).Value;
+        Assert.Equal(new MergedInventoryLayerId("overlapping"), layer.Id);
+    }
+
+    [Fact]
+    public void OverlappingMergedLayerContentMaterializesDistinctGraphNodesWithSharedLayoutProjection()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+            mergedLayers:
+              overlapping:
+                spaces:
+                - owner: entityA
+                  origin: { x: 0, y: 0 }
+                - owner: entityB
+                  origin: { x: 2, y: 0 }
+            actionPlans: {}
+            scenarios:
+              overlap:
+                name: Overlap
+                scenarioRootEntityTemplateId: room
+                playerControls: {}
+            """);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "overlap");
+        var world = materialization.World;
+        var entityAPlane = world.GetRegisteredInventoryPlaneId(new EntityId("entityA"));
+        var entityBPlane = world.GetRegisteredInventoryPlaneId(new EntityId("entityB"));
+        Assert.NotNull(entityAPlane);
+        Assert.NotNull(entityBPlane);
+        var sourceA = new PlaneCoord(entityAPlane!.Value, new GridCoord(2, 0));
+        var sourceB = new PlaneCoord(entityBPlane!.Value, new GridCoord(0, 0));
+        var graph = TopologyGraphMaterializer.Materialize(world);
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        Assert.True(graph.TryGetNode(new TopologyCellRef(sourceA), out var nodeA));
+        Assert.True(graph.TryGetNode(new TopologyCellRef(sourceB), out var nodeB));
+        Assert.NotEqual(nodeA.Id, nodeB.Id);
+        Assert.Equal(new TopologyLayoutCoord(new GridCoord(2, 0)), nodeA.LayoutCoord);
+        Assert.Equal(nodeA.LayoutCoord, nodeB.LayoutCoord);
+    }
+
+    [Fact]
+    public void OverlapLoopScenarioMovesThroughExplicitGraphEdgesWithoutCollapsingLayoutProjection()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              root:
+                name: Root
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: nodeA
+                  templateId: oneCell
+                  coord: { x: 0, y: 0 }
+                - entityId: nodeB
+                  templateId: oneCell
+                  coord: { x: 1, y: 0 }
+                - entityId: nodeC
+                  templateId: oneCell
+                  coord: { x: 2, y: 0 }
+              oneCell:
+                name: One Cell
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              root: { glyph: R, color: Gray }
+              oneCell: { glyph: o, color: Cyan }
+            mergedLayers:
+              overlapLoop:
+                spaces:
+                - owner: nodeA
+                  origin: { x: 0, y: 0 }
+                - owner: nodeB
+                  origin: { x: 0, y: 0 }
+                - owner: nodeC
+                  origin: { x: 0, y: 0 }
+                joins:
+                - from: { owner: nodeA, edge: East }
+                  to: { owner: nodeB, edge: West }
+                  align: Center
+                - from: { owner: nodeB, edge: South }
+                  to: { owner: nodeC, edge: North }
+                  align: Center
+                - from: { owner: nodeC, edge: West }
+                  to: { owner: nodeA, edge: North }
+                  align: Center
+            actionPlans: {}
+            scenarios:
+              overlap-loop:
+                name: Overlap Loop
+                scenarioRootEntityTemplateId: root
+                playerControls: {}
+            """);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "overlap-loop");
+        var world = materialization.World;
+        var nodeAPlane = world.GetRegisteredInventoryPlaneId(new EntityId("nodeA"));
+        var nodeBPlane = world.GetRegisteredInventoryPlaneId(new EntityId("nodeB"));
+        var nodeCPlane = world.GetRegisteredInventoryPlaneId(new EntityId("nodeC"));
+        Assert.NotNull(nodeAPlane);
+        Assert.NotNull(nodeBPlane);
+        Assert.NotNull(nodeCPlane);
+        var sourceA = new PlaneCoord(nodeAPlane!.Value, new GridCoord(0, 0));
+        var sourceB = new PlaneCoord(nodeBPlane!.Value, new GridCoord(0, 0));
+        var sourceC = new PlaneCoord(nodeCPlane!.Value, new GridCoord(0, 0));
+        var travelerId = new EntityId("traveler");
+        AddRuntimeEntity(world, travelerId, "Traveler", sourceA);
+        var movement = new MovementService();
+
+        Assert.Empty(materialization.ValidationDiagnostics);
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        var overlappedNodes = new[] { sourceA, sourceB, sourceC }
+            .Select(source =>
+            {
+                Assert.True(graph.TryGetNode(new TopologyCellRef(source), out var node));
+                return node;
+            })
+            .ToList();
+        Assert.Single(overlappedNodes.Select(node => node.LayoutCoord).Distinct());
+        Assert.Equal(3, overlappedNodes.Select(node => node.Id).Distinct().Count());
+
+        Assert.True(movement.TryMove(world, travelerId, Direction.East));
+        Assert.Equal(sourceB, world.GetEntityLocation(travelerId));
+        Assert.True(movement.TryMove(world, travelerId, Direction.South));
+        Assert.Equal(sourceC, world.GetEntityLocation(travelerId));
+        Assert.True(movement.TryMove(world, travelerId, Direction.West));
+        Assert.Equal(sourceA, world.GetEntityLocation(travelerId));
+    }
+
+    [Fact]
+    public void ContentValidationRejectsMergedLayerDisconnectedOrInvalidOwner()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: entityA
+                  templateId: spaceA
+                  coord: { x: 0, y: 0 }
+                - entityId: entityB
+                  templateId: spaceB
+                  coord: { x: 1, y: 0 }
+              spaceA:
+                name: Space A
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 1
+                aperture: 10
+              spaceB:
+                name: Space B
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 1
+                aperture: 10
+            presentations:
+              room: { glyph: R, color: Gray }
+              spaceA: { glyph: A, color: Cyan }
+              spaceB: { glyph: B, color: Green }
+            mergedLayers:
               disconnected:
                 spaces:
                 - owner: entityA
@@ -236,7 +443,6 @@ public sealed class YamlContentLoaderTests
         var validation = registry.Validate();
 
         Assert.False(validation.IsValid);
-        Assert.Contains(validation.Errors, error => error.Contains("overlapping", StringComparison.Ordinal) && error.Contains("overlap", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(validation.Errors, error => error.Contains("disconnected", StringComparison.Ordinal) && error.Contains("disconnected", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(validation.Errors, error => error.Contains("invalidOwner", StringComparison.Ordinal) && error.Contains("missingEntity", StringComparison.Ordinal));
     }
@@ -1113,4 +1319,11 @@ public sealed class YamlContentLoaderTests
 
     private static bool TraceContains(TraceNode trace, string label) =>
         trace.Label == label || trace.Children.Any(child => TraceContains(child, label));
+
+    private static void AddRuntimeEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1));
+        world.Occupancy.Add(nodeId, entityId);
+    }
 }

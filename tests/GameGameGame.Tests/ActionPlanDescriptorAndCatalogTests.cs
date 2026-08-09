@@ -219,9 +219,27 @@ public sealed class ActionPlanDescriptorAndCatalogTests
     [Fact]
     public void ActionStepCatalogExposesAllCanonicalActionStepKinds()
     {
+        var retired = Enum.GetValues<ActionPlanBehaviorStepKind>()
+            .Where(ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep)
+            .ToHashSet();
+
         Assert.Equal(
-            Enum.GetValues<ActionPlanBehaviorStepKind>().Order(),
+            Enum.GetValues<ActionPlanBehaviorStepKind>().Where(kind => !retired.Contains(kind)).Order(),
             ActionStepCatalog.Steps.Select(step => step.Kind).Order());
+    }
+
+    [Theory]
+    [InlineData(ActionPlanBehaviorStepKind.AcquireNearestTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.SeekTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.FleeTarget)]
+    [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo)]
+    [InlineData(ActionPlanBehaviorStepKind.StrafeClockwise)]
+    [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise)]
+    public void RetiredLegacyTargetingAndCoordinateMovementStepsAreNotCatalogDescriptors(ActionPlanBehaviorStepKind kind)
+    {
+        Assert.True(ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(kind));
+        Assert.DoesNotContain(ActionStepCatalog.Steps, step => step.Kind == kind);
+        Assert.Throws<InvalidOperationException>(() => ActionStepCatalog.Get(kind));
     }
 
     [Fact]

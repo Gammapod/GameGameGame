@@ -61,6 +61,26 @@ public sealed class CoreActionChoiceTests
     }
 
     [Fact]
+    public void ActionChoiceRequestMoveOptionsExposeGraphNodeDestinationsWithCoordinateProjection()
+    {
+        var world = TestWorld.CreateWorld();
+        world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
+        var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Move, DirectionMode: ActionPlanMoveDirectionMode.Forward));
+        var service = new ActionChoiceService(new MovementService());
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        Assert.True(graph.TryGetNeighbor(new TopologyCellRef(origin), Direction.East, out var eastNeighbor));
+        Assert.True(graph.TryGetNode(new TopologyCellRef(eastNeighbor.Destination), out var eastNode));
+
+        var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
+        var move = Assert.Single(request.Choices, choice => choice.Kind == ActionChoiceKind.Move);
+        var east = Assert.Single(move.DirectionOptions, option => option.Direction == Direction.East);
+
+        Assert.Equal(eastNode.Id, east.DestinationNodeId);
+        Assert.Equal(eastNeighbor.Destination, east.Destination);
+    }
+
+    [Fact]
     public void ActionChoiceRequestExposesPickupTargetsAndInventoryDestinationsFromAuthoredPickupStep()
     {
         var world = TestWorld.CreateWorld();
@@ -125,6 +145,7 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), source.Source);
         var destination = Assert.Single(choice.Destinations(TestWorld.RockId), option => option.Destination == new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)));
         Assert.True(destination.CanExecute);
+        Assert.Equal(new TopologyNodeId("world:2,2"), destination.DestinationNodeId);
         Assert.DoesNotContain(choice.Destinations(TestWorld.RockId), option => option.Destination == new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)));
     }
 
@@ -136,10 +157,8 @@ public sealed class CoreActionChoiceTests
         Assert.True(setupMovement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
         var topologyDestination = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 3));
-        var movement = new MovementService(new OverrideNeighborTopologyService(
-            world.GetEntityLocation(TestWorld.PlayerId),
-            Direction.East,
-            topologyDestination));
+        world.SourceCellLinks.Add(new SourceCellLink(world.GetEntityLocation(TestWorld.PlayerId), Direction.East, topologyDestination, Direction.West));
+        var movement = new MovementService();
         var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.DropFacing));
         var service = new ActionChoiceService(movement);
 
@@ -148,6 +167,8 @@ public sealed class CoreActionChoiceTests
         var choice = Assert.Single(request!.Choices);
         var destination = Assert.Single(choice.Destinations(TestWorld.RockId), option => option.Destination == topologyDestination);
         Assert.True(destination.CanExecute);
+        Assert.Equal(new TopologyNodeId("world:3,3"), destination.DestinationNodeId);
+        Assert.Equal(TopologyEdgeKind.SourceCellLink, destination.EdgeKind);
     }
 
     [Fact]
@@ -165,6 +186,8 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(ActionChoiceKind.Enter, choice.Kind);
         var target = Assert.Single(choice.EntityOptions, option => option.TargetId == TestWorld.SlimeId);
         Assert.True(target.CanExecute);
+        Assert.Equal(new TopologyNodeId("world:1,1"), target.SourceNodeId);
+        Assert.Equal(TopologyEdgeKind.DefaultGrid, target.EdgeKind);
     }
 
     [Fact]
@@ -184,6 +207,7 @@ public sealed class CoreActionChoiceTests
         var south = Assert.Single(choice.DirectionOptions, option => option.Direction == Direction.South);
         Assert.True(south.CanExecute);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), south.Destination);
+        Assert.Equal(new TopologyNodeId("world:1,2"), south.DestinationNodeId);
     }
 
     [Fact]
@@ -218,10 +242,8 @@ public sealed class CoreActionChoiceTests
         var topologyCounterpartyLocation = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 3));
         Assert.True(setupMovement.TryPlace(world, TestWorld.SlimeId, topologyCounterpartyLocation));
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
-        var movement = new MovementService(new OverrideNeighborTopologyService(
-            world.GetEntityLocation(TestWorld.PlayerId),
-            Direction.East,
-            topologyCounterpartyLocation));
+        world.SourceCellLinks.Add(new SourceCellLink(world.GetEntityLocation(TestWorld.PlayerId), Direction.East, topologyCounterpartyLocation, Direction.West));
+        var movement = new MovementService();
         var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Transfer));
         var service = new ActionChoiceService(movement);
 
@@ -231,6 +253,8 @@ public sealed class CoreActionChoiceTests
         var counterparty = Assert.Single(choice.TransferCounterparties, option => option.CounterpartyId == TestWorld.SlimeId);
         Assert.Equal(Direction.East, counterparty.Direction);
         Assert.Equal(topologyCounterpartyLocation, counterparty.Source);
+        Assert.Equal(new TopologyNodeId("world:3,3"), counterparty.SourceNodeId);
+        Assert.Equal(TopologyEdgeKind.SourceCellLink, counterparty.EdgeKind);
         Assert.True(counterparty.CanExecute);
     }
 
@@ -276,6 +300,8 @@ public sealed class CoreActionChoiceTests
         var west = Assert.Single(choice.PushDirections(TestWorld.SlimeId), option => option.Direction == Direction.West);
         Assert.True(west.CanExecute);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), west.Destination);
+        Assert.Equal(new TopologyNodeId("world:0,1"), west.DestinationNodeId);
+        Assert.Equal(TopologyEdgeKind.DefaultGrid, west.EdgeKind);
         var east = Assert.Single(choice.PushDirections(TestWorld.SlimeId), option => option.Direction == Direction.East);
         Assert.False(east.CanExecute);
         Assert.Equal(TestWorld.RockId, east.BlockingEntityId);
@@ -399,6 +425,7 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(ControlledActorCommandKind.Drop, result.Kind);
         Assert.Equal(TestWorld.RockId, result.TargetId);
         Assert.Equal(destination, result.Destination);
+        Assert.Equal(new TopologyNodeId("world:2,2"), result.DestinationNodeId);
     }
 
     [Fact]
@@ -437,6 +464,8 @@ public sealed class CoreActionChoiceTests
         Assert.True(result.AdvancedTurn);
         Assert.Equal(ControlledActorCommandKind.Exit, result.Kind);
         Assert.Equal(Direction.South, result.Direction);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), result.Destination);
+        Assert.Equal(new TopologyNodeId("world:1,2"), result.DestinationNodeId);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
     }
 
@@ -469,10 +498,8 @@ public sealed class CoreActionChoiceTests
         var topologyCounterpartyLocation = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(3, 3));
         Assert.True(setupMovement.TryPlace(world, TestWorld.SlimeId, topologyCounterpartyLocation));
         world.SetActionControlSource(TestWorld.PlayerId, EntityControlSource.PlayerChoice);
-        var movement = new MovementService(new OverrideNeighborTopologyService(
-            world.GetEntityLocation(TestWorld.PlayerId),
-            Direction.East,
-            topologyCounterpartyLocation));
+        world.SourceCellLinks.Add(new SourceCellLink(world.GetEntityLocation(TestWorld.PlayerId), Direction.East, topologyCounterpartyLocation, Direction.West));
+        var movement = new MovementService();
         var plan = MovePlan(new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.Transfer));
         var service = new ActionChoiceService(movement);
         var request = service.CreateRequest(world, TestWorld.PlayerId, plan)!;
@@ -518,6 +545,8 @@ public sealed class CoreActionChoiceTests
         Assert.Equal(ControlledActorCommandKind.Push, result.Kind);
         Assert.Equal(TestWorld.SlimeId, result.TargetId);
         Assert.Equal(Direction.West, result.Direction);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), result.Destination);
+        Assert.Equal(new TopologyNodeId("world:0,1"), result.DestinationNodeId);
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 1)), world.GetEntityLocation(TestWorld.SlimeId));
         Assert.Equal(1, world.TurnNumber);
     }

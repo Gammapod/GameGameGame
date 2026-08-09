@@ -17,6 +17,7 @@ internal static class ActionPlanValidator
             TryValidate(errors, $"Action plan template {templateId} ({descriptor.Id})", () => descriptor.Materialize());
 
             ValidateActionPlanShape(diagnostics, templateId, descriptor);
+            ValidateBehaviorAuthoringSteps(diagnostics, templateId, descriptor);
             ValidateBehaviorTargetSlots(diagnostics, templateId, descriptor);
             ValidateBehaviorStepFields(diagnostics, templateId, descriptor, entityTemplates.Keys.ToHashSet());
             ValidateBehaviorPlanReferences(diagnostics, templateId, descriptor, planIds);
@@ -28,6 +29,31 @@ internal static class ActionPlanValidator
                 ValidateCalledPlan(diagnostics, templateId, descriptor, step, step.OnFailure, planIds);
                 ValidateMovementEffectDescriptor(diagnostics, templateId, descriptor, step, step.OnSuccess);
                 ValidateMovementEffectDescriptor(diagnostics, templateId, descriptor, step, step.OnFailure);
+            }
+        }
+    }
+
+    private static void ValidateBehaviorAuthoringSteps(
+        List<ContentDiagnostic> diagnostics,
+        ActionPlanTemplateId actionPlanTemplateId,
+        ActionPlanDescriptor descriptor)
+    {
+        if (descriptor.Behavior is not { } behavior)
+        {
+            return;
+        }
+
+        for (var index = 0; index < behavior.Steps.Count; index++)
+        {
+            var step = behavior.Steps[index];
+            if (ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.UnsupportedLegacyActionStep,
+                    $"Action plan {descriptor.Id} action step {step.Kind} is legacy targeting/coordinate movement and is not supported for graph-first canonical authoring; use graph-first targeting rules and TargetPathMove instead.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
             }
         }
     }

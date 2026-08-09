@@ -417,8 +417,8 @@ internal sealed class FrontendActionPlanMutationService(
             return validationError;
         }
 
-        _ = ActionStepCatalog.Get(kind);
-        if (ActionStepCatalog.IsStableAuthoringStep(kind) is false)
+        if (ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(kind) ||
+            ActionStepCatalog.IsStableAuthoringStep(kind) is false)
         {
             return $"Action step {kind} is not available for canonical authoring.";
         }

@@ -117,7 +117,7 @@ public sealed record PushAction(EntityId TargetId, Direction TargetMoveDirection
             return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, detail);
         }
 
-        trace.Add(TraceNode.Success("Target is adjacent"));
+        trace.Add(TraceNode.Success("Target is adjacent", ActionTrace.FormatAdjacencyFacts(adjacency)));
 
         var aperture = new TraceNode(
             $"Compare {target.Name} bulk to {actor.Name} aperture",
@@ -223,7 +223,7 @@ public sealed record PickupAction(EntityId TargetId, PlaneCoord Destination) : I
             return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, detail);
         }
 
-        trace.Add(TraceNode.Success("Target is adjacent"));
+        trace.Add(TraceNode.Success("Target is adjacent", ActionTrace.FormatAdjacencyFacts(adjacency)));
 
         var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
         var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
@@ -305,7 +305,7 @@ public sealed record DropAction(EntityId TargetId, PlaneCoord Destination) : IAc
             return ActionTrace.Fail(trace, adjacency.FailureReason ?? FailureReason.InvalidDropDestination, detail);
         }
 
-        trace.Add(TraceNode.Success("Destination is adjacent", Destination.ToString()));
+        trace.Add(TraceNode.Success("Destination is adjacent", ActionTrace.FormatAdjacencyFacts(adjacency)));
 
         var constrainedRelocation = new ConstrainedInventoryRelocationService(movement, ignoredPolicyOwnerId: actorId);
         var relocation = constrainedRelocation.Evaluate(world, TargetId, MovementDestination.Plane(Destination));
@@ -395,13 +395,20 @@ public sealed record TransferAction(TransferDirection TransferDirection, EntityI
     private bool TryResolveCounterparty(WorldState world, EntityId actorId, MovementService movement, TraceNode trace, out EntityId counterpartyId)
     {
         counterpartyId = default;
-        var actorLocation = world.GetEntityLocation(actorId);
-        if (!movement.TryGetMoveDestination(world, actorId, CounterpartyDirection, out var counterpartyCoord))
+        if (!movement.TryGetMovementEdge(world, actorId, CounterpartyDirection, out var edge))
         {
-            var adjacency = movement.EvaluateAdjacency(world, actorLocation, counterpartyCoord, actorId);
-            ActionTrace.Fail(trace, adjacency.FailureReason ?? FailureReason.TargetNotAdjacent, adjacency.FailureDetail ?? $"counterparty direction {CounterpartyDirection} is not adjacent");
+            ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"counterparty direction {CounterpartyDirection} is not adjacent");
             return false;
         }
+
+        var counterpartyCoord = edge.Destination;
+        if (edge.IsBlocked)
+        {
+            ActionTrace.Fail(trace, edge.FailureReason ?? FailureReason.TargetNotAdjacent, edge.FailureDetail ?? $"counterparty direction {CounterpartyDirection} is blocked");
+            return false;
+        }
+
+        trace.Add(TraceNode.Success("Counterparty movement edge", ActionTrace.FormatMovementEdgeFacts(edge)));
 
         if (!world.Planes.TryGetValue(counterpartyCoord.PlaneId, out var plane) ||
             !plane.Contains(counterpartyCoord.Coord) ||
@@ -598,7 +605,7 @@ public sealed record EnterAction(EntityId TargetId) : IActionIntent
             return ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, detail);
         }
 
-        trace.Add(TraceNode.Success("Target is adjacent"));
+        trace.Add(TraceNode.Success("Target is adjacent", ActionTrace.FormatAdjacencyFacts(adjacency)));
 
         if (world.GetRegisteredInventoryPlaneId(TargetId) is not { } inventoryPlaneId)
         {
@@ -711,6 +718,12 @@ public sealed record ExitAction(Direction Direction) : IActionIntent
 
 internal static class ActionTrace
 {
+    public static string FormatAdjacencyFacts(AdjacencyEvaluation adjacency) =>
+        $"direction={adjacency.Direction}; sourceNode={adjacency.SourceNodeId?.Value ?? "<none>"}; destinationNode={adjacency.DestinationNodeId?.Value ?? "<none>"}; edge={adjacency.EdgeKind?.ToString() ?? "<none>"}";
+
+    public static string FormatMovementEdgeFacts(MovementEdgeResult edge) =>
+        $"direction={edge.Direction}; sourceNode={edge.SourceNodeId.Value}; source={edge.Source}; destinationNode={edge.DestinationNodeId.Value}; destination={edge.Destination}; edge={edge.Kind}; blocked={edge.IsBlocked}";
+
     public static ActionEvaluation Fail(TraceNode trace, FailureReason reason, string detail)
     {
         trace.Status = TraceStatus.Failure;

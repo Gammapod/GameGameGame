@@ -277,6 +277,7 @@ public sealed class PointOfViewService(EntityContainmentPathService? containment
         }
 
         var capabilities = behavior.Steps
+            .Where(step => !ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
             .Select(step => ActionStepCatalog.Get(step.Kind).TargetCapability)
             .Where(capability => capability is not null)
             .Select(capability => capability!.Value)
@@ -341,6 +342,7 @@ public sealed class PointOfViewService(EntityContainmentPathService? containment
     private static IReadOnlyList<ActionPlanBehaviorStepKind> CapabilitiesFromPlan(ActionPlanDescriptor? actionPlan) =>
         actionPlan?.Behavior is { } behavior
             ? behavior.Steps
+                .Where(step => !ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
                 .Select(step => ActionStepCatalog.Get(step.Kind).TargetCapability)
                 .Where(capability => capability is not null)
                 .Select(capability => capability!.Value)

@@ -14,7 +14,9 @@ public sealed record TopologyVisibleCellProjection(
     int Distance,
     TopologyCellRef? From,
     Direction? Direction,
-    TopologyEdgeKind? Kind);
+    TopologyEdgeKind? Kind,
+    TopologyNodeId? NodeId = null,
+    TopologyLayoutCoord? LayoutCoord = null);
 
 public enum TopologyVisibilityDiagnosticCode
 {
@@ -27,10 +29,8 @@ public sealed record TopologyVisibilityDiagnostic(
     TopologyVisibilityDiagnosticCode Code,
     string Message);
 
-public sealed class TopologyVisibilityProjectionService(ITopologyService? topology = null)
+public sealed class TopologyVisibilityProjectionService
 {
-    private readonly ITopologyService _topology = topology ?? new EntityTopologyService(new DefaultTopologyService());
-
     public TopologyVisibilityProjection Project(WorldState world, EntityId observerEntityId, int maxDepth)
     {
         if (!world.Entities.ContainsKey(observerEntityId))
@@ -54,14 +54,26 @@ public sealed class TopologyVisibilityProjectionService(ITopologyService? topolo
                 [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.NegativeDepthNotSupported, "Topology visibility max depth must be non-negative.")]);
         }
 
-        var traversal = new TopologyTraversalService(_topology);
-        var visibleCells = traversal.Flood(world, origin.SourceCoord, maxDepth)
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        if (!graph.TryGetNode(origin, out var originNode))
+        {
+            return new TopologyVisibilityProjection(
+                observerEntityId,
+                origin,
+                maxDepth,
+                [],
+                [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.ObserverNotFound, $"Observer entity {observerEntityId} has no topology node at {origin}.")]);
+        }
+
+        var visibleCells = TopologyGraphTraversalService.Flood(graph, originNode.Id, maxDepth)
             .Select(step => new TopologyVisibleCellProjection(
-                new TopologyCellRef(step.Coord),
+                new TopologyCellRef(step.SourceCoord),
                 step.Distance,
-                step.From is null ? null : new TopologyCellRef(step.From.Value),
+                step.FromNodeId is null || !graph.TryGetNode(step.FromNodeId.Value, out var fromNode) ? null : new TopologyCellRef(fromNode.SourceCoord),
                 step.Direction,
-                step.Kind))
+                step.Kind,
+                step.NodeId,
+                step.LayoutCoord))
             .ToList();
 
         return new TopologyVisibilityProjection(

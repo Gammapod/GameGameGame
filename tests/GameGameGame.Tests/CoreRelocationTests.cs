@@ -45,6 +45,23 @@ public sealed class CoreRelocationTests
     }
 
     [Fact]
+    public void RelocationEvaluationReportsGraphEdgeFactsForAdjacentDestination()
+    {
+        var world = TestWorld.CreateWorld();
+        world.Entities[TestWorld.PlayerId] = world.Entities[TestWorld.PlayerId] with { TopologyPolicy = EntityTopologyPolicy.ConnectsOutward };
+        var movement = new MovementService();
+        var origin = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, origin));
+
+        var evaluation = movement.EvaluateRelocation(world, TestWorld.RockId, MovementDestination.AdjacentTo(TestWorld.RockId, Direction.East));
+
+        Assert.True(evaluation.CanRelocate);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 2)), evaluation.Destination);
+        Assert.Equal(new TopologyNodeId("world:2,2"), evaluation.DestinationNodeId);
+        Assert.Equal(TopologyEdgeKind.EntityTopologyPolicy, evaluation.EdgeKind);
+    }
+
+    [Fact]
     public void RelocationEvaluationReportsOccupiedDestinationWithoutMovingEntity()
     {
         var world = TestWorld.CreateWorld();

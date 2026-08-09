@@ -23,14 +23,18 @@ public sealed record ControlledActorDirectionAffordance(
     bool CanExecute,
     FailureReason? FailureReason,
     string? FailureDetail,
-    EntityId? BlockingEntityId = null);
+    EntityId? BlockingEntityId = null,
+    TopologyNodeId? DestinationNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);
 
 public sealed record ControlledActorEntityAffordance(
     EntityId TargetId,
     PlaneCoord? Source,
     bool CanExecute,
     FailureReason? FailureReason,
-    string? FailureDetail);
+    string? FailureDetail,
+    TopologyNodeId? SourceNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);
 
 public sealed record ControlledActorDestinationAffordance(
     EntityId TargetId,
@@ -38,7 +42,9 @@ public sealed record ControlledActorDestinationAffordance(
     bool CanExecute,
     FailureReason? FailureReason,
     string? FailureDetail,
-    EntityId? BlockingEntityId = null);
+    EntityId? BlockingEntityId = null,
+    TopologyNodeId? DestinationNodeId = null,
+    TopologyEdgeKind? EdgeKind = null);
 
 public sealed class ControlledActorAffordanceService(MovementService movement)
 {
@@ -69,9 +75,15 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
         Directions.Select(direction =>
         {
             var evaluation = new MoveAction(direction).Evaluate(world, actorId, movement);
-            var destination = movement.TryGetMoveDestination(world, actorId, direction, out var resolvedDestination)
-                ? resolvedDestination
+            var movementEdge = movement.TryGetMovementEdge(world, actorId, direction, out var resolvedMovementEdge)
+                ? resolvedMovementEdge
+                : null;
+            var destination = movementEdge is { IsBlocked: false }
+                ? movementEdge.Destination
                 : (PlaneCoord?)null;
+            var destinationNodeId = movementEdge is { IsBlocked: false }
+                ? movementEdge.DestinationNodeId
+                : (TopologyNodeId?)null;
             var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
             var blockingEntity = destination is { } concreteDestination ? world.GetOccupant(concreteDestination) : null;
             return new ControlledActorDirectionAffordance(
@@ -80,7 +92,9 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
                 evaluation.CanExecute,
                 ToFailureReason(failure),
                 failure?.Detail,
-                blockingEntity);
+                blockingEntity,
+                destinationNodeId,
+                movementEdge?.Kind);
         }).ToList();
 
     private IReadOnlyList<ControlledActorEntityAffordance> QueryPickupSources(
@@ -93,17 +107,17 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
             return [];
         }
 
-        var actorLocation = world.GetEntityLocation(actorId);
         var adjacentTargets = world.Occupancy.Values
             .Where(targetId => targetId != actorId)
-            .Where(targetId => world.GetEntityLocation(targetId).PlaneId == actorLocation.PlaneId && movement.AreAdjacent(world, actorId, targetId))
-            .OrderBy(targetId => world.GetEntityLocation(targetId).Coord.Y)
-            .ThenBy(targetId => world.GetEntityLocation(targetId).Coord.X)
-            .ThenBy(targetId => targetId.Value)
+            .Select(targetId => (TargetId: targetId, Adjacency: movement.EvaluateAdjacency(world, actorId, targetId)))
+            .Where(candidate => candidate.Adjacency.AreAdjacent)
+            .OrderBy(candidate => world.GetEntityLocation(candidate.TargetId).Coord.Y)
+            .ThenBy(candidate => world.GetEntityLocation(candidate.TargetId).Coord.X)
+            .ThenBy(candidate => candidate.TargetId.Value)
             .ToList();
 
         var result = new List<ControlledActorEntityAffordance>();
-        foreach (var targetId in adjacentTargets)
+        foreach (var (targetId, adjacency) in adjacentTargets)
         {
             var destinations = QueryPickupDestinations(world, actorId, targetId);
             destinationsByTargetId[targetId] = destinations;
@@ -113,7 +127,9 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
                 world.GetEntityLocation(targetId),
                 destinations.Any(destination => destination.CanExecute),
                 firstFailure?.FailureReason,
-                firstFailure?.FailureDetail));
+                firstFailure?.FailureDetail,
+                adjacency.DestinationNodeId,
+                adjacency.EdgeKind));
         }
 
         return result;
@@ -182,15 +198,16 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
             return [];
         }
 
-        var actorLocation = world.GetEntityLocation(actorId);
         return world.Occupancy.Values
             .Where(targetId => targetId != actorId)
-            .Where(targetId => world.GetEntityLocation(targetId).PlaneId == actorLocation.PlaneId && movement.AreAdjacent(world, actorId, targetId))
-            .OrderBy(targetId => world.GetEntityLocation(targetId).Coord.Y)
-            .ThenBy(targetId => world.GetEntityLocation(targetId).Coord.X)
-            .ThenBy(targetId => targetId.Value)
-            .Select(targetId =>
+            .Select(targetId => (TargetId: targetId, Adjacency: movement.EvaluateAdjacency(world, actorId, targetId)))
+            .Where(candidate => candidate.Adjacency.AreAdjacent)
+            .OrderBy(candidate => world.GetEntityLocation(candidate.TargetId).Coord.Y)
+            .ThenBy(candidate => world.GetEntityLocation(candidate.TargetId).Coord.X)
+            .ThenBy(candidate => candidate.TargetId.Value)
+            .Select(candidate =>
             {
+                var targetId = candidate.TargetId;
                 var evaluation = new EnterAction(targetId).Evaluate(world, actorId, movement);
                 var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
                 return new ControlledActorEntityAffordance(
@@ -198,7 +215,9 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
                     world.GetEntityLocation(targetId),
                     evaluation.CanExecute,
                     ToFailureReason(failure),
-                    failure?.Detail);
+                    failure?.Detail,
+                    candidate.Adjacency.DestinationNodeId,
+                    candidate.Adjacency.EdgeKind);
             })
             .ToList();
     }
@@ -208,6 +227,9 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
         {
             var actionEvaluation = new ExitAction(direction).Evaluate(world, actorId, movement);
             var constrained = TryEvaluateExitDestination(world, actorId, direction, out var destination, out var blockingEntity);
+            var destinationNodeId = destination is { } concreteDestination && world.TryGetNodeId(concreteDestination, out var nodeId)
+                ? new TopologyNodeId(nodeId.Value)
+                : (TopologyNodeId?)null;
             var failure = actionEvaluation.CanExecute ? null : FindFailure(actionEvaluation.Trace) ?? actionEvaluation.Trace;
             return new ControlledActorDirectionAffordance(
                 direction,
@@ -215,7 +237,8 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
                 actionEvaluation.CanExecute,
                 ToFailureReason(failure),
                 failure?.Detail,
-                blockingEntity ?? (constrained?.CanRelocate == false && destination is { } concreteDestination ? world.GetOccupant(concreteDestination) : null));
+                blockingEntity ?? (constrained?.CanRelocate == false && destination is { } concreteDestinationForOccupant ? world.GetOccupant(concreteDestinationForOccupant) : null),
+                destinationNodeId);
         }).ToList();
 
     private ConstrainedRelocationEvaluation? TryEvaluateExitDestination(WorldState world, EntityId actorId, Direction direction, out PlaneCoord? destination, out EntityId? blockingEntity)
@@ -244,13 +267,15 @@ public sealed class ControlledActorAffordanceService(MovementService movement)
     {
         var evaluation = action.Evaluate(world, actorId, movement);
         var failure = evaluation.CanExecute ? null : FindFailure(evaluation.Trace) ?? evaluation.Trace;
+        var destinationNodeId = world.TryGetNodeId(destination, out var nodeId) ? new TopologyNodeId(nodeId.Value) : (TopologyNodeId?)null;
         return new ControlledActorDestinationAffordance(
             targetId,
             destination,
             evaluation.CanExecute,
             ToFailureReason(failure),
             failure?.Detail,
-            world.GetOccupant(destination));
+            world.GetOccupant(destination),
+            destinationNodeId);
     }
 
     private static IEnumerable<PlaneCoord> PlaneCoords(Plane plane)

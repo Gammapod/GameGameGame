@@ -58,6 +58,7 @@ public enum ContentDiagnosticCode
     InvalidScenarioDefinition,
     InvalidTargetingRule,
     MissingTargetTemplateReference,
+    UnsupportedLegacyActionStep,
     InvalidActionStepTargetSlot,
     InvalidActionStepTargetReference,
     InvalidActionStepField,

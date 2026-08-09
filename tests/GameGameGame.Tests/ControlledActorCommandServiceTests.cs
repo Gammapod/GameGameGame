@@ -27,6 +27,24 @@ public sealed class ControlledActorCommandServiceTests
     }
 
     [Fact]
+    public void ControlledActorCommandMoveReportsGraphNodeDestinationWithCoordinateProjection()
+    {
+        var world = TestWorld.CreateWorld();
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        var origin = world.GetEntityLocation(TestWorld.PlayerId);
+        Assert.True(graph.TryGetNeighbor(new TopologyCellRef(origin), Direction.East, out var eastNeighbor));
+        Assert.True(graph.TryGetNode(new TopologyCellRef(eastNeighbor.Destination), out var eastNode));
+        var service = new ControlledActorCommandService(new MovementService(), new Dictionary<EntityId, IEntityActionPlan>());
+
+        var result = service.Execute(world, TestWorld.PlayerId, ControlledActorCommand.Move(Direction.East));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(eastNeighbor.Destination, result.Destination);
+        Assert.Equal(eastNode.Id, result.DestinationNodeId);
+        Assert.Equal(TopologyEdgeKind.DefaultGrid, result.EdgeKind);
+    }
+
+    [Fact]
     public void ControlledActorCommandFailedMoveRecordsFailureWithoutAdvancingTurn()
     {
         var world = TestWorld.CreateWorld();
@@ -110,6 +128,8 @@ public sealed class ControlledActorCommandServiceTests
         Assert.Equal(TestWorld.SlimeId, result.TargetId);
         Assert.Equal(source, result.Source);
         Assert.Equal(destination, result.Destination);
+        Assert.Equal(new TopologyNodeId("world:0,1"), result.DestinationNodeId);
+        Assert.Equal(TopologyEdgeKind.DefaultGrid, result.EdgeKind);
         Assert.Equal(destination, world.GetEntityLocation(TestWorld.SlimeId));
         Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), world.GetEntityLocation(TestWorld.PlayerId));
         Assert.True(result.AdvancedTurn);

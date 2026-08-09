@@ -59,7 +59,9 @@ public sealed record ControlledActorCommandResult(
     bool ConsumedTurn,
     bool AdvancedTurn,
     TraceNode Trace,
-    SimulationTurnReport? TurnReport)
+    SimulationTurnReport? TurnReport,
+    TopologyNodeId? DestinationNodeId = null,
+    TopologyEdgeKind? EdgeKind = null)
 {
     public EntityId? CounterpartyId { get; init; }
 }
@@ -74,7 +76,10 @@ public sealed class ControlledActorCommandService(
         var action = CreateAction(command);
         var source = command.Source ?? ResolveSource(world, command);
         var evaluation = action.Evaluate(world, actorId, movement);
-        var destination = command.Destination ?? ResolveDestination(world, command);
+        var movementEdge = ResolveMovementEdge(world, actorId, command);
+        var destination = command.Destination ?? movementEdge?.Destination ?? ResolveDestination(world, actorId, command);
+        var destinationNodeId = movementEdge?.DestinationNodeId ?? ResolveDestinationNodeId(world, actorId, command, destination);
+        var edgeKind = movementEdge?.Kind;
 
         if (!evaluation.CanExecute)
         {
@@ -93,7 +98,9 @@ public sealed class ControlledActorCommandService(
                 ConsumedTurn: false,
                 AdvancedTurn: false,
                 evaluation.Trace,
-                TurnReport: null);
+                TurnReport: null,
+                destinationNodeId,
+                edgeKind);
         }
 
         var turns = new TurnService(movement, actionPlans, beforePlan);
@@ -111,7 +118,9 @@ public sealed class ControlledActorCommandService(
             ConsumedTurn: succeeded,
             AdvancedTurn: true,
             world.LastTrace ?? evaluation.Trace,
-            world.LastTurnReport);
+            world.LastTurnReport,
+            destinationNodeId,
+            edgeKind);
     }
 
     private static IActionIntent CreateAction(ControlledActorCommand command) =>
@@ -133,8 +142,25 @@ public sealed class ControlledActorCommandService(
             ? world.GetEntityLocation(targetId)
             : command.Source;
 
-    private PlaneCoord? ResolveDestination(WorldState world, ControlledActorCommand command)
+    private PlaneCoord? ResolveDestination(WorldState world, EntityId actorId, ControlledActorCommand command)
     {
+        if (command.Kind == ControlledActorCommandKind.Move && command.Direction is { } moveDirection)
+        {
+            return movement.TryGetMoveDestination(world, actorId, moveDirection, out var moveDestination)
+                ? moveDestination
+                : null;
+        }
+
+        if (command.Kind == ControlledActorCommandKind.Exit && command.Direction is { } exitDirection)
+        {
+            var actorLocation = world.GetEntityLocation(actorId);
+            if (InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId) &&
+                movement.TryGetMoveDestination(world, containerId, exitDirection, out var exitDestination))
+            {
+                return exitDestination;
+            }
+        }
+
         if (command.Kind == ControlledActorCommandKind.Push && command.TargetId is { } targetId && command.Direction is { } direction && world.Entities.ContainsKey(targetId))
         {
             return movement.TryGetMoveDestination(world, targetId, direction, out var destination)
@@ -143,6 +169,48 @@ public sealed class ControlledActorCommandService(
         }
 
         return command.Destination;
+    }
+
+    private MovementEdgeResult? ResolveMovementEdge(WorldState world, EntityId actorId, ControlledActorCommand command)
+    {
+        if (command.Kind == ControlledActorCommandKind.Move && command.Direction is { } moveDirection &&
+            movement.TryGetMovementEdge(world, actorId, moveDirection, out var moveEdge))
+        {
+            return moveEdge;
+        }
+
+        if (command.Kind == ControlledActorCommandKind.Exit && command.Direction is { } exitDirection)
+        {
+            var actorLocation = world.GetEntityLocation(actorId);
+            if (InventoryPlaneOwnership.TryFindOwner(world, actorLocation.PlaneId, out var containerId) &&
+                movement.TryGetMovementEdge(world, containerId, exitDirection, out var exitEdge))
+            {
+                return exitEdge;
+            }
+        }
+
+        if (command.Kind == ControlledActorCommandKind.Push && command.TargetId is { } targetId && command.Direction is { } pushDirection &&
+            world.Entities.ContainsKey(targetId) &&
+            movement.TryGetMovementEdge(world, targetId, pushDirection, out var pushEdge))
+        {
+            return pushEdge;
+        }
+
+        return null;
+    }
+
+    private TopologyNodeId? ResolveDestinationNodeId(WorldState world, EntityId actorId, ControlledActorCommand command, PlaneCoord? destination)
+    {
+        if (command.Kind == ControlledActorCommandKind.Move && command.Direction is { } moveDirection)
+        {
+            return movement.TryGetMoveDestinationNode(world, actorId, moveDirection, out var nodeId)
+                ? nodeId
+                : null;
+        }
+
+        return destination is { } concreteDestination && world.TryGetNodeId(concreteDestination, out var destinationNodeId)
+            ? new TopologyNodeId(destinationNodeId.Value)
+            : null;
     }
 
     private static IActionIntent CreateTransferAction(ControlledActorCommand command, EntityId movingEntityId, EntityId counterpartyId)

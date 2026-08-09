@@ -61,14 +61,15 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
             return descriptor.Behavior.Steps
                 .Select(step =>
                 {
-                    var metadata = ActionStepCatalog.Get(step.Kind);
+                    var isRetired = ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind);
+                    var metadata = isRetired ? null : ActionStepCatalog.Get(step.Kind);
                     return new ActionPlanPreviewStep(
                         step.Kind,
-                        metadata.DisplayName,
-                        metadata.Description,
-                        metadata.RequiredState,
-                        metadata.DefaultableState,
-                        metadata.StateWrites,
+                        metadata?.DisplayName ?? step.Kind.ToString(),
+                        metadata?.Description ?? "Retired legacy targeting/coordinate movement Action Step; use graph-first targeting rules and TargetPathMove instead.",
+                        metadata?.RequiredState ?? [],
+                        metadata?.DefaultableState ?? [],
+                        metadata?.StateWrites ?? [],
                         step.TargetSlot,
                         step.TargetLabel,
                         step.PlanId,
@@ -137,6 +138,11 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
 
         foreach (var step in descriptor.Behavior.Steps)
         {
+            if (ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
+            {
+                continue;
+            }
+
             var metadata = ActionStepCatalog.Get(step.Kind);
             foreach (var state in metadata.DefaultableState)
             {

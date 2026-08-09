@@ -139,6 +139,29 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationRejectsLegacyTargetingAndCoordinateMovementActionSteps()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                PrototypeContent.WanderingActionPlanTemplateId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("legacyCoordinateMovement"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(ActionPlanBehaviorStepKind.AcquireNearestTarget)
+                    ])));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.UnsupportedLegacyActionStep);
+        Assert.Equal(PrototypeContent.WanderingActionPlanTemplateId, diagnostic.ActionPlanTemplateId);
+        Assert.Equal(new ActionPlanId("legacyCoordinateMovement"), diagnostic.ActionPlanId);
+        Assert.Equal(0, diagnostic.StepIndex);
+        Assert.Contains("graph-first targeting", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsCanonicalMoveMissingDirectionMode()
     {
         var registry = PrototypeContent.CreateRegistry()

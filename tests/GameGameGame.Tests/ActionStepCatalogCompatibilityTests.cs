@@ -9,7 +9,6 @@ public sealed class ActionStepCatalogCompatibilityTests
     [InlineData(ActionPlanBehaviorStepKind.TurnLeft, "Turn Left")]
     [InlineData(ActionPlanBehaviorStepKind.TurnRight, "Turn Right")]
     [InlineData(ActionPlanBehaviorStepKind.ReverseFacing, "Reverse Facing")]
-    [InlineData(ActionPlanBehaviorStepKind.AcquireNearestTarget, "Acquire Nearest Target")]
     public void ActionStepCatalogKeepsLegacyMetadataStepsForRuntimeCompatibility(ActionPlanBehaviorStepKind kind, string displayName)
     {
         var step = ActionStepCatalog.Get(kind);
@@ -17,22 +16,6 @@ public sealed class ActionStepCatalogCompatibilityTests
         Assert.Equal(displayName, step.DisplayName);
         Assert.Equal(ActionStepAuthoringTier.Legacy, step.Tier);
         Assert.NotEmpty(step.Description);
-    }
-
-    [Theory]
-    [InlineData(ActionPlanBehaviorStepKind.SeekTarget, "Seek Target")]
-    [InlineData(ActionPlanBehaviorStepKind.FleeTarget, "Flee Target")]
-    [InlineData(ActionPlanBehaviorStepKind.MaintainChebyshevDistanceTwo, "Maintain Chebyshev Distance Two")]
-    [InlineData(ActionPlanBehaviorStepKind.StrafeClockwise, "Strafe Clockwise")]
-    [InlineData(ActionPlanBehaviorStepKind.StrafeAnticlockwise, "Strafe Anticlockwise")]
-    public void ExistingTargetMovementStepsRemainRuntimeCompatible(ActionPlanBehaviorStepKind kind, string displayName)
-    {
-        var step = ActionStepCatalog.Get(kind);
-
-        Assert.Equal(displayName, step.DisplayName);
-        Assert.Equal(ActionStepAuthoringTier.Legacy, step.Tier);
-        Assert.Contains(step.RequiredState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
-        Assert.Contains(step.DefaultableState, state => state.Slot == ActionPlanSlot.Target && state.ValueKind == PlanValueKind.Entity);
     }
 
     [Theory]

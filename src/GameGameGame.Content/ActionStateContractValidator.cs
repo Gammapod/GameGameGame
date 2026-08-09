@@ -94,6 +94,11 @@ internal static class ActionStateContractValidator
             for (var index = 0; index < behavior.Steps.Count; index++)
             {
                 var step = behavior.Steps[index];
+                if (ActionStepCatalog.IsRetiredLegacyTargetingOrCoordinateMovementStep(step.Kind))
+                {
+                    continue;
+                }
+
                 var metadata = ActionStepCatalog.Get(step.Kind);
                 ApplyDefaultableState(metadata.DefaultableState, slots);
                 ValidateBehaviorStepSlotReads(diagnostics, subject, entityTemplateId, actionPlanTemplateId, plan, step, index, metadata.RequiredState, slots);
