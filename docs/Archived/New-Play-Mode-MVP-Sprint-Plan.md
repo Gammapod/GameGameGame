@@ -17,7 +17,7 @@ related:
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
   - plan.sadconsole-frontend-roadmap
 ---
 
@@ -220,7 +220,7 @@ Suggested tests:
 Documentation updates:
 
 - Record Play vs Debug distinction in the frontend UX decision log after implementation direction is accepted.
-- Keep inventory-space drawing requirements and deferred nice-to-haves in `docs/Plans/SadConsole-UI-Specification.md` until a stable source-of-truth promotion is warranted.
+- Keep inventory-space drawing requirements and deferred nice-to-haves in `docs/Source of Truth/SadConsole-UI-Specification.md`.
 - Add or update component-gallery notes when the reusable inventory-space component is accepted.
 
 ## Recommended implementation order

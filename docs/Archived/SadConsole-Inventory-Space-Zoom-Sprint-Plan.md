@@ -1,7 +1,7 @@
 ---
 id: plan.sadconsole-inventory-space-zoom-sprint
 title: SadConsole Inventory Space Zoom Sprint Plan
-kind: sprint-plan
+kind: plan
 status: archived
 truth_rank: 50
 truth_domains: [planning-priority, frontend-presentation]

@@ -3,19 +3,19 @@ id: plan.actor-pov-play-layout-foundation-sprint
 title: Actor POV Play Layout Foundation Sprint Plan
 kind: plan
 subkind: frontend-sprint-plan
-status: completed
+status: archived
 owners: [frontend-owner]
 audience: [frontend-owner, core-owner]
 lane: frontend-ux
 truth_rank: 60
-truth_domains: [frontend-presentation, frontend-planning]
+truth_domains: [frontend-presentation]
 read_when:
   - reviewing the completed componentized Actor POV consumer Play layout foundation sprint
   - investigating why Actor POV Play mode has separate region/layout/screen-model seams
   - planning follow-up parent inventory nodes connectors per-node viewport or chrome work
 related:
   - plan.actor-pov-inventory-chain-play-layout
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
@@ -24,7 +24,7 @@ related:
 
 # Actor POV Play Layout Foundation Sprint Plan
 
-Status: Completed focused frontend sprint plan. This sprint began the durable rebuild described by `docs/Plans/Actor-POV-Inventory-Chain-Play-Layout-Plan.md` by creating a componentized Actor POV layout foundation over the MVP `ActorPovPlayProjection` layer.
+Status: Completed focused frontend sprint plan. This sprint began the durable rebuild described by `docs/Archived/Actor-POV-Inventory-Chain-Play-Layout-Plan.md` by creating a componentized Actor POV layout foundation over the MVP `ActorPovPlayProjection` layer.
 
 ## Goal
 

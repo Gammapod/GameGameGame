@@ -2,7 +2,7 @@
 id: plan.canonical-actions-vertical-slice
 title: Canonical Actions Vertical Slice Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 45
 truth_domains: [planning-priority, implementation-navigation]
 owners: [core-owner]
@@ -37,8 +37,8 @@ Related source of truth:
 - `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome and affordance rules.
 - `docs/Source of Truth/Frontend-Game-Text.md` records player-facing log message ID slots and argument expectations.
 - `docs/Archived/Delta-Point-of-View-Release-Plan.md` records the POV foundation this plan consumes.
-- `docs/Plans/Gamma-Editor-MVP-Plan.md` and `docs/Plans/SadConsole-Frontend-Roadmap.md` preserve the broader componentized editor/play-mode backlog.
-- `docs/Plans/SadConsole-UI-Specification.md` records reusable UI layout/layering/mouse/render-style specifications for play-mode presentation work.
+- `docs/Archived/Gamma-Editor-MVP-Plan.md` and `docs/Plans/SadConsole-Frontend-Roadmap.md` preserve the broader componentized editor/play-mode backlog.
+- `docs/Source of Truth/SadConsole-UI-Specification.md` records reusable UI layout/layering/mouse/render-style specifications for play-mode presentation work.
 
 ## Release target
 
@@ -110,7 +110,7 @@ These rooms are validation fixtures, not just demos. They should be runnable thr
 1. Componentized play mode can present the action through shared choice/target/log/POV services.
 2. The frontend does not own action legality, success/failure policy, or ratio semantics.
 3. Any frontend tests assert UI consumption of shared facts, not duplicated engine rules.
-4. For every newly promoted action, frontend planning explicitly decides which player-facing facts the action exposes, which of those facts need graphical presentation, and whether an existing canonical visual treatment can be reused or a new one must be prototyped in the SadConsole component gallery before changing the play surface. Layout/layering/mouse/render-style mechanics should consume `docs/Plans/SadConsole-UI-Specification.md` rather than duplicating UI backlog here.
+4. For every newly promoted action, frontend planning explicitly decides which player-facing facts the action exposes, which of those facts need graphical presentation, and whether an existing canonical visual treatment can be reused or a new one must be prototyped in the SadConsole component gallery before changing the play surface. Layout/layering/mouse/render-style mechanics should consume `docs/Source of Truth/SadConsole-UI-Specification.md` rather than duplicating UI backlog here.
 5. New player-facing graphical treatments should fit the SadConsole square-tile rendering baseline: text, entity glyphs, decorators, panels, menus, and future sprites are tile-rendered UI elements, while gameplay state should not default to terminal-style text dumps when a tile-based visual treatment is needed for player understanding.
 
 ## Runtime control source and Action Choice
@@ -354,7 +354,7 @@ Core/shared backlog captured from frontend planning:
 4. Add nested target/destination request DTOs for choices that require additional input.
 5. Define failed submitted-choice policy in Core.
 6. Integrate Action Choice with `SimulationHistorySession` and `ActionLogProjection`.
-7. Expose a reusable actor-turn stepper/scheduler for play-mode active-actor highlighting and animation. The scheduler/stepper facts are Core/shared work; SadConsole active-actor highlighting/animation presentation is frontend-owned and tracked with UI-N07 in `docs/Plans/SadConsole-UI-Specification.md`.
+7. Expose a reusable actor-turn stepper/scheduler for play-mode active-actor highlighting and animation. The scheduler/stepper facts are Core/shared work; SadConsole active-actor highlighting/animation presentation is frontend-owned and tracked with UI-N07 in `docs/Source of Truth/SadConsole-UI-Specification.md`.
 8. Promote materialized scenario `PlayerControls` from binding data into initial runtime control-source setup once the Core model exists.
 
 Scope:

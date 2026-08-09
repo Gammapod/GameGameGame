@@ -2,7 +2,7 @@
 id: plan.merged-inventory-layer-vertical-slice-sprint
 title: Merged Inventory Layer Vertical Slice Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 40
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]

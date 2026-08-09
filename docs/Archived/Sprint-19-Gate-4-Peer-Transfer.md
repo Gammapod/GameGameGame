@@ -9,8 +9,8 @@ Related source of truth and active plans:
 - `docs/Source of Truth/invariants.md`
 - `docs/Plans/High-Level-Roadmap.md`
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
-- `docs/Plans/Beta-Capability-Gap-Log.md`
-- `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`
+- `docs/Source of Truth/Capability-Gap-Log.md`
+- `docs/Source of Truth/Design-Quirks-and-Gotchas.md`
 
 ## Completion summary
 
@@ -95,7 +95,7 @@ Scenario recordings were generated for completed transfer showcases under:
 - Sparse layouts remain the preferred workaround while `AcquireNearestTarget` has no authorable filters.
 - Existing final-state reports still do not summarize nested inventory/containment richly; tests often verify transfer outcomes through trace lines or direct materialized-world inspection.
 - The interactive Console renderer can require a taller terminal for taller scenario roots because the local turn-order report is drawn below the inventory grid. Enlarging the terminal is an acceptable workaround for now.
-- Continuing `beta-collector-trader-handoff` after the intended endpoint produced surprising recursive/continued transfer behavior. This was recorded as a design quirk, not a gap, in `docs/Plans/Beta-Design-Quirks-and-Gotchas.md`.
+- Continuing `beta-collector-trader-handoff` after the intended endpoint produced surprising recursive/continued transfer behavior. This was recorded as a design quirk, not a gap, in `docs/Source of Truth/Design-Quirks-and-Gotchas.md`.
 
 ## Follow-up candidates
 

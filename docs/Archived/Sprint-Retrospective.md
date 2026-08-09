@@ -2,7 +2,7 @@
 id: plan.sprint-retrospective
 title: Sprint Retrospective
 kind: retrospective
-status: reference
+status: archived
 truth_rank: 70
 truth_domains: [process]
 owners: [core-owner]

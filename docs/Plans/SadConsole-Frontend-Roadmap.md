@@ -2,7 +2,7 @@
 id: plan.sadconsole-frontend-roadmap
 title: SadConsole Frontend Roadmap
 kind: backlog-reference
-status: reference
+status: active
 truth_rank: 55
 truth_domains: [planning-priority, frontend-presentation]
 owners: [frontend-owner]
@@ -19,7 +19,7 @@ related:
 ---
 # SadConsole Frontend Roadmap
 
-Status: Backlog/reference. Not an active implementation plan unless a future roadmap selection promotes SadConsole/frontend work again.
+Status: Active roadmap/backlog reference for SadConsole/frontend work selection.
 
 Read when:
 
@@ -37,7 +37,7 @@ Related source of truth:
 - `docs/Archived/SadConsole-UI-Pattern-Discovery-Sprint.md` records the completed componentized editor rebuild/parity sprint.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented engine/editor/frontend-facing capability support.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.
-- `docs/Plans/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
+- `docs/Source of Truth/SadConsole-UI-Specification.md` records the living UI layout/layering/resizing/mouse/render-style planning matrix.
 - `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md` records the completed focused frontend sprint for the first linked containment-space Play-mode UI slices.
 - `docs/Archived/SadConsole-Playmode-Layout-Pattern-Sprint.md` records the completed low-risk mock play-mode pattern sprint.
 - `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md` records the completed focused sprint plan for a new consumer-facing Play mode route and reusable inventory-space component.
@@ -156,7 +156,7 @@ Scope:
 4. Valid-target highlighting and blocked-action explanations.
 5. Facing, target, active-actor, selected-entity, and focus visualization.
 6. Collapsible/expandable panel cards.
-7. Consume the resolved-region geometry from `docs/Plans/SadConsole-UI-Specification.md` when the componentized play/debug surface needs layout or mouse-hit-test work.
+7. Consume the resolved-region geometry from `docs/Source of Truth/SadConsole-UI-Specification.md` when the componentized play/debug surface needs layout or mouse-hit-test work.
 8. Valid inspection target highlighting/cycling for Inspect mode, using visible/projection data without inventing simulation legality.
 
 Exit criteria:
@@ -211,7 +211,7 @@ Goal: improve usability and reassess whether SadConsole remains the right canoni
 
 Scope:
 
-1. Implement UI-N05 mouse hit-testing over resolved panel/cell geometry from `docs/Plans/SadConsole-UI-Specification.md`.
+1. Implement UI-N05 mouse hit-testing over resolved panel/cell geometry from `docs/Source of Truth/SadConsole-UI-Specification.md`.
 2. Click to inspect, select action targets, expand/collapse panels, and focus panels.
 3. Packaging/distribution pass for downloadable builds.
 4. Package SadConsole as the default feedback build; investigate browser/HTML5 feasibility only if later distribution needs re-promote it as a technology-risk item.
@@ -251,7 +251,7 @@ Promote or consider while planning SadConsole work:
 - Frontend screen-model harness for driving common directional/Select/Cancel flows in tests. Frontend-owned test ergonomics for componentized editor/play-mode controller tests.
 - Debug-only frontend UI state panel showing current frontend controller states such as play prompt mode, selected action index, editor submode, dirty/stale status, and focused component. Frontend-owned pure presentation/debugging aid; it must not expose runtime mutation or authoring semantics outside shared services.
 
-Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items formerly repeated in this bucket are consolidated in `docs/Plans/SadConsole-UI-Specification.md` and should be updated there instead of duplicated here.
+Layout/layering/resizing/mouse-hit-test/collapsible-panel/render-style items formerly repeated in this bucket are consolidated in `docs/Source of Truth/SadConsole-UI-Specification.md` and should be updated there instead of duplicated here.
 
 ## Near-term selection recommendation
 
@@ -259,4 +259,4 @@ Recently completed focused frontend sprint: `docs/Archived/SadConsole-Linked-Con
 
 Recently completed focused frontend sprints: `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md` started the consumer-facing Play mode as an isolated componentized route inside the existing SadConsole project, relabeled the previous play/debug path as `Debug`, introduced a reusable inventory-space renderer for the controlled actor's current space, and stabilized the fullscreen Play shell with a one-tile border buffer plus `F12` debug overlay. `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md` followed through with playable input, contextual Select/Cancel prompts, canonical Action Choice coverage for Move/Pickup/Drop/Enter/Exit/Transfer in the size-calibration testbed, and developer-targeted F12 interaction diagnostics.
 
-If a smaller SadConsole/frontend slice is selected before or around that sprint, use `docs/Archived/SadConsole-Playmode-Layout-Pattern-Sprint.md` as completed/reference layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Plans/Gamma-Editor-MVP-Plan.md` or a future active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.
+If a smaller SadConsole/frontend slice is selected before or around that sprint, use `docs/Archived/SadConsole-Playmode-Layout-Pattern-Sprint.md` as completed/reference layout-region experience in the existing mock play-mode. Larger release work should still be selected through `docs/Archived/Gamma-Editor-MVP-Plan.md` or a future active plan, with remaining items classified as Must Have or Could Have for the chosen release checkpoint.

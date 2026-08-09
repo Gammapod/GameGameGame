@@ -4,7 +4,7 @@ title: SadConsole Dynamic Entity Lifecycle Demo Sprint Plan
 kind: archived
 status: archived
 truth_rank: 45
-truth_domains: [frontend-planning, frontend-boundary, test-trace]
+truth_domains: [frontend-boundary, test-trace]
 owners: [frontend-owner]
 audience: [frontend-owner, core-owner, content-editor]
 read_when:
@@ -17,7 +17,7 @@ related:
   - source.frontend-ux-decisions
   - source.testing-charter
   - archived.create-destroy-polymorph-vertical-slice-sprint
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
 ---
 
 # SadConsole Dynamic Entity Lifecycle Demo Sprint Plan

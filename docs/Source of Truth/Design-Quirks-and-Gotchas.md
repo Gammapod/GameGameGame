@@ -1,22 +1,42 @@
-# Beta Design Quirks and Gotchas
+---
+id: source.design-quirks-and-gotchas
+title: Design Quirks and Gotchas
+kind: source-of-truth
+subkind: design-log
+status: active
+truth_rank: 55
+truth_domains: [planning-priority]
+owners: [content-editor]
+audience: [content-editor, core-owner, frontend-owner]
+lane: design-notes
+read_when:
+  - reviewing surprising scenario behavior that may be useful design material
+  - deciding whether an observed behavior is a capability gap a bug or an undocumented emergent capability
+  - collecting future gameplay seeds discovered during authored vignette testing
+related:
+  - source.content-authoring-manual
+  - source.capability-gap-log
+---
 
-Status: Reference log for unexpected-but-not-necessarily-wrong beta behavior, not an active implementation plan. Use as design context when roadmap priorities touch beta scenario behavior.
+# Design Quirks and Gotchas
+
+Status: Living source-of-truth log for unexpected-but-not-necessarily-wrong scenario behavior, not an active implementation plan. Use as design context when roadmap priorities touch authored scenario behavior.
 
 Read when:
 
-- reviewing surprising beta scenario behavior that may be useful design material;
+- reviewing surprising scenario behavior that may be useful design material;
 - deciding whether an observed behavior is a capability gap, a bug, or an undocumented emergent capability;
 - collecting future gameplay seeds discovered during authored vignette testing.
 
 Related plans and source of truth:
 
 - `docs/Source of Truth/Content-Authoring-Manual.md` remains the source of truth for currently authorable content workflows.
-- `docs/Plans/Beta-Capability-Gap-Log.md` records missing capabilities, blockers, reporting needs, and authoring friction.
+- `docs/Source of Truth/Capability-Gap-Log.md` records missing capabilities, blockers, reporting needs, and authoring friction.
 - `docs/Archived/Beta-Content-Exploration-Plan.md` records paused beta vignette ordering and gate context.
 
 ## Purpose
 
-This log is the sister document to the beta capability gap log. Use it for behavior that is surprising, emergent, undocumented, or potentially confusing, but not necessarily wrong and not necessarily a missing capability.
+This log is the sister document to the capability gap log. Use it for behavior that is surprising, emergent, undocumented, or potentially confusing, but not necessarily wrong and not necessarily a missing capability.
 
 Prefer this log over the gap log when the observation is better framed as:
 
@@ -26,7 +46,7 @@ Prefer this log over the gap log when the observation is better framed as:
 - a gameplay seed for later design;
 - a behavior that may need action-specific guardrails later without becoming a global engine prohibition.
 
-Do not use this log for clear blockers, missing authoring support, crashes, or required reporting/tooling improvements. Those belong in `Beta-Capability-Gap-Log.md`.
+Do not use this log for clear blockers, missing authoring support, crashes, or required reporting/tooling improvements. Those belong in `Capability-Gap-Log.md`.
 
 ## Observations
 

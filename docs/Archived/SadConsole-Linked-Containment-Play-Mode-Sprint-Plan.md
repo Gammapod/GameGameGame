@@ -1,8 +1,8 @@
 ---
 id: plan.sadconsole-linked-containment-play-mode-sprint
 title: SadConsole Linked Containment Play-Mode Sprint Plan
-kind: sprint-plan
-status: completed
+kind: plan
+status: archived
 truth_rank: 50
 truth_domains: [planning-priority, frontend-presentation]
 owners: [frontend-owner]
@@ -12,7 +12,7 @@ read_when:
   - implementing the next consumer Play-mode UI sprint
   - planning linked inventory-space node layout connector overlays or Play-mode inspection replacement
 related:
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
   - plan.sadconsole-frontend-roadmap
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
@@ -29,7 +29,7 @@ Implement the first sprint-sized step toward the selected consumer Play-mode UI 
 
 ## Source direction
 
-This plan executes the first four proposed implementation slices from `docs/Plans/SadConsole-UI-Specification.md`:
+This plan executes the first four proposed implementation slices from `docs/Source of Truth/SadConsole-UI-Specification.md`:
 
 1. connector-line presentation contract;
 2. pure linked-space layout for current place plus one linked inspected space;

@@ -9,7 +9,7 @@ Original active plan location:
 Related current plans:
 
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
-- `docs/Plans/Beta-Capability-Gap-Log.md`
+- `docs/Source of Truth/Capability-Gap-Log.md`
 - `docs/Plans/High-Level-Roadmap.md`
 - `docs/Source of Truth/Engine-Editor-Capabilities.md`
 
@@ -80,7 +80,7 @@ Summary:
 
 Tracking entry:
 
-- `docs/Plans/Beta-Capability-Gap-Log.md`
+- `docs/Source of Truth/Capability-Gap-Log.md`
 
 Implication:
 

@@ -1,8 +1,8 @@
 ---
 id: plan.sadconsole-play-mode-logging-sprint
 title: SadConsole Play-Mode Logging Sprint Plan
-kind: sprint-plan
-status: active
+kind: plan
+status: archived
 truth_rank: 50
 truth_domains: [frontend-presentation, frontend-boundary, planning-priority]
 owners: [frontend-owner]

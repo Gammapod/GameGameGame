@@ -14,7 +14,7 @@ Related source of truth:
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records frontend layer boundaries, directional navigation, contextual controls, text-entry submodes, and semantic editor focus targets.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records the Editor/Simulation mode model, semantic focus layout direction, entity-neutral presentation, and glyph standards.
 - `docs/Source of Truth/Frontend-UX-Decisions.md` records chronological frontend UX decisions, including semantic editor focus.
-- `docs/Plans/Gamma-Editor-MVP-Plan.md` records the broader Gamma Editor MVP release target.
+- `docs/Archived/Gamma-Editor-MVP-Plan.md` records the broader Gamma Editor MVP release target.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the broader SadConsole/debug-browser roadmap.
 
 ## Sprint goal

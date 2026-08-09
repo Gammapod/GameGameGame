@@ -2,7 +2,7 @@
 id: plan.documentation-compiler-spike
 title: Documentation Compiler Spike Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 45
 truth_domains: [implementation-navigation, process]
 owners: [core-owner]
@@ -233,9 +233,9 @@ Do not attempt full repository annotation in the spike. Start with enough docume
 ### Planning/reference samples
 
 - `docs/Plans/High-Level-Roadmap.md`
-- `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`
-- `docs/Plans/Beta-Capability-Gap-Log.md`
-- `docs/Plans/Sprint-Retrospective.md`
+- `docs/Archived/Canonical-Actions-Vertical-Slice-Plan.md`
+- `docs/Source of Truth/Capability-Gap-Log.md`
+- `docs/Archived/Sprint-Retrospective.md`
 
 ## MVP role read paths
 

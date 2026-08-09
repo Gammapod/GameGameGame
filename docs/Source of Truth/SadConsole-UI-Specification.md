@@ -1,14 +1,14 @@
 ---
-id: plan.sadconsole-ui-specification
+id: source.sadconsole-ui-specification
 title: SadConsole UI Specification
-kind: plan
+kind: source-of-truth
 subkind: frontend-ui-specification
 status: active
 owners: [frontend-owner]
 audience: [frontend-owner]
-lane: frontend-ux
-truth_rank: 60
-truth_domains: [frontend-presentation, frontend-planning]
+lane: ux-spec
+truth_rank: 45
+truth_domains: [frontend-presentation]
 read_when:
   - planning SadConsole screen layout or play-mode UI changes
   - evaluating relative layout layered regions overlays resizing or user-customizable UI placement

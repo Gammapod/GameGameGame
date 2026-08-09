@@ -13,7 +13,7 @@ Related source of truth:
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records frontend/shared-service boundaries and test traces.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records the accepted Editor/Simulation mode model and UI principles.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the broader SadConsole/debug-browser backlog.
-- `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md` remains the active release-direction plan for canonical actions.
+- `docs/Archived/Canonical-Actions-Vertical-Slice-Plan.md` preserves canonical-action release-direction history.
 
 ## Sprint target
 

@@ -10,7 +10,7 @@ Related source of truth and active plans:
 - `docs/Source of Truth/testing-charter.md`
 - `docs/Plans/High-Level-Roadmap.md`
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
-- `docs/Plans/Beta-Capability-Gap-Log.md`
+- `docs/Source of Truth/Capability-Gap-Log.md`
 
 ## Sprint goal
 
@@ -161,4 +161,4 @@ Docs to update after implementation changes:
 - `docs/Source of Truth/invariants.md` test coverage map if new stable behavior/test names are added.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` for new headless/editor-agent run/report support.
 - `docs/Source of Truth/Content-Authoring-Manual.md` for content-editor-facing scenario run/report workflow changes.
-- `docs/Plans/Beta-Capability-Gap-Log.md` to mark GAP-002/GAP-005/GAP-007 resolved or partially resolved as appropriate.
+- `docs/Source of Truth/Capability-Gap-Log.md` to mark GAP-002/GAP-005/GAP-007 resolved or partially resolved as appropriate.

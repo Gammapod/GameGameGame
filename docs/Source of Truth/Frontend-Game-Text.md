@@ -17,7 +17,7 @@ related:
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
   - source.action-step-outcome-and-affordance-logic
-  - plan.canonical-actions-vertical-slice
+  - plan.high-level-roadmap
 ---
 # Frontend Game Text
 
@@ -34,7 +34,7 @@ Related documents:
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records the boundary rule that logs derive from structured outcomes, not parsed display strings.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records log presentation standards for global and local activity surfaces.
 - `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md` records canonical Action Step outcome and affordance semantics.
-- `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md` records the active requirement that every promoted canonical action has player-facing success/failure log IDs and any needed ratio/reason variants.
+- `docs/Archived/Canonical-Actions-Vertical-Slice-Plan.md` records the requirement established by the archived canonical-action promotion work that every promoted canonical action has player-facing success/failure log IDs and any needed ratio/reason variants.
 - `docs/Archived/Delta-Point-of-View-Release-Plan.md` records the point-of-view, target adjective, and reciprocal adjective foundation.
 
 ## Purpose

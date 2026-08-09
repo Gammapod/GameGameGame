@@ -1,6 +1,6 @@
 # Merged Inventory Topology Spike Findings
 
-Status: Active spike findings for merged inventory topology layers, non-Euclidean seams, overlap-enabled layout experiments, and future topology-aware rendering. This document records what the spike is trying to prove and the friction discovered so far; durable behavior and test trace still live in `docs/Source of Truth/invariants.md` and the sprint implementation log is archived at `docs/Archived/Merged-Inventory-Layer-Vertical-Slice-Sprint-Plan.md`.
+Status: Archived spike findings for merged inventory topology layers, non-Euclidean seams, overlap-enabled layout experiments, and future topology-aware rendering. This document records what the spike tried to prove and the friction discovered; durable behavior and test trace still live in `docs/Source of Truth/invariants.md` and the sprint implementation log is archived at `docs/Archived/Merged-Inventory-Layer-Vertical-Slice-Sprint-Plan.md`.
 
 Read when:
 

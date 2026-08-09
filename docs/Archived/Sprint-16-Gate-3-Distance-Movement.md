@@ -7,7 +7,7 @@ Related plans and source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md`
 - `docs/Plans/High-Level-Roadmap.md`
 - `docs/Plans/Beta-Content-Exploration-Plan.md`
-- `docs/Plans/Beta-Capability-Gap-Log.md`
+- `docs/Source of Truth/Capability-Gap-Log.md`
 - `docs/Archived/Sprint-14-Gate-2-Targeting-Showcases.md`
 - `docs/Archived/Sprint-15-Debug-Scenario-Recorder.md`
 

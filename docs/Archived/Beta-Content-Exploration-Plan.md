@@ -6,7 +6,7 @@ Read when:
 
 - researching paused beta gameplay-vignette context;
 - deciding whether frontend feedback should re-promote a beta content/mechanics gate;
-- reviewing old content-gap rationale before updating `docs/Plans/Beta-Capability-Gap-Log.md` or `docs/Plans/High-Level-Roadmap.md`.
+- reviewing old content-gap rationale before updating `docs/Source of Truth/Capability-Gap-Log.md` or `docs/Plans/High-Level-Roadmap.md`.
 
 Do not read when:
 
@@ -19,7 +19,7 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` is the source of truth for maintainer-facing capability support tiers and layer coverage.
 - `docs/Source of Truth/invariants.md` is the source of truth for stable behavior contracts and test traces when beta work changes existing behavior.
 - `docs/Plans/High-Level-Roadmap.md` remains the strategic roadmap and backlog authority.
-- `docs/Plans/Beta-Capability-Gap-Log.md` records gaps discovered during beta scenario exploration.
+- `docs/Source of Truth/Capability-Gap-Log.md` records gaps discovered during scenario exploration.
 
 ## Beta exploration intent
 

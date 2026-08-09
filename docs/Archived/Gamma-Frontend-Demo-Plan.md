@@ -1,6 +1,6 @@
 # Gamma Frontend Demo Plan
 
-Status: Completed / archived. Superseded for Gamma release selection by `docs/Plans/Gamma-Editor-MVP-Plan.md`, which makes the SadConsole Editor -> Preview -> Simulation -> Return loop the active Gamma checkpoint. Use this document only for historical tester/demo goals and Console polish scope; do not treat Console breadcrumb work as the default next sprint unless it is explicitly re-selected.
+Status: Completed / archived. Superseded for Gamma release selection by `docs/Archived/Gamma-Editor-MVP-Plan.md`, which preserves the SadConsole Editor -> Preview -> Simulation -> Return loop Gamma checkpoint. Use this document only for historical tester/demo goals and Console polish scope; do not treat Console breadcrumb work as the default next sprint unless it is explicitly re-selected.
 
 Read when:
 
@@ -11,7 +11,7 @@ Read when:
 
 Do not read when:
 
-- selecting the immediate Gamma implementation sequence; use `docs/Plans/Gamma-Editor-MVP-Plan.md`.
+- selecting the Gamma implementation sequence; use `docs/Archived/Gamma-Editor-MVP-Plan.md` unless a future active plan supersedes it.
 
 Related source of truth:
 

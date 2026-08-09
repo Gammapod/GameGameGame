@@ -3,12 +3,12 @@ id: plan.actor-pov-inventory-chain-play-layout
 title: Actor POV Inventory-Chain Play Layout Plan
 kind: plan
 subkind: frontend-play-layout-plan
-status: active
+status: archived
 owners: [frontend-owner]
 audience: [frontend-owner, core-owner]
 lane: frontend-ux
 truth_rank: 55
-truth_domains: [frontend-presentation, frontend-planning]
+truth_domains: [frontend-presentation]
 read_when:
   - planning the componentized consumer Play mode containment/inventory-chain layout
   - deciding how actor POV, parent locations, peer inspection, and actor inventory inspection should compose on screen
@@ -19,7 +19,7 @@ related:
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
   - source.entity-panel-ux-spec
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
   - plan.sadconsole-frontend-roadmap
 ---
 

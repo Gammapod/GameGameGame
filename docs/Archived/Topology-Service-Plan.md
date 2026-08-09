@@ -2,7 +2,7 @@
 id: plan.topology-service
 title: Topology Service Plan
 kind: plan
-status: backlog-reference
+status: archived
 truth_rank: 55
 truth_domains: [planning-priority, runtime-behavior, implementation-navigation]
 owners: [core-owner]
@@ -16,7 +16,7 @@ related:
   - source.testing-charter
   - source.engine-editor-capabilities
   - plan.high-level-roadmap
-  - docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md
+  - plan.topology-service-phase-1-sprint
 ---
 # Topology Service Plan
 

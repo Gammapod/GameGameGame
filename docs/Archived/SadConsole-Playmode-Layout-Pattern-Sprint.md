@@ -11,7 +11,7 @@ read_when:
   - implementing low-risk SadConsole play-mode layout pattern experiments
   - preparing the componentized play-mode rewrite
 related:
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
   - plan.sadconsole-frontend-roadmap
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
@@ -24,7 +24,7 @@ Status: Archived completed focused sprint. This is a learning/architecture-prep 
 
 ## Goal
 
-Use `GameplayMockScreen` / `GameplayMockConsole` to prove the first reusable layout-pattern seams from `docs/Plans/SadConsole-UI-Specification.md` with minimal behavior churn.
+Use `GameplayMockScreen` / `GameplayMockConsole` to prove the first reusable layout-pattern seams from `docs/Source of Truth/SadConsole-UI-Specification.md` with minimal behavior churn.
 
 The sprint should create experience with named regions, layered regions, overlay placement, debug visibility, and pure layout tests before replacing the mock play-mode architecture.
 
@@ -177,7 +177,7 @@ Acceptance notes:
 
 ## Documentation updates when complete
 
-- Update `docs/Plans/SadConsole-UI-Specification.md` current project baseline with the implemented resolver/region model.
+- Update `docs/Source of Truth/SadConsole-UI-Specification.md` current project baseline with the implemented resolver/region model.
 - If a pattern is accepted as reusable, update `docs/Source of Truth/Frontend-UX-Decisions.md` or the component gallery notes with the accepted project pattern.
 - If stretch mouse diagnostics land, update UI-N05 planning status.
 

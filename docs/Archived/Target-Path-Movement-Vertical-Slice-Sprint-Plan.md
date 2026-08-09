@@ -2,7 +2,7 @@
 id: plan.target-path-movement-vertical-slice-sprint
 title: Target Path Movement Vertical Slice Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 40
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner, content-editor]

@@ -20,7 +20,7 @@ do_not_read_when:
 related:
   - source.planning-index
   - source.engine-editor-capabilities
-  - plan.beta-capability-gap-log
+  - source.capability-gap-log
 ---
 # Content Authoring Manual
 
@@ -41,7 +41,7 @@ Do not read when:
 
 - changing Core behavior or tests; use `docs/Source of Truth/invariants.md` first;
 - checking implementation-layer support tiers; use `docs/Source of Truth/Engine-Editor-Capabilities.md`;
-- researching future/planned capability priority; use `docs/Plans/Beta-Capability-Gap-Log.md` and current planning docs.
+- researching future/planned capability priority; use `docs/Source of Truth/Capability-Gap-Log.md` and current planning docs.
 
 This document is optimized for fast agent onboarding. It records what content-editing agents can safely author now. If a desired capability is not listed here as authorable, do not assume it is available because it exists in Core, archived plans, tests, or low-level descriptors. Use the capability-gap workflow instead.
 
@@ -202,7 +202,7 @@ Maintainer/runtime details for canonical, transitional, and legacy action-plan f
 
 This table is the content-facing catalog of currently authorable behavior-chain Action Steps. Keep rows compact when adding new steps. Put layer details and deep runtime semantics in `Engine-Editor-Capabilities.md` instead.
 
-Planning note: the active canonical-actions release plan freezes the current broad Action Step catalog as legacy/prototype-compatible for release purposes, then promotes actions one at a time through complete vertical slices. Until a step is explicitly promoted under `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`, authors may still use the currently supported steps below, but content intended to prove release-canonical behavior should follow the new two-room fixture requirement for the selected action.
+Planning note: the archived canonical-actions release plan froze the current broad Action Step catalog as legacy/prototype-compatible for release purposes, then promoted actions one at a time through complete vertical slices. Until a future active plan reselects a step for promotion, authors may still use the currently supported steps below, but content intended to prove release-canonical behavior should follow the new two-room fixture requirement established in `docs/Archived/Canonical-Actions-Vertical-Slice-Plan.md`.
 
 ### Movement and facing
 
@@ -383,7 +383,7 @@ Classify gaps as:
 - new engine capability or system;
 - content/package organization issue.
 
-The active gap log is `docs/Plans/Beta-Capability-Gap-Log.md`. Keep not-yet-authorable/requested-capability tables there or in a separate referenced gap document, not in this manual. This manual should stay focused on what is currently possible.
+The active gap log is `docs/Source of Truth/Capability-Gap-Log.md`. Keep not-yet-authorable/requested-capability tables there or in a separate referenced gap document, not in this manual. This manual should stay focused on what is currently possible.
 
 Promote a request when repeated scenario pressure, one flagship blocked vignette, hard-to-interpret reports, or repeated authoring friction shows that new support is worth planning.
 
@@ -391,6 +391,6 @@ Promote a request when repeated scenario pressure, one flagship blocked vignette
 
 - `docs/Source of Truth/Engine-Editor-Capabilities.md`: maintainer-facing support tiers, layer coverage, runtime/editor/API parity, and detailed Action Step semantics.
 - `docs/Source of Truth/Action-Step-Outcome-And-Affordance-Logic.md`: compact Action Step success/failure/fallthrough rules and actor/actee/spatial verb-affordance tables.
-- `docs/Plans/Beta-Capability-Gap-Log.md`: active beta gaps, not-yet-authorable requested capabilities, workarounds, classifications, and priority signals.
+- `docs/Source of Truth/Capability-Gap-Log.md`: active scenario-discovered gaps, not-yet-authorable requested capabilities, workarounds, classifications, and priority signals.
 - `docs/Source of Truth/planning-index.md`: documentation lanes and required reading order.
 - `docs/Source of Truth/invariants.md`: Core behavior contracts and TDD traces; not normally needed for content authoring.

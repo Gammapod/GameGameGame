@@ -18,7 +18,7 @@ related:
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
   - source.action-step-outcome-and-affordance-logic
-  - plan.sadconsole-ui-specification
+  - source.sadconsole-ui-specification
   - plan.canonical-actions-vertical-slice
   - plan.new-play-mode-mvp-sprint
 ---

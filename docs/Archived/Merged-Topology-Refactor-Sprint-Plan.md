@@ -22,7 +22,7 @@ related:
 
 Status: Archived behavior-preserving refactor sprint plan. This sprint prepared the codebase for a clean merged inventory topology implementation, based on spike findings, without adding merged-layer behavior yet.
 
-The spike findings are expected to live in `docs/Plans/Merged-Inventory-Topology-Spike-Findings.md` or an archived equivalent if saved from the spike branch. The implementation log for the earlier topology service refactor is `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
+The spike findings live in `docs/Archived/Merged-Inventory-Topology-Spike-Findings.md`. The implementation log for the earlier topology service refactor is `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 
 ## Goal
 

@@ -2,7 +2,7 @@
 id: plan.topology-service-phase-1-sprint
 title: Topology Service Phase 1 Sprint Plan
 kind: plan
-status: completed
+status: archived
 truth_rank: 45
 truth_domains: [planning-priority, runtime-behavior, implementation-navigation]
 owners: [core-owner]
@@ -20,7 +20,7 @@ related:
 ---
 # Topology Service Phase 1 Sprint Plan
 
-Status: Completed isolated refactor sprint. This plan scoped Phase 1 of `docs/Plans/Topology-Service-Plan.md` into behavior-preserving sub-phases. It did **not** implement entanglement, portals, authored topology overlays, content schema changes, frontend rendering changes, pathfinding changes, field-of-view changes, or tactical range semantics.
+Status: Completed isolated refactor sprint. This plan scoped Phase 1 of `docs/Archived/Topology-Service-Plan.md` into behavior-preserving sub-phases. It did **not** implement entanglement, portals, authored topology overlays, content schema changes, frontend rendering changes, pathfinding changes, field-of-view changes, or tactical range semantics.
 
 ## Sprint target
 
@@ -162,7 +162,7 @@ Documentation updates after tests pass:
 
 1. Update `docs/Source of Truth/Engine-Editor-Capabilities.md` to state that shared Core topology service support exists for default grid adjacency, and that content/editor authoring is unchanged in Phase 1.
 2. Update `docs/Source of Truth/invariants.md` only if test names or trace wording change. The core invariant that shared Core adjacency evaluation owns the two-corner intercardinal rule should remain true.
-3. Update `docs/Plans/Topology-Service-Plan.md` or this sprint plan with completed sub-phases and deferred follow-ups.
+3. Update `docs/Archived/Topology-Service-Plan.md` or this sprint plan with completed sub-phases and deferred follow-ups.
 
 ## TDD trace before implementation
 

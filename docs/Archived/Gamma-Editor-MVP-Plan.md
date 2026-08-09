@@ -1,6 +1,6 @@
 # Gamma Editor MVP Plan
 
-Status: On hold / backlog reference. Promote again only if a future roadmap selection chooses Gamma Editor MVP work.
+Status: Archived backlog reference. Promote again only if a future roadmap selection chooses Gamma Editor MVP work.
 
 Read when:
 
@@ -17,7 +17,7 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented Core/Editor/frontend-facing support tiers.
 - `docs/Source of Truth/Content-Authoring-Manual.md` records what authors can safely create today.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records the broader SadConsole/debug-browser roadmap.
-- `docs/Plans/SadConsole-UI-Specification.md` records reusable UI layout/layering/resizing/mouse/render-style specifications that should be consumed instead of duplicated here.
+- `docs/Source of Truth/SadConsole-UI-Specification.md` records reusable UI layout/layering/resizing/mouse/render-style specifications that should be consumed instead of duplicated here.
 
 ## Reset note
 

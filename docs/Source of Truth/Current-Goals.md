@@ -16,9 +16,9 @@ read_when:
 related:
   - source.planning-index
   - plan.high-level-roadmap
-  - plan.canonical-actions-vertical-slice
+  - plan.graph-first-runtime-topology-migration
   - plan.sadconsole-frontend-roadmap
-  - plan.beta-capability-gap-log
+  - source.capability-gap-log
   - plan.sprint-retrospective
 ---
 # Current Goals
@@ -45,12 +45,12 @@ The active release direction is canonical action vertical slices: freeze the cur
 ## Active planning bridge
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
-- Active release plan: `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md`.
+- Active architecture/refactor plan: `docs/Plans/Graph-First-Runtime-Topology-Migration-Plan.md`.
 - Active focused sprint plan: none selected; choose the next canonical action vertical slice from the roadmap backlog.
 - Recently archived focused sprint plans: `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`, `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`, `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`, `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
-- Content/scenario capability gaps: `docs/Plans/Beta-Capability-Gap-Log.md`.
-- Recent process observations and open retrospective questions: `docs/Plans/Sprint-Retrospective.md`.
+- Content/scenario capability gaps: `docs/Source of Truth/Capability-Gap-Log.md`.
+- Recent process observations and open retrospective questions: `docs/Archived/Sprint-Retrospective.md`.
 - Historical context: `docs/Archived/`, read only when current docs link to an archived document or when investigating why a system was shaped a certain way.
 
 ## Current highest-priority backlog buckets
