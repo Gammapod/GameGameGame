@@ -16,7 +16,6 @@ read_when:
 related:
   - source.planning-index
   - plan.high-level-roadmap
-  - plan.graph-first-runtime-topology-migration
   - plan.sadconsole-frontend-roadmap
   - source.capability-gap-log
   - plan.sprint-retrospective
@@ -45,9 +44,9 @@ The active release direction is canonical action vertical slices: freeze the cur
 ## Active planning bridge
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
-- Active architecture/refactor plan: `docs/Plans/Graph-First-Runtime-Topology-Migration-Plan.md`.
+- Active architecture/refactor plan: none selected.
 - Active focused sprint plan: none selected; choose the next canonical action vertical slice from the roadmap backlog.
-- Recently archived focused sprint plans: `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`, `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`, `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`, `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
+- Recently archived focused sprint plans: `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`, `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`, `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`, `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`, `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 - Content/scenario capability gaps: `docs/Source of Truth/Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Archived/Sprint-Retrospective.md`.

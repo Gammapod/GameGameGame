@@ -91,6 +91,32 @@ public sealed class TargetPathMovementActionStepTests
     }
 
     [Fact]
+    public void TargetPathMoveSeekCrossesSourceCellLinkBetweenPlanes()
+    {
+        var world = CreateWorld(3, 3, actor: new GridCoord(0, 1), target: new GridCoord(2, 2));
+        AddPlane(world, OtherPlaneId, 3, 3);
+        MoveEntity(world, TargetId, new PlaneCoord(OtherPlaneId, new GridCoord(1, 1)));
+        world.SourceCellLinks.Add(new SourceCellLink(
+            world.GetEntityLocation(ActorId),
+            Direction.East,
+            new PlaneCoord(OtherPlaneId, new GridCoord(0, 1)),
+            Direction.West));
+        world.SetActionTarget(ActorId, TargetId);
+
+        var result = new ActionPlanInterpreter(new MovementService()).Execute(
+            world,
+            ActorId,
+            TargetPathPlan(ActionPlanTargetPathMode.SeekAdjacency),
+            new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(OtherPlaneId, new GridCoord(0, 1)), world.GetEntityLocation(ActorId));
+        Assert.Equal(Direction.East, world.GetActionFacing(ActorId));
+        Assert.Contains(BehaviorChainTraceFormatter.Format(result), line => line.Contains("moved East toward target adjacency", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void TargetPathMoveFleeChoosesIncreasingPathDistanceFromAdjacency()
     {
         var world = CreateWorld(5, 5, actor: new GridCoord(1, 2), target: new GridCoord(3, 2));
@@ -130,7 +156,7 @@ public sealed class TargetPathMovementActionStepTests
     }
 
     [Fact]
-    public void TargetPathMoveReportsDifferentPlaneAndUnreachableAdjacencyFailures()
+    public void TargetPathMoveReportsUnreachableDifferentPlaneAndBlockedAdjacencyFailures()
     {
         var differentPlaneWorld = CreateWorld(5, 5, actor: new GridCoord(1, 1), target: new GridCoord(3, 3));
         AddPlane(differentPlaneWorld, OtherPlaneId, 3, 3);
@@ -157,7 +183,8 @@ public sealed class TargetPathMovementActionStepTests
             new ActionPlanContext());
 
         Assert.False(differentPlaneResult.Succeeded);
-        Assert.Contains(BehaviorChainTraceFormatter.Format(differentPlaneResult), line => line.Contains("off-plane", StringComparison.Ordinal));
+        Assert.DoesNotContain(BehaviorChainTraceFormatter.Format(differentPlaneResult), line => line.Contains("off-plane", StringComparison.Ordinal));
+        Assert.Contains(BehaviorChainTraceFormatter.Format(differentPlaneResult), line => line.Contains("no reachable target-adjacent", StringComparison.Ordinal));
         Assert.False(blockedResult.Succeeded);
         Assert.Contains(BehaviorChainTraceFormatter.Format(blockedResult), line => line.Contains("no reachable target-adjacent", StringComparison.Ordinal));
     }

@@ -64,16 +64,16 @@ Do not read when:
 6. `docs/Source of Truth/vertical-slice-map.md`
      - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
      - Read selectively when a planned slice spans multiple layers.
-7. `docs/Plans/Graph-First-Runtime-Topology-Migration-Plan.md`
-       - Active architecture/refactor sprint plan to migrate runtime topology from coordinate-primary behavior to graph-first topology identity: topology nodes and graph edges become authoritative for movement, adjacency, pathing, visibility, and overlap/folded topology, while coordinates remain projections for authoring/layout/display/debug compatibility.
-8. `docs/Plans/SadConsole-Frontend-Roadmap.md`
-   - Active broader frontend roadmap/reference for SadConsole/debug-browser contracts and future frontend work selection.
-9. `docs/Source of Truth/Capability-Gap-Log.md`
-   - Living source-of-truth log for scenario-discovered gaps, including headless-only, frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-10. `docs/Source of Truth/Design-Quirks-and-Gotchas.md`
-   - Living source-of-truth log for surprising, emergent, or currently-undocumented behavior that is not necessarily a bug or missing capability.
-11. `docs/Source of Truth/SadConsole-UI-Specification.md`
-   - Living source-of-truth UI layout/layering/resizing/mouse/render-style specification for SadConsole presentation work.
+7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
+    - Active broader frontend roadmap/reference for SadConsole/debug-browser contracts and future frontend work selection.
+8. `docs/Source of Truth/Capability-Gap-Log.md`
+    - Living source-of-truth log for scenario-discovered gaps, including headless-only, frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
+9. `docs/Source of Truth/Design-Quirks-and-Gotchas.md`
+    - Living source-of-truth log for surprising, emergent, or currently-undocumented behavior that is not necessarily a bug or missing capability.
+10. `docs/Source of Truth/SadConsole-UI-Specification.md`
+    - Living source-of-truth UI layout/layering/resizing/mouse/render-style specification for SadConsole presentation work.
+11. `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`
+       - Archived architecture/refactor sprint plan for migrating runtime topology from coordinate-primary behavior to graph-first topology identity: topology nodes and graph edges became authoritative for movement, adjacency, pathing, visibility, and overlap/folded topology, while coordinates remain projections for authoring/layout/display/debug compatibility.
 12. `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`
       - Archived focused frontend sprint plan for mixed-size inventory-space rendering: Space Zoom and Relationship Tier vocabulary, SadConsole child-surface mixed scaling, shared pixel presentation geometry, connector/tooltip/layer/performance mitigations, current-location 32x32 rendering, parent-chain 16/8/4 rendering, player inventory 24x24 with 1px gaps, and SadConsole `CellDecorator` Facing overlays.
 13. `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`
@@ -115,7 +115,7 @@ Use `docs/Source of Truth/Current-Goals.md` for the mostly stable current projec
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Mostly stable current project direction and active planning bridge belongs in `Current-Goals.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; currently `Graph-First-Runtime-Topology-Migration-Plan.md` is the active architecture/refactor plan, while completed or inactive focused plans live under `docs/Archived/`.
+- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; completed or inactive focused plans live under `docs/Archived/`.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.

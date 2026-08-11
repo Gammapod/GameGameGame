@@ -2,7 +2,7 @@
 id: plan.graph-first-runtime-topology-migration
 title: Graph-First Runtime Topology Migration Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 40
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]
@@ -21,7 +21,7 @@ related:
 
 # Graph-First Runtime Topology Migration Plan
 
-Status: Active architecture/refactor sprint plan. This plan commits runtime Core topology toward graph-first identity and treats coordinates as authoring/layout/display/debug projections rather than the primary simulation topology source.
+Status: Archived architecture/refactor sprint plan. This sprint completed runtime Core topology migration toward graph-first identity and treats coordinates as authoring/layout/display/debug projections rather than the primary simulation topology source.
 
 ## Decision
 
@@ -1070,3 +1070,33 @@ Use this section to record completed turns, failing-test evidence, verification 
 - Subtractive cleanup: rewrote transfer counterparty resolution away from coordinate-first `TryGetMoveDestination` to graph-native `TryGetMovementEdge`; retained coordinate occupancy lookup only as the current projection/compatibility layer.
 - Friction/blockers: none so far.
 - Phase 8 completion decision: after this final action-internal propagation slice, graph-native movement/adjacency facts are exposed through movement APIs, direct action internals, action-choice/controlled-affordance/controlled-command DTOs, and relevant traces. Remaining coordinate-returning APIs are explicitly compatibility/projection adapters and are not blockers for closing Phase 8.
+
+### 2026-08-10 - Phase 8 acceptance follow-up: TargetPathMove no longer plane-bounded
+
+- TDD/trace:
+  - Affected invariants: target-path movement must use legal movement topology; directed/source-cell topology is authoritative for movement and adjacency; coordinates/planes are projections unless a behavior explicitly asks for embedding semantics.
+  - Existing tests reviewed/revised: `TargetPathMoveReportsDifferentPlaneAndUnreachableAdjacencyFailures` was revised into `TargetPathMoveReportsUnreachableDifferentPlaneAndBlockedAdjacencyFailures` so different-plane targets fail only when graph traversal cannot reach target adjacency.
+  - Added failing acceptance test first: `TargetPathMoveSeekCrossesSourceCellLinkBetweenPlanes` requires `TargetPathMove SeekAdjacency` to move across a source-cell-link edge from one plane to a target-adjacent node in another plane.
+  - Red verification: the two focused tests failed because `TryReadTargetPathEndpoints` rejected actor/target plane mismatch with an `off-plane` failure before graph traversal could run.
+- Implemented:
+  - Removed the actor-plane equals target-plane precondition from `TryReadTargetPathEndpoints`.
+  - Target-path reachability now flows through `GetLegalTargetAdjacency`, `FindShortestPathToAny`, and `HalfStepDistanceToAny` graph traversal for cross-plane source-cell-link topology.
+  - Orbit's angular ordering remains projection/embedding-based by design; this slice only removes coordinate-era plane-bounded topology gating.
+- Behavior impact: `TargetPathMove` can now seek across connected graph topology even when actor and target source coordinates are on different planes. Different-plane targets with no graph path still fail as unreachable target-adjacent paths.
+- Verification:
+  - `dotnet test "tests/GameGameGame.Tests/GameGameGame.Tests.csproj" --filter "FullyQualifiedName~TargetPathMoveSeekCrossesSourceCellLinkBetweenPlanes|FullyQualifiedName~TargetPathMoveReportsUnreachableDifferentPlaneAndBlockedAdjacencyFailures"` passed: 2 tests.
+  - `dotnet test "tests/GameGameGame.Tests/GameGameGame.Tests.csproj" --filter "FullyQualifiedName~TargetPathMovementActionStepTests|FullyQualifiedName~TopologyGraphTraversalTests|FullyQualifiedName~TopologyServiceTests|FullyQualifiedName~ScenarioRunReportTests"` passed: 64 tests.
+  - `dotnet test "tests/GameGameGame.Tests/GameGameGame.Tests.csproj" --filter "Suite=Core"` passed: 362 tests.
+- Subtractive cleanup: deleted the residual coordinate-era same-plane gate from target-path endpoint resolution.
+- Friction/blockers: none.
+
+### 2026-08-10 - Sprint archive and final verification
+
+- Archived this sprint plan from `docs/Plans/` to `docs/Archived/` and marked it archived.
+- Updated `docs/Source of Truth/planning-index.md` and `docs/Source of Truth/Current-Goals.md` so no active plan points at this completed architecture/refactor sprint.
+- Final verification:
+  - `dotnet test "tests/GameGameGame.Tests/GameGameGame.Tests.csproj" --filter "Suite=Core"` passed: 362 tests.
+  - `dotnet test "tests/GameGameGame.Tests/GameGameGame.Tests.csproj" --filter "Suite=Content"` passed: 274 tests.
+  - `dotnet run --project "src/GameGameGame.Documentation/GameGameGame.Documentation.csproj" -- lint` passed.
+- Broader solution test note:
+  - `dotnet test "GameGameGame.sln"` was attempted as a final broad run but timed out after 240 seconds with existing SadConsole test failures in `GameplayMockScreenTests`/related frontend tests, mostly missing mock entity/template keys such as `scenarioRoot`, `mockPlayer`, and `mockCrate`, plus prompt-state expectation failures. The Core/Content/doc verification relevant to this sprint passed.

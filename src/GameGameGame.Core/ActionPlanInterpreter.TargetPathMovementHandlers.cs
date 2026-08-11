@@ -311,12 +311,6 @@ public sealed partial class ActionPlanInterpreter
 
         actorLocation = world.GetEntityLocation(actorId);
         targetLocation = world.GetEntityLocation(targetId);
-        if (actorLocation.PlaneId != targetLocation.PlaneId)
-        {
-            trace.Status = TraceStatus.Failure;
-            trace.Detail = $"target {targetId} is off-plane at {targetLocation}; actor is on {actorLocation.PlaneId}";
-            return false;
-        }
 
         return true;
     }
