@@ -186,6 +186,40 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void FrontendEditorSnapshotUsesCompilerValidationDiagnostics()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans:
+              mixed:
+                id: mixed
+                behavior:
+                  steps:
+                    - kind: MoveFacing
+                steps:
+                  - label: wait
+                    checks: []
+                    onSuccess:
+                      kind: Wait
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var snapshot = service.GetSnapshot();
+
+            Assert.Single(snapshot.ValidationDiagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidActionPlanShape);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void PreviewScenarioMaterializesTurnZeroRuntimeStateWithoutMutatingDocument()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());

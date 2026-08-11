@@ -6,10 +6,8 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
 {
     public FrontendEditorSnapshot Build()
     {
-        var validation = session.Editor.Validate();
-        var canonicalValidation = session.Document.ValidateCanonicalAuthoring();
-        var diagnostics = validation.Diagnostics
-            .Concat(canonicalValidation.Diagnostics)
+        var compile = ContentCompiler.Compile(session.Document);
+        var diagnostics = compile.Validation.Diagnostics
             .Select(FrontendEditorDiagnostic.From)
             .ToList();
 
