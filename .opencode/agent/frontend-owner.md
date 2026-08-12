@@ -44,3 +44,8 @@ Use the compiled documentation graph as the first stop for discovery:`dotnet run
 ## Restrictions
 - Do NOT introduce frontend-only behavior that contradicts established engine/editor capability contracts.
 - Do NOT make SadConsole own durable content-authoring semantics, simulation semantics, action legality, materialization rules, provenance rules, or log facts that should be shared.
+
+## Task tool use (agent consultation)
+- Consult with `content-editor` if a specific scenario is necessary to test a display pattern
+- Consult with `core-owner` if a change to the frontend API would make the current task simpler
+- Prefer using the same `task_id` when invoking the `Task` tool to consult with the same agent again in a session.

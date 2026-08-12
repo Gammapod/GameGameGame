@@ -1291,6 +1291,33 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsMissingCarriedTemplateAsStructuredDiagnostic()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                new EntityTemplateId("badBag"),
+                new EntityTemplate(
+                    "Bad Bag",
+                    InventoryWidth: 1,
+                    InventoryHeight: 1,
+                    Bulk: 1,
+                    Aperture: 10,
+                    CarriedEntities:
+                    [
+                        new CarriedEntityTemplate(new EntityId("ghostRock"), new EntityTemplateId("missingRock"), new GridCoord(0, 0))
+                    ]));
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Contains("badBag") && error.Contains("ghostRock") && error.Contains("missingRock"));
+        var diagnostic = Assert.Single(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingCarriedEntityTemplateReference);
+        Assert.Equal(new EntityTemplateId("badBag"), diagnostic.EntityTemplateId);
+        Assert.Equal(new EntityId("ghostRock"), diagnostic.CarriedEntityId);
+        Assert.Equal(new EntityTemplateId("missingRock"), diagnostic.ReferencedEntityTemplateId);
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsMissingRequiredPlanVariable()
     {
         var planTemplateId = new ActionPlanTemplateId("needsDirection");

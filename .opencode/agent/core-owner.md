@@ -41,3 +41,9 @@ Use the compiled documentation graph as the first stop for discovery: `dotnet ru
 - For changes to existing behavior, ensure the plan traces affected invariants from `docs/Source of Truth/invariants.md` to the existing tests that cover them, or explicitly records `None`.
 - Before implementation, revise the traced existing tests where appropriate and/or add new tests so the planned behavior is represented by intentionally failing tests.
 - Implement the smallest coordinated Core/Content/Editor change needed to make those tests pass, then run targeted and relevant broader test suites.
+
+## Task tool use (agent consultation)
+- Consult with `content-editor` if there are changes being made to content authoring tools or gameplay semantics
+- Delegate the creation of user-facing test scenarios to `content-editor`
+- Delegate frontend updates for existing systems to `frontend-owner`
+- Prefer using the same `task_id` when invoking the `Task` tool to consult with the same agent again in a session.

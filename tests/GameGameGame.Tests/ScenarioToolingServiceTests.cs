@@ -987,4 +987,37 @@ presentations:
         Assert.Contains(validation.Errors, error => error.Contains("Scenario broken-alpha references missing scenario root template missingRoom", StringComparison.Ordinal));
         Assert.Contains(validation.Errors, error => error.Contains("Scenario broken-alpha references missing player template missingPlayer", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void ScenarioMaterializerUsesCompilerValidationResult()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              brokenRoom:
+                name: Broken Room
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 10
+                carryingCapacity: 10
+                carriedEntities:
+                  - entityId: brokenChild
+                    coord: { x: 0, y: 0 }
+            presentations:
+              brokenRoom:
+                glyph: '#'
+                color: Gray
+            actionPlans: {}
+            scenarios:
+              broken:
+                name: Broken
+                scenarioRootEntityTemplateId: brokenRoom
+            """);
+
+        var materialization = ScenarioMaterializer.Materialize(document, "broken");
+
+        Assert.Contains(materialization.ValidationDiagnostics, diagnostic =>
+            diagnostic.Contains("Content document could not be compiled", StringComparison.Ordinal)
+            && diagnostic.Contains("TemplateId", StringComparison.OrdinalIgnoreCase));
+    }
 }

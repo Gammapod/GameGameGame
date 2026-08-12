@@ -43,7 +43,12 @@ internal static class EntityTemplateValidator
             {
                 if (carried.TemplateId is { } carriedTemplateId && !entityTemplates.ContainsKey(carriedTemplateId))
                 {
-                    errors.Add($"Entity template {templateId} ({template.Name}) carries {carried.EntityId} with missing template {carriedTemplateId}.");
+                    AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                        ContentDiagnosticCode.MissingCarriedEntityTemplateReference,
+                        $"Entity template {templateId} ({template.Name}) carries {carried.EntityId} with missing template {carriedTemplateId}.",
+                        entityTemplateId: templateId,
+                        carriedEntityId: carried.EntityId,
+                        referencedEntityTemplateId: carriedTemplateId));
                 }
             }
         }

@@ -132,7 +132,7 @@ public sealed class PrototypeContentRegistry(
         ValidateEntityTemplates(errors, diagnostics);
         ValidatePresentations(diagnostics);
         ValidateActionPlans(errors, diagnostics);
-        ValidateMergedInventoryLayers(errors);
+        ValidateMergedInventoryLayers(errors, diagnostics);
 
         diagnostics.AddRange(errors.Select(error => ContentDiagnostic.Error(ContentDiagnosticCode.General, error)));
         return new ContentValidationResult(diagnostics);
@@ -223,14 +223,17 @@ public sealed class PrototypeContentRegistry(
         }
     }
 
-    private void ValidateMergedInventoryLayers(List<string> errors)
+    private void ValidateMergedInventoryLayers(List<string> errors, List<ContentDiagnostic> diagnostics)
     {
         var entityTemplatesByAuthoredEntityId = CollectAuthoredEntityTemplates();
         foreach (var (layerId, layer) in MergedInventoryLayers)
         {
             if (layer.Spaces.Count < 2)
             {
-                errors.Add($"Merged inventory layer {layerId} must declare at least 2 spaces; found {layer.Spaces.Count}.");
+                diagnostics.Add(ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidMergedInventoryLayer,
+                    $"Merged inventory layer {layerId} must declare at least 2 spaces; found {layer.Spaces.Count}.",
+                    mergedInventoryLayerId: layerId));
             }
 
             var occupiedLayerCells = new Dictionary<GridCoord, EntityId>();
@@ -239,14 +242,23 @@ public sealed class PrototypeContentRegistry(
             {
                 if (!entityTemplatesByAuthoredEntityId.TryGetValue(space.OwnerId, out var templateId) || !entityTemplates.TryGetValue(templateId, out var template))
                 {
-                    errors.Add($"Merged inventory layer {layerId} references unknown owner entity {space.OwnerId}.");
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidMergedInventoryLayer,
+                        $"Merged inventory layer {layerId} references unknown owner entity {space.OwnerId}.",
+                        relatedEntityId: space.OwnerId,
+                        mergedInventoryLayerId: layerId));
                     hasInvalidSpace = true;
                     continue;
                 }
 
                 if (!template.HasUsableInventory())
                 {
-                    errors.Add($"Merged inventory layer {layerId} owner {space.OwnerId} template {templateId} has no usable inventory space.");
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidMergedInventoryLayer,
+                        $"Merged inventory layer {layerId} owner {space.OwnerId} template {templateId} has no usable inventory space.",
+                        entityTemplateId: templateId,
+                        relatedEntityId: space.OwnerId,
+                        mergedInventoryLayerId: layerId));
                     hasInvalidSpace = true;
                     continue;
                 }
@@ -265,13 +277,16 @@ public sealed class PrototypeContentRegistry(
             {
                 if ((layer.Joins ?? []).Count == 0)
                 {
-                    errors.Add($"Merged inventory layer {layerId} is disconnected; MVP placements must form one connected layer unless aligned joins declare semantic adjacency.");
+                    diagnostics.Add(ContentDiagnostic.Error(
+                        ContentDiagnosticCode.InvalidMergedInventoryLayer,
+                        $"Merged inventory layer {layerId} is disconnected; MVP placements must form one connected layer unless aligned joins declare semantic adjacency.",
+                        mergedInventoryLayerId: layerId));
                 }
             }
 
             if (!hasInvalidSpace)
             {
-                ValidateMergedInventoryLayerJoins(layer, entityTemplatesByAuthoredEntityId, errors);
+                ValidateMergedInventoryLayerJoins(layer, entityTemplatesByAuthoredEntityId, diagnostics);
             }
         }
     }
@@ -279,7 +294,7 @@ public sealed class PrototypeContentRegistry(
     private void ValidateMergedInventoryLayerJoins(
         MergedInventoryLayerDefinition layer,
         IReadOnlyDictionary<EntityId, EntityTemplateId> entityTemplatesByAuthoredEntityId,
-        List<string> errors)
+        List<ContentDiagnostic> diagnostics)
     {
         if ((layer.Joins ?? []).Count == 0)
         {
@@ -297,7 +312,10 @@ public sealed class PrototypeContentRegistry(
 
         var joinErrors = new List<string>();
         var links = MergedInventoryAlignedJoinResolver.Resolve(layer, templatesByOwnerId, joinErrors);
-        errors.AddRange(joinErrors);
+        diagnostics.AddRange(joinErrors.Select(error => ContentDiagnostic.Error(
+            ContentDiagnosticCode.InvalidMergedInventoryLayer,
+            error,
+            mergedInventoryLayerId: layer.Id)));
 
         var directedEdges = links.SelectMany(link => new[]
         {
@@ -314,7 +332,10 @@ public sealed class PrototypeContentRegistry(
         var uniqueness = TopologyDirectionalUniqueness.Validate(directedEdges);
         foreach (var conflict in uniqueness.Conflicts)
         {
-            errors.Add($"Merged inventory layer {layer.Id} has directional conflict from {conflict.Source} {conflict.Direction}: {conflict.FirstDestination} conflicts with {conflict.ConflictingDestination}.");
+            diagnostics.Add(ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidMergedInventoryLayer,
+                $"Merged inventory layer {layer.Id} has directional conflict from {conflict.Source} {conflict.Direction}: {conflict.FirstDestination} conflicts with {conflict.ConflictingDestination}.",
+                mergedInventoryLayerId: layer.Id));
         }
     }
 

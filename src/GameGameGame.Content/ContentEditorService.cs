@@ -19,7 +19,21 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
             .ToList();
     }
 
-    public ContentValidationResult Validate() => Document.ToRegistry().Validate();
+    public ContentValidationResult Validate() => ContentCompiler.Compile(Document).Validation;
+
+    /// <summary>
+    /// Builds a read-only one-document compiler-backed projection from the current document.
+    /// Does not mutate, save, canonicalize, or rewrite YAML.
+    /// </summary>
+    public ContentWorkspaceSurface BuildWorkspaceSurface(ContentCompileOptions? options = null) =>
+        ContentWorkspaceSurfaceService.Build(Document, options);
+
+    /// <summary>
+    /// Builds a read-only one-document scenario projection from the current document.
+    /// Does not mutate, save, canonicalize, or rewrite YAML.
+    /// </summary>
+    public ContentScenarioSurface BuildScenarioSurface(string scenarioId, ContentCompileOptions? options = null) =>
+        ContentScenarioSurfaceService.Build(Document, scenarioId, options);
 
     public void UpsertMergedInventoryLayer(MergedInventoryLayerDefinition layer)
     {

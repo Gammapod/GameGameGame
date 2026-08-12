@@ -6,16 +6,14 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
 {
     public ActionPlanPreview Preview(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null, bool includeYamlPreview = true)
     {
-        var registry = document.ToRegistry();
+        var compile = ContentCompiler.Compile(document);
+        var registry = compile.Registry ?? document.ToRegistry();
         var plan = registry.ActionPlanDescriptors
             .Single(item => item.Key == planId)
             .Value;
-        var validation = registry.Validate();
-        var canonicalValidation = document.ValidateCanonicalAuthoring();
-        var diagnostics = validation.ForActionPlan(planId)
-            .Concat(canonicalValidation.ForActionPlan(planId))
+        var diagnostics = compile.Validation.ForActionPlan(planId)
             .Concat(entityTemplateId is { } templateId
-                ? validation.ForEntityTemplate(templateId).Concat(canonicalValidation.ForEntityTemplate(templateId))
+                ? compile.Validation.ForEntityTemplate(templateId)
                 : [])
             .Select(diagnostic => diagnostic.Message)
             .Distinct()

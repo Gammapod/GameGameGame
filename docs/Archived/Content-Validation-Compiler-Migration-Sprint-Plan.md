@@ -2,7 +2,7 @@
 id: plan.content-validation-compiler-migration-sprint
 title: Content Validation Compiler Migration Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 40
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]
@@ -20,7 +20,7 @@ related:
 
 # Content Validation Compiler Migration Sprint Plan
 
-Status: Active focused refactor sprint plan.
+Status: Archived completed refactor sprint plan. This sprint introduced the one-document `ContentCompiler`, unified registry/canonical authoring diagnostics, structured formerly string-heavy validation issues, source attribution, a one-document symbol/reference index, and compiler routing for shared Content/editor consumers. Retained as implementation context for future content workspace / multi-document surface work.
 
 ## Goal
 
@@ -446,3 +446,89 @@ Use this section to record completed turns, verification commands, friction disc
   - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentCompiler|FullyQualifiedName~PrototypeRegistryValidation|FullyQualifiedName~EditableContentDocumentCanonicalAuthoringValidation|FullyQualifiedName~ContentEditorServiceValidation|FullyQualifiedName~FrontendEditorService"` passed: 140 tests.
   - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed: 290 tests.
 - Recommended next step: proceed to Phase 3 by converting the highest-value remaining string-only validation errors into structured diagnostics, starting with missing carried-template references and merged-layer directional-conflict diagnostics.
+
+### Phase 3 turn 1: Structured carried-template and merged-layer diagnostics
+
+- Added structured diagnostic support for two high-value formerly string-heavy validation areas:
+  - missing carried entity template references now use `ContentDiagnosticCode.MissingCarriedEntityTemplateReference` with source `EntityTemplateId`, `CarriedEntityId`, and `ReferencedEntityTemplateId`;
+  - merged inventory layer validation now uses `ContentDiagnosticCode.InvalidMergedInventoryLayer` with `MergedInventoryLayerId` and related subject fields where available.
+- Extended `ContentDiagnostic` with optional `ReferencedEntityTemplateId` and `MergedInventoryLayerId` fields for compiler/editor navigation readiness without adding source-span mapping yet.
+- Converted merged-layer validation messages for too few spaces, unknown owners, unusable owner inventories, disconnected layers, join resolver errors, and directional conflicts from plain `errors` strings to structured diagnostics. The compatibility `Errors` projection still exposes their human-readable messages.
+- Added/revised TDD coverage:
+  - `PrototypeRegistryValidationReportsMissingCarriedTemplateAsStructuredDiagnostic`;
+  - `ContentValidationReportsMergedLayerUnknownOwnerAsStructuredDiagnostic`;
+  - `ContentValidationRejectsMergedLayerJoinDirectionalConflict` now asserts the structured merged-layer diagnostic as well as the message.
+- Confirmed the intended red step before implementation: new tests initially failed to compile because the new diagnostic codes/fields did not exist.
+- Friction: merged-layer diagnostics did not have an existing subject slot on `ContentDiagnostic`, and overloading existing entity/action-plan fields would have made future editor navigation ambiguous. Mitigation used: added narrow optional diagnostic fields for referenced entity-template IDs and merged-layer IDs, keeping existing constructor/static-factory parameters source-compatible by appending optional parameters.
+- Verification:
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~PrototypeRegistryValidationReportsMissingCarriedTemplateAsStructuredDiagnostic|FullyQualifiedName~ContentValidationRejectsMergedLayerJoinDirectionalConflict|FullyQualifiedName~ContentValidationReportsMergedLayerUnknownOwnerAsStructuredDiagnostic"` passed: 3 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~PrototypeRegistryValidationReportsCarried|FullyQualifiedName~PrototypeRegistryValidationReportsMissingCarried|FullyQualifiedName~ContentValidation|FullyQualifiedName~YamlContentLoaderLoadsAlignedMergedLayerJoin|FullyQualifiedName~ScenarioMaterializerResolvesAlignedMergedLayerJoinsToSourceCellLinks|FullyQualifiedName~ContentCompiler"` passed: 19 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed: 292 tests.
+- Recommended next step: proceed to Phase 4 by adding compiler-provided diagnostic attribution metadata (`DocumentId`/`SourcePath` style fields) without attempting YAML line/column source-span mapping.
+
+### Phase 4 turn 1: Diagnostic source attribution
+
+- Added `ContentCompileOptions` with optional `DocumentId` and `SourcePath`.
+- Extended `ContentDiagnostic` with optional `DocumentId`, `SourcePath`, `SymbolKind`, and `SymbolId` fields. Phase 4 populates document/source fields only; symbol fields are reserved for Phase 5 symbol/reference indexing.
+- Updated `ContentCompiler.Compile(...)` to apply compile-option attribution to successful validation diagnostics and materialization-failure diagnostics.
+- Updated `FrontendEditorSnapshotBuilder` to pass the open session file path as both document ID and source path when building compiler validation for file-backed sessions.
+- Extended `FrontendEditorDiagnostic` to preserve `DocumentId` and `SourcePath` for frontend/editor consumers.
+- Added TDD coverage:
+  - `ContentCompilerAnnotatesDiagnosticsWithDocumentSource`;
+  - `FrontendEditorSnapshotPreservesDiagnosticSourceAttribution`.
+- Confirmed the intended red step before implementation: tests initially failed to compile because `ContentCompileOptions`, diagnostic attribution fields, and frontend diagnostic attribution fields did not exist.
+- Friction: no unexpected friction. Mitigation/design choice: keep attribution optional and compiler-applied so direct `registry.Validate()` callers remain source-compatible and diagnostics outside compiler context continue to have null attribution.
+- Verification:
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentCompilerAnnotatesDiagnosticsWithDocumentSource|FullyQualifiedName~FrontendEditorSnapshotPreservesDiagnosticSourceAttribution"` passed: 2 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentCompiler|FullyQualifiedName~FrontendEditorService|FullyQualifiedName~ContentToolDispatcherCreatesBehaviorPlanAndPreviewWithValidationSummary"` passed: 90 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed: 294 tests.
+- Recommended next step: proceed to Phase 5 by adding the one-document symbol/reference index, using the reserved symbol attribution fields only where the index can assign stable symbol kind/ID facts without inventing multi-file resolution.
+
+### Phase 5 turn 1: One-document symbol/reference index
+
+- Added compiler-owned one-document symbol/reference indexing to `ContentCompileResult`:
+  - `ContentSymbol`, `ContentSymbolKind`;
+  - `ContentReference`, `ContentReferenceKind`, `ContentReferenceResolution`.
+- The compiler now emits symbols for entity templates, action plans, scenarios, presentations, presentation definitions, palettes, merged inventory layers, and authored carried entity instances.
+- The compiler now emits references for current one-document dependency categories:
+  - template default action plans;
+  - carried entity templates;
+  - scenario root/player templates;
+  - behavior-step referenced plans, spawned/polymorphed templates, and cost templates;
+  - legacy low-level `CallPlan` effect references;
+  - targeting target templates;
+  - merged-layer owner entity references;
+  - presentation-to-template and presentation/palette identity references.
+- Missing references are marked `Missing` within the current document instead of attempting cross-file/import resolution. `Ambiguous` is reserved for a future workspace/import phase and is not emitted by this one-document compiler.
+- Added TDD coverage:
+  - `ContentCompilerBuildsSymbolsGroupedByType`;
+  - `ContentCompilerIndexesTemplateActionPlanAndScenarioReferences`;
+  - `ContentCompilerIndexesBehaviorStepTemplatePlanAndCostReferences`;
+  - `ContentCompilerMarksMissingReferencesWithoutResolvingAcrossFiles`.
+- Confirmed the intended red step before implementation: new tests initially failed to compile because symbol/reference result properties and vocabulary did not exist.
+- Friction: merged-layer owner references target authored entity instances, while the current one-document index does not yet resolve authored instance IDs recursively or validate merged-layer owner existence through the index. Mitigation used: emit stable authored entity instance symbols for direct carried instances and keep merged-layer owner references one-document/factual without changing current validation semantics; deeper recursive provenance can be promoted with workspace/index consumers if needed.
+- Verification:
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentCompilerBuildsSymbolsGroupedByType|FullyQualifiedName~ContentCompilerIndexes|FullyQualifiedName~ContentCompilerMarksMissingReferences"` passed: 4 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentCompiler|FullyQualifiedName~ContentEditorService|FullyQualifiedName~FrontendEditorService|FullyQualifiedName~PrototypeRegistryValidation"` passed: 191 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed: 298 tests.
+- Recommended next step: proceed to Phase 6 by routing high-value shared Content/editor consumers through the compiler seam where practical, starting with `ContentEditorService.Validate()`, `ActionPlanPreviewService`, `ScenarioMaterializer`, and agent validation paths while preserving current mutation semantics.
+
+### Phase 6 turn 1: Shared consumer compiler routing
+
+- Routed high-value shared consumers through `ContentCompiler` while preserving mutation semantics:
+  - `ContentEditorService.Validate()` now returns `ContentCompiler.Compile(Document).Validation`;
+  - `ActionPlanPreviewService` now gets registry and validation diagnostics from the compiler result for normal preview flows;
+  - `ScenarioMaterializer` now compiles once up front, consumes the compiler registry when available, and returns compiler validation diagnostics when compile/materialization fails.
+- Agent validation paths that call `Session.Editor.Validate()` now inherit the compiler validation seam through `ContentEditorService` without changing the agent API result shape.
+- Added TDD coverage:
+  - `ContentEditorServiceValidateUsesContentCompiler`;
+  - `ScenarioMaterializerUsesCompilerValidationResult`.
+- Confirmed the intended red step before implementation:
+  - `ContentEditorServiceValidateUsesContentCompiler` failed because editor validation still returned only registry diagnostics and missed canonical-authoring diagnostics;
+  - `ScenarioMaterializerUsesCompilerValidationResult` failed because materialization still performed its own `ToRegistry()` catch path with the old `content registry could not be materialized` message instead of compiler diagnostics.
+- Friction: `ActionPlanPreviewService` can only use compiler diagnostics when the compiler can produce a registry; invalid DTO/materialization failures still leave no semantic action-plan registry to preview. Mitigation used: keep the fallback `document.ToRegistry()` behavior for the rare null-registry preview path rather than widening preview semantics in this phase. A later phase can design graceful preview over raw DTOs if needed.
+- Verification:
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentEditorServiceValidateUsesContentCompiler|FullyQualifiedName~ScenarioMaterializerUsesCompilerValidationResult"` passed: 2 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "FullyQualifiedName~ContentCompiler|FullyQualifiedName~ContentEditorService|FullyQualifiedName~ActionPlanPreview|FullyQualifiedName~ScenarioMaterializer|FullyQualifiedName~AgentContentEditorApi"` passed: 97 tests.
+  - `dotnet test tests/GameGameGame.Tests/GameGameGame.Tests.csproj --filter "Suite=Content"` passed: 299 tests.
+- Recommended next step: close this migration sprint with a cleanup/review pass: inspect the compiler/index surface for naming/API polish, decide whether `ContentReferenceIndex` should move out of `ContentCompiler.cs` before further growth, and update source-of-truth docs only if the compiler seam is considered an editor/content capability status change.

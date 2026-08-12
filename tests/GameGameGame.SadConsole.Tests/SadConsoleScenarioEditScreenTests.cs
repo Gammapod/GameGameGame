@@ -24,6 +24,99 @@ public sealed class SadConsoleScenarioEditScreenTests
     }
 
     [Fact]
+    public void ScenarioEditOpenConsumesScenarioSurfaceWithoutChangingEditorShape()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 2
+                inventoryHeight: 2
+                weight: 100
+                carryingCapacity: 100
+                carriedEntities:
+                  - entityId: actor1
+                    templateId: actor
+                    coord: { x: 0, y: 0 }
+              actor:
+                name: Actor
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 1
+              unused:
+                name: Unused
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 1
+            presentations:
+              room: { glyph: '#', color: Gray }
+              actor: { glyph: a, color: Green }
+              unused: { glyph: u, color: Yellow }
+            actionPlans: {}
+            scenarios:
+              smoke:
+                name: Smoke
+                scenarioRootEntityTemplateId: room
+                playerEntityTemplateId: actor
+                playerEntityId: player
+                playerStart: { x: 0, y: 0 }
+            """);
+        try
+        {
+            var screen = ScenarioEditScreen.Open(new ScenarioCatalogEntry(path, "smoke", "Smoke", "Smoke scenario")).Screen;
+
+            var previewRows = screen.Components().Single(component => component.Id == "scenario-preview").RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default);
+            var playerRows = screen.Components().Single(component => component.Id == "player-start").RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default);
+
+            Assert.Contains(previewRows, row => row.Contains("Type-first surface: 1 scenarios, 3 templates, 0 action plans"));
+            Assert.Contains(previewRows, row => row.Contains("Scenario refs: 2 | dependencies: 2"));
+            Assert.Contains(playerRows, row => row.Contains("scenario root") && row.Contains("room"));
+            Assert.Contains(playerRows, row => row.Contains("player X position") && row.Contains("0"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ScenarioEditOpenShowsSurfaceMissingReferencesInDiagnostics()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 1
+            presentations:
+              actor: { glyph: a, color: Green }
+            actionPlans: {}
+            scenarios:
+              broken:
+                name: Broken
+                scenarioRootEntityTemplateId: missingRoom
+            """);
+        try
+        {
+            var screen = ScenarioEditScreen.Open(new ScenarioCatalogEntry(path, "broken", "Broken", "Broken scenario")).Screen;
+
+            var diagnostics = screen.Components().Single(component => component.Id == "scenario-edit-diagnostics").RenderRows(GameGameGame.SadConsoleApp.Ui.Styling.SadConsoleTheme.Default);
+
+            Assert.Contains(diagnostics, row => row.Contains("Missing ScenarioRootTemplate: broken -> missingRoom"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ScenarioEditDirtySnapshotShowsUnsavedStatus()
     {
         var screen = ScenarioEditScreen.FromSnapshot(DemoEntry(), DemoSnapshot(isDirty: true));
@@ -260,6 +353,13 @@ public sealed class SadConsoleScenarioEditScreenTests
     }
 
     private static ScenarioCatalogEntry DemoEntry() => new("demo.yaml", "demo", "Demo Scenario", "Demo description");
+
+    private static string WriteTempContentFile(string yaml)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ggg-sadconsole-scenario-edit-{Guid.NewGuid():N}.yaml");
+        File.WriteAllText(path, yaml);
+        return path;
+    }
 
     private static FrontendEditorSnapshot DemoSnapshot(bool isDirty = false) => new(
         "demo.yaml",

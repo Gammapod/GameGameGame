@@ -9,6 +9,7 @@ internal sealed class ScenarioEditScreen
     private FrontendEditorSnapshot? _snapshot;
     private readonly FrontendEditorService? _service;
     private readonly FrontendEditorScenarioSummary? _scenario;
+    private ContentScenarioSurface? _scenarioSurface;
     private readonly List<FrontendEditorEntityTemplateSummary> _entities;
     private readonly List<FrontendEditorActionPlanSummary> _actionPlans;
     private readonly List<string> _diagnostics;
@@ -35,12 +36,14 @@ internal sealed class ScenarioEditScreen
         FrontendEditorService? service,
         FrontendEditorSnapshot? snapshot,
         FrontendEditorScenarioSummary? scenario,
+        ContentScenarioSurface? scenarioSurface,
         IReadOnlyList<string> diagnostics)
     {
         CatalogEntry = catalogEntry;
         _service = service;
         _snapshot = snapshot;
         _scenario = scenario;
+        _scenarioSurface = scenarioSurface;
         _entities = snapshot?.EntityTemplates.ToList() ?? [];
         _actionPlans = snapshot?.ActionPlans.ToList() ?? [];
         _diagnostics = diagnostics.ToList();
@@ -69,26 +72,32 @@ internal sealed class ScenarioEditScreen
             var open = FrontendEditorService.OpenFile(entry.ContentPath);
             if (!open.IsSuccess || open.Service is null)
             {
-                return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, null, [open.ErrorMessage ?? $"Could not open {entry.ContentPath}."]));
+                return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, null, null, [open.ErrorMessage ?? $"Could not open {entry.ContentPath}."]));
             }
 
             var snapshot = open.Service.GetSnapshot();
             var scenario = snapshot.Scenarios.FirstOrDefault(item => item.ScenarioId == entry.ScenarioId);
+            var scenarioSurface = scenario is null
+                ? null
+                : open.Service.BuildScenarioSurface(entry.ScenarioId, new ContentCompileOptions(SourcePath: entry.ContentPath));
             var diagnostics = scenario is null
                 ? [$"Scenario '{entry.ScenarioId}' was not found in {entry.ContentPath}."]
-                : snapshot.ValidationDiagnostics.Select(diagnostic => $"{diagnostic.Severity}: {diagnostic.Message}").ToList();
-            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, open.Service, snapshot, scenario, diagnostics));
+                : BuildDiagnostics(snapshot, scenarioSurface);
+            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, open.Service, snapshot, scenario, scenarioSurface, diagnostics));
         }
         catch (Exception ex)
         {
-            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, null, [ex.Message]));
+            return ScenarioEditOpenResult.Success(new ScenarioEditScreen(entry, null, null, null, null, [ex.Message]));
         }
     }
 
     public static ScenarioEditScreen FromSnapshot(ScenarioCatalogEntry entry, FrontendEditorSnapshot snapshot, FrontendEditorService? service = null)
     {
         var scenario = snapshot.Scenarios.FirstOrDefault(item => item.ScenarioId == entry.ScenarioId);
-        return new ScenarioEditScreen(entry, service, snapshot, scenario, []);
+        var scenarioSurface = service is null || scenario is null
+            ? null
+            : service.BuildScenarioSurface(entry.ScenarioId, new ContentCompileOptions(SourcePath: entry.ContentPath));
+        return new ScenarioEditScreen(entry, service, snapshot, scenario, scenarioSurface, []);
     }
 
     public EntityTemplateEditScreen? OpenEntityTemplateEditScreen(string templateId)
@@ -108,6 +117,28 @@ internal sealed class ScenarioEditScreen
         _entities.AddRange(snapshot.EntityTemplates);
         _actionPlans.Clear();
         _actionPlans.AddRange(snapshot.ActionPlans);
+        _scenarioSurface = _service is null || _scenario is null
+            ? null
+            : _service.BuildScenarioSurface(_scenario.ScenarioId, new ContentCompileOptions(SourcePath: CatalogEntry.ContentPath));
+    }
+
+    private static List<string> BuildDiagnostics(FrontendEditorSnapshot snapshot, ContentScenarioSurface? scenarioSurface)
+    {
+        if (scenarioSurface is null)
+        {
+            return snapshot.ValidationDiagnostics.Select(diagnostic => $"{diagnostic.Severity}: {diagnostic.Message}").ToList();
+        }
+
+        var rows = scenarioSurface.SelectedScenarioDiagnostics
+            .Select(diagnostic => $"{diagnostic.Severity}: {diagnostic.Message}")
+            .ToList();
+        rows.AddRange(scenarioSurface.SelectedScenarioReferences
+            .Where(reference => reference.Resolution == ContentReferenceResolution.Missing)
+            .Select(reference => $"Missing {reference.Kind}: {reference.SourceId} -> {reference.TargetId}"));
+        rows.AddRange(scenarioSurface.GlobalDiagnostics
+            .Take(Math.Max(0, 4 - rows.Count))
+            .Select(diagnostic => $"{diagnostic.Severity}: {diagnostic.Message}"));
+        return rows;
     }
 
     public ActionPlanEditScreen? OpenActionPlanEditScreen(string actionPlanId, ActionPlanEditReturnDestination returnDestination)
@@ -594,8 +625,14 @@ internal sealed class ScenarioEditScreen
             : new List<string>
             {
                 $"Turn-0 preview for: {_scenario.Name}",
-                $"Root template: {_scenario.ScenarioRootEntityTemplateId}",
-                $"Player template: {_scenario.PlayerEntityTemplateId}",
+                $"Root template: {_scenarioSurface?.RootTemplateId ?? _scenario.ScenarioRootEntityTemplateId}",
+                $"Player template: {_scenarioSurface?.PlayerTemplateId ?? _scenario.PlayerEntityTemplateId}",
+                _scenarioSurface is null
+                    ? "Type-first surface: not available"
+                    : $"Type-first surface: {_scenarioSurface.Workspace.Scenarios.Count} scenarios, {_scenarioSurface.Workspace.EntityTemplates.Count} templates, {_scenarioSurface.Workspace.ActionPlans.Count} action plans",
+                _scenarioSurface is null
+                    ? "Scenario refs: not available"
+                    : $"Scenario refs: {_scenarioSurface.SelectedScenarioReferences.Count} | dependencies: {_scenarioSurface.DependencySymbols.Count}",
                 "Derived runtime preview tree placeholder:"
             };
         rows.AddRange(_entities.Select((entity, index) => $"{(index == _selectedPreviewIndex ? ">" : " ")} {entity.Glyph} {entity.Name} ({entity.TemplateId})"));
@@ -616,8 +653,8 @@ internal sealed class ScenarioEditScreen
             new SadConsoleRect(61, 4, 56, 13),
             [
                 new EditableFieldComponent("scenario-root", "scenario root", _scenario?.ScenarioRootEntityTemplateId ?? "(missing)", EditableFieldMode.ReadOnly),
-                new EditableFieldComponent("player-x", "player X position", _scenario?.PlayerStart.X.ToString() ?? "?", EditableFieldMode.ReadOnly),
-                new EditableFieldComponent("player-y", "player Y position", _scenario?.PlayerStart.Y.ToString() ?? "?", EditableFieldMode.ReadOnly)
+                new EditableFieldComponent("player-x", "player X position", (_scenarioSurface?.PlayerStart?.X ?? _scenario?.PlayerStart.X)?.ToString() ?? "?", EditableFieldMode.ReadOnly),
+                new EditableFieldComponent("player-y", "player Y position", (_scenarioSurface?.PlayerStart?.Y ?? _scenario?.PlayerStart.Y)?.ToString() ?? "?", EditableFieldMode.ReadOnly)
             ],
             _focusRouter.StateFor("player-start"));
     }

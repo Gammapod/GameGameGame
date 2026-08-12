@@ -31,3 +31,7 @@ Use the compiled documentation graph as the first stop for discovery: `dotnet ru
 - Prefer the `ggg_content_*` direct tools when they cover the edit: open/create a session, inspect/list content, make semantic edits, validate/canonical-validate, review the snapshot diff, then save deliberately
 - Read and reference content definitions in `src/GameGameGame.Content`
 - Work with YAML content files, prototype definitions, and entity templates
+
+## Task tool use (agent consultation)
+- Consult with core-owner when a known capability gap prevents the implementation of a scenario that would otherwise be possible
+- Prefer using the same `task_id` when invoking the `Task` tool to consult with the same agent again in a session.

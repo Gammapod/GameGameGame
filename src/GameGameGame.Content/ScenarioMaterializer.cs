@@ -97,18 +97,16 @@ public static class ScenarioMaterializer
             new Dictionary<EntityTemplateId, EntityPresentation>());
         var actionPlans = new Dictionary<EntityId, IEntityActionPlan>();
 
-        try
+        var compile = ContentCompiler.Compile(document);
+        validationDiagnostics.AddRange(compile.Validation.Errors);
+        validationDiagnostics = validationDiagnostics.Distinct().ToList();
+        if (compile.Registry is null)
         {
-            registry = document.ToRegistry();
-            validationDiagnostics.AddRange(registry.Validate().Errors);
-            validationDiagnostics = validationDiagnostics.Distinct().ToList();
-            PopulateRuntimeTemplates(world, registry);
-        }
-        catch (Exception ex)
-        {
-            validationDiagnostics.Add($"content registry could not be materialized: {ex.Message}");
             return CreateResult(resultScenarioPlaneId: null, playerLocation: null);
         }
+
+        registry = compile.Registry;
+        PopulateRuntimeTemplates(world, registry);
 
         if (!registry.EntityTemplates.ContainsKey(scenarioRootEntityTemplateId))
         {

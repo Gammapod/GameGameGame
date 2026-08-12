@@ -51,6 +51,20 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
     public AgentApiResult<ContentValidationResult> ValidateCanonicalAuthoring() =>
         AgentApiResult<ContentValidationResult>.Success(Session.Document.ValidateCanonicalAuthoring());
 
+    /// <summary>
+    /// Builds a read-only one-document compiler-backed projection from the current document.
+    /// Does not mutate, save, canonicalize, or rewrite YAML.
+    /// </summary>
+    public AgentApiResult<ContentWorkspaceSurface> BuildWorkspaceSurface(ContentCompileOptions? options = null) =>
+        Try("BuildWorkspaceSurfaceFailed", () => Session.Editor.BuildWorkspaceSurface(options));
+
+    /// <summary>
+    /// Builds a read-only one-document scenario projection from the current document.
+    /// Does not mutate, save, canonicalize, or rewrite YAML.
+    /// </summary>
+    public AgentApiResult<ContentScenarioSurface> BuildScenarioSurface(string scenarioId, ContentCompileOptions? options = null) =>
+        Try("BuildScenarioSurfaceFailed", () => Session.Editor.BuildScenarioSurface(scenarioId, options));
+
     public AgentApiResult<AgentScenarioRunReport> RunScenario(AgentScenarioRunRequest request) =>
         Try("RunScenarioFailed", () => ToAgentReport(ScenarioRunService.Run(
             Session.Document,

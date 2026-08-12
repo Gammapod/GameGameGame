@@ -105,6 +105,21 @@ This target promoted the following items out of backlog buckets and into the com
 
 ## Active / likely next sprint
 
+### Content workspace/type-first surface
+
+Status: Active planning direction after the completed content validation compiler migration sprint.
+
+Active planning document:
+
+- [Content Workspace Surface Implementation Plan](Content-Workspace-Surface-Implementation-Plan.md)
+
+Target statement:
+
+- Build a compiler-backed, one-document, type-first content surface for scenarios, entity templates, action plans, presentations, merged layers, diagnostics, and dependency references.
+- Use the new surface to support scenario-centric browsing/editing where scenario-specific facts and shared content lists are both visible regardless of current file layout.
+- Pull in compatible frontend/editor backlog items such as read-only debug/editor browser foundations, validation/reference panels, action-plan preview panels, and provenance/source facts.
+- Continue deferring true multi-file imports/includes/packages and shipped-vs-user separation until the one-document surface proves useful.
+
 ### Canonical action release target: vertical slices and player control
 
 Status: Selected after the Delta point-of-view foundation and player-facing log groundwork.
@@ -132,6 +147,7 @@ Canonical action target statement:
 
 Recently completed focused sprints:
 
+- [Content Validation Compiler Migration Sprint Plan](../Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md): one-document compiler facade, unified registry/canonical validation diagnostics, structured carried-template and merged-layer diagnostics, document/source attribution, symbol/reference indexing, and compiler routing for editor/preview/materialization consumers. This is the runway for the active type-first content surface plan, not a multi-file/import implementation.
 - [Topology Service Phase 1 Sprint Plan](../Archived/Topology-Service-Phase-1-Sprint-Plan.md): behavior-preserving Core topology service refactor for default eight-way grid neighbors, MovementService adjacency/directional relocation, controlled exit affordance projection, Action Choice drop/transfer topology facts, and Transfer counterparty lookup. Content/editor schema and frontend rendering were intentionally unchanged.
 - [Give/Take Transfer Vertical Slice Sprint Plan](../Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md): Core atomic Transfer semantics, policy-asymmetric ActorToTarget/TargetToActor directions, combined outcome/player rooms, Action Choice/history support, and a first frontend transfer workflow.
 

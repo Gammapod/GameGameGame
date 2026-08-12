@@ -6,7 +6,11 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
 {
     public FrontendEditorSnapshot Build()
     {
-        var compile = ContentCompiler.Compile(session.Document);
+        var compile = ContentCompiler.Compile(
+            session.Document,
+            new ContentCompileOptions(
+                DocumentId: session.FilePath,
+                SourcePath: session.FilePath));
         var diagnostics = compile.Validation.Diagnostics
             .Select(FrontendEditorDiagnostic.From)
             .ToList();

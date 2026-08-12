@@ -1062,6 +1062,39 @@ public sealed class ContentEditorServiceTests
     }
 
     [Fact]
+    public void ContentEditorServiceValidateUsesContentCompiler()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 1
+                defaultPlanVariables:
+                  mood:
+                    kind: Int
+                    intValue: 1
+            presentations:
+              actor:
+                glyph: a
+                color: Green
+            actionPlans: {}
+            """);
+        var editor = new ContentEditorService(document);
+
+        var validation = editor.Validate();
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == ContentDiagnosticCode.ArbitraryPlanVariableField
+            && diagnostic.EntityTemplateId == new EntityTemplateId("actor")
+            && diagnostic.VariableName == "mood");
+    }
+
+    [Fact]
     public void ContentEditorServiceCreatesEntityPresetWithGeneratedIdAndDefaultPresentation()
     {
         var editor = new ContentEditorService(EditableContentDocument.LoadYaml(

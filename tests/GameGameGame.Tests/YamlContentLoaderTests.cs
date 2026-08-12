@@ -632,6 +632,53 @@ public sealed class YamlContentLoaderTests
 
         Assert.False(validation.IsValid);
         Assert.Contains(validation.Errors, error => error.Contains("roomHallConflict", StringComparison.Ordinal) && error.Contains("directional conflict", StringComparison.OrdinalIgnoreCase));
+        var diagnostic = Assert.Single(validation.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidMergedInventoryLayer);
+        Assert.Equal(new MergedInventoryLayerId("roomHallConflict"), diagnostic.MergedInventoryLayerId);
+        Assert.Contains("directional conflict", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ContentValidationReportsMergedLayerUnknownOwnerAsStructuredDiagnostic()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              root:
+                name: Root
+                inventoryWidth: 2
+                inventoryHeight: 1
+                bulk: 10
+                aperture: 10
+                carriedEntities:
+                - entityId: roomA
+                  templateId: roomSpace
+                  coord: { x: 0, y: 0 }
+              roomSpace:
+                name: Room Space
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 10
+            presentations:
+              root: { glyph: R, color: Gray }
+              roomSpace: { glyph: A, color: Cyan }
+            mergedLayers:
+              missingOwnerLayer:
+                spaces:
+                - owner: roomA
+                  origin: { x: 0, y: 0 }
+                - owner: missingRoom
+                  origin: { x: 2, y: 0 }
+            actionPlans: {}
+            """);
+
+        var validation = registry.Validate();
+
+        Assert.False(validation.IsValid);
+        var diagnostic = Assert.Single(validation.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidMergedInventoryLayer);
+        Assert.Equal(new MergedInventoryLayerId("missingOwnerLayer"), diagnostic.MergedInventoryLayerId);
+        Assert.Equal(new EntityId("missingRoom"), diagnostic.RelatedEntityId);
+        Assert.Contains("unknown owner entity missingRoom", diagnostic.Message, StringComparison.Ordinal);
     }
 
     private static EntityId TestWorldEntity(string id) => new(id);

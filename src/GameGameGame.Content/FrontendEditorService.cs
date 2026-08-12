@@ -225,6 +225,20 @@ public sealed class FrontendEditorService(ContentEditorSession session)
     public FrontendEditorSnapshot GetSnapshot()
         => new FrontendEditorSnapshotBuilder(Session).Build();
 
+    /// <summary>
+    /// Builds a read-only one-document compiler-backed projection from the current document.
+    /// Does not mutate, save, canonicalize, or rewrite YAML.
+    /// </summary>
+    public ContentWorkspaceSurface BuildWorkspaceSurface(ContentCompileOptions? options = null) =>
+        Session.Editor.BuildWorkspaceSurface(options);
+
+    /// <summary>
+    /// Builds a read-only one-document scenario projection from the current document.
+    /// Does not mutate, save, canonicalize, or rewrite YAML.
+    /// </summary>
+    public ContentScenarioSurface BuildScenarioSurface(string scenarioId, ContentCompileOptions? options = null) =>
+        Session.Editor.BuildScenarioSurface(scenarioId, options);
+
     public FrontendEditorScenarioPreview PreviewScenario(string scenarioId)
     {
         var session = PlayableScenarioLauncher.CreateFromDocument(Session.Document, scenarioId);
@@ -472,7 +486,9 @@ public sealed record FrontendEditorDiagnostic(
     string? ActionPlanId,
     int? StepIndex,
     string? CarriedEntityId,
-    GridCoord? Coord)
+    GridCoord? Coord,
+    string? DocumentId = null,
+    string? SourcePath = null)
 {
     public static FrontendEditorDiagnostic From(ContentDiagnostic diagnostic) =>
         new(
@@ -483,7 +499,9 @@ public sealed record FrontendEditorDiagnostic(
             diagnostic.ActionPlanTemplateId?.Value,
             diagnostic.StepIndex,
             diagnostic.CarriedEntityId?.Value,
-            diagnostic.Coord);
+            diagnostic.Coord,
+            diagnostic.DocumentId,
+            diagnostic.SourcePath);
 }
 
 public sealed record FrontendEditorScenarioPreview(

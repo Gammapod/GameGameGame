@@ -12,5 +12,16 @@
       ],
       "enabled": true
     }
+  },
+  "agent": {
+    "frontend-owner": {
+      "color": "#ff6b6b"
+    },
+    "core-owner": {
+      "color": "#6b6bff"
+    },
+    "content-editor": {
+      "color": "#6bff6b"
+    }
   }
 }

@@ -20,6 +20,8 @@
       "item.crystal": 132,
       "item.potion": 133,
       "item.box": 134,
+      "item.bow": 135,
+      "item.scroll": 136,
       "actor.player": 219,
       "face.smile": 219,
       "face.happy": 220,
@@ -33,6 +35,9 @@
     "gridDotted": 223,
     "gridSolid": 224,
     "gridIce": 225,
+    "gridCave": 226,
+    "gridGrass": 227,
+    "gridWood": 228,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

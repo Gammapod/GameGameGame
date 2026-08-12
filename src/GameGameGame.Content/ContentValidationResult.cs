@@ -63,7 +63,9 @@ public enum ContentDiagnosticCode
     InvalidActionStepTargetReference,
     InvalidActionStepField,
     UnknownPresentationId,
-    UnknownPaletteId
+    UnknownPaletteId,
+    MissingCarriedEntityTemplateReference,
+    InvalidMergedInventoryLayer
 }
 
 public sealed record ContentDiagnostic(
@@ -81,7 +83,13 @@ public sealed record ContentDiagnostic(
     PlanValueKind? ActualValueKind = null,
     EntityId? CarriedEntityId = null,
     EntityId? RelatedEntityId = null,
-    GridCoord? Coord = null)
+    GridCoord? Coord = null,
+    EntityTemplateId? ReferencedEntityTemplateId = null,
+    MergedInventoryLayerId? MergedInventoryLayerId = null,
+    string? DocumentId = null,
+    string? SourcePath = null,
+    string? SymbolKind = null,
+    string? SymbolId = null)
 {
     public static ContentDiagnostic Error(
         ContentDiagnosticCode code,
@@ -97,7 +105,13 @@ public sealed record ContentDiagnostic(
         PlanValueKind? actualValueKind = null,
         EntityId? carriedEntityId = null,
         EntityId? relatedEntityId = null,
-        GridCoord? coord = null) =>
+        GridCoord? coord = null,
+        EntityTemplateId? referencedEntityTemplateId = null,
+        MergedInventoryLayerId? mergedInventoryLayerId = null,
+        string? documentId = null,
+        string? sourcePath = null,
+        string? symbolKind = null,
+        string? symbolId = null) =>
         new(
             ContentDiagnosticSeverity.Error,
             code,
@@ -113,5 +127,11 @@ public sealed record ContentDiagnostic(
             actualValueKind,
             carriedEntityId,
             relatedEntityId,
-            coord);
+            coord,
+            referencedEntityTemplateId,
+            mergedInventoryLayerId,
+            documentId,
+            sourcePath,
+            symbolKind,
+            symbolId);
 }

@@ -220,6 +220,41 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
+    public void FrontendEditorSnapshotPreservesDiagnosticSourceAttribution()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidth: 1
+                inventoryHeight: 1
+                weight: 1
+                carryingCapacity: 1
+                defaultActionPlanId: missingPlan
+            presentations:
+              actor:
+                glyph: a
+                color: Green
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var service = FrontendEditorService.OpenFile(path).Service!;
+
+            var diagnostic = Assert.Single(service.GetSnapshot().ValidationDiagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingActionPlanReference);
+
+            Assert.Equal(path, diagnostic.SourcePath);
+            Assert.Equal(path, diagnostic.DocumentId);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void PreviewScenarioMaterializesTurnZeroRuntimeStateWithoutMutatingDocument()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());
