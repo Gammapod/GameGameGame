@@ -44,9 +44,9 @@ The active release direction is canonical action vertical slices: freeze the cur
 ## Active planning bridge
 
 - Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
-- Active architecture/refactor plan: `docs/Plans/Content-Workspace-Surface-Implementation-Plan.md`, for implementing the compiler-backed one-document type-first content surface before any multi-file/import work.
-- Active focused sprint plan: none selected; use the content workspace/type-first surface plan when selecting the next content/editor surface slice, otherwise choose the next canonical action vertical slice from the roadmap backlog.
-- Recently archived focused sprint plans: `docs/Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md`, `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`, `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`, `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`, `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`, `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
+- Active architecture/refactor plan: `docs/Plans/Multi-Document-Content-Workspace-Compiler-Sprint-Plan.md`, for introducing a multi-document ContentWorkspace/ContentCompiler subsystem while preserving one-document APIs as compatibility adapters.
+- Active focused sprint plan: none selected; use the multi-document content workspace/compiler plan when selecting the next content/editor composition slice, otherwise choose the next canonical action vertical slice from the roadmap backlog.
+- Recently archived focused sprint plans: `docs/Archived/Content-Workspace-Surface-Implementation-Plan.md`, `docs/Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md`, `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`, `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`, `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`, `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`, `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
 - Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
 - Content/scenario capability gaps: `docs/Source of Truth/Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Archived/Sprint-Retrospective.md`.
@@ -56,7 +56,7 @@ The active release direction is canonical action vertical slices: freeze the cur
 
 Trust `docs/Plans/High-Level-Roadmap.md` for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Implement the compiler-backed one-document content workspace/type-first surface, using the completed content validation compiler migration as runway and keeping imports/packages deferred.
+1. Implement the multi-document ContentWorkspace/ContentCompiler composition sprint, using the completed one-document compiler and type-first surface as runway while preserving compatibility adapters.
 2. Select the next canonical action vertical slice from the roadmap backlog using the completed Move, Pickup/Drop seam, Enter/Exit, Transfer, and Play-mode interaction evidence.
 3. Canonical runtime control-source / Action Choice model follow-through.
 4. Componentized Gamma play-mode follow-through over canonical action/Action Choice/POV/log services.

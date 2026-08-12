@@ -65,7 +65,9 @@ public enum ContentDiagnosticCode
     UnknownPresentationId,
     UnknownPaletteId,
     MissingCarriedEntityTemplateReference,
-    InvalidMergedInventoryLayer
+    InvalidMergedInventoryLayer,
+    DuplicateSymbolDeclaration,
+    AmbiguousSymbolReference
 }
 
 public sealed record ContentDiagnostic(

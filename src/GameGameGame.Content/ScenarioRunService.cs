@@ -78,6 +78,22 @@ public static class ScenarioRunService
         return RunPersistedWithHistory(document, request).Report;
     }
 
+    public static ScenarioRunReport Run(ContentWorkspace workspace, PersistedScenarioRunRequest request)
+    {
+        if (request.TurnCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "Scenario turn count must be non-negative.");
+        }
+
+        var materialization = ScenarioMaterializer.Materialize(workspace, request.ScenarioId);
+
+        return RunMaterialized(
+            new ScenarioRunRequest(materialization.ScenarioRootEntityTemplateId, request.TurnCount),
+            materialization,
+            request.TurnCount,
+            "Workspace persisted scenario simulation");
+    }
+
     internal static ScenarioRunHistoryResult RunPersistedWithHistory(EditableContentDocument document, PersistedScenarioRunRequest request)
     {
         if (request.TurnCount < 0)

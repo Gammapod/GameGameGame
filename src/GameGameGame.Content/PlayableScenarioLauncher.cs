@@ -55,6 +55,9 @@ public static class PlayableScenarioLauncher
     public static PlayableScenarioSession CreateFromDocument(EditableContentDocument document, string scenarioId) =>
         CreateFromMaterialization(ScenarioMaterializer.Materialize(document, scenarioId));
 
+    public static PlayableScenarioSession CreateFromWorkspace(ContentWorkspace workspace, string scenarioId) =>
+        CreateFromMaterialization(ScenarioMaterializer.Materialize(workspace, scenarioId));
+
     public static PlayableScenarioSession CreateFromMaterialization(ScenarioMaterializationResult result)
     {
         var activePlaneId = result.ScenarioPlaneId ?? ScenarioMaterializer.DefaultScenarioPlaneId;

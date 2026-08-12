@@ -1,0 +1,28 @@
+entityTemplates:
+  debugPlayer:
+    name: Debug Player
+    inventoryWidth: 2
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 5
+    defaultActionPlanId: debugPlayerActionPlan
+    actionStateDefaults:
+      facing: North
+
+presentations:
+  debugPlayer:
+    presentationId: actor.player
+    paletteId: actor.player.default
+    glyph: '@'
+    color: Yellow
+
+actionPlans:
+  debugPlayerActionPlan:
+    id: debugPlayerActionPlan
+    behavior:
+      steps:
+      - kind: MoveFacing
+      - kind: Backstep
+      - kind: PickupTarget

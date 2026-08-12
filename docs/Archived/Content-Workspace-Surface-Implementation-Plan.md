@@ -2,15 +2,15 @@
 id: plan.content-workspace-surface-implementation
 title: Content Workspace Surface Implementation Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 45
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]
 audience: [core-owner, content-editor, frontend-owner]
 read_when:
-  - implementing type-first content browsing or editor surfaces over compiler facts
-  - adding Content workspace/surface projections before multi-file imports
-  - deciding which frontend/editor backlog items to pull into the compiler-backed surface
+  - researching the completed one-document compiler-backed content workspace/type-first surface
+  - preserving context before changing multi-document ContentWorkspace or ContentCompiler behavior
+  - deciding whether old frontend/editor surface follow-ups still apply to the multi-document plan
 related:
   - source.invariants
   - source.testing-charter
@@ -23,7 +23,7 @@ related:
 
 # Content Workspace Surface Implementation Plan
 
-Status: Active planning document for the next content/editor surface work after the completed compiler migration sprint.
+Status: Archived implementation plan. This plan produced the one-document compiler-backed content workspace/type-first surface and associated scenario/reference projections. It is retained as context for the successor multi-document ContentWorkspace/ContentCompiler composition sprint.
 
 The completed migration sprint is archived at `docs/Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md`.
 

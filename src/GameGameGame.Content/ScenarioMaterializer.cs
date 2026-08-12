@@ -38,6 +38,52 @@ public static class ScenarioMaterializer
     public static ScenarioMaterializationResult Materialize(EditableContentDocument document, string scenarioId) =>
         Materialize(document, document.GetScenario(scenarioId));
 
+    public static ScenarioMaterializationResult Materialize(ContentWorkspace workspace, string scenarioId)
+    {
+        var compile = ContentCompiler.Compile(workspace);
+        var scenarioSymbols = compile.Symbols
+            .Where(symbol => symbol.Kind == ContentSymbolKind.Scenario && symbol.Id == scenarioId)
+            .ToList();
+        var fallbackScenario = new ScenarioDefinition(
+            scenarioId,
+            scenarioId,
+            new EntityTemplateId(string.Empty),
+            PlayerEntityTemplateId: null,
+            PlayerEntityId: null,
+            PlayerStart: null);
+
+        if (scenarioSymbols.Count != 1)
+        {
+            var diagnostics = compile.Validation.Errors.ToList();
+            diagnostics.Add(scenarioSymbols.Count == 0
+                ? $"workspace scenario {scenarioId} was not found."
+                : $"workspace scenario {scenarioId} is ambiguous across workspace documents.");
+
+            return CreateInvalidWorkspaceResult(scenarioId, scenarioId, fallbackScenario, compile.Registry, diagnostics);
+        }
+
+        var composedDocument = ContentCompiler.ComposeDocument(workspace);
+        if (!composedDocument.Scenarios.TryGetValue(scenarioId, out var scenarioDto))
+        {
+            var diagnostics = compile.Validation.Errors.ToList();
+            diagnostics.Add($"workspace scenario {scenarioId} was not found in the composed document.");
+            return CreateInvalidWorkspaceResult(scenarioId, scenarioId, fallbackScenario, compile.Registry, diagnostics);
+        }
+
+        var scenario = scenarioDto.ToDefinition(scenarioId);
+        if (compile.Registry is null || !compile.Validation.IsValid)
+        {
+            return CreateInvalidWorkspaceResult(
+                scenarioId,
+                scenario.Name,
+                scenario,
+                compile.Registry,
+                FormatWorkspaceDiagnostics(compile.Diagnostics));
+        }
+
+        return Materialize(composedDocument, scenario);
+    }
+
     public static ScenarioMaterializationResult Materialize(EditableContentDocument document, ScenarioDefinition scenario)
         => Materialize(
             document,
@@ -51,6 +97,46 @@ public static class ScenarioMaterializer
             scenario.PlayerStart,
             scenario.PlayerControls,
             allowPlayerlessPlay: true);
+
+    private static ScenarioMaterializationResult CreateInvalidWorkspaceResult(
+        string scenarioId,
+        string name,
+        ScenarioDefinition scenario,
+        PrototypeContentRegistry? registry,
+        IReadOnlyList<string> validationDiagnostics) =>
+        new(
+            scenarioId,
+            name,
+            scenario.ScenarioRootEntityTemplateId,
+            DefaultScenarioRootEntityId,
+            scenario.PlayerEntityTemplateId,
+            scenario.PlayerEntityId,
+            ScenarioPlaneId: null,
+            PlayerLocation: null,
+            new WorldState(),
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            registry ?? new PrototypeContentRegistry(
+                new Dictionary<EntityTemplateId, EntityTemplate>(),
+                new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(),
+                new Dictionary<EntityTemplateId, EntityPresentation>()),
+            SetupLines: [],
+            validationDiagnostics,
+            RuntimeFailures: [],
+            CapabilityGaps: [],
+            PlayerControls: null,
+            AllowPlayerlessPlay: true);
+
+    private static IReadOnlyList<string> FormatWorkspaceDiagnostics(IReadOnlyList<ContentDiagnostic> diagnostics) =>
+        diagnostics
+            .Where(diagnostic => diagnostic.Severity == ContentDiagnosticSeverity.Error)
+            .Select(diagnostic =>
+            {
+                var source = diagnostic.DocumentId is null && diagnostic.SourcePath is null
+                    ? null
+                    : $" [{diagnostic.DocumentId ?? "unknown-document"} {diagnostic.SourcePath ?? "unknown-source"}]";
+                return $"{diagnostic.Message}{source}";
+            })
+            .ToList();
 
     public static ScenarioMaterializationResult MaterializeRootOnly(
         EditableContentDocument document,

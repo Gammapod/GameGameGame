@@ -105,20 +105,21 @@ This target promoted the following items out of backlog buckets and into the com
 
 ## Active / likely next sprint
 
-### Content workspace/type-first surface
+### Multi-document content workspace/compiler
 
-Status: Active planning direction after the completed content validation compiler migration sprint.
+Status: Active planning direction after the completed content validation compiler migration sprint and one-document workspace/type-first surface.
 
 Active planning document:
 
-- [Content Workspace Surface Implementation Plan](Content-Workspace-Surface-Implementation-Plan.md)
+- [Multi-Document Content Workspace Compiler Sprint Plan](Multi-Document-Content-Workspace-Compiler-Sprint-Plan.md)
 
 Target statement:
 
-- Build a compiler-backed, one-document, type-first content surface for scenarios, entity templates, action plans, presentations, merged layers, diagnostics, and dependency references.
-- Use the new surface to support scenario-centric browsing/editing where scenario-specific facts and shared content lists are both visible regardless of current file layout.
-- Pull in compatible frontend/editor backlog items such as read-only debug/editor browser foundations, validation/reference panels, action-plan preview panels, and provenance/source facts.
-- Continue deferring true multi-file imports/includes/packages and shipped-vs-user separation until the one-document surface proves useful.
+- Introduce a multi-document `ContentWorkspace` / `ContentCompiler` subsystem rather than rewriting `GameGameGame.Content` wholesale.
+- Load and compile multiple `EditableContentDocument` inputs with document IDs, source paths, source classes, read-only/writable policy, source/save ownership, workspace symbols, and structured diagnostics.
+- Resolve typed references across documents, diagnose duplicate symbols, missing references, ambiguous references, and read-only mutation attempts without using load-order-wins semantics.
+- Route scenario validation/materialization/launch through composed workspace content while keeping existing one-document editor/session APIs as compatibility adapters.
+- Prepare for read-only shipped canonical content plus separate player/user-authored content, with promotion/category standards initially advisory rather than hard validation blockers.
 
 ### Canonical action release target: vertical slices and player control
 

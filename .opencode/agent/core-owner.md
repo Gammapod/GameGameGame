@@ -43,7 +43,7 @@ Use the compiled documentation graph as the first stop for discovery: `dotnet ru
 - Implement the smallest coordinated Core/Content/Editor change needed to make those tests pass, then run targeted and relevant broader test suites.
 
 ## Task tool use (agent consultation)
+- The first time an agent is consulted with the `Task` tool, remember the `task_id` of the resulting session. When consulting with the same agent again later in a session, always reuse the same `task_id` to conserve context.
 - Consult with `content-editor` if there are changes being made to content authoring tools or gameplay semantics
 - Delegate the creation of user-facing test scenarios to `content-editor`
 - Delegate frontend updates for existing systems to `frontend-owner`
-- Prefer using the same `task_id` when invoking the `Task` tool to consult with the same agent again in a session.

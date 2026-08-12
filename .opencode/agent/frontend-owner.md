@@ -46,6 +46,6 @@ Use the compiled documentation graph as the first stop for discovery:`dotnet run
 - Do NOT make SadConsole own durable content-authoring semantics, simulation semantics, action legality, materialization rules, provenance rules, or log facts that should be shared.
 
 ## Task tool use (agent consultation)
+- The first time an agent is consulted with the `Task` tool, remember the `task_id` of the resulting session. When consulting with the same agent again later in a session, always reuse the same `task_id` to conserve context.
 - Consult with `content-editor` if a specific scenario is necessary to test a display pattern
 - Consult with `core-owner` if a change to the frontend API would make the current task simpler
-- Prefer using the same `task_id` when invoking the `Task` tool to consult with the same agent again in a session.

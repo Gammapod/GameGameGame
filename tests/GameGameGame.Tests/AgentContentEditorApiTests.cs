@@ -59,6 +59,57 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiValidatesMultiDocumentWorkspace()
+    {
+        var api = new AgentContentWorkspaceApi(CreateWorkspaceDocuments());
+
+        var result = api.ValidateWorkspace();
+
+        var report = AssertSuccess(result);
+        Assert.True(report.Validation.IsValid, string.Join(Environment.NewLine, report.Validation.Errors));
+        Assert.Equal(2, report.Documents.Count);
+        Assert.Contains(report.Documents, document => document.DocumentId == "debug.scenario" && !document.IsProtected);
+        Assert.Contains(report.Documents, document => document.DocumentId == "canonical.templates" && document.IsProtected);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiListsWorkspaceDocumentsAndSymbols()
+    {
+        var api = new AgentContentWorkspaceApi(CreateWorkspaceDocuments());
+
+        var result = api.ListWorkspace();
+
+        var report = AssertSuccess(result);
+        Assert.Contains(report.Documents, document =>
+            document.DocumentId == "canonical.templates"
+            && document.SourcePath == "templates.yaml"
+            && document.SourceKind == ContentWorkspaceSourceKind.Canonical
+            && document.IsProtected);
+        Assert.Contains(report.Symbols, symbol =>
+            symbol.Kind == ContentSymbolKind.Scenario
+            && symbol.Id == "debugRoom"
+            && symbol.DocumentId == "debug.scenario");
+        Assert.Contains(report.Symbols, symbol =>
+            symbol.Kind == ContentSymbolKind.EntityTemplate
+            && symbol.Id == "debugRoot"
+            && symbol.DocumentId == "canonical.templates");
+    }
+
+    [Fact]
+    public void AgentContentEditorApiRunsWorkspaceScenarioById()
+    {
+        var api = new AgentContentWorkspaceApi(CreateWorkspaceDocuments());
+
+        var result = api.RunWorkspaceScenarioById("debugRoom", turnCount: 0);
+
+        var report = AssertSuccess(result);
+        Assert.Equal(new EntityTemplateId("debugRoot"), report.ScenarioRootEntityTemplateId);
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Contains("Run mode: Workspace persisted scenario simulation", report.SetupLines);
+        Assert.Contains(report.FinalStateLines, line => line.Contains("Player: scenarioRoot(0,0)", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsTargetingRulesAndBehaviorTargetSlots()
     {
         var api = AgentContentEditorApi.CreateNew();
@@ -543,5 +594,47 @@ public sealed class AgentContentEditorApiTests
     {
         Assert.True(result.IsSuccess, result.Error?.Message);
         return result.Value!;
+    }
+
+    private static IReadOnlyList<ContentWorkspaceDocument> CreateWorkspaceDocuments()
+    {
+        var scenario = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates: {}
+            presentations: {}
+            actionPlans: {}
+            scenarios:
+              debugRoom:
+                name: Debug Room
+                scenarioRootEntityTemplateId: debugRoot
+                playerEntityTemplateId: player
+                playerEntityId: debugPlayer
+                playerStart: { x: 0, y: 0 }
+            """);
+        var templates = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              debugRoot:
+                name: Debug Root
+                inventoryWidth: 2
+                inventoryHeight: 2
+                weight: 100
+                carryingCapacity: 100
+              player:
+                name: Player
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+            presentations:
+              debugRoot: { glyph: '#', color: Gray }
+              player: { glyph: '@', color: White }
+            actionPlans: {}
+            """);
+
+        return [
+            new ContentWorkspaceDocument(scenario, "debug.scenario", "debug-room.yaml", ContentWorkspaceSourceKind.User),
+            new ContentWorkspaceDocument(templates, "canonical.templates", "templates.yaml", ContentWorkspaceSourceKind.Canonical, IsReadOnly: true)
+        ];
     }
 }

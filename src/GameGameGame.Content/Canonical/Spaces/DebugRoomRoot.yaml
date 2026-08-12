@@ -1,0 +1,34 @@
+entityTemplates:
+  debugRoomRoot:
+    name: Debug Room Root
+    inventoryWidth: 9
+    inventoryHeight: 7
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+
+presentations:
+  debugRoomRoot:
+    presentationId: space.debug-room
+    paletteId: space.debug-room.default
+    glyph: '#'
+    color: Gray
+
+presentationCatalog:
+  space.debug-room:
+    name: Debug Room
+    fallbackText: '#'
+    tags:
+    - space
+    - room
+    - debug
+
+palettes:
+  space.debug-room.default:
+    name: Debug Room Default
+    roles:
+      floor: Gray
+      wall: Gray
+
+actionPlans: {}
