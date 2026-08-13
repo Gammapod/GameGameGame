@@ -88,7 +88,12 @@ Keep this document separate from `Frontend-UX-Invariants.md` for now. Invariants
    - A SadConsole glyph number is a tilesheet index. Do not assume non-ASCII roles such as box borders, arrows, decorators, or UI icons match IBM/CP437 indexes unless the tilesheet has been inspected.
    - For each tileset promoted beyond a smoke test, generate an indexed contact sheet with `tools/inspect-tileset.ps1`, inspect the actual tile shapes, choose role-specific indexes such as panel border corners/edges, and record the accepted mapping in frontend code or source-of-truth docs.
    - Border suitability criteria: corner tiles must visually join horizontal and vertical edge tiles; edge tiles must repeat cleanly at one-cell thickness; tiles must be readable at the target scale and color treatment; and the mapping must be reusable across selected/focused/error border colors without changing the glyph role.
-   - If a tileset lacks suitable one-cell border tiles, use a tileset-specific fallback treatment such as filled panel backgrounds, two-cell frame art, or simple ASCII-like borders rather than forcing incorrect CP437 indexes.
+    - If a tileset lacks suitable one-cell border tiles, use a tileset-specific fallback treatment such as filled panel backgrounds, two-cell frame art, or simple ASCII-like borders rather than forcing incorrect CP437 indexes.
+
+6. **Candii size variants share semantic glyph indexes.**
+   - Candii 8x8, Candii16 16x16, and future Candii-family sizes should treat the same glyph index as the same represented thing.
+   - `Candii.tileset.json` currently records size-independent presentation mappings and role definitions. New frontend code should resolve blank tiles, panel borders, entity presentation glyphs, backdrop/grid roles, and future sprite roles through that manifest rather than hardcoding text-code assumptions.
+   - Optional accent layers and looping tile animations are expected future renderer capabilities. They should be added as manifest-backed layers/animations when needed, not by changing Core simulation facts or replacing entity identity glyphs.
 
 ## Inventory-space component specification
 

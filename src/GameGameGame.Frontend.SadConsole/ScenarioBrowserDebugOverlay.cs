@@ -16,9 +16,10 @@ internal sealed record ScenarioBrowserDebugOverlay(
             "F12 layout debug",
             $"screen cells: {shell.LogicalWidth}x{shell.LogicalHeight} from {shell.PixelWidth}x{shell.PixelHeight}px",
             $"drawable: x={shell.DrawableBounds.X} y={shell.DrawableBounds.Y} w={shell.DrawableBounds.Width} h={shell.DrawableBounds.Height}",
-            $"scenario list: y={layout.ListY} h={layout.ListHeight} selected={model.SelectedIndex + 1}/{model.Entries.Count}",
+            $"scenario list: y={layout.ListY} h={layout.ListHeight} selected={model.SelectedIndex + 1}/{model.Entries.Count} viewport={model.Viewport(layout.ListHeight).StartIndex + 1}-{model.Viewport(layout.ListHeight).EndIndexExclusive}",
             $"selected: {model.SelectedEntry?.ScenarioId ?? "none"} ({(model.SelectedEntry?.IsWorkspaceBacked == true ? "workspace" : "file/none")})",
-            $"diagnostics: {model.Diagnostics.Count} | window: {windowMode} | F11 toggles fullscreen/windowed"
+            $"selector: {(model.ActionSelectorOpen ? "open" : "closed")} option={model.SelectedActionOption}",
+            $"diagnostics: {model.Diagnostics.Count} | window: {windowMode} | input: {model.ActiveInputMode} | F11 toggles fullscreen/windowed"
         ]);
 }
 

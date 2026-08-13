@@ -22,6 +22,8 @@ public sealed class ScenarioBrowserDebugOverlayTests
         Assert.Contains(overlay.Rows, row => row.Contains("screen cells", StringComparison.Ordinal));
         Assert.Contains(overlay.Rows, row => row.Contains("drawable", StringComparison.Ordinal));
         Assert.Contains(overlay.Rows, row => row.Contains("selected: debug-room", StringComparison.Ordinal));
+        Assert.Contains(overlay.Rows, row => row.Contains("selector: closed", StringComparison.Ordinal));
+        Assert.Contains(overlay.Rows, row => row.Contains("input: Keyboard", StringComparison.Ordinal));
         Assert.Contains(overlay.Rows, row => row.Contains("F11", StringComparison.Ordinal));
     }
 

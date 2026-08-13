@@ -12,7 +12,8 @@ internal sealed record TilesetProfile(
     int TileHeight,
     int BaseUnit,
     int Blank,
-    bool AsciiCodepointMapping)
+    bool AsciiCodepointMapping,
+    TilesetRoles Roles)
 {
     public int ResolveTextGlyph(char character) => character == ' '
         ? Blank
@@ -20,6 +21,16 @@ internal sealed record TilesetProfile(
             ? character
             : throw new InvalidOperationException($"Tileset '{Id}' does not define text glyph mapping for '{character}'.");
 }
+
+internal sealed record TilesetRoles(TileBorderGlyphSet PanelBorder);
+
+internal sealed record TileBorderGlyphSet(
+    int TopLeft,
+    int TopRight,
+    int BottomLeft,
+    int BottomRight,
+    int Horizontal,
+    int Vertical);
 
 internal static class TilesetProfileLoader
 {

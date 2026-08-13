@@ -14,6 +14,7 @@ internal sealed class ScenarioBrowserConsole : Console
     private readonly TilesetProfile _tilesetProfile;
     private readonly ScenarioBrowserChromeState _chromeState;
     private readonly SadConsoleDisplaySettings _displaySettings;
+    private OverlayPanelConsole? _actionSelectorOverlay;
     private string _message = "Choose a scenario. Debug-room is the current target.";
 
     public ScenarioBrowserConsole(
@@ -26,13 +27,14 @@ internal sealed class ScenarioBrowserConsole : Console
         : base(shell.LogicalWidth, shell.LogicalHeight)
     {
         _catalog = catalog;
-        _model = new ScenarioBrowserScreenModel(catalog, selectedIndex);
+        _model = new ScenarioBrowserScreenModel(catalog, selectedIndex, FrontendInputMode.Keyboard);
         _shell = shell;
         _layout = ScenarioBrowserLayout.Resolve(shell.DrawableBounds);
         _tilesetProfile = TilesetProfileLoader.LoadCandii();
         _chromeState = new ScenarioBrowserChromeState(windowMode, layoutDebugVisible);
         _displaySettings = displaySettings;
         UseKeyboard = true;
+        UseMouse = true;
         IsFocused = true;
         FocusedMode = global::SadConsole.FocusBehavior.Set;
         Redraw();
@@ -49,6 +51,52 @@ internal sealed class ScenarioBrowserConsole : Console
         else return false;
 
         return true;
+    }
+
+    public override bool ProcessMouse(MouseScreenObjectState state)
+    {
+        if (!state.IsOnScreenObject)
+        {
+            return false;
+        }
+
+        var handled = false;
+        if (state.Mouse.ScrollWheelValueChange != 0)
+        {
+            var delta = state.Mouse.ScrollWheelValueChange > 0 ? 1 : -1;
+            _message = _model.Scroll(delta).Message;
+            handled = true;
+        }
+
+        var position = state.SurfaceCellPosition;
+        if (TryVisibleRowIndexAt(position.X, position.Y, out var hoverRowIndex))
+        {
+            var hoverResult = _model.HoverVisibleRow(_model.Viewport(_layout.ListHeight), hoverRowIndex);
+            _message = hoverResult.Message;
+            handled = true;
+        }
+        else if (_model.HoveredIndex is not null)
+        {
+            _model.ClearHover();
+            handled = true;
+        }
+
+        if (state.Mouse.LeftClicked)
+        {
+            if (TryVisibleRowIndexAt(position.X, position.Y, out var rowIndex))
+            {
+                var result = _model.SelectVisibleRow(_model.Viewport(_layout.ListHeight), rowIndex, launch: true);
+                _message = result.Message;
+                handled = true;
+            }
+        }
+
+        if (handled)
+        {
+            Redraw();
+        }
+
+        return handled;
     }
 
     private void ToggleLayoutDebug()
@@ -89,20 +137,34 @@ internal sealed class ScenarioBrowserConsole : Console
 
         if (result.Kind == ScenarioBrowserResultKind.LaunchRequested && result.Entry is { } entry)
         {
-            try
-            {
-                var session = WorkspaceScenarioCatalogService.Launch(_catalog, entry.EntryId);
-                _message = session.CanPlay
-                    ? $"Playable session loaded: {session.Name} ({session.ScenarioId}). Play surface next."
-                    : $"Scenario loaded with diagnostics: {session.Name}.";
-            }
-            catch (Exception ex)
-            {
-                _message = $"Launch failed: {ex.Message}";
-            }
+            TryLaunch(entry);
         }
 
         Redraw();
+    }
+
+    private void TryLaunch(WorkspaceScenarioCatalogEntry entry)
+    {
+        try
+        {
+            var session = WorkspaceScenarioCatalogService.Launch(_catalog, entry.EntryId);
+            _message = session.CanPlay
+                ? $"Playable session loaded: {session.Name} ({session.ScenarioId}). Play surface next."
+                : $"Scenario loaded with diagnostics: {session.Name}.";
+        }
+        catch (Exception ex)
+        {
+            _message = $"Launch failed: {ex.Message}";
+        }
+    }
+
+    private bool TryVisibleRowIndexAt(int x, int y, out int rowIndex)
+    {
+        rowIndex = y - _layout.ListY;
+        return x >= _layout.TextX
+            && x < _layout.TextX + _layout.TextWidth
+            && rowIndex >= 0
+            && rowIndex < _model.Viewport(_layout.ListHeight).Entries.Count;
     }
 
     private void Redraw()
@@ -112,15 +174,25 @@ internal sealed class ScenarioBrowserConsole : Console
         var bounds = _layout.Bounds;
         PrintClipped(_layout.TextX, _layout.TitleY, _layout.TextWidth, _model.Title, Color.White);
         PrintClipped(_layout.TextX, _layout.SummaryY, _layout.TextWidth, $"Drawable: {bounds.Width}x{bounds.Height} cells | Scenarios: {_model.Entries.Count}", Color.Gray);
-        PrintClipped(_layout.TextX, _layout.HeadingY, _layout.TextWidth, "Available scenarios", Color.Yellow);
+        var viewport = _model.Viewport(_layout.ListHeight);
+        var position = viewport.PositionSummary(_model.SelectedIndex, _model.Entries.Count);
+        var scrollHint = viewport.HasItemsAbove || viewport.HasItemsBelow
+            ? $" | showing {viewport.StartIndex + 1}-{viewport.EndIndexExclusive}"
+            : string.Empty;
+        PrintClipped(_layout.TextX, _layout.HeadingY, _layout.TextWidth, $"Available scenarios ({position}{scrollHint})", Color.Yellow);
 
         var y = _layout.ListY;
-        for (var index = 0; index < _model.Entries.Count && index < _layout.ListHeight; index++, y++)
+        for (var visibleIndex = 0; visibleIndex < viewport.Entries.Count; visibleIndex++, y++)
         {
-            var entry = _model.Entries[index];
-            var marker = index == _model.SelectedIndex ? ">" : " ";
+            var entry = viewport.Entries[visibleIndex];
+            var marker = visibleIndex == viewport.SelectedVisibleIndex ? ">" : " ";
             var kind = entry.IsWorkspaceBacked ? "workspace" : "file";
-            var color = index == _model.SelectedIndex ? Color.Cyan : Color.White;
+            var absoluteIndex = viewport.StartIndex + visibleIndex;
+            var color = visibleIndex == viewport.SelectedVisibleIndex
+                ? Color.Cyan
+                : absoluteIndex == _model.HoveredIndex
+                    ? Color.Gold
+                    : Color.White;
             PrintClipped(_layout.TextX, y, _layout.TextWidth, $"{marker} {entry.Name} [{entry.ScenarioId}] ({kind})", color);
         }
 
@@ -148,6 +220,15 @@ internal sealed class ScenarioBrowserConsole : Console
         PrintClipped(_layout.TextX, _layout.MessageY, _layout.TextWidth, _message, Color.LightGreen);
         PrintClipped(_layout.TextX, _layout.FooterY, _layout.TextWidth, _model.Footer, Color.Gray);
 
+        if (_model.ActionSelectorOpen)
+        {
+            ShowActionSelectorOverlay();
+        }
+        else
+        {
+            HideActionSelectorOverlay();
+        }
+
         if (_chromeState.LayoutDebugVisible)
         {
             DrawDebugOverlay(ScenarioBrowserDebugOverlay.Build(_model, _shell, _layout, _chromeState.WindowMode));
@@ -168,6 +249,52 @@ internal sealed class ScenarioBrowserConsole : Console
         {
             SetGlyph(0, y, 181, BorderColor());
             SetGlyph(Width - 1, y, 181, BorderColor());
+        }
+    }
+
+    private void ShowActionSelectorOverlay()
+    {
+        var entry = _model.SelectedEntry;
+        if (entry is null)
+        {
+            HideActionSelectorOverlay();
+            return;
+        }
+
+        var background = new Color((byte)0, (byte)0, (byte)0, (byte)210);
+        var width = Math.Min(Math.Max(0, _layout.TextWidth - 2), 74);
+        var panelBounds = new FrontendRect(_layout.TextX + 1, _layout.ListY, width + 2, Math.Min(10, _layout.MessageY - _layout.ListY));
+        var rows = new[]
+        {
+            $"Scenario: {entry.Name}",
+            $"Id: {entry.ScenarioId} | Source: {(entry.IsWorkspaceBacked ? "workspace" : "file")}",
+            $"Status: {entry.Status ?? "none"} | Tags: {(entry.Tags.Count == 0 ? "none" : string.Join(",", entry.Tags))}",
+            $"Preview: turn-0 preview placeholder; materialized preview surface pending.",
+            string.Empty,
+            $"{(_model.SelectedActionOption == ScenarioBrowserActionOption.Play ? ">" : " ")} Play",
+            $"{(_model.SelectedActionOption == ScenarioBrowserActionOption.Edit ? ">" : " ")} Edit (placeholder)"
+        };
+
+        HideActionSelectorOverlay();
+        _actionSelectorOverlay = new OverlayPanelConsole(
+            new OverlayPanelModel(
+                OverlayPanelGeometry.HalfTileOffset(panelBounds, _displaySettings),
+                rows,
+                Color.Gold,
+                Color.White,
+                background),
+            _tilesetProfile);
+        Children.Add(_actionSelectorOverlay);
+        _actionSelectorOverlay.IsVisible = true;
+        _actionSelectorOverlay.Surface.IsDirty = true;
+    }
+
+    private void HideActionSelectorOverlay()
+    {
+        if (_actionSelectorOverlay is not null)
+        {
+            Children.Remove(_actionSelectorOverlay);
+            _actionSelectorOverlay = null;
         }
     }
 

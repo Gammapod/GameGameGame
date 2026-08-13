@@ -241,3 +241,10 @@ Each decision should include:
 - **Reasoning:** The changed requirement is workspace composition and multi-file scenario launch, not a SadConsole-specific API compatibility break. A shared service keeps scenario discovery/materialization frontend-neutral and avoids freezing a premature version boundary.
 - **Implications:** `DebugRoom.yaml` must be discovered/launched through workspace-aware services because it depends on canonical content files. File-local launch helpers may remain compatibility paths, but the new frontend should not depend on them for multi-file content. Frontend tests may assert request mapping and display of returned diagnostics, not catalog/materialization semantics.
 - **Status:** Active.
+
+### FED-028: Candii is treated as a size-parity tileset family
+
+- **Decision:** The new `GameGameGame.Frontend.SadConsole` treats Candii assets as one tileset family with size variants. A glyph index in `Candii` 8x8 and the same glyph index in `Candii16` 16x16 represent the same semantic tile. Presentation mappings and role definitions from the Candii tileset manifest are size-independent unless a future manifest explicitly overrides a role for a size.
+- **Reasoning:** The frontend already depends on manifest-owned glyph facts such as the Candii blank tile and panel-border roles. Making glyph parity explicit lets renderers switch between 8x8, 16x16, and future sizes without duplicating presentation mappings or inventing renderer-local glyph tables.
+- **Implications:** Frontend renderers should resolve text blank, entity presentation glyphs, panel borders, grid/backdrop roles, and future sprite roles through the tileset family manifest instead of hardcoding ASCII/CP437 assumptions. The manifest should remain flexible enough to add size variants, optional accent layers, and animations later. Do not split Candii into many category sheets or implement accent/animation rendering until asset pressure or Play-mode requirements justify it.
+- **Status:** Active / first applied to the new scenario browser modal border and blank glyph handling.
