@@ -65,44 +65,46 @@ Do not read when:
      - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
      - Read selectively when a planned slice spans multiple layers.
 7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
-    - Active broader frontend roadmap/reference for SadConsole/debug-browser contracts and future frontend work selection.
-8. `docs/Source of Truth/Capability-Gap-Log.md`
-    - Living source-of-truth log for scenario-discovered gaps, including headless-only, frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
-9. `docs/Source of Truth/Design-Quirks-and-Gotchas.md`
+     - Active broader frontend roadmap/reference for SadConsole/debug-browser contracts and future frontend work selection.
+8. `docs/Plans/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`
+     - Active spike-branch sprint plan for creating `GameGameGame.Frontend.SadConsole`, establishing `GameGameGame.Frontend.SadConsole.Tests`, proving workspace-backed scenario browsing for `debug-room`, and then starting the new Play surface.
+9. `docs/Source of Truth/Capability-Gap-Log.md`
+     - Living source-of-truth log for scenario-discovered gaps, including headless-only, frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
+10. `docs/Source of Truth/Design-Quirks-and-Gotchas.md`
     - Living source-of-truth log for surprising, emergent, or currently-undocumented behavior that is not necessarily a bug or missing capability.
-10. `docs/Source of Truth/SadConsole-UI-Specification.md`
+11. `docs/Source of Truth/SadConsole-UI-Specification.md`
     - Living source-of-truth UI layout/layering/resizing/mouse/render-style specification for SadConsole presentation work.
-11. `docs/Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md`
+12. `docs/Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md`
       - Archived focused Content/compiler migration sprint plan: one-document `ContentCompiler`, unified validation diagnostics, structured reference diagnostics, document/source attribution, symbol/reference index, and compiler routing for editor/preview/materialization consumers. Read before implementing future content workspace or compiler changes.
-12. `docs/Archived/Content-Workspace-Surface-Implementation-Plan.md`
+13. `docs/Archived/Content-Workspace-Surface-Implementation-Plan.md`
       - Archived one-document compiler-backed workspace/type-first surface plan: scenario/reference projections and read-only frontend-neutral surface context. Read before changing multi-document workspace surfaces or migrating frontend/editor consumers.
-13. `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`
+14. `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`
        - Archived architecture/refactor sprint plan for migrating runtime topology from coordinate-primary behavior to graph-first topology identity: topology nodes and graph edges became authoritative for movement, adjacency, pathing, visibility, and overlap/folded topology, while coordinates remain projections for authoring/layout/display/debug compatibility.
-14. `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`
+15. `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`
       - Archived focused frontend sprint plan for mixed-size inventory-space rendering: Space Zoom and Relationship Tier vocabulary, SadConsole child-surface mixed scaling, shared pixel presentation geometry, connector/tooltip/layer/performance mitigations, current-location 32x32 rendering, parent-chain 16/8/4 rendering, player inventory 24x24 with 1px gaps, and SadConsole `CellDecorator` Facing overlays.
-15. `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`
+16. `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`
     - Archived focused frontend sprint plan for making the Create/Destroy/Polymorph flagship room demoable in SadConsole through world-aware dynamic presentation and actor/initiative refresh.
-16. `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`
+17. `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`
     - Archived focused sprint plan for template-backed `CreateEntity`, simple `DestroyTarget`, and `PolymorphTarget` gameplay, including Core/Content/Editor parity and the user-facing lifecycle flagship room.
-17. `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`
+18. `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`
     - Archived focused frontend sprint plan for the successful consumer Play-mode linked containment-space proof of concept: connector-line contract, pure two-space layout, Play-mode inspection replacement, smooth connectors, F12 diagnostics, and follow-ups for connector styling, explicit inspected-space selection, and POV-driven automatic inspection policy.
-18. `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`
+19. `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`
     - Archived focused frontend sprint plan for playable consumer Play mode over abstract intent resolution, contextual prompt stacks, canonical Action Choice consumption, size-calibration coverage, and F12 interaction diagnostics.
-19. `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`
+20. `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`
     - Archived focused frontend sprint plan for the new consumer-facing SadConsole Play mode route, Play/Debug/Edit scenario option split, and reusable layered inventory-space component that initially rendered only the controlled actor's current space.
-20. `docs/Archived/Merged-Topology-Refactor-Sprint-Plan.md`
+21. `docs/Archived/Merged-Topology-Refactor-Sprint-Plan.md`
     - Archived behavior-preserving refactor sprint plan that prepared clean merged topology implementation seams: topology identity/fact vocabulary, directional uniqueness helper, topology identity versus layout/render coordinate naming, Content/editor topology plumbing mapper, and topology visibility projection seam stub.
-21. `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`
+22. `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`
     - Archived focused sprint plan for the behavior-preserving Core topology service refactor: default grid neighbor lookup/enumeration, MovementService topology consumption, Action Choice drop/transfer topology facts, controlled exit affordance projection, and Transfer counterparty lookup.
-22. `docs/Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md`
+23. `docs/Archived/Give-Take-Transfer-Vertical-Slice-Sprint-Plan.md`
     - Archived focused sprint plan for canonical peer inventory Transfer as a controller-agnostic atomic containment transfer with ActorToTarget/TargetToActor directions, policy-asymmetric validation, content test rooms, Action Choice/history/log support, and an explicitly designed frontend transfer workflow.
-23. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
+24. `docs/Archived/Delta-Point-of-View-Release-Plan.md`
     - Archived Delta release plan focused on arbitrary-entity point-of-view: breadcrumb-backed current place, bulk/aperture ratio, frontend/content projection, and affordance/adjective groundwork. Treat as foundation/reference unless follow-up POV work is explicitly selected.
-24. `docs/Archived/Instance-Controller-Playable-Starts-Sprint-Plan.md`
+25. `docs/Archived/Instance-Controller-Playable-Starts-Sprint-Plan.md`
     - Archived sprint plan for content-authored initial control source / nested playable starts. Treat as implementation history for placed-instance `controller` metadata, legacy player insertion fallback, nullable player coordinates, and valid playerless scenarios.
-25. `docs/Archived/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
+26. `docs/Archived/Initiative-Aware-PlayerChoice-Scheduler-Plan.md`
     - Archived hardening plan for initiative-aware `PlayerChoice` scheduling, headless prompt alignment, and history retargeting across active controlled actors.
-26. `docs/Archived/`
+27. `docs/Archived/`
     - Historical context only. Read archived plans when current docs link to them or when investigating why an existing system was shaped a certain way.
    - Includes completed Play-mode interaction and MVP sprint plans, completed Topology Service Phase 1, Sprint 17 scenario/tooling decoupling, Sprint 18 tech-debt cleanup, Sprint 19 Gate 4 peer-transfer, Sprint 20 scenario run/report polish, Sprint 21 Console scenario catalog, Sprint 22 Gamma containment path service plans, the completed Enter/Exit policy vertical slice sprint, Frontend Sprint 2 SadConsole balanced Simulation UX, the completed SadConsole UI pattern discovery sprint, the completed SadConsole frontend refactor/consolidation sprint, the completed Core refactor/consolidation sprint, the archived Gamma frontend demo plan, the archived frontend testing strategy proposal, archived SadConsole prototype/assessment plans, the archived SadConsole tile-scaling spike findings, the archived/paused Beta content exploration plan, and historical Agent Editor API planning.
 

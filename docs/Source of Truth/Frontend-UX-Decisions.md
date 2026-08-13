@@ -227,3 +227,17 @@ Each decision should include:
 - **Reasoning:** The mixed-scale sprint showed that applying child surfaces directly to Play mode without a geometry/layer/performance foundation caused connector, tooltip, overlay, and redraw problems. A geometry-first path lets rendering, connectors, hit-testing, and occlusion agree about where entities actually appear. SadConsole's `CellDecorator` and `Mirror` APIs provide the needed facing treatment while preserving entity identity.
 - **Implications:** Future mixed-scale work should pass active root-cell pixel metrics into sizing/geometry, avoid hidden 16px assumptions, and treat the current per-cell child-console renderer as accepted-for-now rather than the final rendering architecture. `Micro4` remains a non-Candii summary renderer; it may carry a desire for state presentation, but needs a separate micro-state marker policy before claiming glyph-facing support.
 - **Status:** Active.
+
+### FED-026: New SadConsole frontend project supersedes old project for active player-facing work
+
+- **Decision:** New active frontend work starts in `src/GameGameGame.Frontend.SadConsole`, with tests in `tests/GameGameGame.Frontend.SadConsole.Tests`. The existing `src/GameGameGame.SadConsole` project remains buildable/reference-only until useful components, tests, patterns, glyph decisions, and display lessons have been mined, but the new project must not reference it.
+- **Reasoning:** The multi-document content/workspace refactor intentionally broke assumptions in the old frontend. Starting a clean project avoids preserving legacy Debug/Edit shell architecture while still allowing SadConsole research and component patterns to be cannibalized deliberately.
+- **Implications:** The first checkpoint is a workspace-backed scenario browser that shows `debug-room`; Play mode is rebuilt after that checkpoint. Debug mode is abandoned as a first-class route. Editor mode is deferred and should be reinvented around shared workspace/editor services. Reusable components promoted into the new frontend should receive readable gallery examples and focused tests once stable.
+- **Status:** Active / spike sprint planned by `docs/Plans/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`.
+
+### FED-027: Frontend.SadConsole consumes workspace scenario services rather than an API v2
+
+- **Decision:** Do not create a parallel API v2 for the new frontend. Instead, add or evolve a Content-owned, frontend-neutral workspace scenario catalog/launch facade over `ContentWorkspace`, scenario catalog projections, and `PlayableScenarioLauncher.CreateFromWorkspace(...)`.
+- **Reasoning:** The changed requirement is workspace composition and multi-file scenario launch, not a SadConsole-specific API compatibility break. A shared service keeps scenario discovery/materialization frontend-neutral and avoids freezing a premature version boundary.
+- **Implications:** `DebugRoom.yaml` must be discovered/launched through workspace-aware services because it depends on canonical content files. File-local launch helpers may remain compatibility paths, but the new frontend should not depend on them for multi-file content. Frontend tests may assert request mapping and display of returned diagnostics, not catalog/materialization semantics.
+- **Status:** Active.

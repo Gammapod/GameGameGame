@@ -16,6 +16,7 @@ related:
   - source.engine-editor-capabilities
   - source.invariants
   - plan.new-play-mode-mvp-sprint
+  - plan.frontend-sadconsole-workspace-browser-sprint
 ---
 # SadConsole Frontend Roadmap
 
@@ -45,7 +46,7 @@ Related source of truth:
 
 ## Direction
 
-SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The componentized SadConsole editor is now the default launch path. The former user-launchable `--beta-editor` legacy shell has been removed. A small internal legacy Simulation Play stopgap still uses the old shell while the componentized Simulation screen is rebuilt; it should not receive new editor features.
+SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. New active frontend work is moving to `src/GameGameGame.Frontend.SadConsole` under `docs/Plans/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`. The existing `src/GameGameGame.SadConsole` project remains buildable/reference-only while useful components, tests, patterns, glyph decisions, and display lessons are mined; it should not receive new product-surface features.
 
 The former Console frontend has been removed. Simple developer commands, scenario scanning, reports, and recording workflows should live in shared Content/Headless tooling or future explicit CLI tools rather than reviving Console-specific UI workflows. New rich UI investment should prefer SadConsole or shared frontend-neutral services.
 
