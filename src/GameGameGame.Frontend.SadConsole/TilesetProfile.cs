@@ -13,6 +13,7 @@ internal sealed record TilesetProfile(
     int BaseUnit,
     int Blank,
     bool AsciiCodepointMapping,
+    TilesetPresentationMappings PresentationMappings,
     TilesetRoles Roles)
 {
     public int ResolveTextGlyph(char character) => character == ' '
@@ -22,7 +23,12 @@ internal sealed record TilesetProfile(
             : throw new InvalidOperationException($"Tileset '{Id}' does not define text glyph mapping for '{character}'.");
 }
 
-internal sealed record TilesetRoles(TileBorderGlyphSet PanelBorder);
+internal sealed record TilesetRoles(int GridDotted, TileBorderGlyphSet PanelBorder)
+{
+    public int DefaultBackdrop => GridDotted;
+}
+
+internal sealed record TilesetPresentationMappings(IReadOnlyDictionary<string, int> GlyphsByPresentationId);
 
 internal sealed record TileBorderGlyphSet(
     int TopLeft,

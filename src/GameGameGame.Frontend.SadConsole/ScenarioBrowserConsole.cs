@@ -15,7 +15,9 @@ internal sealed class ScenarioBrowserConsole : Console
     private readonly ScenarioBrowserChromeState _chromeState;
     private readonly SadConsoleDisplaySettings _displaySettings;
     private OverlayPanelConsole? _actionSelectorOverlay;
+    private OverlayPanelConsole? _toastOverlay;
     private string _message = "Choose a scenario. Debug-room is the current target.";
+    private ToastNotificationState? _toast;
 
     public ScenarioBrowserConsole(
         WorkspaceScenarioCatalogResult catalog,
@@ -99,6 +101,16 @@ internal sealed class ScenarioBrowserConsole : Console
         return handled;
     }
 
+    public override void Render(TimeSpan delta)
+    {
+        if (_toast?.Advance(delta) == true)
+        {
+            HideToastOverlay();
+        }
+
+        base.Render(delta);
+    }
+
     private void ToggleLayoutDebug()
     {
         var visible = _chromeState.ToggleLayoutDebug();
@@ -148,13 +160,29 @@ internal sealed class ScenarioBrowserConsole : Console
         try
         {
             var session = WorkspaceScenarioCatalogService.Launch(_catalog, entry.EntryId);
-            _message = session.CanPlay
-                ? $"Playable session loaded: {session.Name} ({session.ScenarioId}). Play surface next."
-                : $"Scenario loaded with diagnostics: {session.Name}.";
+            if (!session.CanPlay)
+            {
+                var presentation = ScenarioLaunchFailurePresenter.FromSession(session);
+                _message = $"Cannot play {session.Name}; warning shown.";
+                ShowToast(ToastNotificationPresenter.LaunchWarning(presentation));
+                return;
+            }
+
+            HideToastOverlay();
+            var play = new PlayModeConsole(session, _shell, _tilesetProfile, () =>
+            {
+                global::SadConsole.Game.Instance.Screen = this;
+                IsFocused = true;
+                FocusedMode = global::SadConsole.FocusBehavior.Set;
+                Redraw();
+            });
+            global::SadConsole.Game.Instance.Screen = play;
         }
         catch (Exception ex)
         {
-            _message = $"Launch failed: {ex.Message}";
+            var presentation = ScenarioLaunchFailurePresenter.FromException(entry, ex);
+            _message = $"Launch failed for {entry.Name}; warning shown.";
+            ShowToast(ToastNotificationPresenter.LaunchWarning(presentation));
         }
     }
 
@@ -229,6 +257,15 @@ internal sealed class ScenarioBrowserConsole : Console
             HideActionSelectorOverlay();
         }
 
+        if (_toast is not null && !_toast.IsExpired)
+        {
+            ShowToastOverlay();
+        }
+        else
+        {
+            HideToastOverlay();
+        }
+
         if (_chromeState.LayoutDebugVisible)
         {
             DrawDebugOverlay(ScenarioBrowserDebugOverlay.Build(_model, _shell, _layout, _chromeState.WindowMode));
@@ -295,6 +332,54 @@ internal sealed class ScenarioBrowserConsole : Console
         {
             Children.Remove(_actionSelectorOverlay);
             _actionSelectorOverlay = null;
+        }
+    }
+
+    private void ShowToast(ToastNotificationState toast)
+    {
+        RemoveToastOverlay();
+        _toast = toast;
+        ShowToastOverlay();
+    }
+
+    private void ShowToastOverlay()
+    {
+        if (_toast is null || _toast.IsExpired)
+        {
+            HideToastOverlay();
+            return;
+        }
+
+        if (_toastOverlay is not null)
+        {
+            return;
+        }
+
+        _toastOverlay = new OverlayPanelConsole(
+            ToastNotificationPresenter.ToOverlay(_toast, _layout, _displaySettings),
+            _tilesetProfile);
+        Children.Add(_toastOverlay);
+        _toastOverlay.IsVisible = true;
+        _toastOverlay.Surface.IsDirty = true;
+    }
+
+    private void HideToastOverlay()
+    {
+        RemoveToastOverlay();
+
+        if (_toast?.IsExpired == true)
+        {
+            _toast = null;
+        }
+    }
+
+    private void RemoveToastOverlay()
+    {
+        if (_toastOverlay is not null)
+        {
+            Children.Remove(_toastOverlay);
+            _toastOverlay = null;
+            Surface.IsDirty = true;
         }
     }
 

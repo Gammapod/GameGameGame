@@ -167,6 +167,11 @@ internal sealed class ScenarioBrowserScreenModel
     public ScenarioBrowserResult Scroll(int deltaRows)
     {
         ActiveInputMode = FrontendInputMode.Mouse;
+        if (ActionSelectorOpen)
+        {
+            return ScenarioBrowserResult.Stay("Scenario details focused; close them before scrolling the scenario list.");
+        }
+
         Move(deltaRows);
         return ScenarioBrowserResult.Stay($"Selected scenario: {SelectedEntry?.Name ?? "none"}.");
     }
@@ -174,6 +179,11 @@ internal sealed class ScenarioBrowserScreenModel
     public ScenarioBrowserResult SelectVisibleRow(ScenarioBrowserViewport viewport, int visibleRowIndex, bool launch)
     {
         ActiveInputMode = FrontendInputMode.Mouse;
+        if (ActionSelectorOpen)
+        {
+            return ScenarioBrowserResult.Stay("Scenario details focused; close them before selecting another scenario.");
+        }
+
         if (visibleRowIndex < 0 || visibleRowIndex >= viewport.Entries.Count)
         {
             return ScenarioBrowserResult.Stay("No scenario row is under the mouse.");
@@ -194,6 +204,11 @@ internal sealed class ScenarioBrowserScreenModel
     public ScenarioBrowserResult HoverVisibleRow(ScenarioBrowserViewport viewport, int visibleRowIndex)
     {
         ActiveInputMode = FrontendInputMode.Mouse;
+        if (ActionSelectorOpen)
+        {
+            return ScenarioBrowserResult.Stay("Scenario details focused; scenario list hover is inactive.");
+        }
+
         if (visibleRowIndex < 0 || visibleRowIndex >= viewport.Entries.Count)
         {
             ClearHover();

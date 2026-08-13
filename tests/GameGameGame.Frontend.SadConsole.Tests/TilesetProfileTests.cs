@@ -15,6 +15,15 @@ public sealed class TilesetProfileTests
     }
 
     [Fact]
+    public void CandiiTilesetUsesGridDottedAsDefaultBackdrop()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        Assert.Equal(223, profile.Roles.GridDotted);
+        Assert.Equal(223, profile.Roles.DefaultBackdrop);
+    }
+
+    [Fact]
     public void CandiiTilesetLoadsManifestBackedPanelBorderRoles()
     {
         var profile = TilesetProfileLoader.LoadCandii();

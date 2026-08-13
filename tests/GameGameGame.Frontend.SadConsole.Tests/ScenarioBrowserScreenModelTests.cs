@@ -189,6 +189,39 @@ public sealed class ScenarioBrowserScreenModelTests
         Assert.Equal(ScenarioBrowserActionOption.Edit, model.SelectedActionOption);
     }
 
+    [Fact]
+    public void ScenarioBrowserModalFocusPreventsMouseSelectingUnderlyingScenarioRows()
+    {
+        var model = new ScenarioBrowserScreenModel(CatalogWithEntries(5));
+        var open = model.Handle(ScenarioBrowserCommand.Select);
+        var viewport = model.Viewport(5);
+
+        var result = model.SelectVisibleRow(viewport, 3, launch: true);
+
+        Assert.Equal(ScenarioBrowserResultKind.Stay, open.Kind);
+        Assert.True(model.ActionSelectorOpen);
+        Assert.Equal(0, model.SelectedIndex);
+        Assert.Equal("scenario-00", model.SelectedEntry?.ScenarioId);
+        Assert.Contains("focused", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ScenarioBrowserModalFocusPreventsMouseHoverAndScrollChangingUnderlyingList()
+    {
+        var model = new ScenarioBrowserScreenModel(CatalogWithEntries(5), selectedIndex: 2);
+        model.Handle(ScenarioBrowserCommand.Select);
+        var viewport = model.Viewport(5);
+
+        var hover = model.HoverVisibleRow(viewport, 4);
+        var scroll = model.Scroll(1);
+
+        Assert.True(model.ActionSelectorOpen);
+        Assert.Equal(2, model.SelectedIndex);
+        Assert.Null(model.HoveredIndex);
+        Assert.Contains("focused", hover.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("focused", scroll.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static WorkspaceScenarioCatalogResult CatalogWithEntries(int count) => new(
         new ContentWorkspace([]),
         Enumerable.Range(0, count)
