@@ -24,6 +24,41 @@ public sealed class TilesetProfileTests
     }
 
     [Fact]
+    public void CandiiTilesetLoadsFacingRoleGlyphsAndMirrorsDirections()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        Assert.Equal(251, profile.Roles.FacingDiag);
+        Assert.Equal(252, profile.Roles.FacingNS);
+        Assert.Equal(253, profile.Roles.FacingWE);
+        Assert.Equal(218, profile.Roles.MoveHighlight);
+        Assert.Equal((252, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.North));
+        Assert.Equal((252, global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.South));
+        Assert.Equal((253, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.East));
+        Assert.Equal((253, global::SadConsole.Mirror.Horizontal), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.West));
+        Assert.Equal((251, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.NorthWest));
+        Assert.Equal((251, global::SadConsole.Mirror.Horizontal), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.NorthEast));
+        Assert.Equal((251, global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.SouthWest));
+        Assert.Equal((251, global::SadConsole.Mirror.Horizontal | global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.SouthEast));
+    }
+
+    [Fact]
+    public void MovePreviewHighlightUsesMoveHighlightGlyphWithSemiTransparentForeground()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        var highlight = CellHighlightPresentation.MovePreview(profile);
+
+        Assert.Equal(CellHighlightKind.MovePreview, highlight.Kind);
+        Assert.Equal(218, highlight.Glyph);
+        Assert.Equal(global::SadConsole.Mirror.None, highlight.Mirror);
+        Assert.Equal((byte)160, highlight.Foreground.A);
+        Assert.Equal((byte)0, highlight.Foreground.R);
+        Assert.Equal((byte)255, highlight.Foreground.G);
+        Assert.Equal((byte)255, highlight.Foreground.B);
+    }
+
+    [Fact]
     public void CandiiTilesetLoadsManifestBackedPanelBorderRoles()
     {
         var profile = TilesetProfileLoader.LoadCandii();

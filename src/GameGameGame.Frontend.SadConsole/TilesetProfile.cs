@@ -23,9 +23,22 @@ internal sealed record TilesetProfile(
             : throw new InvalidOperationException($"Tileset '{Id}' does not define text glyph mapping for '{character}'.");
 }
 
-internal sealed record TilesetRoles(int GridDotted, TileBorderGlyphSet PanelBorder)
+internal sealed record TilesetRoles(int GridDotted, int FacingDiag, int FacingNS, int FacingWE, int MoveHighlight, TileBorderGlyphSet PanelBorder)
 {
     public int DefaultBackdrop => GridDotted;
+
+    public (int Glyph, global::SadConsole.Mirror Mirror) FacingGlyph(GameGameGame.Core.Direction direction) => direction switch
+    {
+        GameGameGame.Core.Direction.North => (FacingNS, global::SadConsole.Mirror.None),
+        GameGameGame.Core.Direction.South => (FacingNS, global::SadConsole.Mirror.Vertical),
+        GameGameGame.Core.Direction.East => (FacingWE, global::SadConsole.Mirror.None),
+        GameGameGame.Core.Direction.West => (FacingWE, global::SadConsole.Mirror.Horizontal),
+        GameGameGame.Core.Direction.NorthWest => (FacingDiag, global::SadConsole.Mirror.None),
+        GameGameGame.Core.Direction.NorthEast => (FacingDiag, global::SadConsole.Mirror.Horizontal),
+        GameGameGame.Core.Direction.SouthWest => (FacingDiag, global::SadConsole.Mirror.Vertical),
+        GameGameGame.Core.Direction.SouthEast => (FacingDiag, global::SadConsole.Mirror.Horizontal | global::SadConsole.Mirror.Vertical),
+        _ => (FacingNS, global::SadConsole.Mirror.None)
+    };
 }
 
 internal sealed record TilesetPresentationMappings(IReadOnlyDictionary<string, int> GlyphsByPresentationId);

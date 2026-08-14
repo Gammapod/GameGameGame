@@ -28,7 +28,8 @@ public sealed record WorkspaceScenarioCatalogResult(
 public sealed record WorkspaceScenarioCatalogOptions(
     IReadOnlyList<string>? WorkspaceContentPaths = null,
     bool IncludeSingleFileCompatibilityScenarios = true,
-    string? CompatibilityScenarioFolder = null)
+    string? CompatibilityScenarioFolder = null,
+    string? RepositoryRoot = null)
 {
     public IReadOnlyList<string> WorkspaceContentPaths { get; } = WorkspaceContentPaths ?? WorkspaceScenarioCatalogService.DefaultDebugRoomWorkspacePaths;
 }
@@ -42,6 +43,8 @@ public static class WorkspaceScenarioCatalogService
         Path.Combine("src", "GameGameGame.Content", "Debug", "DebugRoom.yaml")
     ];
 
+    private static readonly string RepositoryDefaultCompatibilityScenarioFolder = Path.Combine("src", "GameGameGame.Content", "Beta");
+
     public static WorkspaceScenarioCatalogResult BuildDefaultCatalog() =>
         BuildCatalog(new WorkspaceScenarioCatalogOptions());
 
@@ -49,13 +52,13 @@ public static class WorkspaceScenarioCatalogService
     {
         options ??= new WorkspaceScenarioCatalogOptions();
         var diagnostics = new List<string>();
-        var workspace = BuildWorkspace(options.WorkspaceContentPaths, diagnostics);
+        var workspace = BuildWorkspace(options.WorkspaceContentPaths, options.RepositoryRoot, diagnostics);
         var compile = ContentCompiler.Compile(workspace);
         diagnostics.AddRange(compile.Diagnostics.Select(FormatDiagnostic));
 
         var entries = BuildWorkspaceEntries(workspace)
             .Concat(options.IncludeSingleFileCompatibilityScenarios
-                ? BuildCompatibilityEntries(options.CompatibilityScenarioFolder, diagnostics)
+                ? BuildCompatibilityEntries(options.CompatibilityScenarioFolder, options.RepositoryRoot, diagnostics)
                 : [])
             .GroupBy(entry => entry.EntryId, StringComparer.Ordinal)
             .Select(group => group.First())
@@ -80,12 +83,12 @@ public static class WorkspaceScenarioCatalogService
             : PlayableScenarioLauncher.CreateFromFile(entry.SourcePath ?? string.Empty, entry.ScenarioId);
     }
 
-    private static ContentWorkspace BuildWorkspace(IReadOnlyList<string> contentPaths, List<string> diagnostics)
+    private static ContentWorkspace BuildWorkspace(IReadOnlyList<string> contentPaths, string? repositoryRoot, List<string> diagnostics)
     {
         var documents = new List<ContentWorkspaceDocument>();
         foreach (var relativePath in contentPaths)
         {
-            if (!TryResolveRepositoryFile(relativePath, out var path))
+            if (!TryResolveRepositoryFile(relativePath, repositoryRoot, out var path))
             {
                 diagnostics.Add($"Workspace content path {relativePath} was not found.");
                 continue;
@@ -124,9 +127,9 @@ public static class WorkspaceScenarioCatalogService
                 LaunchKind: WorkspaceScenarioLaunchKind.Workspace)))
             .ToList();
 
-    private static IReadOnlyList<WorkspaceScenarioCatalogEntry> BuildCompatibilityEntries(string? folderPath, List<string> diagnostics)
+    private static IReadOnlyList<WorkspaceScenarioCatalogEntry> BuildCompatibilityEntries(string? folderPath, string? repositoryRoot, List<string> diagnostics)
     {
-        var folder = folderPath ?? ScenarioCatalog.DefaultDiscoveryFolder;
+        var folder = ResolveCompatibilityFolder(folderPath, repositoryRoot);
         var manifestPath = Path.Combine(folder, ScenarioCatalog.ManifestFileName);
         var catalog = File.Exists(manifestPath)
             ? ScenarioCatalog.LoadManifest(manifestPath)
@@ -188,8 +191,18 @@ public static class WorkspaceScenarioCatalogService
         return new string(result.ToArray());
     }
 
-    private static bool TryResolveRepositoryFile(string relativePath, out string path)
+    private static bool TryResolveRepositoryFile(string relativePath, string? repositoryRoot, out string path)
     {
+        if (!string.IsNullOrWhiteSpace(repositoryRoot))
+        {
+            var rootedCandidate = ResolveAgainstRoot(relativePath, repositoryRoot);
+            if (File.Exists(rootedCandidate))
+            {
+                path = rootedCandidate;
+                return true;
+            }
+        }
+
         var directory = Directory.GetCurrentDirectory();
         while (directory is not null)
         {
@@ -206,6 +219,25 @@ public static class WorkspaceScenarioCatalogService
         path = relativePath;
         return false;
     }
+
+    private static string ResolveCompatibilityFolder(string? folderPath, string? repositoryRoot)
+    {
+        if (!string.IsNullOrWhiteSpace(folderPath))
+        {
+            return !string.IsNullOrWhiteSpace(repositoryRoot)
+                ? ResolveAgainstRoot(folderPath, repositoryRoot)
+                : folderPath;
+        }
+
+        return !string.IsNullOrWhiteSpace(repositoryRoot)
+            ? Path.Combine(Path.GetFullPath(repositoryRoot), RepositoryDefaultCompatibilityScenarioFolder)
+            : ScenarioCatalog.DefaultDiscoveryFolder;
+    }
+
+    private static string ResolveAgainstRoot(string path, string repositoryRoot) =>
+        Path.GetFullPath(Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(repositoryRoot, path));
 
     private static string FormatDiagnostic(ContentDiagnostic diagnostic) =>
         string.IsNullOrWhiteSpace(diagnostic.SourcePath)

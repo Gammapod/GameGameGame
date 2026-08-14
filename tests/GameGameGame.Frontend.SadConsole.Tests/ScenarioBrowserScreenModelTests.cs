@@ -8,7 +8,7 @@ public sealed class ScenarioBrowserScreenModelTests
     [Fact]
     public void ScenarioBrowserShowsWorkspaceDebugRoomCatalogEntry()
     {
-        var catalog = WorkspaceScenarioCatalogService.BuildDefaultCatalog();
+        var catalog = TestRepository.BuildDefaultCatalog();
 
         var model = new ScenarioBrowserScreenModel(catalog);
 
@@ -18,7 +18,7 @@ public sealed class ScenarioBrowserScreenModelTests
     [Fact]
     public void ScenarioBrowserSelectionOpensPlayEditSelectorThenCreatesLaunchRequest()
     {
-        var catalog = WorkspaceScenarioCatalogService.BuildDefaultCatalog();
+        var catalog = TestRepository.BuildDefaultCatalog();
         var model = new ScenarioBrowserScreenModel(catalog);
         while (model.SelectedEntry?.ScenarioId != "debug-room")
         {

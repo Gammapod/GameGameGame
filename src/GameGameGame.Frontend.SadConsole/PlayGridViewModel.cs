@@ -1,6 +1,7 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
 using SadRogue.Primitives;
+using SadMirror = SadConsole.Mirror;
 
 namespace GameGameGame.Frontend.SadConsole;
 
@@ -12,7 +13,9 @@ internal sealed record PlayCellVisual(
     Color BackdropBackground,
     int? EntityGlyph = null,
     Color? EntityForeground = null,
-    EntityId? EntityId = null);
+    EntityId? EntityId = null,
+    int? FacingGlyph = null,
+    SadMirror FacingMirror = SadMirror.None);
 
 internal sealed record PlayGridViewModel(
     string Title,
@@ -40,6 +43,9 @@ internal sealed record PlayGridViewModel(
                 var entityGlyph = occupant is { } entityId
                     ? ResolveEntityGlyph(session, tilesetProfile, entityId)
                     : (int?)null;
+                var facing = occupant is { } facingEntityId && session.World.GetActionFacing(facingEntityId) is { } direction
+                    ? tilesetProfile.Roles.FacingGlyph(direction)
+                    : ((int Glyph, SadMirror Mirror)?)null;
 
                 cells.Add(new PlayCellVisual(
                     x,
@@ -49,7 +55,9 @@ internal sealed record PlayGridViewModel(
                     Color.Black,
                     entityGlyph,
                     occupant == session.PlayerEntityId ? Color.Yellow : Color.White,
-                    occupant));
+                    occupant,
+                    facing?.Glyph,
+                    facing?.Mirror ?? SadMirror.None));
             }
         }
 
@@ -89,7 +97,13 @@ internal static class PlayGridRenderer
         model.Width,
         model.Height);
 
-    public static void Draw(global::SadConsole.Console target, FrontendRect bounds, PlayGridViewModel model, IReadOnlySet<EntityId>? hiddenEntityIds = null)
+    public static void Draw(
+        global::SadConsole.Console target,
+        FrontendRect bounds,
+        PlayGridViewModel model,
+        IReadOnlySet<EntityId>? hiddenEntityIds = null,
+        GridCoord? movementPreviewCoord = null,
+        CellHighlightPresentation? movementPreviewHighlight = null)
     {
         var gridBounds = ResolveGridBounds(bounds, model);
 
@@ -98,10 +112,13 @@ internal static class PlayGridRenderer
             var x = gridBounds.X + cell.X;
             var y = gridBounds.Y + cell.Y;
             SetGlyph(target, x, y, cell.BackdropGlyph, cell.BackdropForeground, cell.BackdropBackground);
-            if (cell.EntityGlyph is { } entityGlyph && (cell.EntityId is not { } entityId || hiddenEntityIds?.Contains(entityId) != true))
+            var entityHidden = cell.EntityId is { } entityId && hiddenEntityIds?.Contains(entityId) == true;
+            if (cell.EntityGlyph is { } entityGlyph && !entityHidden)
             {
                 SetGlyph(target, x, y, entityGlyph, cell.EntityForeground ?? Color.White, cell.BackdropBackground);
             }
+
+            ApplyDecorators(target, x, y, cell, entityHidden, movementPreviewCoord == new GridCoord(cell.X, cell.Y) ? movementPreviewHighlight : null);
         }
     }
 
@@ -115,5 +132,26 @@ internal static class PlayGridRenderer
         target.Surface[x, y].Glyph = glyph;
         target.Surface[x, y].Foreground = foreground;
         target.Surface[x, y].Background = background;
+        target.Surface[x, y].Mirror = SadMirror.None;
+        target.Surface[x, y].Decorators = null;
+    }
+
+    private static void ApplyDecorators(global::SadConsole.Console target, int x, int y, PlayCellVisual cell, bool entityHidden, CellHighlightPresentation? movementPreviewHighlight)
+    {
+        var decorators = new List<global::SadConsole.CellDecorator>();
+        if (!entityHidden && cell.FacingGlyph is { } facingGlyph && cell.EntityGlyph is not null)
+        {
+            decorators.Add(new global::SadConsole.CellDecorator(Color.LightYellow, facingGlyph, cell.FacingMirror));
+        }
+
+        if (movementPreviewHighlight is not null)
+        {
+            decorators.Add(new global::SadConsole.CellDecorator(movementPreviewHighlight.Foreground, movementPreviewHighlight.Glyph, movementPreviewHighlight.Mirror));
+        }
+
+        if (decorators.Count > 0)
+        {
+            target.Surface[x, y].Decorators = decorators;
+        }
     }
 }

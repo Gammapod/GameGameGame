@@ -8,7 +8,7 @@ public sealed class PlayGridViewModelTests
     [Fact]
     public void PlayGridViewModelBuildsDebugRoomStartingLocationWithBackdropUnderEveryCell()
     {
-        var catalog = WorkspaceScenarioCatalogService.BuildDefaultCatalog();
+        var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
         var tileset = TilesetProfileLoader.LoadCandii();
@@ -23,5 +23,7 @@ public sealed class PlayGridViewModelTests
         var playerCell = grid.CellAt(4, 3);
         Assert.Equal(session.PlayerEntityId, playerCell.EntityId);
         Assert.Equal(219, playerCell.EntityGlyph);
+        Assert.Equal(252, playerCell.FacingGlyph);
+        Assert.Equal(global::SadConsole.Mirror.None, playerCell.FacingMirror);
     }
 }

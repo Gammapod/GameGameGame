@@ -5,6 +5,7 @@ model: openai/gpt-5.5
 permission:
   read:
     "*": ask
+    "assets/*": allow
     "docs/*": allow
     "src/*": allow
     "src/GameGameGame.SadConsole/*": allow

@@ -41,6 +41,7 @@
     "facingDiag": 251,
     "facingNS": 252,
     "facingWE": 253,
+    "moveHighlight": 218,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

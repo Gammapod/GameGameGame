@@ -1,5 +1,6 @@
 using GameGameGame.Content;
 using GameGameGame.Core;
+using System.Runtime.CompilerServices;
 
 namespace GameGameGame.Tests;
 
@@ -9,7 +10,7 @@ public sealed class WorkspaceScenarioCatalogServiceTests
     [Fact]
     public void WorkspaceScenarioCatalogDiscoversDebugRoomScenario()
     {
-        var catalog = WorkspaceScenarioCatalogService.BuildDefaultCatalog();
+        var catalog = BuildRepositoryCatalog();
 
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         Assert.Equal("Debug Room", entry.Name);
@@ -24,7 +25,7 @@ public sealed class WorkspaceScenarioCatalogServiceTests
     [Fact]
     public void WorkspaceScenarioLaunchCreatesPlayableSessionFromDebugRoom()
     {
-        var catalog = WorkspaceScenarioCatalogService.BuildDefaultCatalog();
+        var catalog = BuildRepositoryCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
 
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
@@ -39,7 +40,7 @@ public sealed class WorkspaceScenarioCatalogServiceTests
     [Fact]
     public void WorkspaceScenarioLaunchUsesPlayableScenarioLauncherCreateFromWorkspace()
     {
-        var catalog = WorkspaceScenarioCatalogService.BuildDefaultCatalog();
+        var catalog = BuildRepositoryCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
 
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
@@ -48,4 +49,58 @@ public sealed class WorkspaceScenarioCatalogServiceTests
         Assert.True(session.Registry.EntityTemplates.ContainsKey(new EntityTemplateId("debugPlayer")));
         Assert.True(session.Registry.EntityTemplates.ContainsKey(new EntityTemplateId("debugRoomRoot")));
     }
+
+    [Fact]
+    public void WorkspaceScenarioCatalogResolvesDefaultsFromExplicitRepositoryRootWhenCurrentDirectoryIsElsewhere()
+    {
+        var originalCurrentDirectory = Directory.GetCurrentDirectory();
+        var tempDirectory = Directory.CreateTempSubdirectory("ggg-catalog-cwd-");
+        try
+        {
+            Directory.SetCurrentDirectory(tempDirectory.FullName);
+
+            var catalog = WorkspaceScenarioCatalogService.BuildCatalog(new WorkspaceScenarioCatalogOptions(
+                RepositoryRoot: RepositoryRoot(),
+                IncludeSingleFileCompatibilityScenarios: false));
+
+            Assert.Contains(catalog.Entries, entry => entry.ScenarioId == "debug-room" && entry.IsWorkspaceBacked);
+            Assert.DoesNotContain(catalog.Diagnostics, diagnostic => diagnostic.Contains("Workspace content path", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalCurrentDirectory);
+            tempDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WorkspaceScenarioCatalogResolvesCompatibilityFolderFromExplicitRepositoryRootWhenCurrentDirectoryIsElsewhere()
+    {
+        var originalCurrentDirectory = Directory.GetCurrentDirectory();
+        var tempDirectory = Directory.CreateTempSubdirectory("ggg-catalog-cwd-");
+        try
+        {
+            Directory.SetCurrentDirectory(tempDirectory.FullName);
+
+            var catalog = WorkspaceScenarioCatalogService.BuildCatalog(new WorkspaceScenarioCatalogOptions(
+                WorkspaceContentPaths: [],
+                CompatibilityScenarioFolder: Path.Combine("src", "GameGameGame.Content", "Beta"),
+                RepositoryRoot: RepositoryRoot()));
+
+            Assert.Contains(catalog.Entries, entry => entry.LaunchKind == WorkspaceScenarioLaunchKind.File);
+            Assert.DoesNotContain(catalog.Diagnostics, diagnostic => diagnostic.Contains("Compatibility scenario catalog", StringComparison.Ordinal)
+                && diagnostic.Contains("not found", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalCurrentDirectory);
+            tempDirectory.Delete(recursive: true);
+        }
+    }
+
+    private static string RepositoryRoot([CallerFilePath] string sourcePath = "") =>
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "..", ".."));
+
+    private static WorkspaceScenarioCatalogResult BuildRepositoryCatalog() =>
+        WorkspaceScenarioCatalogService.BuildCatalog(new WorkspaceScenarioCatalogOptions(RepositoryRoot: RepositoryRoot()));
 }
