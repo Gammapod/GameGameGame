@@ -48,6 +48,7 @@ internal sealed class ScenarioBrowserConsole : Console
         else if (keyboard.IsKeyReleased(Keys.Down)) Handle(ScenarioBrowserCommand.Down);
         else if (keyboard.IsKeyReleased(Keys.Enter)) Handle(ScenarioBrowserCommand.Select);
         else if (keyboard.IsKeyReleased(Keys.Escape)) Handle(ScenarioBrowserCommand.Cancel);
+        else if (keyboard.IsKeyReleased(Keys.F2)) OpenComponentGallery();
         else if (keyboard.IsKeyReleased(Keys.F12)) ToggleLayoutDebug();
         else if (keyboard.IsKeyReleased(Keys.F11)) ToggleFullscreen();
         else return false;
@@ -116,6 +117,20 @@ internal sealed class ScenarioBrowserConsole : Console
         var visible = _chromeState.ToggleLayoutDebug();
         _message = visible ? "Layout debug visible." : "Layout debug hidden.";
         Redraw();
+    }
+
+    private void OpenComponentGallery()
+    {
+        HideActionSelectorOverlay();
+        HideToastOverlay();
+        var gallery = new ComponentGalleryConsole(_shell, _displaySettings, _tilesetProfile, () =>
+        {
+            global::SadConsole.Game.Instance.Screen = this;
+            IsFocused = true;
+            FocusedMode = global::SadConsole.FocusBehavior.Set;
+            Redraw();
+        });
+        global::SadConsole.Game.Instance.Screen = gallery;
     }
 
     private void ToggleFullscreen()

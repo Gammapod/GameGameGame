@@ -161,6 +161,7 @@ public sealed class ScenarioBrowserScreenModelTests
         model.Handle(ScenarioBrowserCommand.Up);
         Assert.Equal(FrontendInputMode.Keyboard, model.ActiveInputMode);
         Assert.Contains("Input: Keyboard", model.Footer);
+        Assert.Contains("F2: Gallery", model.Footer);
     }
 
     [Fact]

@@ -52,11 +52,18 @@ internal static class ToastNotificationPresenter
         var height = Math.Min(Math.Max(4, toast.Rows.Count + 2), Math.Max(4, layout.MessageY - layout.ListY));
         var background = new Color((byte)48, (byte)28, (byte)0, (byte)225);
 
-        return new OverlayPanelModel(
-            OverlayPanelGeometry.HalfTileOffset(new FrontendRect(layout.TextX + 1, layout.ListY, width + 2, height), displaySettings),
+        return ToOverlayAt(toast, new FrontendRect(layout.TextX + 1, layout.ListY, width + 2, height), displaySettings, background);
+    }
+
+    public static OverlayPanelModel ToOverlayAt(
+        ToastNotificationState toast,
+        FrontendRect cellBounds,
+        SadConsoleDisplaySettings displaySettings,
+        Color? background = null) =>
+        new(
+            OverlayPanelGeometry.HalfTileOffset(cellBounds, displaySettings),
             toast.Rows,
             Color.Orange,
             Color.White,
-            background);
-    }
+            background ?? new Color((byte)48, (byte)28, (byte)0, (byte)225));
 }

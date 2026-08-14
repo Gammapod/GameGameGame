@@ -38,6 +38,9 @@
     "gridCave": 226,
     "gridGrass": 227,
     "gridWood": 228,
+    "facingDiag": 251,
+    "facingNS": 252,
+    "facingWE": 253,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

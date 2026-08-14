@@ -73,7 +73,7 @@ internal sealed class ScenarioBrowserScreenModel
     public WorkspaceScenarioCatalogEntry? HoveredEntry => _hoveredIndex is { } index && index >= 0 && index < _entries.Count ? _entries[index] : null;
     public string Footer => ActionSelectorOpen
         ? $"Up/Down: Play/Edit  Enter/Click: Activate  Esc: Back  F12: Layout debug  Input: {ActiveInputMode}"
-        : $"Up/Down: Move  Enter/Click: Select  Esc: Exit  F11: Fullscreen  F12: Layout debug  Input: {ActiveInputMode}";
+        : $"Up/Down: Move  Enter/Click: Select  Esc: Exit  F2: Gallery  F11: Fullscreen  F12: Layout debug  Input: {ActiveInputMode}";
 
     public ScenarioBrowserViewport Viewport(int visibleRows)
     {
