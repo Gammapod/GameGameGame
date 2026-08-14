@@ -11,7 +11,10 @@ internal enum ComponentGalleryCommand
 internal enum ComponentGalleryExampleKind
 {
     SelectorPopup,
-    ToastPopup
+    ToastPopup,
+    StaticPlayRenderer,
+    MoveAnimation,
+    MoveAnimationQueue
 }
 
 internal enum ComponentGalleryResultKind
@@ -19,7 +22,10 @@ internal enum ComponentGalleryResultKind
     Stay,
     ExitRequested,
     SelectorPopupRequested,
-    ToastRequested
+    ToastRequested,
+    StaticPlayRendererSelected,
+    MoveAnimationSelected,
+    MoveAnimationQueueSelected
 }
 
 internal sealed record ComponentGalleryExample(
@@ -56,7 +62,10 @@ internal sealed class ComponentGalleryScreenModel
     public static IReadOnlyList<ComponentGalleryExample> DefaultExamples() =>
     [
         new("selector-popup", "Selector popup", "Offset modal child surface; modal focus blocks underlying list input.", ComponentGalleryExampleKind.SelectorPopup),
-        new("toast-popup", "Toast popup", "Offset warning notification; auto-dismisses after four seconds.", ComponentGalleryExampleKind.ToastPopup)
+        new("toast-popup", "Toast popup", "Offset warning notification; auto-dismisses after four seconds.", ComponentGalleryExampleKind.ToastPopup),
+        new("static-play-renderer", "Static Play renderer", "Layered backdrop/entity/accent/status/highlight rendering through a camera.", ComponentGalleryExampleKind.StaticPlayRenderer),
+        new("move-animation", "Move animation", "Simple adjacent-cell slide preview for an entity visual bundle.", ComponentGalleryExampleKind.MoveAnimation),
+        new("move-animation-queue", "Move animation queue", "Sequential initiative-order slide playback with final redraw signal.", ComponentGalleryExampleKind.MoveAnimationQueue)
     ];
 
     public ComponentGalleryResult Handle(ComponentGalleryCommand command)
@@ -155,6 +164,9 @@ internal sealed class ComponentGalleryScreenModel
         {
             ComponentGalleryExampleKind.SelectorPopup => OpenSelectorPopup(),
             ComponentGalleryExampleKind.ToastPopup => new ComponentGalleryResult(ComponentGalleryResultKind.ToastRequested, "Toast popup example shown."),
+            ComponentGalleryExampleKind.StaticPlayRenderer => new ComponentGalleryResult(ComponentGalleryResultKind.StaticPlayRendererSelected, "Static Play renderer example selected."),
+            ComponentGalleryExampleKind.MoveAnimation => new ComponentGalleryResult(ComponentGalleryResultKind.MoveAnimationSelected, "Move animation example selected."),
+            ComponentGalleryExampleKind.MoveAnimationQueue => new ComponentGalleryResult(ComponentGalleryResultKind.MoveAnimationQueueSelected, "Move animation queue example selected."),
             _ => new ComponentGalleryResult(ComponentGalleryResultKind.Stay, "No gallery example is selected.")
         };
     }

@@ -83,17 +83,22 @@ internal sealed record PlayGridViewModel(
 
 internal static class PlayGridRenderer
 {
-    public static void Draw(global::SadConsole.Console target, FrontendRect bounds, PlayGridViewModel model)
+    public static FrontendRect ResolveGridBounds(FrontendRect bounds, PlayGridViewModel model) => new(
+        bounds.X + Math.Max(0, (bounds.Width - model.Width) / 2),
+        bounds.Y + Math.Max(0, (bounds.Height - model.Height) / 2),
+        model.Width,
+        model.Height);
+
+    public static void Draw(global::SadConsole.Console target, FrontendRect bounds, PlayGridViewModel model, IReadOnlySet<EntityId>? hiddenEntityIds = null)
     {
-        var startX = bounds.X + Math.Max(0, (bounds.Width - model.Width) / 2);
-        var startY = bounds.Y + Math.Max(0, (bounds.Height - model.Height) / 2);
+        var gridBounds = ResolveGridBounds(bounds, model);
 
         foreach (var cell in model.Cells)
         {
-            var x = startX + cell.X;
-            var y = startY + cell.Y;
+            var x = gridBounds.X + cell.X;
+            var y = gridBounds.Y + cell.Y;
             SetGlyph(target, x, y, cell.BackdropGlyph, cell.BackdropForeground, cell.BackdropBackground);
-            if (cell.EntityGlyph is { } entityGlyph)
+            if (cell.EntityGlyph is { } entityGlyph && (cell.EntityId is not { } entityId || hiddenEntityIds?.Contains(entityId) != true))
             {
                 SetGlyph(target, x, y, entityGlyph, cell.EntityForeground ?? Color.White, cell.BackdropBackground);
             }

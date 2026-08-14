@@ -11,6 +11,9 @@ public sealed class ComponentGalleryScreenModelTests
 
         Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.SelectorPopup && example.Id == "selector-popup");
         Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.ToastPopup && example.Id == "toast-popup");
+        Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.StaticPlayRenderer && example.Id == "static-play-renderer");
+        Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.MoveAnimation && example.Id == "move-animation");
+        Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.MoveAnimationQueue && example.Id == "move-animation-queue");
     }
 
     [Fact]
@@ -55,5 +58,38 @@ public sealed class ComponentGalleryScreenModelTests
         Assert.Equal(ComponentGalleryResultKind.ToastRequested, result.Kind);
         Assert.Equal(TimeSpan.FromSeconds(4), toast.Duration);
         Assert.Contains("Toast popup example", toast.Rows);
+    }
+
+    [Fact]
+    public void ComponentGalleryStaticPlayRendererExampleCanBeSelected()
+    {
+        var model = new ComponentGalleryScreenModel(selectedIndex: 2);
+
+        var result = model.Handle(ComponentGalleryCommand.Select);
+
+        Assert.Equal(ComponentGalleryResultKind.StaticPlayRendererSelected, result.Kind);
+        Assert.Equal(ComponentGalleryExampleKind.StaticPlayRenderer, model.SelectedExample?.Kind);
+    }
+
+    [Fact]
+    public void ComponentGalleryMoveAnimationExampleCanBeSelected()
+    {
+        var model = new ComponentGalleryScreenModel(selectedIndex: 3);
+
+        var result = model.Handle(ComponentGalleryCommand.Select);
+
+        Assert.Equal(ComponentGalleryResultKind.MoveAnimationSelected, result.Kind);
+        Assert.Equal(ComponentGalleryExampleKind.MoveAnimation, model.SelectedExample?.Kind);
+    }
+
+    [Fact]
+    public void ComponentGalleryMoveAnimationQueueExampleCanBeSelected()
+    {
+        var model = new ComponentGalleryScreenModel(selectedIndex: 4);
+
+        var result = model.Handle(ComponentGalleryCommand.Select);
+
+        Assert.Equal(ComponentGalleryResultKind.MoveAnimationQueueSelected, result.Kind);
+        Assert.Equal(ComponentGalleryExampleKind.MoveAnimationQueue, model.SelectedExample?.Kind);
     }
 }

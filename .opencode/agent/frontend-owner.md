@@ -7,16 +7,21 @@ permission:
     "*": ask
     "docs/*": allow
     "src/*": allow
+    "src/GameGameGame.SadConsole/*": allow
+    "src/GameGameGame.Frontend.SadConsole/*": allow
     "src/GameGameGame.Core/*": deny
     "tests/*": allow
     "tests/GameGameGame.SadConsole.Tests/*": allow
+    "tests/GameGameGame.Frontend.SadConsole.Tests/*": allow
   edit:
     "*": ask
     "docs/*": allow
     "src/*": deny
-    "src/GameGameGame.SadConsole/*": allow
+    "src/GameGameGame.SadConsole/*": deny
+    "src/GameGameGame.Frontend.SadConsole/*": allow
     "tests/*": deny
-    "tests/GameGameGame.SadConsole.Tests/*": allow
+    "tests/GameGameGame.SadConsole.Tests/*": deny
+    "tests/GameGameGame.Frontend.SadConsole.Tests/*": allow
   task:
     "core-owner": allow
     "content-editor": allow

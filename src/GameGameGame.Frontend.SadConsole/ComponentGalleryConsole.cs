@@ -14,7 +14,10 @@ internal sealed class ComponentGalleryConsole : Console
     private readonly FrontendRect _bounds;
     private OverlayPanelConsole? _selectorOverlay;
     private OverlayPanelConsole? _toastOverlay;
+    private PixelGlyphSpriteConsole? _moveSpriteOverlay;
     private ToastNotificationState? _toast;
+    private TimeSpan _moveAnimationElapsed;
+    private PlayAnimationQueuePlayback? _moveQueuePlayback;
     private string _message = "Component gallery: choose an example.";
 
     public ComponentGalleryConsole(FrontendDisplayShell shell, SadConsoleDisplaySettings displaySettings, TilesetProfile tilesetProfile, Action returnToBrowser)
@@ -66,6 +69,29 @@ internal sealed class ComponentGalleryConsole : Console
             HideToastOverlay();
         }
 
+        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.MoveAnimation)
+        {
+            _moveAnimationElapsed += delta < TimeSpan.Zero ? TimeSpan.Zero : delta;
+            var duration = StaticPlayRendererExamples.MoveSlideDuration;
+            if (_moveAnimationElapsed >= duration)
+            {
+                _moveAnimationElapsed -= duration;
+            }
+
+            Redraw();
+        }
+
+        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.MoveAnimationQueue && _moveQueuePlayback is not null)
+        {
+            _moveQueuePlayback.Advance(delta, speed: 1d);
+            if (_moveQueuePlayback.Completed)
+            {
+                _moveQueuePlayback = new PlayAnimationQueuePlayback(StaticPlayRendererExamples.MoveQueueSteps(), StaticPlayRendererExamples.LayeredRoom(_tilesetProfile).Camera);
+            }
+
+            Redraw();
+        }
+
         base.Render(delta);
     }
 
@@ -83,6 +109,7 @@ internal sealed class ComponentGalleryConsole : Console
             case ComponentGalleryResultKind.ExitRequested:
                 HideSelectorOverlay();
                 HideToastOverlay();
+                HideMoveSpriteOverlay();
                 _returnToBrowser();
                 break;
             case ComponentGalleryResultKind.SelectorPopupRequested:
@@ -90,6 +117,20 @@ internal sealed class ComponentGalleryConsole : Console
                 break;
             case ComponentGalleryResultKind.ToastRequested:
                 ShowToast(_model.CreateToastExample());
+                break;
+            case ComponentGalleryResultKind.StaticPlayRendererSelected:
+                HideSelectorOverlay();
+                HideMoveSpriteOverlay();
+                _moveQueuePlayback = null;
+                break;
+            case ComponentGalleryResultKind.MoveAnimationSelected:
+                HideSelectorOverlay();
+                _moveAnimationElapsed = TimeSpan.Zero;
+                _moveQueuePlayback = null;
+                break;
+            case ComponentGalleryResultKind.MoveAnimationQueueSelected:
+                HideSelectorOverlay();
+                _moveQueuePlayback = new PlayAnimationQueuePlayback(StaticPlayRendererExamples.MoveQueueSteps(), StaticPlayRendererExamples.LayeredRoom(_tilesetProfile).Camera);
                 break;
         }
     }
@@ -119,12 +160,153 @@ internal sealed class ComponentGalleryConsole : Console
             PrintClipped(_bounds.X + 2, y, _bounds.Width - 4, $"{marker} {example.Title} - {example.Description}", color);
         }
 
+        DrawSelectedExamplePreview(y + 2);
+
         PrintClipped(_bounds.X + 2, _bounds.Bottom - 2, _bounds.Width - 4, _message, Color.LightGreen);
         PrintClipped(_bounds.X + 2, _bounds.Bottom - 1, _bounds.Width - 4, _model.Footer, Color.Gray);
 
         if (_model.SelectorPopupOpen) ShowSelectorOverlay(); else HideSelectorOverlay();
         if (_toast is not null && !_toast.IsExpired) ShowToastOverlay(); else HideToastOverlay();
         Surface.IsDirty = true;
+    }
+
+    private void DrawSelectedExamplePreview(int y)
+    {
+        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.StaticPlayRenderer)
+        {
+            DrawStaticPlayRendererPreview(y);
+            return;
+        }
+
+        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.MoveAnimation)
+        {
+            DrawMoveAnimationPreview(y);
+            return;
+        }
+
+        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.MoveAnimationQueue)
+        {
+            DrawMoveAnimationQueuePreview(y);
+            return;
+        }
+
+        HideMoveSpriteOverlay();
+        PrintClipped(_bounds.X + 2, y, _bounds.Width - 4, "Select an example to inspect its live pattern.", Color.DarkGray);
+    }
+
+    private void DrawStaticPlayRendererPreview(int y)
+    {
+        HideMoveSpriteOverlay();
+        var previewWidth = Math.Min(18, _bounds.Width - 8);
+        var previewHeight = Math.Min(12, Math.Max(0, _bounds.Bottom - y - 3));
+        if (previewWidth <= 2 || previewHeight <= 2)
+        {
+            return;
+        }
+
+        var panel = new FrontendRect(_bounds.X + 4, y, previewWidth, previewHeight);
+        PanelRenderer.DrawPanel(this, panel, _tilesetProfile.Roles.PanelBorder, Color.Gold, Color.Black);
+        PrintClipped(panel.X + 1, panel.Y, panel.Width - 2, "camera 12x8", Color.LightYellow);
+        var frame = StaticPlayRendererExamples.LayeredRoom(_tilesetProfile);
+        LayeredPlaySurfaceRenderer.Draw(this, new FrontendRect(panel.X + 1, panel.Y + 1, frame.Camera.ViewportWidth, frame.Camera.ViewportHeight), frame, _tilesetProfile);
+        PrintClipped(panel.X, panel.Bottom + 1, _bounds.Width - 4, "Layers: backdrop < sprite < accent/status < UX highlight", Color.Gray);
+    }
+
+    private void DrawMoveAnimationPreview(int y)
+    {
+        var previewWidth = Math.Min(18, _bounds.Width - 8);
+        var previewHeight = Math.Min(12, Math.Max(0, _bounds.Bottom - y - 3));
+        if (previewWidth <= 2 || previewHeight <= 2)
+        {
+            HideMoveSpriteOverlay();
+            return;
+        }
+
+        var panel = new FrontendRect(_bounds.X + 4, y, previewWidth, previewHeight);
+        PanelRenderer.DrawPanel(this, panel, _tilesetProfile.Roles.PanelBorder, Color.Gold, Color.Black);
+        PrintClipped(panel.X + 1, panel.Y, panel.Width - 2, "move slide", Color.LightYellow);
+        var frame = StaticPlayRendererExamples.LayeredRoom(_tilesetProfile);
+        var backdropOnly = frame with { Entities = [], Overlays = [] };
+        var viewport = new FrontendRect(panel.X + 1, panel.Y + 1, frame.Camera.ViewportWidth, frame.Camera.ViewportHeight);
+        LayeredPlaySurfaceRenderer.Draw(this, viewport, backdropOnly, _tilesetProfile);
+        PrintClipped(panel.X, panel.Bottom + 1, _bounds.Width - 4, "The yellow sprite is pixel-positioned between adjacent cells.", Color.Gray);
+        ShowMoveSpriteOverlay(viewport, frame.Camera);
+    }
+
+    private void DrawMoveAnimationQueuePreview(int y)
+    {
+        var previewWidth = Math.Min(18, _bounds.Width - 8);
+        var previewHeight = Math.Min(12, Math.Max(0, _bounds.Bottom - y - 3));
+        if (previewWidth <= 2 || previewHeight <= 2)
+        {
+            HideMoveSpriteOverlay();
+            return;
+        }
+
+        var frame = StaticPlayRendererExamples.LayeredRoom(_tilesetProfile);
+        _moveQueuePlayback ??= new PlayAnimationQueuePlayback(StaticPlayRendererExamples.MoveQueueSteps(), frame.Camera);
+        var panel = new FrontendRect(_bounds.X + 4, y, previewWidth, previewHeight);
+        PanelRenderer.DrawPanel(this, panel, _tilesetProfile.Roles.PanelBorder, Color.Gold, Color.Black);
+        var active = _moveQueuePlayback.ActiveStep?.Id ?? "final redraw";
+        PrintClipped(panel.X + 1, panel.Y, panel.Width - 2, active, Color.LightYellow);
+        var backdropOnly = frame with { Entities = [], Overlays = [] };
+        var viewport = new FrontendRect(panel.X + 1, panel.Y + 1, frame.Camera.ViewportWidth, frame.Camera.ViewportHeight);
+        LayeredPlaySurfaceRenderer.Draw(this, viewport, backdropOnly, _tilesetProfile);
+        PrintClipped(panel.X, panel.Bottom + 1, _bounds.Width - 4, "Queue plays one initiative step at a time, then redraws final state.", Color.Gray);
+        ShowMoveQueueSpriteOverlay(viewport);
+    }
+
+    private void ShowMoveSpriteOverlay(FrontendRect viewport, PlayCamera camera)
+    {
+        var entity = StaticPlayRendererExamples.AnimatedPlayer();
+        var animation = StaticPlayRendererExamples.AdjacentMoveSlide();
+        var command = LayeredPlaySurfaceProjector.BuildAnimatedEntityCommands(camera, entity, animation, _moveAnimationElapsed)
+            .FirstOrDefault(command => command.Layer == PlayRenderLayer.EntitySprite);
+        if (command is null)
+        {
+            HideMoveSpriteOverlay();
+            return;
+        }
+
+        var pixelX = (int)Math.Round((viewport.X + command.ScreenPosition.X) * _displaySettings.ScaledTileWidth);
+        var pixelY = (int)Math.Round((viewport.Y + command.ScreenPosition.Y) * _displaySettings.ScaledTileHeight);
+        if (_moveSpriteOverlay is null)
+        {
+            _moveSpriteOverlay = new PixelGlyphSpriteConsole(command.Glyph, command.Foreground, command.Background);
+            Children.Add(_moveSpriteOverlay);
+        }
+
+        _moveSpriteOverlay.Position = new Point(pixelX, pixelY);
+        _moveSpriteOverlay.Surface.IsDirty = true;
+    }
+
+    private void ShowMoveQueueSpriteOverlay(FrontendRect viewport)
+    {
+        var command = _moveQueuePlayback?.ActiveCommands().FirstOrDefault(command => command.Layer == PlayRenderLayer.EntitySprite);
+        if (command is null)
+        {
+            HideMoveSpriteOverlay();
+            return;
+        }
+
+        var pixelX = (int)Math.Round((viewport.X + command.ScreenPosition.X) * _displaySettings.ScaledTileWidth);
+        var pixelY = (int)Math.Round((viewport.Y + command.ScreenPosition.Y) * _displaySettings.ScaledTileHeight);
+        if (_moveSpriteOverlay is null)
+        {
+            _moveSpriteOverlay = new PixelGlyphSpriteConsole(command.Glyph, command.Foreground, command.Background);
+            Children.Add(_moveSpriteOverlay);
+        }
+
+        _moveSpriteOverlay.SetGlyph(command.Glyph, command.Foreground, command.Background);
+        _moveSpriteOverlay.Position = new Point(pixelX, pixelY);
+        _moveSpriteOverlay.Surface.IsDirty = true;
+    }
+
+    private void HideMoveSpriteOverlay()
+    {
+        if (_moveSpriteOverlay is null) return;
+        Children.Remove(_moveSpriteOverlay);
+        _moveSpriteOverlay = null;
     }
 
     private void ShowSelectorOverlay()
@@ -217,3 +399,4 @@ internal sealed class ComponentGalleryConsole : Console
         Surface[x, y].Background = background;
     }
 }
+
