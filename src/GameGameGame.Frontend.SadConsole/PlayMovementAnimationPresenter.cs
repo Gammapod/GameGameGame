@@ -33,11 +33,18 @@ internal sealed class PlayMovementAnimationPresenter(
     public void Start(PlayGridViewModel beforeGrid, GridCoord before, GridCoord after, CoreDirection direction)
     {
         BaseGrid = beforeGrid;
+        var cell = beforeGrid.TryCellAt(before.X, before.Y);
+        if (cell?.EntityGlyph is null)
+        {
+            Clear();
+            return;
+        }
+
         var facing = tilesetProfile.Roles.FacingGlyph(direction);
         var entity = new PlayEntityVisualBundle(
             entityId.Value,
             new PlayWorldCoord(before.X, before.Y),
-            new PlayVisualGlyph(beforeGrid.CellAt(before.X, before.Y).EntityGlyph ?? '?', Color.Yellow, Color.Black, PlayRenderLayer.EntitySprite, $"entity:{entityId}:sprite"),
+            new PlayVisualGlyph(cell.EntityGlyph.Value, Color.Yellow, Color.Black, PlayRenderLayer.EntitySprite, $"entity:{entityId}:sprite"),
             [new PlayVisualGlyph(facing.Glyph, Color.LightYellow, Color.Black, PlayRenderLayer.EntityAccent, $"entity:{entityId}:facing")],
             []);
         var move = new PlayMoveAnimation(entityId.Value, new PlayWorldCoord(before.X, before.Y), new PlayWorldCoord(after.X, after.Y), settings.MoveDuration);

@@ -34,7 +34,7 @@ public sealed class WorkspaceScenarioCatalogServiceTests
         Assert.Equal("Debug Room", session.Name);
         Assert.True(session.CanPlay, string.Join(Environment.NewLine, session.ValidationDiagnostics.Concat(session.RuntimeFailures).Concat(session.CapabilityGaps)));
         Assert.Equal(new EntityId("debugPlayer"), session.PlayerEntityId);
-        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(4, 3)), session.World.GetEntityLocation(session.PlayerEntityId));
+        Assert.Equal(new PlaneCoord(new PlaneId("debugStartRoom"), new GridCoord(4, 3)), session.World.GetEntityLocation(session.PlayerEntityId));
     }
 
     [Fact]

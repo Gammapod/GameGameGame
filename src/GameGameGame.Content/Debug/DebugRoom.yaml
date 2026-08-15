@@ -8,11 +8,3 @@ scenarios:
   debug-room:
     name: Debug Room
     scenarioRootEntityTemplateId: debugRoomRoot
-    playerEntityTemplateId: debugPlayer
-    playerEntityId: debugPlayer
-    playerStart:
-      x: 4
-      y: 3
-    playerControls:
-      player-1:
-      - debugPlayer

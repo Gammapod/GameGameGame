@@ -23,14 +23,18 @@ internal sealed record PlayGridViewModel(
     int Height,
     IReadOnlyList<PlayCellVisual> Cells,
     EntityId ControlledEntityId,
-    GridCoord? ControlledEntityCoord)
+    GridCoord? ControlledEntityCoord,
+    PlaneId PlaneId,
+    EntityId? ContainerEntityId)
 {
-    public PlayCellVisual CellAt(int x, int y) => Cells.Single(cell => cell.X == x && cell.Y == y);
+    public PlayCellVisual? TryCellAt(int x, int y) => Cells.FirstOrDefault(cell => cell.X == x && cell.Y == y);
+
+    public PlayCellVisual CellAt(int x, int y) => TryCellAt(x, y)
+        ?? throw new InvalidOperationException($"Cell ({x},{y}) is outside rendered plane {PlaneId}.");
 
     public static PlayGridViewModel FromSession(PlayableScenarioSession session, TilesetProfile tilesetProfile)
     {
-        var planeId = session.World.GetRegisteredInventoryPlaneId(session.ActiveContainerEntityId)
-            ?? session.ActivePlaneId;
+        var planeId = ResolveRenderedPlane(session);
         var plane = session.World.Planes[planeId];
         var cells = new List<PlayCellVisual>();
 
@@ -62,8 +66,12 @@ internal sealed record PlayGridViewModel(
         }
 
         var controlledCoord = session.World.Entities.ContainsKey(session.PlayerEntityId)
+            && session.World.GetEntityLocation(session.PlayerEntityId).PlaneId == planeId
             ? session.World.GetEntityLocation(session.PlayerEntityId).Coord
             : (GridCoord?)null;
+        var containerEntityId = InventoryPlaneOwnership.TryFindOwner(session.World, planeId, out var ownerId)
+            ? ownerId
+            : (EntityId?)null;
 
         return new PlayGridViewModel(
             session.Name,
@@ -71,7 +79,29 @@ internal sealed record PlayGridViewModel(
             plane.Height,
             cells,
             session.PlayerEntityId,
-            controlledCoord);
+            controlledCoord,
+            planeId,
+            containerEntityId);
+    }
+
+    private static PlaneId ResolveRenderedPlane(PlayableScenarioSession session)
+    {
+        if (session.World.Entities.ContainsKey(session.PlayerEntityId))
+        {
+            var playerPlane = session.World.GetEntityLocation(session.PlayerEntityId).PlaneId;
+            if (session.World.Planes.ContainsKey(playerPlane))
+            {
+                return playerPlane;
+            }
+        }
+
+        var activeContainerPlane = session.World.GetRegisteredInventoryPlaneId(session.ActiveContainerEntityId);
+        if (activeContainerPlane is { } planeId && session.World.Planes.ContainsKey(planeId))
+        {
+            return planeId;
+        }
+
+        return session.ActivePlaneId;
     }
 
     private static int ResolveEntityGlyph(PlayableScenarioSession session, TilesetProfile tilesetProfile, EntityId entityId)

@@ -17,6 +17,10 @@ public sealed class ContentWorkspaceCompilerTests
         Assert.NotNull(result.Registry);
         Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.EntityTemplate && symbol.Id == "debugPlayer" && symbol.DocumentId == "canonical.creatures.debug-player");
         Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.ActionPlan && symbol.Id == "debugPlayerActionPlan" && symbol.DocumentId == "canonical.creatures.debug-player");
+        Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.EntityTemplate && symbol.Id == "scrap" && symbol.DocumentId == "canonical.substrates.scrap");
+        Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.EntityTemplate && symbol.Id == "chest" && symbol.DocumentId == "canonical.objects.chest");
+        Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.EntityTemplate && symbol.Id == "bag" && symbol.DocumentId == "canonical.objects.bag");
+        Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.EntityTemplate && symbol.Id == "pushBlock" && symbol.DocumentId == "canonical.objects.push-block");
         Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.EntityTemplate && symbol.Id == "debugRoomRoot" && symbol.DocumentId == "canonical.spaces.debug-room-root");
         Assert.Contains(result.Symbols, symbol => symbol.Kind == ContentSymbolKind.Scenario && symbol.Id == "debug-room" && symbol.DocumentId == "debug.debug-room");
         Assert.All(result.WorkspaceDocuments.Where(document => document.SourceKind == ContentWorkspaceSourceKind.Canonical), document => Assert.True(document.IsReadOnly));
@@ -32,11 +36,30 @@ public sealed class ContentWorkspaceCompilerTests
 
         Assert.Empty(materialization.ValidationDiagnostics);
         Assert.Equal(new EntityTemplateId("debugRoomRoot"), materialization.ScenarioRootEntityTemplateId);
-        Assert.Equal(new EntityId("debugPlayer"), materialization.PlayerEntityId);
-        Assert.Equal(new PlaneCoord(new PlaneId("scenarioRoot"), new GridCoord(4, 3)), materialization.PlayerLocation);
+        Assert.Null(materialization.PlayerEntityId);
+        Assert.Null(materialization.PlayerLocation);
+        Assert.Equal([new EntityId("debugPlayer")], materialization.PlayerControls["player-1"]);
+        Assert.Equal(new PlaneCoord(new PlaneId("debugStartRoom"), new GridCoord(4, 3)), materialization.World.GetEntityLocation(new EntityId("debugPlayer")));
+        for (var index = 1; index <= 5; index++)
+        {
+            Assert.True(materialization.World.Entities.ContainsKey(new EntityId($"debugScrap{index}")));
+        }
+
+        Assert.Equal(new PlaneCoord(new PlaneId("debugStartRoom"), new GridCoord(1, 1)), materialization.World.GetEntityLocation(new EntityId("debugChest")));
+        Assert.Equal(new PlaneCoord(new PlaneId("debugStartRoom"), new GridCoord(7, 1)), materialization.World.GetEntityLocation(new EntityId("debugBag")));
+        Assert.Equal(new PlaneCoord(new PlaneId("debugStartRoom"), new GridCoord(4, 4)), materialization.World.GetEntityLocation(new EntityId("debugPushBlock")));
+        var chest = materialization.Registry.EntityTemplates[new EntityTemplateId("chest")];
+        var bag = materialization.Registry.EntityTemplates[new EntityTemplateId("bag")];
+        var pushBlock = materialization.Registry.EntityTemplates[new EntityTemplateId("pushBlock")];
+        Assert.True(chest.Bulk > materialization.Registry.EntityTemplates[new EntityTemplateId("debugPlayer")].Aperture);
+        Assert.True(bag.Bulk <= materialization.Registry.EntityTemplates[new EntityTemplateId("debugPlayer")].Aperture);
+        Assert.True(materialization.Registry.EntityTemplates[new EntityTemplateId("debugPlayer")].Bulk > bag.Aperture);
+        Assert.True(pushBlock.Bulk <= materialization.Registry.EntityTemplates[new EntityTemplateId("debugPlayer")].Aperture);
+        Assert.False(materialization.Registry.EntityTemplates[new EntityTemplateId("debugPlayer")].Bulk > pushBlock.Aperture);
+
         Assert.Empty(run.ValidationDiagnostics);
         Assert.Contains("Run mode: Workspace persisted scenario simulation", run.SetupLines);
-        Assert.Contains(run.FinalStateLines, line => line.Contains("Debug Player: scenarioRoot(4,3), facing North", StringComparison.Ordinal));
+        Assert.Contains(run.FinalStateLines, line => line.Contains("Debug Start Room: scenarioRoot(1,1)", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -716,6 +739,10 @@ public sealed class ContentWorkspaceCompilerTests
     private static ContentWorkspace LoadInitialDebugRoomWorkspace()
     {
         var debugPlayerPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Canonical", "Creatures", "DebugPlayer.yaml"));
+        var chestPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Canonical", "Objects", "Chest.yaml"));
+        var bagPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Canonical", "Objects", "Bag.yaml"));
+        var pushBlockPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Canonical", "Objects", "PushBlock.yaml"));
+        var scrapPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Canonical", "Substrates", "Scrap.yaml"));
         var debugRoomRootPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Canonical", "Spaces", "DebugRoomRoot.yaml"));
         var scenarioPath = FindRepositoryFile(Path.Combine("src", "GameGameGame.Content", "Debug", "DebugRoom.yaml"));
 
@@ -724,6 +751,30 @@ public sealed class ContentWorkspaceCompilerTests
                 EditableContentDocument.LoadYaml(File.ReadAllText(debugPlayerPath)),
                 "canonical.creatures.debug-player",
                 debugPlayerPath,
+                ContentWorkspaceSourceKind.Canonical,
+                IsReadOnly: true),
+            new ContentWorkspaceDocument(
+                EditableContentDocument.LoadYaml(File.ReadAllText(chestPath)),
+                "canonical.objects.chest",
+                chestPath,
+                ContentWorkspaceSourceKind.Canonical,
+                IsReadOnly: true),
+            new ContentWorkspaceDocument(
+                EditableContentDocument.LoadYaml(File.ReadAllText(bagPath)),
+                "canonical.objects.bag",
+                bagPath,
+                ContentWorkspaceSourceKind.Canonical,
+                IsReadOnly: true),
+            new ContentWorkspaceDocument(
+                EditableContentDocument.LoadYaml(File.ReadAllText(pushBlockPath)),
+                "canonical.objects.push-block",
+                pushBlockPath,
+                ContentWorkspaceSourceKind.Canonical,
+                IsReadOnly: true),
+            new ContentWorkspaceDocument(
+                EditableContentDocument.LoadYaml(File.ReadAllText(scrapPath)),
+                "canonical.substrates.scrap",
+                scrapPath,
                 ContentWorkspaceSourceKind.Canonical,
                 IsReadOnly: true),
             new ContentWorkspaceDocument(

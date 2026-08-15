@@ -17,6 +17,7 @@ public sealed class PlayGridViewModelTests
 
         Assert.Equal(9, grid.Width);
         Assert.Equal(7, grid.Height);
+        Assert.Equal(new GameGameGame.Core.EntityId("debugStartRoom"), grid.ContainerEntityId);
         Assert.Equal(63, grid.Cells.Count);
         Assert.All(grid.Cells, cell => Assert.Equal(tileset.Roles.DefaultBackdrop, cell.BackdropGlyph));
         Assert.Equal(new GameGameGame.Core.GridCoord(4, 3), grid.ControlledEntityCoord);

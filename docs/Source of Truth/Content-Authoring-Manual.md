@@ -273,6 +273,8 @@ Targeting rules currently select by optional template ID, target-capability adje
 
 Author scenarios as small compositions of normal content.
 
+For new composed/exhibit scenarios, treat the scenario root as a world/level container rather than a gameplay room. Players and ordinary interactable objects should normally be placed inside room-like child entities contained by the root, with playable actors authored as placed instances using `controller: Player`. Use direct placement in the scenario-root plane only for root-only compatibility tests, small engine/editor fixtures, intentionally container-like scenarios, or legacy content awaiting migration.
+
 Current persisted scenario fields:
 
 | Field | Purpose |

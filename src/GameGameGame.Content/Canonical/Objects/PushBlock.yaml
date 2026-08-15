@@ -1,0 +1,32 @@
+entityTemplates:
+  pushBlock:
+    name: Push Block
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 2
+    carryingCapacity: 0
+    bulk: 2
+    aperture: 5
+
+presentations:
+  pushBlock:
+    presentationId: object.pushBlock
+    paletteId: object.pushBlock.default
+    glyph: '■'
+    color: Gray
+
+presentationCatalog:
+  object.pushBlock:
+    name: Push Block
+    fallbackText: '■'
+    tags:
+    - object
+    - pushable
+
+palettes:
+  object.pushBlock.default:
+    name: Push Block Default
+    roles:
+      body: Gray
+
+actionPlans: {}

@@ -39,6 +39,10 @@ public static class WorkspaceScenarioCatalogService
     public static readonly IReadOnlyList<string> DefaultDebugRoomWorkspacePaths =
     [
         Path.Combine("src", "GameGameGame.Content", "Canonical", "Creatures", "DebugPlayer.yaml"),
+        Path.Combine("src", "GameGameGame.Content", "Canonical", "Objects", "Chest.yaml"),
+        Path.Combine("src", "GameGameGame.Content", "Canonical", "Objects", "Bag.yaml"),
+        Path.Combine("src", "GameGameGame.Content", "Canonical", "Objects", "PushBlock.yaml"),
+        Path.Combine("src", "GameGameGame.Content", "Canonical", "Substrates", "Scrap.yaml"),
         Path.Combine("src", "GameGameGame.Content", "Canonical", "Spaces", "DebugRoomRoot.yaml"),
         Path.Combine("src", "GameGameGame.Content", "Debug", "DebugRoom.yaml")
     ];
@@ -159,6 +163,16 @@ public static class WorkspaceScenarioCatalogService
         if (relativePath.Contains(Path.Combine("Canonical", "Spaces"), StringComparison.OrdinalIgnoreCase))
         {
             return $"canonical.spaces.{ToKebabCase(fileName)}";
+        }
+
+        if (relativePath.Contains(Path.Combine("Canonical", "Substrates"), StringComparison.OrdinalIgnoreCase))
+        {
+            return $"canonical.substrates.{ToKebabCase(fileName)}";
+        }
+
+        if (relativePath.Contains(Path.Combine("Canonical", "Objects"), StringComparison.OrdinalIgnoreCase))
+        {
+            return $"canonical.objects.{ToKebabCase(fileName)}";
         }
 
         if (relativePath.Contains(Path.Combine("Debug"), StringComparison.OrdinalIgnoreCase))

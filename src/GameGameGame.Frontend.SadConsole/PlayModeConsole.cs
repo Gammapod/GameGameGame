@@ -152,7 +152,7 @@ internal sealed class PlayModeConsole : Console
         ClearSurface();
         DrawBorder();
         Print(2, 1, $"Play: {_session.Name} [{_session.ScenarioId}]", Color.White);
-        Print(2, 2, $"Current place: {_session.ActiveContainerEntityId} | Player: {_session.PlayerEntityId} | {_message}", Color.Gray);
+        Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Player: {_session.PlayerEntityId} | {_message}", Color.Gray);
         var visibleGrid = _animationPresenter.BaseGrid ?? _grid;
         var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _session.PlayerEntityId } : null;
         var previewCoord = _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
@@ -181,6 +181,19 @@ internal sealed class PlayModeConsole : Console
                 SetGlyph(x, y, _tilesetProfile.Blank, Color.White, Color.Black);
             }
         }
+    }
+
+    private string CurrentPlaceLabel()
+    {
+        var placeId = _grid.ContainerEntityId;
+        if (placeId is null)
+        {
+            return _grid.PlaneId.ToString();
+        }
+
+        return _session.World.Entities.TryGetValue(placeId.Value, out var entity) && !string.IsNullOrWhiteSpace(entity.Name)
+            ? $"{entity.Name} ({placeId})"
+            : placeId.Value.ToString();
     }
 
     private void DrawBorder()

@@ -1,12 +1,74 @@
 entityTemplates:
   debugRoomRoot:
-    name: Debug Room Root
+    name: Debug Scenario Root
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: debugStartRoom
+      templateId: debugStartRoom
+      coord:
+        x: 1
+        y: 1
+
+  debugStartRoom:
+    name: Debug Start Room
     inventoryWidth: 9
     inventoryHeight: 7
     weight: 1000
     carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
+    carriedEntities:
+    - entityId: debugPlayer
+      templateId: debugPlayer
+      coord:
+        x: 4
+        y: 3
+      controller: Player
+    - entityId: debugScrap1
+      templateId: scrap
+      coord:
+        x: 2
+        y: 3
+    - entityId: debugScrap2
+      templateId: scrap
+      coord:
+        x: 3
+        y: 3
+    - entityId: debugScrap3
+      templateId: scrap
+      coord:
+        x: 5
+        y: 3
+    - entityId: debugScrap4
+      templateId: scrap
+      coord:
+        x: 6
+        y: 3
+    - entityId: debugScrap5
+      templateId: scrap
+      coord:
+        x: 4
+        y: 2
+    - entityId: debugChest
+      templateId: chest
+      coord:
+        x: 1
+        y: 1
+    - entityId: debugBag
+      templateId: bag
+      coord:
+        x: 7
+        y: 1
+    - entityId: debugPushBlock
+      templateId: pushBlock
+      coord:
+        x: 4
+        y: 4
 
 presentations:
   debugRoomRoot:
@@ -14,11 +76,23 @@ presentations:
     paletteId: space.debug-room.default
     glyph: '#'
     color: Gray
+  debugStartRoom:
+    presentationId: space.debug-start-room
+    paletteId: space.debug-room.default
+    glyph: '.'
+    color: Gray
 
 presentationCatalog:
   space.debug-room:
-    name: Debug Room
+    name: Debug Scenario Root
     fallbackText: '#'
+    tags:
+    - space
+    - scenario-root
+    - debug
+  space.debug-start-room:
+    name: Debug Start Room
+    fallbackText: '.'
     tags:
     - space
     - room

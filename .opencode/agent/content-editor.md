@@ -5,14 +5,17 @@ model: openai/gpt-5.5
 permission:
   read:
     "*": ask
+    "assets/Candii.tileset.json": allow
     "docs/*": allow
     "src/*": deny
     "src/GameGameGame.Content/*": allow
+    "tests/*": allow
   edit:
     "*": ask
     "docs/*": allow
     "src/*": deny
     "src/GameGameGame.Content/*": allow
+    "tests/*": deny
   task:
     "frontend-owner": allow
     "core-owner": allow
