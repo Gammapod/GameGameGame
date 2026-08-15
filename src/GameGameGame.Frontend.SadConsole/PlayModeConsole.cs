@@ -13,14 +13,11 @@ internal sealed class PlayModeConsole : Console
     private readonly FrontendDisplayShell _shell;
     private readonly TilesetProfile _tilesetProfile;
     private readonly PlayMovementController _movement;
-    private readonly PlayAnimationSettings _animationSettings;
     private readonly QueuedMovementBuffer<CoreDirection> _queuedMovement = new();
     private readonly MovementPreviewState _movementPreview = new();
+    private readonly PlayMovementAnimationPresenter _animationPresenter;
     private readonly Action _returnToBrowser;
     private PlayGridViewModel _grid;
-    private PlayGridViewModel? _animationBaseGrid;
-    private PlayAnimationQueuePlayback? _animationPlayback;
-    private PixelGlyphSpriteConsole? _animationSprite;
     private string _message = "Numpad/arrows/WASD: aim  Space/Enter: move  Esc: return";
 
     public PlayModeConsole(
@@ -35,7 +32,7 @@ internal sealed class PlayModeConsole : Console
         _tilesetProfile = tilesetProfile;
         _returnToBrowser = returnToBrowser;
         _movement = new PlayMovementController(session);
-        _animationSettings = PlayAnimationSettings.Default;
+        _animationPresenter = new PlayMovementAnimationPresenter(this, shell, tilesetProfile, PlayAnimationSettings.Default, session.PlayerEntityId);
         _grid = PlayGridViewModel.FromSession(session, tilesetProfile);
         UseKeyboard = true;
         IsFocused = true;
@@ -45,48 +42,40 @@ internal sealed class PlayModeConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
-        if (keyboard.IsKeyReleased(Keys.Escape))
+        var intent = PlayInputController.Read(keyboard, _movementPreview.HasPreview);
+        switch (intent.Kind)
         {
-            _returnToBrowser();
-            return true;
-        }
+            case PlayControlIntentKind.Cancel:
+                _returnToBrowser();
+                return true;
+            case PlayControlIntentKind.AimMove when intent.Direction is { } aim:
+                _movementPreview.Set(aim);
+                _message = $"Aiming {aim}. Space/Enter to move.";
+                Redraw();
+                return true;
+            case PlayControlIntentKind.ConfirmMove:
+                if (intent.Direction is { } confirmAim)
+                {
+                    _movementPreview.Set(confirmAim);
+                }
 
-        var heldDirection = MovementPreviewKeyboardReader.ReadHeldDirection(keyboard.KeysDown.Select(key => key.Key));
-        if (heldDirection is { } direction)
-        {
-            _movementPreview.Set(direction);
-            _message = $"Aiming {direction}. Space/Enter to move.";
+                ConfirmMovePreview();
+                return true;
+            case PlayControlIntentKind.ClearMoveAim:
+                _movementPreview.Clear();
+                _message = "Movement aim cleared.";
+                Redraw();
+                return true;
+            default:
+                return false;
         }
-
-        if (MovementPreviewKeyboardReader.IsConfirmReleased(keyboard))
-        {
-            ConfirmMovePreview();
-            return true;
-        }
-
-        if (heldDirection is not null)
-        {
-            Redraw();
-            return true;
-        }
-
-        if (_movementPreview.HasPreview && keyboard.KeysReleased.Any(key => MovementPreviewKeyboardReader.IsMovementKey(key.Key)))
-        {
-            _movementPreview.Clear();
-            _message = "Movement aim cleared.";
-            Redraw();
-            return true;
-        }
-
-        return false;
     }
 
     public override void Render(TimeSpan delta)
     {
-        if (_animationPlayback is not null)
+        if (_animationPresenter.IsAnimating)
         {
-            _animationPlayback.Advance(delta, _animationSettings.Speed);
-            if (_animationPlayback.Completed)
+            if (_animationPresenter.Advance(delta))
             {
                 EndAnimationAndRedrawFinalState();
             }
@@ -109,7 +98,7 @@ internal sealed class PlayModeConsole : Console
             return;
         }
 
-        if (_animationPlayback is not null)
+        if (_animationPresenter.IsAnimating)
         {
             _queuedMovement.Queue(confirmedDirection);
             _message = $"Queued {confirmedDirection}.";
@@ -139,35 +128,17 @@ internal sealed class PlayModeConsole : Console
         _movementPreview.Clear();
         if (result.MovedOneCell)
         {
-            StartMoveAnimation(beforeGrid, result.BeforeCoord, result.AfterCoord, direction);
+            _animationPresenter.Start(beforeGrid, result.BeforeCoord, result.AfterCoord, direction);
+            Redraw();
             return;
         }
 
         Redraw();
     }
 
-    private void StartMoveAnimation(PlayGridViewModel beforeGrid, GridCoord before, GridCoord after, CoreDirection direction)
-    {
-        _animationBaseGrid = beforeGrid;
-        var facing = _tilesetProfile.Roles.FacingGlyph(direction);
-        var entity = new PlayEntityVisualBundle(
-            _session.PlayerEntityId.Value,
-            new PlayWorldCoord(before.X, before.Y),
-            new PlayVisualGlyph(beforeGrid.CellAt(before.X, before.Y).EntityGlyph ?? '?', Color.Yellow, Color.Black, PlayRenderLayer.EntitySprite, $"entity:{_session.PlayerEntityId}:sprite"),
-            [new PlayVisualGlyph(facing.Glyph, Color.LightYellow, Color.Black, PlayRenderLayer.EntityAccent, $"entity:{_session.PlayerEntityId}:facing")],
-            []);
-        var move = new PlayMoveAnimation(_session.PlayerEntityId.Value, new PlayWorldCoord(before.X, before.Y), new PlayWorldCoord(after.X, after.Y), _animationSettings.MoveDuration);
-        _animationPlayback = new PlayAnimationQueuePlayback([
-            new PlayAnimationStep("player-move", move, entity)
-        ], new PlayCamera(new PlayWorldCoord(0, 0), beforeGrid.Width, beforeGrid.Height));
-        Redraw();
-    }
-
     private void EndAnimationAndRedrawFinalState()
     {
-        HideAnimationSprite();
-        _animationPlayback = null;
-        _animationBaseGrid = null;
+        _animationPresenter.Clear();
         _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
         Redraw();
         if (_queuedMovement.TryConsume(out var queuedDirection))
@@ -182,58 +153,23 @@ internal sealed class PlayModeConsole : Console
         DrawBorder();
         Print(2, 1, $"Play: {_session.Name} [{_session.ScenarioId}]", Color.White);
         Print(2, 2, $"Current place: {_session.ActiveContainerEntityId} | Player: {_session.PlayerEntityId} | {_message}", Color.Gray);
-        var visibleGrid = _animationBaseGrid ?? _grid;
-        var hidden = _animationPlayback is null ? null : new HashSet<EntityId> { _session.PlayerEntityId };
+        var visibleGrid = _animationPresenter.BaseGrid ?? _grid;
+        var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _session.PlayerEntityId } : null;
         var previewCoord = _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
             ? destination
             : (GridCoord?)null;
         PlayGridRenderer.Draw(this, _shell.DrawableBounds, visibleGrid, hidden, previewCoord, CellHighlightPresentation.MovePreview(_tilesetProfile));
-        if (_animationPlayback is not null)
+        if (_animationPresenter.IsAnimating)
         {
-            ShowAnimationSprite(PlayGridRenderer.ResolveGridBounds(_shell.DrawableBounds, visibleGrid));
+            _animationPresenter.Draw(
+                PlayGridRenderer.ResolveGridBounds(_shell.DrawableBounds, visibleGrid),
+                _session.World.GetActionFacing(_session.PlayerEntityId) ?? CoreDirection.North);
         }
         else
         {
-            HideAnimationSprite();
+            _animationPresenter.Clear();
         }
         Surface.IsDirty = true;
-    }
-
-    private void ShowAnimationSprite(FrontendRect gridBounds)
-    {
-        var commands = _animationPlayback?.ActiveCommands();
-        var command = commands?.FirstOrDefault(command => command.Layer == PlayRenderLayer.EntitySprite);
-        if (commands is null || command is null)
-        {
-            HideAnimationSprite();
-            return;
-        }
-
-        var facing = commands.FirstOrDefault(command => command.Layer == PlayRenderLayer.EntityAccent);
-        global::SadConsole.CellDecorator? decorator = facing is null
-            ? null
-            : new global::SadConsole.CellDecorator(facing.Foreground, facing.Glyph, _tilesetProfile.Roles.FacingGlyph(_session.World.GetActionFacing(_session.PlayerEntityId) ?? CoreDirection.North).Mirror);
-
-        var tileWidth = _shell.PixelWidth / Width;
-        var tileHeight = _shell.PixelHeight / Height;
-        var pixelX = PixelSnapper.SnapToStep((gridBounds.X + command.ScreenPosition.X) * tileWidth, tileWidth / _tilesetProfile.TileWidth);
-        var pixelY = PixelSnapper.SnapToStep((gridBounds.Y + command.ScreenPosition.Y) * tileHeight, tileHeight / _tilesetProfile.TileHeight);
-        if (_animationSprite is null)
-        {
-            _animationSprite = new PixelGlyphSpriteConsole(command.Glyph, command.Foreground, command.Background);
-            Children.Add(_animationSprite);
-        }
-
-        _animationSprite.SetGlyph(command.Glyph, command.Foreground, command.Background, decorator);
-        _animationSprite.Position = new Point(pixelX, pixelY);
-        _animationSprite.Surface.IsDirty = true;
-    }
-
-    private void HideAnimationSprite()
-    {
-        if (_animationSprite is null) return;
-        Children.Remove(_animationSprite);
-        _animationSprite = null;
     }
 
     private void ClearSurface()
