@@ -15,6 +15,7 @@ internal sealed class ComponentGalleryConsole : Console
     private OverlayPanelConsole? _selectorOverlay;
     private OverlayPanelConsole? _toastOverlay;
     private PixelGlyphSpriteConsole? _moveSpriteOverlay;
+    private EntityInspectionPlayspaceOverlayPresenter? _inspectionOverlays;
     private ToastNotificationState? _toast;
     private TimeSpan _moveAnimationElapsed;
     private PlayAnimationQueuePlayback? _moveQueuePlayback;
@@ -110,6 +111,7 @@ internal sealed class ComponentGalleryConsole : Console
                 HideSelectorOverlay();
                 HideToastOverlay();
                 HideMoveSpriteOverlay();
+                ClearInspectionOverlays();
                 _returnToBrowser();
                 break;
             case ComponentGalleryResultKind.SelectorPopupRequested:
@@ -121,16 +123,24 @@ internal sealed class ComponentGalleryConsole : Console
             case ComponentGalleryResultKind.StaticPlayRendererSelected:
                 HideSelectorOverlay();
                 HideMoveSpriteOverlay();
+                ClearInspectionOverlays();
                 _moveQueuePlayback = null;
                 break;
             case ComponentGalleryResultKind.MoveAnimationSelected:
                 HideSelectorOverlay();
+                ClearInspectionOverlays();
                 _moveAnimationElapsed = TimeSpan.Zero;
                 _moveQueuePlayback = null;
                 break;
             case ComponentGalleryResultKind.MoveAnimationQueueSelected:
                 HideSelectorOverlay();
+                ClearInspectionOverlays();
                 _moveQueuePlayback = new PlayAnimationQueuePlayback(StaticPlayRendererExamples.MoveQueueSteps(), StaticPlayRendererExamples.LayeredRoom(_tilesetProfile).Camera);
+                break;
+            case ComponentGalleryResultKind.EntityInspectionPanelSelected:
+                HideSelectorOverlay();
+                HideMoveSpriteOverlay();
+                _moveQueuePlayback = null;
                 break;
         }
     }
@@ -190,6 +200,13 @@ internal sealed class ComponentGalleryConsole : Console
             return;
         }
 
+        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.EntityInspectionPanel)
+        {
+            DrawEntityInspectionPanelPreview(y);
+            return;
+        }
+
+        ClearInspectionOverlays();
         HideMoveSpriteOverlay();
         PrintClipped(_bounds.X + 2, y, _bounds.Width - 4, "Select an example to inspect its live pattern.", Color.DarkGray);
     }
@@ -197,6 +214,7 @@ internal sealed class ComponentGalleryConsole : Console
     private void DrawStaticPlayRendererPreview(int y)
     {
         HideMoveSpriteOverlay();
+        ClearInspectionOverlays();
         var previewWidth = Math.Min(18, _bounds.Width - 8);
         var previewHeight = Math.Min(12, Math.Max(0, _bounds.Bottom - y - 3));
         if (previewWidth <= 2 || previewHeight <= 2)
@@ -215,6 +233,7 @@ internal sealed class ComponentGalleryConsole : Console
     private void DrawMoveAnimationPreview(int y)
     {
         var previewWidth = Math.Min(18, _bounds.Width - 8);
+        ClearInspectionOverlays();
         var previewHeight = Math.Min(12, Math.Max(0, _bounds.Bottom - y - 3));
         if (previewWidth <= 2 || previewHeight <= 2)
         {
@@ -236,6 +255,7 @@ internal sealed class ComponentGalleryConsole : Console
     private void DrawMoveAnimationQueuePreview(int y)
     {
         var previewWidth = Math.Min(18, _bounds.Width - 8);
+        ClearInspectionOverlays();
         var previewHeight = Math.Min(12, Math.Max(0, _bounds.Bottom - y - 3));
         if (previewWidth <= 2 || previewHeight <= 2)
         {
@@ -254,6 +274,31 @@ internal sealed class ComponentGalleryConsole : Console
         LayeredPlaySurfaceRenderer.Draw(this, viewport, backdropOnly, _tilesetProfile);
         PrintClipped(panel.X, panel.Bottom + 1, _bounds.Width - 4, "Queue plays one initiative step at a time, then redraws final state.", Color.Gray);
         ShowMoveQueueSpriteOverlay(viewport);
+    }
+
+    private void DrawEntityInspectionPanelPreview(int y)
+    {
+        HideMoveSpriteOverlay();
+        var panelWidth = Math.Min(58, _bounds.Width - 8);
+        var panelHeight = Math.Min(24, Math.Max(0, _bounds.Bottom - y - 1));
+        if (panelWidth < 24 || panelHeight < 16)
+        {
+            ClearInspectionOverlays();
+            PrintClipped(_bounds.X + 2, y, _bounds.Width - 4, "Not enough space to show inspection panel example.", Color.Red);
+            return;
+        }
+
+        var bounds = new FrontendRect(_bounds.X + 4, y, panelWidth, panelHeight);
+        var layout = EntityInspectionPanelLayout.Resolve(bounds, showInventory: true);
+        EntityInspectionPanelRenderer.Draw(this, layout, EntityInspectionPanelModel.GalleryExample(), _tilesetProfile);
+        _inspectionOverlays ??= new EntityInspectionPlayspaceOverlayPresenter(this, _displaySettings, _tilesetProfile);
+        _inspectionOverlays.Draw(layout);
+    }
+
+    private void ClearInspectionOverlays()
+    {
+        _inspectionOverlays?.Clear();
+        _inspectionOverlays = null;
     }
 
     private void ShowMoveSpriteOverlay(FrontendRect viewport, PlayCamera camera)

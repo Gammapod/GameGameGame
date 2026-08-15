@@ -49,7 +49,11 @@ internal sealed record TileBorderGlyphSet(
     int BottomLeft,
     int BottomRight,
     int Horizontal,
-    int Vertical);
+    int Vertical,
+    int HorizontalWithSouthVertical,
+    int HorizontalWithNorthVertical,
+    int VerticalWithEastHorizontal,
+    int VerticalWithWestHorizontal);
 
 internal static class TilesetProfileLoader
 {

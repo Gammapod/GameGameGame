@@ -18,6 +18,7 @@ var configuration = Builder.GetBuilder()
     .ConfigureFonts((fonts, _) =>
     {
         fonts.UseCustomFont("assets/Candii.font");
+        fonts.AddExtraFonts("assets/Candii16.font");
         fonts.SetDefaultFontSize(display.FontSizePreset);
     })
     .SetWindowSizeInPixels(display.StartupWindowWidthPixels, display.StartupWindowHeightPixels)

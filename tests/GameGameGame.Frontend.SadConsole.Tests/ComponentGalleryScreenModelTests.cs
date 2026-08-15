@@ -14,6 +14,7 @@ public sealed class ComponentGalleryScreenModelTests
         Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.StaticPlayRenderer && example.Id == "static-play-renderer");
         Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.MoveAnimation && example.Id == "move-animation");
         Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.MoveAnimationQueue && example.Id == "move-animation-queue");
+        Assert.Contains(model.Examples, example => example.Kind == ComponentGalleryExampleKind.EntityInspectionPanel && example.Id == "entity-inspection-panel");
     }
 
     [Fact]
@@ -91,5 +92,16 @@ public sealed class ComponentGalleryScreenModelTests
 
         Assert.Equal(ComponentGalleryResultKind.MoveAnimationQueueSelected, result.Kind);
         Assert.Equal(ComponentGalleryExampleKind.MoveAnimationQueue, model.SelectedExample?.Kind);
+    }
+
+    [Fact]
+    public void ComponentGalleryEntityInspectionPanelExampleCanBeSelected()
+    {
+        var model = new ComponentGalleryScreenModel(selectedIndex: 5);
+
+        var result = model.Handle(ComponentGalleryCommand.Select);
+
+        Assert.Equal(ComponentGalleryResultKind.EntityInspectionPanelSelected, result.Kind);
+        Assert.Equal(ComponentGalleryExampleKind.EntityInspectionPanel, model.SelectedExample?.Kind);
     }
 }

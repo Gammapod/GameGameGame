@@ -45,13 +45,18 @@
     "facingNS": 252,
     "facingWE": 253,
     "moveHighlight": 218,
+    "entityHighlight": 217,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,
       "bottomLeft": 154,
       "bottomRight": 179,
       "horizontal": 158,
-      "vertical": 141
+      "vertical": 141,
+      "horizontalWithSouthVertical": 156,
+      "horizontalWithNorthVertical": 155,
+      "verticalWithEastHorizontal": 157,
+      "verticalWithWestHorizontal": 159
     }
   }
 }

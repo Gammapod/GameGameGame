@@ -14,7 +14,8 @@ internal enum ComponentGalleryExampleKind
     ToastPopup,
     StaticPlayRenderer,
     MoveAnimation,
-    MoveAnimationQueue
+    MoveAnimationQueue,
+    EntityInspectionPanel
 }
 
 internal enum ComponentGalleryResultKind
@@ -25,7 +26,8 @@ internal enum ComponentGalleryResultKind
     ToastRequested,
     StaticPlayRendererSelected,
     MoveAnimationSelected,
-    MoveAnimationQueueSelected
+    MoveAnimationQueueSelected,
+    EntityInspectionPanelSelected
 }
 
 internal sealed record ComponentGalleryExample(
@@ -65,7 +67,8 @@ internal sealed class ComponentGalleryScreenModel
         new("toast-popup", "Toast popup", "Offset warning notification; auto-dismisses after four seconds.", ComponentGalleryExampleKind.ToastPopup),
         new("static-play-renderer", "Static Play renderer", "Layered backdrop/entity/accent/status/highlight rendering through a camera.", ComponentGalleryExampleKind.StaticPlayRenderer),
         new("move-animation", "Move animation", "Simple adjacent-cell slide preview for an entity visual bundle.", ComponentGalleryExampleKind.MoveAnimation),
-        new("move-animation-queue", "Move animation queue", "Sequential initiative-order slide playback with final redraw signal.", ComponentGalleryExampleKind.MoveAnimationQueue)
+        new("move-animation-queue", "Move animation queue", "Sequential initiative-order slide playback with final redraw signal.", ComponentGalleryExampleKind.MoveAnimationQueue),
+        new("entity-inspection-panel", "Entity inspection panel", "Popup status/actions/inventory layout with mixed-scale playspace regions.", ComponentGalleryExampleKind.EntityInspectionPanel)
     ];
 
     public ComponentGalleryResult Handle(ComponentGalleryCommand command)
@@ -167,6 +170,7 @@ internal sealed class ComponentGalleryScreenModel
             ComponentGalleryExampleKind.StaticPlayRenderer => new ComponentGalleryResult(ComponentGalleryResultKind.StaticPlayRendererSelected, "Static Play renderer example selected."),
             ComponentGalleryExampleKind.MoveAnimation => new ComponentGalleryResult(ComponentGalleryResultKind.MoveAnimationSelected, "Move animation example selected."),
             ComponentGalleryExampleKind.MoveAnimationQueue => new ComponentGalleryResult(ComponentGalleryResultKind.MoveAnimationQueueSelected, "Move animation queue example selected."),
+            ComponentGalleryExampleKind.EntityInspectionPanel => new ComponentGalleryResult(ComponentGalleryResultKind.EntityInspectionPanelSelected, "Entity inspection panel example selected."),
             _ => new ComponentGalleryResult(ComponentGalleryResultKind.Stay, "No gallery example is selected.")
         };
     }

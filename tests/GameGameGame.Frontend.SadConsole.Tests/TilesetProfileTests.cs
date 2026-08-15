@@ -69,5 +69,9 @@ public sealed class TilesetProfileTests
         Assert.Equal(179, profile.Roles.PanelBorder.BottomRight);
         Assert.Equal(158, profile.Roles.PanelBorder.Horizontal);
         Assert.Equal(141, profile.Roles.PanelBorder.Vertical);
+        Assert.Equal(156, profile.Roles.PanelBorder.HorizontalWithSouthVertical);
+        Assert.Equal(155, profile.Roles.PanelBorder.HorizontalWithNorthVertical);
+        Assert.Equal(157, profile.Roles.PanelBorder.VerticalWithEastHorizontal);
+        Assert.Equal(159, profile.Roles.PanelBorder.VerticalWithWestHorizontal);
     }
 }
