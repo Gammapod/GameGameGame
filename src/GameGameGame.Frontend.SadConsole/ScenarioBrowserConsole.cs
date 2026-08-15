@@ -184,7 +184,7 @@ internal sealed class ScenarioBrowserConsole : Console
             }
 
             HideToastOverlay();
-            var play = new PlayModeConsole(session, _shell, _tilesetProfile, () =>
+            var play = new PlayModeConsole(session, _shell, _displaySettings, _tilesetProfile, () =>
             {
                 global::SadConsole.Game.Instance.Screen = this;
                 IsFocused = true;

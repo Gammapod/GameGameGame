@@ -290,9 +290,10 @@ internal sealed class ComponentGalleryConsole : Console
 
         var bounds = new FrontendRect(_bounds.X + 4, y, panelWidth, panelHeight);
         var layout = EntityInspectionPanelLayout.Resolve(bounds, showInventory: true);
-        EntityInspectionPanelRenderer.Draw(this, layout, EntityInspectionPanelModel.GalleryExample(), _tilesetProfile);
+        var model = EntityInspectionPanelModel.GalleryExample();
+        EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile);
         _inspectionOverlays ??= new EntityInspectionPlayspaceOverlayPresenter(this, _displaySettings, _tilesetProfile);
-        _inspectionOverlays.Draw(layout);
+        _inspectionOverlays.Draw(layout, model);
     }
 
     private void ClearInspectionOverlays()

@@ -44,9 +44,18 @@ internal sealed class Candii16PlayspaceOverlayConsole : global::SadConsole.Conso
         RedrawBackdrop();
     }
 
-    public void DrawEntityAt(int x, int y, int glyph, Color foreground)
+    public void DrawCell(EntityInspectionPortraitCell cell)
     {
-        SetGlyph(x, y, glyph, foreground, Color.Black);
+        var glyph = cell.EntityGlyph ?? cell.BackdropGlyph;
+        var foreground = cell.EntityForeground ?? cell.BackdropForeground;
+        SetGlyph(cell.X, cell.Y, glyph, foreground, cell.BackdropBackground);
+        if (cell.EntityGlyph is not null && cell.FacingGlyph is { } facingGlyph)
+        {
+            Surface[cell.X, cell.Y].Decorators =
+            [
+                new global::SadConsole.CellDecorator(Color.LightYellow, facingGlyph, cell.FacingMirror)
+            ];
+        }
     }
 
     public void RedrawBackdrop()
@@ -63,6 +72,7 @@ internal sealed class Candii16PlayspaceOverlayConsole : global::SadConsole.Conso
         Surface[x, y].Glyph = glyph;
         Surface[x, y].Foreground = foreground;
         Surface[x, y].Background = background;
+        Surface[x, y].Decorators = null;
     }
 
     public static bool TryResolveCandii16Font(out global::SadConsole.IFont font)
@@ -89,11 +99,14 @@ internal sealed class EntityInspectionPlayspaceOverlayPresenter(global::SadConso
     private Candii16PlayspaceOverlayConsole? _portrait;
     private Candii16PlayspaceOverlayConsole? _inventory;
 
-    public void Draw(EntityInspectionPanelLayout layout)
+    public void Draw(EntityInspectionPanelLayout layout, EntityInspectionPanelModel model)
     {
         _portrait = EnsureOverlay(_portrait, layout.PortraitRegion, 3, 3);
         _portrait.RedrawBackdrop();
-        _portrait.DrawEntityAt(1, 1, tilesetProfile.PresentationMappings.GlyphsByPresentationId["object.pushBlock"], Color.LightGray);
+        foreach (var cell in model.PortraitCells)
+        {
+            _portrait.DrawCell(cell);
+        }
 
         if (layout.InventoryRegion is { } inventoryRegion)
         {

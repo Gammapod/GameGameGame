@@ -48,4 +48,13 @@ public sealed class EntityInspectionPanelTests
         Assert.Contains(model.Actions, action => action.Selectable && action.Text.Contains("Push"));
         Assert.Contains(model.Actions, action => !action.Selectable && action.FailureReason == "non-portable");
     }
+
+    [Fact]
+    public void EntityInspectionGalleryModelProvidesThreeByThreePortraitCells()
+    {
+        var model = EntityInspectionPanelModel.GalleryExample();
+
+        Assert.Equal(9, model.PortraitCells.Count);
+        Assert.Contains(model.PortraitCells, cell => cell.X == 1 && cell.Y == 1 && cell.EntityGlyph is not null);
+    }
 }

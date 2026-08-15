@@ -11,24 +11,29 @@ internal sealed class PlayModeConsole : Console
 {
     private readonly PlayableScenarioSession _session;
     private readonly FrontendDisplayShell _shell;
+    private readonly SadConsoleDisplaySettings _displaySettings;
     private readonly TilesetProfile _tilesetProfile;
     private readonly PlayMovementController _movement;
     private readonly QueuedMovementBuffer<CoreDirection> _queuedMovement = new();
     private readonly MovementPreviewState _movementPreview = new();
+    private readonly PlayInspectionState _inspection = new();
     private readonly PlayMovementAnimationPresenter _animationPresenter;
     private readonly Action _returnToBrowser;
     private PlayGridViewModel _grid;
+    private EntityInspectionOverlayConsole? _inspectionOverlay;
     private string _message = "Numpad/arrows/WASD: aim  Space/Enter: move  Esc: return";
 
     public PlayModeConsole(
         PlayableScenarioSession session,
         FrontendDisplayShell shell,
+        SadConsoleDisplaySettings displaySettings,
         TilesetProfile tilesetProfile,
         Action returnToBrowser)
         : base(shell.LogicalWidth, shell.LogicalHeight)
     {
         _session = session;
         _shell = shell;
+        _displaySettings = displaySettings;
         _tilesetProfile = tilesetProfile;
         _returnToBrowser = returnToBrowser;
         _movement = new PlayMovementController(session);
@@ -158,11 +163,17 @@ internal sealed class PlayModeConsole : Console
         var previewCoord = _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
             ? destination
             : (GridCoord?)null;
-        PlayGridRenderer.Draw(this, _shell.DrawableBounds, visibleGrid, hidden, previewCoord, CellHighlightPresentation.MovePreview(_tilesetProfile));
+        var layout = PlayModeInspectionLayout.Resolve(_shell.DrawableBounds);
+        var inspectedCell = _inspection.ResolveInspectedCell(_grid, previewCoord);
+        var inspectionModel = inspectedCell is null
+            ? null
+            : EntityInspectionPanelModelFactory.FromEntity(_session, _grid, inspectedCell);
+        PlayGridRenderer.Draw(this, layout.GridBounds, visibleGrid, hidden, previewCoord, CellHighlightPresentation.MovePreview(_tilesetProfile));
+        DrawInspectionPanel(layout.InspectionBounds, inspectionModel);
         if (_animationPresenter.IsAnimating)
         {
             _animationPresenter.Draw(
-                PlayGridRenderer.ResolveGridBounds(_shell.DrawableBounds, visibleGrid),
+                PlayGridRenderer.ResolveGridBounds(layout.GridBounds, visibleGrid),
                 _session.World.GetActionFacing(_session.PlayerEntityId) ?? CoreDirection.North);
         }
         else
@@ -170,6 +181,33 @@ internal sealed class PlayModeConsole : Console
             _animationPresenter.Clear();
         }
         Surface.IsDirty = true;
+    }
+
+    private void DrawInspectionPanel(FrontendRect? bounds, EntityInspectionPanelModel? model)
+    {
+        if (bounds is null)
+        {
+            ClearInspectionOverlay();
+            return;
+        }
+
+        var geometry = OverlayPanelGeometry.HalfTileOffset(bounds, _displaySettings);
+        if (_inspectionOverlay is null || _inspectionOverlay.Width != bounds.Width || _inspectionOverlay.Height != bounds.Height)
+        {
+            ClearInspectionOverlay();
+            _inspectionOverlay = new EntityInspectionOverlayConsole(geometry, _displaySettings, _tilesetProfile);
+            Children.Add(_inspectionOverlay);
+        }
+
+        _inspectionOverlay.MoveTo(geometry);
+        _inspectionOverlay.Draw(model);
+    }
+
+    private void ClearInspectionOverlay()
+    {
+        if (_inspectionOverlay is null) return;
+        Children.Remove(_inspectionOverlay);
+        _inspectionOverlay = null;
     }
 
     private void ClearSurface()
