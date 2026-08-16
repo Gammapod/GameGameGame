@@ -88,7 +88,7 @@ public sealed class PlayInspectionStateTests
 
         var cells = EntityInspectionPanelModelFactory.BuildPortraitCells(grid, inspected, new GridCoord(1, 1));
 
-        Assert.Contains(cells, cell => cell.X == 0 && cell.Y == 1 && cell.IsHighlighted);
+        Assert.Contains(cells, cell => cell.X == 0 && cell.Y == 1 && cell.HighlightKind == CellHighlightKind.EntityTarget);
     }
 
     [Fact]

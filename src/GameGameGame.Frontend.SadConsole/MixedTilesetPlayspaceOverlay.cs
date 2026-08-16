@@ -54,10 +54,12 @@ internal sealed class Candii16PlayspaceOverlayConsole : global::SadConsole.Conso
             Surface[cell.X, cell.Y].Decorators = [new global::SadConsole.CellDecorator(Color.LightYellow, facingGlyph, cell.FacingMirror)];
         }
 
-        if (cell.IsHighlighted)
+        if (cell.HighlightKind is { } highlightKind)
         {
             var decorators = Surface[cell.X, cell.Y].Decorators?.ToList() ?? [];
-            var highlight = CellHighlightPresentation.MovePreview(_tilesetProfile);
+            var highlight = highlightKind == CellHighlightKind.EntityTarget
+                ? CellHighlightPresentation.EntityTarget(_tilesetProfile)
+                : CellHighlightPresentation.MovePreview(_tilesetProfile);
             decorators.Add(new global::SadConsole.CellDecorator(highlight.Foreground, highlight.Glyph, highlight.Mirror));
             Surface[cell.X, cell.Y].Decorators = decorators;
         }

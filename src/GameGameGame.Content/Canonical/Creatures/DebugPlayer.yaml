@@ -21,6 +21,19 @@ actionPlans:
     id: debugPlayerActionPlan
     behavior:
       steps:
-      - kind: MoveFacing
-      - kind: Backstep
-      - kind: PickupTarget
+      - kind: Move
+        directionMode: Forward
+      - kind: PushFacing
+        directionMode: Forward
+      - kind: TransformAdjacentToInventory
+      - kind: TransformInventoryToAdjacent
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: ActorToTarget
+      - kind: Transfer
+        targetSlot: 1
+        directionMode: Forward
+        transferDirection: TargetToActor
+      - kind: EnterTarget
+      - kind: ExitFacing

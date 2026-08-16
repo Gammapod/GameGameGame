@@ -43,7 +43,10 @@ internal sealed record EntityInspectionPortraitCell(
     Color? EntityForeground = null,
     int? FacingGlyph = null,
     global::SadConsole.Mirror FacingMirror = global::SadConsole.Mirror.None,
-    bool IsHighlighted = false);
+    CellHighlightKind? HighlightKind = null)
+{
+    public bool IsHighlighted => HighlightKind is not null;
+}
 
 internal sealed record EntityInspectionPanelModel(
     string EntityName,
@@ -188,7 +191,7 @@ internal static class EntityInspectionPanelModelFactory
             var source = grid.TryCellAt(sourceCoord.X, sourceCoord.Y);
             var isHighlighted = highlightedCoord == sourceCoord;
             cells.Add(source is null
-                ? new EntityInspectionPortraitCell(x, y, 160, Color.Black, Color.Black, IsHighlighted: isHighlighted)
+                ? new EntityInspectionPortraitCell(x, y, 160, Color.Black, Color.Black, HighlightKind: isHighlighted ? HighlightKindForSource(source) : null)
                 : new EntityInspectionPortraitCell(
                     x,
                     y,
@@ -199,11 +202,15 @@ internal static class EntityInspectionPanelModelFactory
                     source.EntityForeground,
                     source.FacingGlyph,
                     source.FacingMirror,
-                    isHighlighted));
+                    isHighlighted ? HighlightKindForSource(source) : null));
         }
 
         return cells;
     }
+
+    private static CellHighlightKind HighlightKindForSource(PlayCellVisual? source) => source?.EntityId is null
+        ? CellHighlightKind.MovePreview
+        : CellHighlightKind.EntityTarget;
 }
 
 internal static class EntityInspectionPanelRenderer
@@ -213,7 +220,9 @@ internal static class EntityInspectionPanelRenderer
         EntityInspectionPanelLayout layout,
         EntityInspectionPanelModel model,
         TilesetProfile tilesetProfile,
-        Color? backgroundOverride = null)
+        Color? backgroundOverride = null,
+        int? selectedActionIndex = null,
+        bool actionMenuFocused = false)
     {
         var background = backgroundOverride ?? Color.Black;
         PanelRenderer.DrawPanel(target, layout.Bounds, tilesetProfile.Roles.PanelBorder, Color.Gold, background);
@@ -223,7 +232,7 @@ internal static class EntityInspectionPanelRenderer
         var text = FrontendTextResolver.InspectionPrototype;
         PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y, layout.StatusRegion.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatAperture, ("value", model.Aperture))), Color.White, background, tilesetProfile);
         PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y + 1, layout.StatusRegion.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatBulk, ("value", model.Bulk))), Color.White, background, tilesetProfile);
-        DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background, text);
+        DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background, text, selectedActionIndex, actionMenuFocused);
         if (layout.InventoryRegion is { } inventory)
         {
             DrawReservedInventoryRegion(target, inventory, tilesetProfile, background);
@@ -265,15 +274,17 @@ internal static class EntityInspectionPanelRenderer
 
     }
 
-    private static void DrawActions(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text)
+    private static void DrawActions(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text, int? selectedActionIndex, bool actionMenuFocused)
     {
         PrintClipped(target, region.X, region.Y, region.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionActionsHeader)), Color.Yellow, background, tilesetProfile);
         for (var i = 0; i < model.Actions.Count && i + 1 < region.Height; i++)
         {
             var action = model.Actions[i];
-            var prefix = action.Selectable ? "> " : "~ ";
+            var selected = actionMenuFocused && selectedActionIndex == i;
+            var prefix = selected ? "> " : action.Selectable ? "  " : "~ ";
             var suffix = action.Selectable ? string.Empty : " ~";
-            PrintClipped(target, region.X, region.Y + i + 1, region.Width, prefix + text.Resolve(action.Text) + suffix, action.Selectable ? Color.Cyan : Color.Gray, background, tilesetProfile);
+            var color = selected ? Color.LightCyan : action.Selectable ? Color.Cyan : Color.Gray;
+            PrintClipped(target, region.X, region.Y + i + 1, region.Width, prefix + text.Resolve(action.Text) + suffix, color, background, tilesetProfile);
         }
     }
 

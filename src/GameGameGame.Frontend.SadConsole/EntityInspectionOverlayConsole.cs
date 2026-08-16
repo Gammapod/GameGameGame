@@ -25,7 +25,7 @@ internal sealed class EntityInspectionOverlayConsole : global::SadConsole.Consol
         _playspaceOverlays = new EntityInspectionPlayspaceOverlayPresenter(this, _displaySettings, _tilesetProfile);
     }
 
-    public void Draw(EntityInspectionPanelModel? model)
+    public void Draw(EntityInspectionPanelModel? model, int selectedActionIndex = 0, bool actionMenuFocused = false)
     {
         ClearSurface();
         if (model is null)
@@ -37,7 +37,7 @@ internal sealed class EntityInspectionOverlayConsole : global::SadConsole.Consol
         else
         {
             var layout = EntityInspectionPanelLayout.Resolve(LocalBounds, model.HasInventory);
-            EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile, OverlayBackground);
+            EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile, OverlayBackground, selectedActionIndex, actionMenuFocused);
             _playspaceOverlays.Draw(layout, model);
         }
 

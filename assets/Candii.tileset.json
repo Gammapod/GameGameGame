@@ -41,6 +41,7 @@
     "gridCave": 226,
     "gridGrass": 227,
     "gridWood": 228,
+    "gridMetal": 229,
     "facingDiag": 251,
     "facingNS": 252,
     "facingWE": 253,

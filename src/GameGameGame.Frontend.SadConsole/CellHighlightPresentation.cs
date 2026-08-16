@@ -4,7 +4,8 @@ namespace GameGameGame.Frontend.SadConsole;
 
 internal enum CellHighlightKind
 {
-    MovePreview
+    MovePreview,
+    EntityTarget
 }
 
 internal sealed record CellHighlightPresentation(
@@ -17,4 +18,9 @@ internal sealed record CellHighlightPresentation(
         CellHighlightKind.MovePreview,
         tilesetProfile.Roles.MoveHighlight,
         new Color((byte)0, (byte)255, (byte)255, (byte)160));
+
+    public static CellHighlightPresentation EntityTarget(TilesetProfile tilesetProfile) => new(
+        CellHighlightKind.EntityTarget,
+        tilesetProfile.Roles.EntityHighlight,
+        new Color((byte)180, (byte)80, (byte)255, (byte)180));
 }

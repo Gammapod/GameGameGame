@@ -7,6 +7,12 @@ using CoreDirection = GameGameGame.Core.Direction;
 
 namespace GameGameGame.Frontend.SadConsole;
 
+internal enum PlayFocusMode
+{
+    Grid,
+    InspectionActions
+}
+
 internal sealed class PlayModeConsole : Console
 {
     private readonly PlayableScenarioSession _session;
@@ -20,6 +26,8 @@ internal sealed class PlayModeConsole : Console
     private readonly PlayMovementAnimationPresenter _animationPresenter;
     private readonly Action _returnToBrowser;
     private PlayGridViewModel _grid;
+    private PlayFocusMode _focusMode = PlayFocusMode.Grid;
+    private int _selectedInspectionActionIndex;
     private EntityInspectionOverlayConsole? _inspectionOverlay;
     private EntityId? _cachedInspectionEntityId;
     private EntityInspectionPanelModel? _cachedInspectionModel;
@@ -29,6 +37,8 @@ internal sealed class PlayModeConsole : Console
     private bool _cachedInspectionEmpty;
     private bool _inspectionDirty = true;
     private bool _inspectionModelChanged = true;
+    private int? _drawnInspectionActionIndex;
+    private PlayFocusMode? _drawnFocusMode;
     private string _message = "Numpad/arrows/WASD: aim  Space/Enter: move  Esc: return";
 
     public PlayModeConsole(
@@ -55,6 +65,40 @@ internal sealed class PlayModeConsole : Console
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
+        if (_focusMode == PlayFocusMode.InspectionActions)
+        {
+            if (keyboard.IsKeyReleased(Keys.Escape) || keyboard.IsKeyReleased(Keys.Left))
+            {
+                _focusMode = PlayFocusMode.Grid;
+                _drawnFocusMode = null;
+                _message = "Returned to movement focus.";
+                Redraw();
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Up))
+            {
+                MoveInspectionActionSelection(-1);
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Down))
+            {
+                MoveInspectionActionSelection(1);
+                return true;
+            }
+
+            if (keyboard.IsKeyReleased(Keys.Enter) || keyboard.IsKeyReleased(Keys.Space))
+            {
+                var action = _cachedInspectionModel?.Actions.ElementAtOrDefault(_selectedInspectionActionIndex);
+                _message = action is null
+                    ? "No inspected action selected."
+                    : $"Selected action: {FrontendTextResolver.InspectionPrototype.Resolve(action.Text)} (not wired yet).";
+                Redraw();
+                return true;
+            }
+        }
+
         var intent = PlayInputController.Read(keyboard, _movementPreview.HasPreview);
         switch (intent.Kind)
         {
@@ -115,6 +159,18 @@ internal sealed class PlayModeConsole : Console
         if (direction is not { } confirmedDirection)
         {
             _message = "Choose a movement direction first; no facing direction is available.";
+            Redraw();
+            return;
+        }
+
+        if (_movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
+            && _grid.TryCellAt(destination.X, destination.Y)?.EntityId is { } entityId
+            && entityId != _session.PlayerEntityId)
+        {
+            _focusMode = PlayFocusMode.InspectionActions;
+            _selectedInspectionActionIndex = FirstSelectableInspectionActionIndex();
+            _drawnInspectionActionIndex = null;
+            _message = "Inspection actions focused. Up/Down choose, Esc returns.";
             Redraw();
             return;
         }
@@ -193,7 +249,11 @@ internal sealed class PlayModeConsole : Console
         var layout = PlayModeInspectionLayout.Resolve(_shell.DrawableBounds);
         var inspectedCell = _inspection.ResolveInspectedCell(_grid, previewCoord);
         var inspectionModel = ResolveInspectionModel(inspectedCell, previewCoord);
-        PlayGridRenderer.Draw(this, layout.GridBounds, visibleGrid, hidden, previewCoord, CellHighlightPresentation.MovePreview(_tilesetProfile));
+        _selectedInspectionActionIndex = ClampInspectionActionIndex(_selectedInspectionActionIndex);
+        var previewHighlight = previewCoord is { } coord && _grid.TryCellAt(coord.X, coord.Y)?.EntityId is { } entityId && entityId != _session.PlayerEntityId
+            ? CellHighlightPresentation.EntityTarget(_tilesetProfile)
+            : CellHighlightPresentation.MovePreview(_tilesetProfile);
+        PlayGridRenderer.Draw(this, layout.GridBounds, visibleGrid, hidden, previewCoord, previewHighlight);
         DrawInspectionPanel(layout.InspectionBounds, inspectedCell?.EntityId, inspectionModel);
         if (_animationPresenter.IsAnimating)
         {
@@ -249,6 +309,8 @@ internal sealed class PlayModeConsole : Console
             || _inspectionOverlay.Height != bounds.Height
             || _cachedInspectionBounds != bounds
             || _inspectionModelChanged
+            || _drawnInspectionActionIndex != _selectedInspectionActionIndex
+            || _drawnFocusMode != _focusMode
             || (model is null && !_cachedInspectionEmpty)
             || (model is not null && (_cachedInspectionEmpty || _drawnInspectionEntityId != entityId));
 
@@ -263,11 +325,13 @@ internal sealed class PlayModeConsole : Console
         _inspectionOverlay.MoveTo(geometry);
         if (needsRedraw)
         {
-            _inspectionOverlay.Draw(model);
+            _inspectionOverlay.Draw(model, _selectedInspectionActionIndex, _focusMode == PlayFocusMode.InspectionActions);
             _cachedInspectionBounds = bounds;
             _cachedInspectionEmpty = model is null;
             _drawnInspectionEntityId = model is null ? null : entityId;
             _inspectionModelChanged = false;
+            _drawnInspectionActionIndex = _selectedInspectionActionIndex;
+            _drawnFocusMode = _focusMode;
         }
     }
 
@@ -279,6 +343,36 @@ internal sealed class PlayModeConsole : Console
         _cachedInspectionBounds = null;
         _cachedInspectionEmpty = false;
         _drawnInspectionEntityId = null;
+        _drawnInspectionActionIndex = null;
+        _drawnFocusMode = null;
+    }
+
+    private void MoveInspectionActionSelection(int delta)
+    {
+        var actions = _cachedInspectionModel?.Actions ?? [];
+        if (actions.Count == 0)
+        {
+            return;
+        }
+
+        _selectedInspectionActionIndex = Math.Clamp(_selectedInspectionActionIndex + delta, 0, actions.Count - 1);
+        _drawnInspectionActionIndex = null;
+        _message = $"Action {_selectedInspectionActionIndex + 1}/{actions.Count}.";
+        Redraw();
+    }
+
+    private int FirstSelectableInspectionActionIndex()
+    {
+        var actions = _cachedInspectionModel?.Actions;
+        if (actions is null || actions.Count == 0) return 0;
+        var index = actions.ToList().FindIndex(action => action.Selectable);
+        return index >= 0 ? index : 0;
+    }
+
+    private int ClampInspectionActionIndex(int index)
+    {
+        var count = _cachedInspectionModel?.Actions.Count ?? 0;
+        return count == 0 ? 0 : Math.Clamp(index, 0, count - 1);
     }
 
     private void ClearSurface()

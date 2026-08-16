@@ -59,6 +59,20 @@ public sealed class TilesetProfileTests
     }
 
     [Fact]
+    public void EntityTargetHighlightUsesEntityHighlightGlyphWithPurpleForeground()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        var highlight = CellHighlightPresentation.EntityTarget(profile);
+
+        Assert.Equal(CellHighlightKind.EntityTarget, highlight.Kind);
+        Assert.Equal(217, highlight.Glyph);
+        Assert.Equal((byte)180, highlight.Foreground.R);
+        Assert.Equal((byte)80, highlight.Foreground.G);
+        Assert.Equal((byte)255, highlight.Foreground.B);
+    }
+
+    [Fact]
     public void CandiiTilesetLoadsManifestBackedPanelBorderRoles()
     {
         var profile = TilesetProfileLoader.LoadCandii();

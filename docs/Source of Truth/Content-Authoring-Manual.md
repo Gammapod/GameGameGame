@@ -172,8 +172,9 @@ actionPlans:
     id: examplePlan
     behavior:
       steps:
-        - kind: MoveFacing
-        - kind: PickupTarget
+        - kind: Move
+          directionMode: Forward
+        - kind: TransformAdjacentToInventory
 ```
 
 Authoring model:
@@ -186,7 +187,7 @@ Authoring model:
 - A failed/non-acting step may fall through to the next step, depending on the step.
 - Use Action Step order to express simple fallback behavior.
 - Target acquisition is not authored as an Action Step for new content. Use entity-template `targeting` profiles instead, and set target-consuming Action Step `targetLabel` values to the matching stable labels when a plan needs multiple target concepts.
-- Facing changes after successful directional movement; use the promoted canonical `Move` Action Step for new adjacent movement where possible. Existing prototype-compatible movement Action Steps such as `MoveFacing`, `Backstep`, `StrafeClockwise`, and `StrafeAnticlockwise` remain available while migration continues.
+- Facing changes after successful directional movement; use the promoted canonical `Move` Action Step for new adjacent movement in canon-promoted content. Existing prototype-compatible movement Action Steps such as `MoveFacing`, `Backstep`, `StrafeClockwise`, and `StrafeAnticlockwise` remain available only for legacy/prototype scenarios while migration continues.
 
 Do not use for new normal content:
 
@@ -203,6 +204,23 @@ Maintainer/runtime details for canonical, transitional, and legacy action-plan f
 This table is the content-facing catalog of currently authorable behavior-chain Action Steps. Keep rows compact when adding new steps. Put layer details and deep runtime semantics in `Engine-Editor-Capabilities.md` instead.
 
 Planning note: the archived canonical-actions release plan froze the current broad Action Step catalog as legacy/prototype-compatible for release purposes, then promoted actions one at a time through complete vertical slices. Until a future active plan reselects a step for promotion, authors may still use the currently supported steps below, but content intended to prove release-canonical behavior should follow the new two-room fixture requirement established in `docs/Archived/Canonical-Actions-Vertical-Slice-Plan.md`.
+
+### Canon-promoted content allowlist stopgap
+
+Until the legacy/prototype Action Steps are removed, content under `src/GameGameGame.Content/Canonical` and other canon-promoted fixtures must use this stopgap allowlist. Prefer the canonical row even when a compatibility alias currently has identical runtime semantics.
+
+| Player-facing action/need | Canon-promoted Action Step(s) to author | Forbidden in canon-promoted content | Notes |
+|---|---|---|---|
+| Move | `Move` with explicit `directionMode` | `MoveFacing`, `Backstep`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise` | Prototype movement helpers remain loadable for old scenarios, but canonical fixtures should use promoted movement. |
+| Pickup | `TransformAdjacentToInventory` | `PickupTarget` | `PickupTarget` is only a compatibility name for the same pickup semantics. |
+| Drop | `TransformInventoryToAdjacent` | `DropFacing` | `DropFacing` is only a compatibility name for the same adjacent-drop semantics. |
+| Give | `Transfer` with `transferDirection: ActorToTarget` | `GiveTarget` | Canonical transfer selects a concrete moving entity and adjacent counterparty; legacy give transfers the first actor-carried entity to `Target`. |
+| Take | `Transfer` with `transferDirection: TargetToActor` | `TakeTarget` | Canonical transfer selects a concrete moving entity from the counterparty; legacy take transfers the first target-carried entity. |
+| Enter | `EnterTarget` | none yet | Current promoted enter command has no renamed replacement yet. Use it only for explicit canon-promoted Enter coverage. |
+| Exit | `ExitFacing` | none yet | Current promoted exit command has no renamed replacement yet. Use it only for explicit canon-promoted Exit coverage. |
+| Push | `Push` with explicit `directionMode` | `PushFacing` | `PushFacing` is the older bump/facing shortcut. |
+
+If canon-promoted content appears to need a forbidden step, first try to express it through the allowed row. If the allowed row cannot express the scenario, log a capability gap instead of adding new canonical content that depends on the forbidden step.
 
 ### Movement and facing
 
@@ -251,17 +269,17 @@ Common chain patterns:
 
 | Goal | Chain |
 |---|---|
-| Move and pick up blockers/items | `MoveFacing -> PickupTarget` |
+| Move and pick up blockers/items | `Move -> TransformAdjacentToInventory` |
 | Chase a selected target | `SeekTarget`, with a template `targetingRules` slot selecting the desired target type |
 | Flee a selected target | `FleeTarget`, with a template `targetingRules` slot selecting the desired target type |
 | Keep distance before fallback behavior | `MaintainChebyshevDistanceTwo -> StrafeClockwise`, with template `targetingRules` selecting the target |
-| Try to move, then push blocker | `MoveFacing -> PushFacing` |
+| Try to move, then push target | `Move -> Push` |
 | Make a selected target try a temporary behavior next turn | `ApplyPrePlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn pre-plan |
 | Temporarily replace or append selected target behavior next turn | `ApplyMainPlan` or `ApplyPostPlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn override plan |
-| Drop carried entity forward, otherwise move | `DropFacing -> MoveFacing` |
+| Drop carried entity forward, otherwise move | `TransformInventoryToAdjacent -> Move` |
 | Transfer a specific targeted item to or from an adjacent counterparty | `Transfer`, with `targetLabel`/`targetSlot`, `directionMode`, and `transferDirection` |
-| Legacy give to a targeted peer, otherwise try taking from them | `GiveTarget -> TakeTarget` |
-| Move into a bumped/targeted container, then later leave it | `MoveFacing -> EnterTarget`; contained actor can use `ExitFacing` |
+| Canonical give/take pair with an adjacent counterparty | `Transfer` with `ActorToTarget`, then `Transfer` with `TargetToActor` when both directions should be available |
+| Move into a targeted container, then later leave it | `Move -> EnterTarget`; contained actor can use `ExitFacing` |
 
 Targeting rules currently select by optional template ID, target-capability adjectives, same-plane Manhattan range, and nearest deterministic tie-break. A rule may be noun-only (`thief loves gold`), adjective-only (`thief loves portables`), or noun-plus-adjective (`thief loves portable gold`). Supported target capabilities are the Action Steps that expose non-mutating target affordance checks: `PickupTarget`, `EnterTarget`, `GiveTarget`, `TakeTarget`, `DestroyTarget`, and `PushFacing`. Capability rules are validated against the template's default behavior chain: the referenced capability step should exist and consume the same target label/slot. Use stable labels such as `danger`, `home`, `food`, or `shelter` when one entity needs different content-defined target concepts; numeric slots are still stored for compatibility but should not be the primary reference in new action steps.
 
