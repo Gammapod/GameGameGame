@@ -32,6 +32,28 @@ public sealed class PlayInputControllerTests
         Assert.Equal(PlayControlIntentKind.ClearMoveAim, intent.Kind);
     }
 
+    [Fact]
+    public void InspectionFocusConsumesMovementKeysInsteadOfProducingGridInput()
+    {
+        var intent = PlayInspectionInputController.ReadKeys([Keys.Right]);
+
+        Assert.Equal(PlayInspectionInputIntentKind.Consume, intent.Kind);
+    }
+
+    [Theory]
+    [InlineData(Keys.Escape, (int)PlayInspectionInputIntentKind.ReturnToGrid)]
+    [InlineData(Keys.Left, (int)PlayInspectionInputIntentKind.ReturnToGrid)]
+    [InlineData(Keys.Up, (int)PlayInspectionInputIntentKind.PreviousAction)]
+    [InlineData(Keys.Down, (int)PlayInspectionInputIntentKind.NextAction)]
+    [InlineData(Keys.Enter, (int)PlayInspectionInputIntentKind.ConfirmAction)]
+    [InlineData(Keys.Space, (int)PlayInspectionInputIntentKind.ConfirmAction)]
+    public void InspectionFocusMapsOnlyPanelCommands(Keys releasedKey, int expected)
+    {
+        var intent = PlayInspectionInputController.ReadKeys([releasedKey]);
+
+        Assert.Equal((PlayInspectionInputIntentKind)expected, intent.Kind);
+    }
+
     private static PlayControlIntent Read(IReadOnlyList<Keys>? keysDown = null, IReadOnlyList<Keys>? keysReleased = null, bool hasPreview = false) =>
         PlayInputController.ReadKeys(
             keysDown ?? [],

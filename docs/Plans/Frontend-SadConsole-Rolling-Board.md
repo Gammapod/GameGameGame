@@ -30,23 +30,7 @@ Purpose: Track small, continuously updated user stories without creating a dedic
 
 ## Now
 
-### Harden Play focus/input routing
-
-**User story:** As a player, when I focus an inspection/player panel, only that panel responds to input so movement aim and inspected-entity selection do not change behind it.
-
-**Plan:**
-
-- Introduce an explicit `PlayFocusTarget`/focus routing model for Play mode.
-- Route `PlayModeConsole.ProcessKeyboard` by current focus target.
-- Ensure grid input never runs while panel/picker focus is active.
-- Preserve clear return paths such as `Esc`/Left returning focus to the grid.
-- Add tests that panel focus blocks movement aim updates and inspected-entity changes.
-
-**Done when:**
-
-- Inspection action focus blocks movement aim/cursor updates.
-- Returning to grid focus restores movement input.
-- Tests prove no fallthrough input between focused components.
+No active item selected. Pull from **Next** when ready.
 
 ## Next
 
@@ -144,3 +128,13 @@ Purpose: Track small, continuously updated user stories without creating a dedic
 - Docs clearly state frontend ownership/status.
 - Old frontend no longer drives new UX decisions except as archived/reference material.
 - Normal build/test expectations are explicit.
+
+## Completed
+
+### 2026-08-15: Harden Play focus/input routing
+
+**User story:** As a player, when I focus an inspection/player panel, only that panel responds to input so movement aim and inspected-entity selection do not change behind it.
+
+**Completion notes:** Added an inspection-focus input controller that maps only panel commands while consuming all other keys, including movement-key releases. `PlayModeConsole` now returns immediately when inspection actions have focus, preventing fallthrough to grid movement/cursor handling. `Esc`/Left returns focus to the grid.
+
+**Verification:** `dotnet test tests/GameGameGame.Frontend.SadConsole.Tests/GameGameGame.Frontend.SadConsole.Tests.csproj --artifacts-path C:\Users\Scramble\AppData\Local\Temp\opencode\ggg-focus-lockout2 -m:1 --filter "PlayInput|MovementPreview|EntityInspectionPanel|TilesetProfile"` passed 38 tests.

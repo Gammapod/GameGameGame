@@ -47,34 +47,8 @@ internal sealed class PlayModeConsole : Console
     {
         if (_inspection.FocusMode == PlayFocusMode.InspectionActions)
         {
-            if (keyboard.IsKeyReleased(Keys.Escape) || keyboard.IsKeyReleased(Keys.Left))
-            {
-                _inspection.ReturnToGrid();
-                _message = "Returned to movement focus.";
-                Redraw();
-                return true;
-            }
-
-            if (keyboard.IsKeyReleased(Keys.Up))
-            {
-                _message = _inspection.MoveSelection(-1);
-                Redraw();
-                return true;
-            }
-
-            if (keyboard.IsKeyReleased(Keys.Down))
-            {
-                _message = _inspection.MoveSelection(1);
-                Redraw();
-                return true;
-            }
-
-            if (keyboard.IsKeyReleased(Keys.Enter) || keyboard.IsKeyReleased(Keys.Space))
-            {
-                _message = _inspection.ConfirmSelectedActionMessage();
-                Redraw();
-                return true;
-            }
+            HandleInspectionKeyboard(PlayInspectionInputController.Read(keyboard));
+            return true;
         }
 
         var intent = PlayInputController.Read(keyboard, _movementPreview.HasPreview);
@@ -111,6 +85,33 @@ internal sealed class PlayModeConsole : Console
                 return true;
             default:
                 return false;
+        }
+    }
+
+    private void HandleInspectionKeyboard(PlayInspectionInputIntent intent)
+    {
+        switch (intent.Kind)
+        {
+            case PlayInspectionInputIntentKind.ReturnToGrid:
+                _inspection.ReturnToGrid();
+                _message = "Returned to movement focus.";
+                Redraw();
+                break;
+            case PlayInspectionInputIntentKind.PreviousAction:
+                _message = _inspection.MoveSelection(-1);
+                Redraw();
+                break;
+            case PlayInspectionInputIntentKind.NextAction:
+                _message = _inspection.MoveSelection(1);
+                Redraw();
+                break;
+            case PlayInspectionInputIntentKind.ConfirmAction:
+                _message = _inspection.ConfirmSelectedActionMessage();
+                Redraw();
+                break;
+            case PlayInspectionInputIntentKind.Consume:
+            default:
+                break;
         }
     }
 
