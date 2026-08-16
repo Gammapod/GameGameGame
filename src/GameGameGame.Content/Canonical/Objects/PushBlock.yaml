@@ -6,7 +6,7 @@ entityTemplates:
     weight: 2
     carryingCapacity: 0
     bulk: 2
-    aperture: 5
+    aperture: 500
 
 presentations:
   pushBlock:

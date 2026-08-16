@@ -67,8 +67,8 @@ entityTemplates:
     - entityId: debugPushBlock
       templateId: pushBlock
       coord:
-        x: 4
-        y: 4
+        x: 6
+        y: 6
 
 presentations:
   debugRoomRoot:

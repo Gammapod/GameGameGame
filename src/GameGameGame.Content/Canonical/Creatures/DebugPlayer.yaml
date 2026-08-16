@@ -3,10 +3,8 @@ entityTemplates:
     name: Debug Player
     inventoryWidth: 2
     inventoryHeight: 2
-    weight: 1
-    carryingCapacity: 10
-    bulk: 1
-    aperture: 5
+    bulk: 5
+    aperture: 10
     defaultActionPlanId: debugPlayerActionPlan
     actionStateDefaults:
       facing: North

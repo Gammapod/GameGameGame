@@ -9,9 +9,27 @@ internal sealed class MovementPreviewState
 
     public bool HasPreview => Direction is not null;
 
-    public void Set(Direction direction) => Direction = direction;
+    public bool Set(Direction direction)
+    {
+        if (Direction == direction)
+        {
+            return false;
+        }
 
-    public void Clear() => Direction = null;
+        Direction = direction;
+        return true;
+    }
+
+    public bool Clear()
+    {
+        if (Direction is null)
+        {
+            return false;
+        }
+
+        Direction = null;
+        return true;
+    }
 
     public bool TryDestination(GridCoord origin, out GridCoord destination)
     {

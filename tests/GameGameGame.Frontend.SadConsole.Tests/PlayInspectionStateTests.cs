@@ -78,6 +78,36 @@ public sealed class PlayInspectionStateTests
         Assert.Contains(model.PortraitCells, cell => cell.X == 1 && cell.Y == 0 && cell.EntityGlyph is not null && cell.FacingGlyph is not null);
     }
 
+    [Fact]
+    public void InspectionPanelModelMarksHighlightedRepresentedCellInPortrait()
+    {
+        var player = new EntityId("player");
+        var block = new EntityId("block");
+        var grid = Grid(player, block);
+        var inspected = grid.CellAt(2, 1);
+
+        var cells = EntityInspectionPanelModelFactory.BuildPortraitCells(grid, inspected, new GridCoord(1, 1));
+
+        Assert.Contains(cells, cell => cell.X == 0 && cell.Y == 1 && cell.IsHighlighted);
+    }
+
+    [Fact]
+    public void InspectionPanelModelShowsCoreAuthoredActionChoicesForInspectedEntity()
+    {
+        var tileset = TilesetProfileLoader.LoadCandii();
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = GameGameGame.Content.WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var grid = PlayGridViewModel.FromSession(session, tileset);
+        var inspected = Assert.Single(grid.Cells, cell => cell.EntityId?.Value == "debugPushBlock");
+
+        var model = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspected);
+
+        var text = FrontendTextResolver.InspectionPrototype;
+        Assert.Contains(model.Actions, action => !action.Selectable && text.Resolve(action.Text).Contains("Pickup") && action.FailureReason is not null);
+        Assert.DoesNotContain(model.Actions, action => text.Resolve(action.Text).Contains("Display only"));
+    }
+
     private static PlayGridViewModel Grid(EntityId player, EntityId block) => new(
         "test",
         4,

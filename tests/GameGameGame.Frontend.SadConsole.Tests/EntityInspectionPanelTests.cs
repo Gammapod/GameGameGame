@@ -45,8 +45,18 @@ public sealed class EntityInspectionPanelTests
     {
         var model = EntityInspectionPanelModel.GalleryExample();
 
-        Assert.Contains(model.Actions, action => action.Selectable && action.Text.Contains("Push"));
-        Assert.Contains(model.Actions, action => !action.Selectable && action.FailureReason == "non-portable");
+        var text = FrontendTextResolver.InspectionPrototype;
+        Assert.Contains(model.Actions, action => action.Selectable && text.Resolve(action.Text).Contains("Push"));
+        Assert.Contains(model.Actions, action => !action.Selectable && action.FailureReason?.Id == "inspection.failure.nonPortable");
+    }
+
+    [Fact]
+    public void FrontendTextResolverUsesTemplatesAndFallsBackToIds()
+    {
+        var text = FrontendTextResolver.InspectionPrototype;
+
+        Assert.Equal("Aperture.text.id: 5", text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatAperture, ("value", 5))));
+        Assert.Equal("unknown.text.id value=7", text.Resolve(FrontendTextMessage.Create("unknown.text.id", ("value", 7))));
     }
 
     [Fact]

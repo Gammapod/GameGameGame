@@ -43,12 +43,14 @@ public sealed class MovementPreviewTests
     {
         var preview = new MovementPreviewState();
 
-        preview.Set(Direction.North);
-        preview.Set(Direction.West);
+        Assert.True(preview.Set(Direction.North));
+        Assert.False(preview.Set(Direction.North));
+        Assert.True(preview.Set(Direction.West));
         Assert.Equal(Direction.West, preview.Direction);
 
-        preview.Clear();
+        Assert.True(preview.Clear());
         Assert.False(preview.HasPreview);
+        Assert.False(preview.Clear());
     }
 
     [Fact]

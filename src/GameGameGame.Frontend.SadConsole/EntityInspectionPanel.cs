@@ -1,4 +1,5 @@
 using GameGameGame.Content;
+using GameGameGame.Core;
 using SadRogue.Primitives;
 
 namespace GameGameGame.Frontend.SadConsole;
@@ -30,7 +31,7 @@ internal sealed record EntityInspectionPanelLayout(
     }
 }
 
-internal sealed record EntityInspectionActionRow(string Text, bool Selectable, string? FailureReason = null);
+internal sealed record EntityInspectionActionRow(FrontendTextMessage Text, bool Selectable, FrontendTextMessage? FailureReason = null);
 
 internal sealed record EntityInspectionPortraitCell(
     int X,
@@ -41,7 +42,8 @@ internal sealed record EntityInspectionPortraitCell(
     int? EntityGlyph = null,
     Color? EntityForeground = null,
     int? FacingGlyph = null,
-    global::SadConsole.Mirror FacingMirror = global::SadConsole.Mirror.None);
+    global::SadConsole.Mirror FacingMirror = global::SadConsole.Mirror.None,
+    bool IsHighlighted = false);
 
 internal sealed record EntityInspectionPanelModel(
     string EntityName,
@@ -69,8 +71,11 @@ internal sealed record EntityInspectionPanelModel(
             new(2, 2, 160, Color.DimGray, Color.Black)
         ],
         [
-            new EntityInspectionActionRow("> Push", Selectable: true),
-            new EntityInspectionActionRow("~ Pickup: non-portable ~", Selectable: false, "non-portable")
+            new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionPush, ("targetName", "Debug Push Block")), Selectable: true),
+            new EntityInspectionActionRow(
+                FrontendTextMessage.Create(FrontendTextIds.InspectionActionUnavailable, ("action", "Pickup Debug Push Block"), ("reason", "non-portable")),
+                Selectable: false,
+                FrontendTextMessage.Create("inspection.failure.nonPortable"))
         ]);
 }
 
@@ -79,7 +84,8 @@ internal static class EntityInspectionPanelModelFactory
     public static EntityInspectionPanelModel FromEntity(
         PlayableScenarioSession session,
         PlayGridViewModel grid,
-        PlayCellVisual visual)
+        PlayCellVisual visual,
+        GridCoord? highlightedCoord = null)
     {
         var entityId = visual.EntityId ?? throw new InvalidOperationException("Cannot build an inspection panel model for an empty play cell.");
         var entity = session.World.Entities[entityId];
@@ -88,19 +94,101 @@ internal static class EntityInspectionPanelModelFactory
             entity.Aperture,
             entity.Bulk,
             entity.HasUsableInventory,
-            BuildPortraitCells(grid, visual),
-            [new EntityInspectionActionRow("Display only", Selectable: false)]);
+            BuildPortraitCells(grid, visual, highlightedCoord),
+            BuildActionRows(session, entityId));
     }
 
-    private static IReadOnlyList<EntityInspectionPortraitCell> BuildPortraitCells(PlayGridViewModel grid, PlayCellVisual center)
+    private static IReadOnlyList<EntityInspectionActionRow> BuildActionRows(PlayableScenarioSession session, EntityId targetId)
+    {
+        if (CreateActionChoiceRequest(session) is not { } request)
+        {
+            return [new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionNoValidActions), Selectable: false)];
+        }
+
+        var rows = new List<EntityInspectionActionRow>();
+        foreach (var choice in request.Choices)
+        {
+            rows.AddRange(RowsForChoice(choice, targetId));
+        }
+
+        return rows.Count == 0
+            ? [new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionNoValidActions), Selectable: false)]
+            : rows;
+    }
+
+    private static ActionChoiceRequest? CreateActionChoiceRequest(PlayableScenarioSession session)
+    {
+        if (!session.Registry.TryGetTemplateIdForEntity(session.World, session.PlayerEntityId, out var templateId))
+        {
+            return null;
+        }
+
+        var template = session.Registry.GetEntityTemplate(templateId);
+        var defaultPlanId = session.World.GetDefaultActionPlanId(session.PlayerEntityId) is { } runtimePlanId
+            ? new ActionPlanTemplateId(runtimePlanId.Value)
+            : template.DefaultActionPlanId;
+        if (defaultPlanId is not { } planId || !session.Registry.ActionPlanDescriptors.TryGetValue(planId, out var descriptor))
+        {
+            return null;
+        }
+
+        return new ActionChoiceService(new MovementService()).CreateRequest(session.World, session.PlayerEntityId, descriptor);
+    }
+
+    private static IEnumerable<EntityInspectionActionRow> RowsForChoice(ActionChoice choice, EntityId targetId)
+    {
+        foreach (var option in choice.EntityOptions.Where(option => option.TargetId == targetId))
+        {
+            yield return Row(ActionText(choice.Kind, targetId), option.CanExecute, option.FailureReason, option.FailureDetail);
+        }
+
+        if (choice.Kind == ActionChoiceKind.Transfer)
+        {
+            foreach (var option in choice.TransferCounterparties.Where(option => option.CounterpartyId == targetId))
+            {
+                yield return Row(ActionText(ActionChoiceKind.Transfer, targetId), option.CanExecute, option.FailureReason, option.FailureDetail);
+            }
+        }
+    }
+
+    private static EntityInspectionActionRow Row(FrontendTextMessage action, bool canExecute, FailureReason? failureReason, string? failureDetail) => canExecute
+        ? new EntityInspectionActionRow(action, Selectable: true)
+        : new EntityInspectionActionRow(
+            FrontendTextMessage.Create(
+                FrontendTextIds.InspectionActionUnavailable,
+                ("action", FrontendTextResolver.InspectionPrototype.Resolve(action)),
+                ("reason", FailureText(failureReason, failureDetail))),
+            Selectable: false,
+            FrontendTextMessage.Create(FailureTextId(failureReason), ("detail", failureDetail ?? string.Empty)));
+
+    private static FrontendTextMessage ActionText(ActionChoiceKind kind, EntityId targetId) => kind switch
+    {
+        ActionChoiceKind.Pickup => FrontendTextMessage.Create(FrontendTextIds.InspectionActionPickup, ("targetName", targetId.Value)),
+        ActionChoiceKind.Drop => FrontendTextMessage.Create(FrontendTextIds.InspectionActionDrop, ("targetName", targetId.Value)),
+        ActionChoiceKind.Enter => FrontendTextMessage.Create(FrontendTextIds.InspectionActionEnter, ("targetName", targetId.Value)),
+        ActionChoiceKind.Push => FrontendTextMessage.Create(FrontendTextIds.InspectionActionPush, ("targetName", targetId.Value)),
+        ActionChoiceKind.Transfer => FrontendTextMessage.Create(FrontendTextIds.InspectionActionTransfer, ("targetName", targetId.Value)),
+        _ => FrontendTextMessage.Create(FrontendTextIds.InspectionActionGeneric, ("actionName", kind), ("targetName", targetId.Value))
+    };
+
+    private static string FailureTextId(FailureReason? failureReason) => failureReason is null
+        ? "inspection.failure.unavailable"
+        : $"inspection.failure.{failureReason}";
+
+    private static string FailureText(FailureReason? failureReason, string? failureDetail) =>
+        !string.IsNullOrWhiteSpace(failureDetail) ? failureDetail : failureReason?.ToString() ?? "unavailable";
+
+    internal static IReadOnlyList<EntityInspectionPortraitCell> BuildPortraitCells(PlayGridViewModel grid, PlayCellVisual center, GridCoord? highlightedCoord)
     {
         var cells = new List<EntityInspectionPortraitCell>(9);
         for (var y = 0; y < 3; y++)
         for (var x = 0; x < 3; x++)
         {
-            var source = grid.TryCellAt(center.X + x - 1, center.Y + y - 1);
+            var sourceCoord = new GridCoord(center.X + x - 1, center.Y + y - 1);
+            var source = grid.TryCellAt(sourceCoord.X, sourceCoord.Y);
+            var isHighlighted = highlightedCoord == sourceCoord;
             cells.Add(source is null
-                ? new EntityInspectionPortraitCell(x, y, 160, Color.Black, Color.Black)
+                ? new EntityInspectionPortraitCell(x, y, 160, Color.Black, Color.Black, IsHighlighted: isHighlighted)
                 : new EntityInspectionPortraitCell(
                     x,
                     y,
@@ -110,7 +198,8 @@ internal static class EntityInspectionPanelModelFactory
                     source.EntityGlyph,
                     source.EntityForeground,
                     source.FacingGlyph,
-                    source.FacingMirror));
+                    source.FacingMirror,
+                    isHighlighted));
         }
 
         return cells;
@@ -131,9 +220,10 @@ internal static class EntityInspectionPanelRenderer
         PrintClipped(target, layout.Bounds.X + 3, layout.Bounds.Y, layout.Bounds.Width - 6, model.EntityName, Color.White, background, tilesetProfile);
         DrawSeparators(target, layout, tilesetProfile.Roles.PanelBorder, Color.Gold, background);
         DrawReservedPlayspaceRegion(target, layout.PortraitRegion, tilesetProfile, background);
-        PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y, layout.StatusRegion.Width, "Aperture.text.id: " + model.Aperture, Color.White, background, tilesetProfile);
-        PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y + 1, layout.StatusRegion.Width, "Bulk.text.id: " + model.Bulk, Color.White, background, tilesetProfile);
-        DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background);
+        var text = FrontendTextResolver.InspectionPrototype;
+        PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y, layout.StatusRegion.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatAperture, ("value", model.Aperture))), Color.White, background, tilesetProfile);
+        PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y + 1, layout.StatusRegion.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatBulk, ("value", model.Bulk))), Color.White, background, tilesetProfile);
+        DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background, text);
         if (layout.InventoryRegion is { } inventory)
         {
             DrawReservedInventoryRegion(target, inventory, tilesetProfile, background);
@@ -175,13 +265,15 @@ internal static class EntityInspectionPanelRenderer
 
     }
 
-    private static void DrawActions(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background)
+    private static void DrawActions(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text)
     {
-        PrintClipped(target, region.X, region.Y, region.Width, "Actions:", Color.Yellow, background, tilesetProfile);
+        PrintClipped(target, region.X, region.Y, region.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionActionsHeader)), Color.Yellow, background, tilesetProfile);
         for (var i = 0; i < model.Actions.Count && i + 1 < region.Height; i++)
         {
             var action = model.Actions[i];
-            PrintClipped(target, region.X, region.Y + i + 1, region.Width, action.Text, action.Selectable ? Color.Cyan : Color.Gray, background, tilesetProfile);
+            var prefix = action.Selectable ? "> " : "~ ";
+            var suffix = action.Selectable ? string.Empty : " ~";
+            PrintClipped(target, region.X, region.Y + i + 1, region.Width, prefix + text.Resolve(action.Text) + suffix, action.Selectable ? Color.Cyan : Color.Gray, background, tilesetProfile);
         }
     }
 

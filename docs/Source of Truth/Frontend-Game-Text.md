@@ -62,6 +62,22 @@ The current entries are allowed to be placeholders. The important first step is 
 - `{adjective}`: projected affordance/adjective such as `portable`, `enterable`, or `hostile`.
 - Message IDs use lowercase dotted `action.<action_step>.<result>[.<variant>]` form, such as `action.move_facing.success` or `action.pickup_target.failure.large`. These IDs are the current contract; final user-facing language is not.
 
+## Inspection panel text slots
+
+The SadConsole inspection panel uses the same ID-plus-args discipline as logs. Its model should carry structured `FrontendTextMessage` values rather than final prose strings. The renderer resolves those messages at the last presentation step through a frontend-owned resolver. This keeps current labels such as `Aperture.text.id` and `Bulk.text.id` intentionally provisional and lets future wording switch to `Aperture: 8`, `A: 8`, `Size: 8`, or another presentation without changing Core action facts.
+
+Initial inspection IDs are frontend-owned placeholders:
+
+- `inspection.stat.aperture` with `{value}`
+- `inspection.stat.bulk` with `{value}`
+- `inspection.actions.header`
+- `inspection.action.none`
+- `inspection.action.pickup` / `drop` / `enter` / `push` / `transfer` with `{targetName}`
+- `inspection.action.generic` with `{actionName}` and `{targetName}`
+- `inspection.action.unavailable` with `{action}` and `{reason}`
+
+Action rows should derive from Core `ActionChoice` facts and then map the action kind/failure facts to text IDs. Do not treat enum names such as `Pickup` or `ApertureBlocked` as final player-facing copy; they are stable semantic inputs to a wording decision.
+
 ## Player motivations and UX feedback concerns
 
 Player-facing log text should first answer why the player is reading the log, then choose sentence detail accordingly. Current player narrative projection output is useful for smoke-testing tone, but Alpha Slime showcase review exposed several UX concerns that should guide future text and structured-fact work.
