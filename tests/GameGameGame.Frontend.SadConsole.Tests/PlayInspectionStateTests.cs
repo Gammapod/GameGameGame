@@ -86,7 +86,7 @@ public sealed class PlayInspectionStateTests
         var grid = Grid(player, block);
         var inspected = grid.CellAt(2, 1);
 
-        var cells = EntityInspectionPanelModelFactory.BuildPortraitCells(grid, inspected, new GridCoord(1, 1));
+        var cells = InspectionPortraitProjector.Project(grid, inspected, new PlayHighlightState(new GridCoord(1, 1), CellHighlightKind.EntityTarget));
 
         Assert.Contains(cells, cell => cell.X == 0 && cell.Y == 1 && cell.HighlightKind == CellHighlightKind.EntityTarget);
     }
