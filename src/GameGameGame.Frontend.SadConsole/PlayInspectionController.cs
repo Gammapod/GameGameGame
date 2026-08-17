@@ -13,6 +13,7 @@ internal enum PlayFocusMode
 internal sealed class PlayInspectionController(
     Console owner,
     PlayableScenarioSession session,
+    PlayActionSessionController actionSession,
     SadConsoleDisplaySettings displaySettings,
     TilesetProfile tilesetProfile)
 {
@@ -67,9 +68,15 @@ internal sealed class PlayInspectionController(
     public string ConfirmSelectedActionMessage()
     {
         var action = _cachedModel?.Actions.ElementAtOrDefault(SelectedActionIndex);
-        return action is null
-            ? "No inspected action selected."
-            : $"Selected action: {FrontendTextResolver.InspectionPrototype.Resolve(action.Text)} (not wired yet).";
+        var outcome = PlayActionCandidateResolver.ResolveSelection(action?.Candidate);
+        return outcome.Kind switch
+        {
+            PlayActionCandidateOutcomeKind.NoSelection => "No inspected action selected.",
+            PlayActionCandidateOutcomeKind.Explained => $"Action unavailable: {FrontendTextResolver.InspectionPrototype.Resolve(outcome.Message)}",
+            PlayActionCandidateOutcomeKind.FollowUpNeeded => $"Selected action: {FrontendTextResolver.InspectionPrototype.Resolve(action!.Text)}. More input needed: {FrontendTextResolver.InspectionPrototype.Resolve(outcome.Message)}.",
+            PlayActionCandidateOutcomeKind.ReadyToSubmit => $"Selected action: {FrontendTextResolver.InspectionPrototype.Resolve(outcome.Message)} (ready to submit).",
+            _ => "No inspected action selected."
+        };
     }
 
     public void Draw(FrontendRect? bounds, PlayGridViewModel grid, PlayCellVisual? inspectedCell, PlayHighlightState? highlight)
@@ -100,7 +107,7 @@ internal sealed class PlayInspectionController(
 
         _cachedEntityId = entityId;
         _cachedHighlight = highlight;
-        _cachedModel = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspectedCell!, highlight);
+        _cachedModel = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspectedCell!, actionSession.CurrentActionChoiceRequest, highlight);
         _modelDirty = false;
         _modelChanged = true;
         return _cachedModel;

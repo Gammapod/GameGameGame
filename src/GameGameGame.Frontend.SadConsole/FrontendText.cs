@@ -20,6 +20,14 @@ internal static class FrontendTextIds
     public const string InspectionActionTransfer = "inspection.action.transfer";
     public const string InspectionActionGeneric = "inspection.action.generic";
     public const string InspectionActionUnavailable = "inspection.action.unavailable";
+    public const string PlayActionNoSelection = "play.action.no-selection";
+    public const string PlayActionUnavailable = "play.action.unavailable";
+    public const string PlayActionPromptPickupDestination = "play.action.prompt.pickup-destination";
+    public const string PlayActionPromptDestination = "play.action.prompt.destination";
+    public const string PlayActionPromptPushDirection = "play.action.prompt.push-direction";
+    public const string PlayActionPromptDirection = "play.action.prompt.direction";
+    public const string PlayActionPromptTransferItem = "play.action.prompt.transfer-item";
+    public const string PlayActionPromptTransferItemChoice = "play.action.prompt.transfer-item-choice";
 }
 
 internal sealed class FrontendTextResolver
@@ -36,7 +44,15 @@ internal sealed class FrontendTextResolver
         [FrontendTextIds.InspectionActionPush] = "Push {targetName}",
         [FrontendTextIds.InspectionActionTransfer] = "Transfer with {targetName}",
         [FrontendTextIds.InspectionActionGeneric] = "{actionName} {targetName}",
-        [FrontendTextIds.InspectionActionUnavailable] = "{action}: {reason}"
+        [FrontendTextIds.InspectionActionUnavailable] = "{action}: {reason}",
+        [FrontendTextIds.PlayActionNoSelection] = "No action selected",
+        [FrontendTextIds.PlayActionUnavailable] = "{reason}",
+        [FrontendTextIds.PlayActionPromptPickupDestination] = "Choose pickup destination for {targetName}",
+        [FrontendTextIds.PlayActionPromptDestination] = "to {coord}",
+        [FrontendTextIds.PlayActionPromptPushDirection] = "Choose push direction for {targetName}",
+        [FrontendTextIds.PlayActionPromptDirection] = "{direction}",
+        [FrontendTextIds.PlayActionPromptTransferItem] = "Choose transfer item with {targetName}",
+        [FrontendTextIds.PlayActionPromptTransferItemChoice] = "{entityId}"
     });
 
     private readonly IReadOnlyDictionary<string, string> _templates;

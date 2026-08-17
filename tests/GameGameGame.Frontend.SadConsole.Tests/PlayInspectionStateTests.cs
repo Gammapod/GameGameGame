@@ -68,10 +68,11 @@ public sealed class PlayInspectionStateTests
         var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = GameGameGame.Content.WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
         var grid = PlayGridViewModel.FromSession(session, tileset);
         var inspected = Assert.Single(grid.Cells, cell => cell.EntityId?.Value == "debugPushBlock");
 
-        var model = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspected);
+        var model = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspected, actionSession.CurrentActionChoiceRequest);
 
         Assert.Equal(9, model.PortraitCells.Count);
         Assert.Contains(model.PortraitCells, cell => cell.X == 1 && cell.Y == 1 && cell.EntityGlyph == inspected.EntityGlyph);
@@ -98,10 +99,11 @@ public sealed class PlayInspectionStateTests
         var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = GameGameGame.Content.WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
         var grid = PlayGridViewModel.FromSession(session, tileset);
         var inspected = Assert.Single(grid.Cells, cell => cell.EntityId?.Value == "debugPushBlock");
 
-        var model = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspected);
+        var model = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspected, actionSession.CurrentActionChoiceRequest);
 
         var text = FrontendTextResolver.InspectionPrototype;
         Assert.Contains(model.Actions, action => !action.Selectable && text.Resolve(action.Text).Contains("Pickup") && action.FailureReason is not null);

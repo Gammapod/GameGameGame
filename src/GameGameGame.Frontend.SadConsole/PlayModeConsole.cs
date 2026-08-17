@@ -12,6 +12,7 @@ internal sealed class PlayModeConsole : Console
     private readonly PlayableScenarioSession _session;
     private readonly FrontendDisplayShell _shell;
     private readonly TilesetProfile _tilesetProfile;
+    private readonly PlayActionSessionController _actionSession;
     private readonly PlayMovementController _movement;
     private readonly QueuedMovementBuffer<CoreDirection> _queuedMovement = new();
     private readonly MovementPreviewState _movementPreview = new();
@@ -33,8 +34,9 @@ internal sealed class PlayModeConsole : Console
         _shell = shell;
         _tilesetProfile = tilesetProfile;
         _returnToBrowser = returnToBrowser;
-        _movement = new PlayMovementController(session);
-        _inspection = new PlayInspectionController(this, session, displaySettings, tilesetProfile);
+        _actionSession = new PlayActionSessionController(session);
+        _movement = new PlayMovementController(_actionSession);
+        _inspection = new PlayInspectionController(this, session, _actionSession, displaySettings, tilesetProfile);
         _animationPresenter = new PlayMovementAnimationPresenter(this, shell, tilesetProfile, PlayAnimationSettings.Default, session.PlayerEntityId);
         _grid = PlayGridViewModel.FromSession(session, tilesetProfile);
         UseKeyboard = true;
@@ -217,7 +219,7 @@ internal sealed class PlayModeConsole : Console
         ClearSurface();
         DrawBorder();
         Print(2, 1, $"Play: {_session.Name} [{_session.ScenarioId}]", Color.White);
-        Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Player: {_session.PlayerEntityId} | {_message}", Color.Gray);
+        Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Player: {_actionSession.ControlledActorId} | {_message}", Color.Gray);
         var visibleGrid = _animationPresenter.BaseGrid ?? _grid;
         var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _session.PlayerEntityId } : null;
         var previewCoord = _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)

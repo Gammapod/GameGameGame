@@ -29,7 +29,7 @@ internal sealed record EntityInspectionPanelLayout(
     }
 }
 
-internal sealed record EntityInspectionActionRow(FrontendTextMessage Text, bool Selectable, FrontendTextMessage? FailureReason = null);
+internal sealed record EntityInspectionActionRow(FrontendTextMessage Text, bool Selectable, FrontendTextMessage? FailureReason = null, PlayActionCandidate? Candidate = null);
 
 internal sealed record EntityInspectionPortraitCell(
     int X,

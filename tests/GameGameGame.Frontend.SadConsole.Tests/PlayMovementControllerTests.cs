@@ -7,21 +7,24 @@ namespace GameGameGame.Frontend.SadConsole.Tests;
 public sealed class PlayMovementControllerTests
 {
     [Fact]
-    public void PlayMovementControllerMovesDebugRoomPlayerThroughSharedCommandService()
+    public void PlayMovementControllerSubmitsDebugRoomMovementThroughPlayActionSessionController()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
-        var controller = new PlayMovementController(session);
+        var actionSession = new PlayActionSessionController(session);
+        var controller = new PlayMovementController(actionSession);
 
         var result = controller.Move(Direction.East);
 
-        Assert.True(result.CommandResult.Succeeded);
-        Assert.True(result.CommandResult.AdvancedTurn);
+        Assert.False(result.CommandResult.Succeeded);
+        Assert.False(result.CommandResult.AdvancedTurn);
+        Assert.True(result.UsedCoreActionChoice);
         Assert.Equal(new GridCoord(4, 3), result.BeforeCoord);
-        Assert.Equal(new GridCoord(5, 3), result.AfterCoord);
-        Assert.True(result.MovedOneCell);
-        Assert.Equal(new GridCoord(5, 3), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.Equal(new GridCoord(4, 3), result.AfterCoord);
+        Assert.False(result.MovedOneCell);
+        Assert.Equal(new GridCoord(4, 3), session.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.NotNull(actionSession.CurrentActionChoiceRequest);
     }
 
 }
