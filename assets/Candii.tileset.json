@@ -47,6 +47,11 @@
     "facingWE": 253,
     "moveHighlight": 218,
     "entityHighlight": 217,
+    "pickupHighlight": 216,
+    "dropHighlight": 215,
+    "enterHighlight": 214,
+    "exitHighlight": 213,
+    "transferHighlight": 212,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

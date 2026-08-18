@@ -15,6 +15,7 @@ read_when:
   - deciding whether a new UI affordance conflicts with a prior decision
 related:
   - source.frontend-ux-standards
+  - source.frontend-play-visual-language
   - plan.sadconsole-frontend-roadmap
 ---
 # Frontend UX Decision Log
@@ -30,6 +31,7 @@ Read when:
 Related documents:
 
 - `docs/Source of Truth/Frontend-UX-Standards.md` records the current UI-bible standards.
+- `docs/Source of Truth/Frontend-Play-Visual-Language.md` records player-facing Play-mode visual semantics.
 - `docs/Source of Truth/Frontend-Editor-Simulation-Flow.mmd` diagrams the current Editor/Simulation context model.
 - `docs/Plans/SadConsole-Frontend-Roadmap.md` records staged implementation work and backlog items.
 
@@ -248,3 +250,42 @@ Each decision should include:
 - **Reasoning:** The frontend already depends on manifest-owned glyph facts such as the Candii blank tile and panel-border roles. Making glyph parity explicit lets renderers switch between 8x8, 16x16, and future sizes without duplicating presentation mappings or inventing renderer-local glyph tables.
 - **Implications:** Frontend renderers should resolve text blank, entity presentation glyphs, panel borders, grid/backdrop roles, and future sprite roles through the tileset family manifest instead of hardcoding ASCII/CP437 assumptions. The manifest should remain flexible enough to add size variants, optional accent layers, and animations later. Do not split Candii into many category sheets or implement accent/animation rendering until asset pressure or Play-mode requirements justify it.
 - **Status:** Active / first applied to the new scenario browser modal border and blank glyph handling.
+
+### FED-029: Play visual semantics belong in a separate visual-language source
+
+- **Decision:** Keep `Frontend-UX-Decisions.md` as the frontend-owner rationale and implementation-memory log, and use `Frontend-Play-Visual-Language.md` as the canonical player-facing visual semantics document for the new `GameGameGame.Frontend.SadConsole` Play mode.
+- **Reasoning:** The project needs two different documentation products: durable memory of why code and UX choices were made, and a clean rulebook for what players should infer from highlights, focus, overlays, action rows, and future indicators. Mixing them would make the visual-language spec too implementation-heavy and make the decision log too normative for player-facing semantics.
+- **Implications:** When implementing a feature, record rationale, alternatives, code anchors, tests, and follow-up risks here. When promoting a visible Play concept into stable player-facing language, add or update the visual-language document. Old frontend UX specs remain reference/audit material and should not define new prompt/menu assumptions for `GameGameGame.Frontend.SadConsole`.
+- **Status:** Active.
+
+### FED-030: Play highlights communicate expected action, not generic interest
+
+- **Decision:** In new Play mode, grid highlights communicate what confirming/selecting the highlighted cell will do. Current implemented variants are movement preview and entity-target inspection/action focus.
+- **Reasoning:** The same adjacent cell can imply different outcomes: moving to an empty destination versus focusing actions for an occupied entity. A single generic highlight would hide the actual consequence of confirmation. Distinct highlights preserve player intent and prevent accidental movement/action confusion.
+- **Implementation anchors:** `PlayHighlightState`, `CellHighlightKind.MovePreview`, `CellHighlightKind.EntityTarget`, `CellHighlightPresentation`, `TilesetRoles.MoveHighlight`, `TilesetRoles.EntityHighlight`, and `PlayModeConsole.ResolveHighlight(...)`.
+- **Implications:** Future action-specific highlights may be introduced when exactly one action is available, but only after that action's UX semantics are designed. Highlights should remain overlays/decorators rather than replacing entity glyph identity, preserving FED-004/FED-005.
+- **Status:** Active / initial rules copied into `Frontend-Play-Visual-Language.md`.
+
+### FED-031: Play focus routing locks input to the focused owner
+
+- **Decision:** Play mode routes keyboard input by focus owner. When inspection actions have focus, panel input is consumed by `PlayInspectionInputController`; movement aim, movement-key release clearing, and inspected-cell changes do not fall through to the grid.
+- **Reasoning:** Focus must be semantic, not just visual. Without explicit routing, panel interaction can accidentally mutate grid aim or selection behind the overlay, making action selection unreliable and undermining future picker/player-panel workflows.
+- **Implementation anchors:** `PlayFocusMode`, `PlayInspectionInputController`, `PlayModeConsole.ProcessKeyboard(...)`, `PlayInspectionController.FocusActions()/ReturnToGrid()`, and tests in `PlayInputControllerTests`.
+- **Implications:** Future player inventory panels and action pickers must become explicit focus owners before accepting input. `Esc`/Left-style return paths should move focus visibly and semantically back to the grid or previous owner.
+- **Status:** Active / checkpoint `e4ba3b6 Harden play inspection focus input`.
+
+### FED-032: New Play action session controller owns execution facts, not selection UX
+
+- **Decision:** `PlayActionSessionController` centralizes Core action-choice submission/session facts for the new frontend, while action-selection workflows remain frontend-designed and action-specific.
+- **Reasoning:** The old frontend's session controller had valuable Core orchestration responsibilities, but its prompt/menu conventions are not automatically valid for the new frontend. Separating execution facts from selection semantics lets the new UI use current overlay/focus patterns without duplicating Core `ActionChoiceService` requests or inheriting legacy prompt assumptions.
+- **Implementation anchors:** `PlayActionSessionController`, `PlayMovementController`, `PlayModeConsole`, `EntityInspectionPanelModelFactory`, and `InspectionActionChoiceProjector`.
+- **Implications:** Movement and inspection action rows should consume the controller-owned current `ActionChoiceRequest`. Do not expose old `PlayModeIntentSeed`, prompt stack, menu ordering, or shortcut assumptions through the session controller. Coordinate with Core/Content if missing submission/session capabilities appear.
+- **Status:** Active / checkpoint `ae7e85f Add play action session groundwork`.
+
+### FED-033: Action candidates are inert infrastructure until per-action UX is designed
+
+- **Decision:** New `PlayActionCandidate` and `PlayActionPromptLayer` data can be projected onto inspection/player action rows, but prompt focus, picker overlays, auto-submit, candidate ordering, and action confirmation semantics are deferred until after the player inventory/self-inspection overlay exists and then designed one action at a time.
+- **Reasoning:** Building all prompt behavior now would either import old frontend workflow assumptions or prematurely commit to interaction semantics before the inventory overlay exists. Structured candidate data is still useful infrastructure: rows can carry Core-derived action facts without each panel re-reading affordances or relying on text-only “not wired yet” placeholders.
+- **Implementation anchors:** `PlayActionCandidateModel.cs`, `EntityInspectionActionRow.Candidate`, `InspectionActionChoiceProjector`, `PlayActionCandidateResolver`, and `PlayActionCandidateModelTests`.
+- **Implications:** Candidate outcome terminology should avoid implying visible prompt behavior has happened; use “follow-up needed” rather than “prompt opened” for inert classification. The first concrete action workflow should update the visual-language spec and decision log for that action only, without claiming global prompt semantics.
+- **Status:** Active / infrastructure checkpoint only.
