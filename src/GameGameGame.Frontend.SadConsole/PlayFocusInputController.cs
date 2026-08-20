@@ -1,3 +1,4 @@
+using GameGameGame.Core;
 using SadConsole.Input;
 
 namespace GameGameGame.Frontend.SadConsole;
@@ -27,10 +28,15 @@ internal static class PlayInspectionInputController
     public static PlayInspectionInputIntent ReadKeys(IEnumerable<Keys> releasedKeys)
     {
         var keys = releasedKeys.ToHashSet();
-        if (keys.Contains(Keys.Escape) || keys.Contains(Keys.Left)) return PlayInspectionInputIntent.ReturnToGrid;
+        if (keys.Contains(Keys.Escape)) return PlayInspectionInputIntent.ReturnToGrid;
         if (keys.Contains(Keys.Up)) return PlayInspectionInputIntent.PreviousAction;
         if (keys.Contains(Keys.Down)) return PlayInspectionInputIntent.NextAction;
         if (keys.Contains(Keys.Enter) || keys.Contains(Keys.Space)) return PlayInspectionInputIntent.ConfirmAction;
         return PlayInspectionInputIntent.Consume;
     }
+}
+
+internal static class PlayInventorySelectionInputController
+{
+    public static Direction? ReadDirection(Keyboard keyboard) => MovementPreviewKeyboardReader.ReadHeldDirection(keyboard.KeysReleased.Select(key => key.Key));
 }

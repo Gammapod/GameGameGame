@@ -52,6 +52,7 @@
     "enterHighlight": 214,
     "exitHighlight": 213,
     "transferHighlight": 212,
+    "noActionHighlight": 211,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

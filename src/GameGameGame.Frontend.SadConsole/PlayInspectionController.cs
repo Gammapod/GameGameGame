@@ -79,6 +79,11 @@ internal sealed class PlayInspectionController(
         };
     }
 
+    public CellHighlightKind FocusedActionHighlightKind() =>
+        PlayActionHighlightResolver.ForInspectionAction(_cachedModel?.Actions.ElementAtOrDefault(SelectedActionIndex));
+
+    public EntityInspectionActionRow? SelectedActionRow => _cachedModel?.Actions.ElementAtOrDefault(SelectedActionIndex);
+
     public void Draw(FrontendRect? bounds, PlayGridViewModel grid, PlayCellVisual? inspectedCell, PlayHighlightState? highlight)
     {
         var model = ResolveModel(grid, inspectedCell, highlight);
@@ -107,7 +112,7 @@ internal sealed class PlayInspectionController(
 
         _cachedEntityId = entityId;
         _cachedHighlight = highlight;
-        _cachedModel = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspectedCell!, actionSession.CurrentActionChoiceRequest, highlight);
+        _cachedModel = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspectedCell!, actionSession.CurrentActionChoiceRequest, tilesetProfile, highlight);
         _modelDirty = false;
         _modelChanged = true;
         return _cachedModel;

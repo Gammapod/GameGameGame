@@ -23,7 +23,20 @@ internal sealed record TilesetProfile(
             : throw new InvalidOperationException($"Tileset '{Id}' does not define text glyph mapping for '{character}'.");
 }
 
-internal sealed record TilesetRoles(int GridDotted, int FacingDiag, int FacingNS, int FacingWE, int MoveHighlight, int EntityHighlight, TileBorderGlyphSet PanelBorder)
+internal sealed record TilesetRoles(
+    int GridDotted,
+    int FacingDiag,
+    int FacingNS,
+    int FacingWE,
+    int MoveHighlight,
+    int EntityHighlight,
+    int PickupHighlight,
+    int DropHighlight,
+    int EnterHighlight,
+    int ExitHighlight,
+    int TransferHighlight,
+    int NoActionHighlight,
+    TileBorderGlyphSet PanelBorder)
 {
     public int DefaultBackdrop => GridDotted;
 

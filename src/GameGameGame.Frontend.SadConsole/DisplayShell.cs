@@ -32,6 +32,7 @@ internal sealed record FrontendRect(int X, int Y, int Width, int Height)
 {
     public int Right => X + Width - 1;
     public int Bottom => Y + Height - 1;
+    public bool Contains(int x, int y) => x >= X && y >= Y && x <= Right && y <= Bottom;
 }
 
 internal sealed record FrontendDisplayShell(

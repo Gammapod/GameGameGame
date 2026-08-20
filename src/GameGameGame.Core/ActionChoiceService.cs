@@ -82,6 +82,8 @@ public sealed class ActionChoiceService(MovementService movement)
 {
     public ActionChoiceRequest? CreateRequest(WorldState world, EntityId actorId, ActionPlanDescriptor descriptor)
     {
+        using var topologyScope = TopologyGraphMaterializer.BeginCacheScope();
+
         if (world.GetActionControlSource(actorId) != EntityControlSource.PlayerChoice)
         {
             return null;
@@ -94,12 +96,21 @@ public sealed class ActionChoiceService(MovementService movement)
 
         var choices = new List<ActionChoice>();
         var hasMoveChoice = false;
-        var affordanceService = new ControlledActorAffordanceService(movement);
-        var affordances = affordanceService.Query(world, actorId);
+        ControlledActorAffordances? affordances = null;
+        ControlledActorAffordances GetAffordances() =>
+            affordances ??= new ControlledActorAffordanceService(movement).Query(world, actorId);
 
         for (var index = 0; index < behavior.Steps.Count; index++)
         {
             var step = behavior.Steps[index];
+            var actorAffordances = step.Kind is ActionPlanBehaviorStepKind.PickupTarget
+                    or ActionPlanBehaviorStepKind.TransformAdjacentToInventory
+                    or ActionPlanBehaviorStepKind.DropFacing
+                    or ActionPlanBehaviorStepKind.TransformInventoryToAdjacent
+                    or ActionPlanBehaviorStepKind.EnterTarget
+                    or ActionPlanBehaviorStepKind.ExitFacing
+                ? GetAffordances()
+                : null;
             switch (step.Kind)
             {
                 case ActionPlanBehaviorStepKind.Move when !hasMoveChoice:
@@ -110,17 +121,17 @@ public sealed class ActionChoiceService(MovementService movement)
                     break;
                 case ActionPlanBehaviorStepKind.PickupTarget:
                 case ActionPlanBehaviorStepKind.TransformAdjacentToInventory:
-                    choices.Add(new ActionChoice(ActionChoiceKind.Pickup, index, [], affordances.PickupSources, affordances.PickupDestinationsByTargetId));
+                    choices.Add(new ActionChoice(ActionChoiceKind.Pickup, index, [], actorAffordances!.PickupSources, actorAffordances.PickupDestinationsByTargetId));
                     break;
                 case ActionPlanBehaviorStepKind.DropFacing:
                 case ActionPlanBehaviorStepKind.TransformInventoryToAdjacent:
-                    choices.Add(new ActionChoice(ActionChoiceKind.Drop, index, [], affordances.DropSources, QueryAdjacentDropDestinations(world, actorId, affordances.DropSources)));
+                    choices.Add(new ActionChoice(ActionChoiceKind.Drop, index, [], actorAffordances!.DropSources, QueryAdjacentDropDestinations(world, actorId, actorAffordances.DropSources)));
                     break;
                 case ActionPlanBehaviorStepKind.EnterTarget:
-                    choices.Add(new ActionChoice(ActionChoiceKind.Enter, index, [], affordances.EnterTargets, new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
+                    choices.Add(new ActionChoice(ActionChoiceKind.Enter, index, [], actorAffordances!.EnterTargets, new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
                     break;
                 case ActionPlanBehaviorStepKind.ExitFacing:
-                    choices.Add(new ActionChoice(ActionChoiceKind.Exit, index, affordances.ExitDirections.Select(ToDirectionOption).ToList(), [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
+                    choices.Add(new ActionChoice(ActionChoiceKind.Exit, index, actorAffordances!.ExitDirections.Select(ToDirectionOption).ToList(), [], new Dictionary<EntityId, IReadOnlyList<ControlledActorDestinationAffordance>>()));
                     break;
                 case ActionPlanBehaviorStepKind.Transfer:
                     var transferCounterparties = QueryTransferCounterparties(world, actorId);

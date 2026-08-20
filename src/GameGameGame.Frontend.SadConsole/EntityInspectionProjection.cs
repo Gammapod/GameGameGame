@@ -11,7 +11,9 @@ internal static class EntityInspectionPanelModelFactory
         PlayGridViewModel grid,
         PlayCellVisual visual,
         ActionChoiceRequest? actionChoiceRequest,
-        PlayHighlightState? highlight = null)
+        TilesetProfile tilesetProfile,
+        PlayHighlightState? highlight = null,
+        PlayHighlightState? inventoryHighlight = null)
     {
         var entityId = visual.EntityId ?? throw new InvalidOperationException("Cannot build an inspection panel model for an empty play cell.");
         var entity = session.World.Entities[entityId];
@@ -21,7 +23,59 @@ internal static class EntityInspectionPanelModelFactory
             entity.Bulk,
             entity.HasUsableInventory,
             InspectionPortraitProjector.Project(grid, visual, highlight),
+            InspectionInventoryProjector.Project(session, entityId, tilesetProfile, inventoryHighlight),
             InspectionActionChoiceProjector.Project(actionChoiceRequest, entityId));
+    }
+}
+
+internal static class InspectionInventoryProjector
+{
+    public static IReadOnlyList<EntityInspectionPortraitCell> Project(PlayableScenarioSession session, EntityId entityId, TilesetProfile tilesetProfile, PlayHighlightState? highlight = null)
+    {
+        if (session.World.GetRegisteredInventoryPlaneId(entityId) is not { } planeId
+            || !session.World.Planes.TryGetValue(planeId, out var plane))
+        {
+            return [];
+        }
+
+        var cells = new List<EntityInspectionPortraitCell>(plane.Width * plane.Height);
+        for (var y = 0; y < plane.Height; y++)
+        for (var x = 0; x < plane.Width; x++)
+        {
+            var coord = new PlaneCoord(planeId, new GridCoord(x, y));
+            var occupant = session.World.GetOccupant(coord);
+            var glyph = occupant is { } occupantId ? ResolveEntityGlyph(session, tilesetProfile, occupantId) : (int?)null;
+            var facing = occupant is { } facingEntityId && session.World.GetActionFacing(facingEntityId) is { } direction
+                ? tilesetProfile.Roles.FacingGlyph(direction)
+                : ((int Glyph, global::SadConsole.Mirror Mirror)?)null;
+            cells.Add(new EntityInspectionPortraitCell(
+                x,
+                y,
+                tilesetProfile.Roles.DefaultBackdrop,
+                Color.DimGray,
+                Color.Black,
+                glyph,
+                glyph is null ? null : Color.White,
+                facing?.Glyph,
+                facing?.Mirror ?? global::SadConsole.Mirror.None,
+                highlight?.Coord == new GridCoord(x, y) ? highlight.Kind : null));
+        }
+
+        return cells;
+    }
+
+    private static int ResolveEntityGlyph(PlayableScenarioSession session, TilesetProfile tilesetProfile, EntityId entityId)
+    {
+        if (session.Registry.TryGetTemplateIdForEntity(session.World, entityId, out var templateId)
+            && session.Registry.Presentations.TryGetValue(templateId, out var presentation)
+            && tilesetProfile.PresentationMappings.GlyphsByPresentationId.TryGetValue(presentation.PresentationId.Value, out var mappedGlyph))
+        {
+            return mappedGlyph;
+        }
+
+        return session.World.Entities.TryGetValue(entityId, out var entity) && !string.IsNullOrWhiteSpace(entity.Name)
+            ? entity.Name[0]
+            : '?';
     }
 }
 

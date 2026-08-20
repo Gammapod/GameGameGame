@@ -1,6 +1,6 @@
 namespace GameGameGame.Frontend.SadConsole;
 
-internal sealed record PlayModeInspectionLayout(FrontendRect GridBounds, FrontendRect? InspectionBounds)
+internal sealed record PlayModeInspectionLayout(FrontendRect GridBounds, FrontendRect? InspectionBounds, FrontendRect? PlayerPanelBounds)
 {
     public static PlayModeInspectionLayout Resolve(FrontendRect drawableBounds)
     {
@@ -11,7 +11,7 @@ internal sealed record PlayModeInspectionLayout(FrontendRect GridBounds, Fronten
 
         if (drawableBounds.Height < minimumInspectionHeight || drawableBounds.Width < minimumInspectionWidth)
         {
-            return new PlayModeInspectionLayout(drawableBounds, null);
+            return new PlayModeInspectionLayout(drawableBounds, null, null);
         }
 
         var inspectionWidth = Math.Min(preferredInspectionWidth, Math.Max(minimumInspectionWidth, drawableBounds.Width - gap));
@@ -21,6 +21,11 @@ internal sealed record PlayModeInspectionLayout(FrontendRect GridBounds, Fronten
             drawableBounds.Y + 1,
             inspectionWidth,
             inspectionHeight);
-        return new PlayModeInspectionLayout(drawableBounds, inspection);
+        var playerPanel = new FrontendRect(
+            drawableBounds.X,
+            drawableBounds.Bottom - Math.Min(18, drawableBounds.Height - 1) + 1,
+            inspectionWidth,
+            Math.Min(18, drawableBounds.Height - 1));
+        return new PlayModeInspectionLayout(drawableBounds, inspection, playerPanel);
     }
 }

@@ -30,49 +30,9 @@ Purpose: Track small, continuously updated user stories without creating a dedic
 
 ## Now
 
-### Add action candidate model for focused Play panels
-
-**User story:** As a developer, I want inspection/player panel action rows to carry structured action candidates so future user-facing workflows can be implemented one at a time without re-reading Core affordances in each panel.
-
-**Boundary decision:** This Now item is infrastructure only. Do not implement prompt-layer focus, picker overlays, auto-submit semantics, candidate ordering semantics, or action-confirmation UX here. User-facing action semantics will be approached one-by-one after the player inventory/self-inspection overlay exists. Legacy `PlayModeIntentController` and `ConsumerPlayModeScreen` candidate builders remain references for Core affordance coverage and edge cases, not APIs or UX to import verbatim.
-
-**Plan:**
-
-- Design new-frontend model types for structured action candidates; use the legacy `PlayModeIntentController`/`PlayModeActionCandidate` idea only as a reference pattern. **Started:** `PlayActionCandidate`, `PlayActionPromptLayer`, `PlayActionPromptChoice`, and selection outcome models exist.
-- Build candidates from the active controller's `ActionChoiceRequest` for inspection-entity rows first. **Started:** inspection-entity candidates are projected from the controller-owned request.
-- Keep prompt-layer data inert until the player inventory/self-inspection overlay exists.
-- Keep complete-candidate submit behavior inert until each action's user-facing flow is intentionally designed.
-- Record unresolved UX decisions as deferred follow-ups rather than implementing broad prompt behavior now.
-
-**Current implementation note:** Inspection rows now carry action candidates and no longer treat row selection as an unstructured “not wired yet” message. Prompt layers are modelled but intentionally not focused/rendered as interactive overlays. Defer prompt, picker, and auto-submit semantics until after the player inventory/self-inspection overlay is implemented.
-
-**Done when:**
-
-- Inspection action rows carry structured candidates instead of being text-only rows.
-- Candidate resolver can classify no-selection, unavailable, ready-to-submit, and prompt-needed states without changing focus or submitting actions.
-- Tests cover candidate projection and inert outcome classification.
+No active item selected. Pull from **Next** when ready.
 
 ## Next
-
-### Add player self-inspection panel
-
-**User story:** As a player, I can open my own inventory/status panel with `I` and focus its action list without changing grid aim.
-
-**Plan:**
-
-- Add a bottom-left player-panel overlay using the same child-console/transparent-overlay family as entity inspection.
-- Reuse inspection panel rendering and Candii-size overlay patterns where practical.
-- Add player-only projection for portrait/status/inventory/action rows.
-- Filter player-panel action rows by first prompt source:
-  - no-prompt or deducible actions;
-  - player-inventory-first actions such as Drop or Give/Transfer ActorToTarget.
-- Route `I` through Play focus/input handling.
-
-**Done when:**
-
-- `I` opens/focuses the player panel.
-- The player panel displays the controlled actor's portrait/inventory/status/actions.
-- Grid input is locked while the player panel has focus.
 
 ### Design first action prompt semantics after inventory overlay
 
@@ -148,6 +108,26 @@ Purpose: Track small, continuously updated user stories without creating a dedic
 - Normal build/test expectations are explicit.
 
 ## Completed
+
+### 2026-08-16: Add player self-inspection/inventory panel
+
+**User story:** As a player, I can focus my always-visible inventory/status panel with `I` without changing grid aim.
+
+**Completion notes:** Added an always-visible bottom-left player panel overlay using the same child-console/mixed-Candii overlay family as entity inspection. `I` toggles player-panel focus/unfocus; `Esc`/Left also returns to grid. While focused, the player panel consumes input so movement/grid input does not fall through. The panel projects the controlled actor's portrait, status/action rows, and inventory cells from the actor's registered inventory plane.
+
+**Deferred:** Player-panel action execution and prompt semantics remain deferred. Current player-panel action messages are inert until action-specific workflows are designed.
+
+**Verification:** `dotnet test tests/GameGameGame.Frontend.SadConsole.Tests/GameGameGame.Frontend.SadConsole.Tests.csproj --artifacts-path C:\Users\Scramble\AppData\Local\Temp\opencode\ggg-player-panel3 -m:1 --filter "PlayInput|PlayInspectionState|EntityInspectionPanel|PlayMovement|PlayGrid|TilesetProfile|PlayActionCandidate|MovementPreview"` passed 53 tests.
+
+### 2026-08-16: Add action candidate model for focused Play panels
+
+**User story:** As a developer, I want inspection/player panel action rows to carry structured action candidates so future user-facing workflows can be implemented one at a time without re-reading Core affordances in each panel.
+
+**Boundary decision:** Implemented as infrastructure only. Prompt-layer focus, picker overlays, auto-submit semantics, candidate ordering semantics, and action-confirmation UX are intentionally deferred until after the player inventory/self-inspection overlay exists and then one action at a time.
+
+**Completion notes:** Added `PlayActionCandidate`, prompt/follow-up data models, and inert outcome classification. Inspection action rows carry candidates from the controller-owned request instead of being text-only rows.
+
+**Verification:** Included in checkpoint `ae7e85f Add play action session groundwork` and reverified with the player-panel targeted test run above.
 
 ### 2026-08-16: Introduce new frontend Play action session controller
 

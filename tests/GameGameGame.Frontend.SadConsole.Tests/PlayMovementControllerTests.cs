@@ -27,4 +27,37 @@ public sealed class PlayMovementControllerTests
         Assert.NotNull(actionSession.CurrentActionChoiceRequest);
     }
 
+    [Fact]
+    public void DeferredMoveAppliesPlayerMoveBeforeCompletingPostSubmitRefresh()
+    {
+        PlayableScenarioSession? session = null;
+        PlayActionSessionController? actionSession = null;
+        PlayMovementController? controller = null;
+        PlayMovementResult? result = null;
+        foreach (var direction in Enum.GetValues<Direction>())
+        {
+            session = PlayableScenarioLauncher.CreatePrototype();
+            actionSession = new PlayActionSessionController(session);
+            controller = new PlayMovementController(actionSession);
+            result = controller.MoveAndDeferRefresh(direction);
+            if (result.CommandResult.Succeeded && result.MovedOneCell)
+            {
+                break;
+            }
+        }
+
+        Assert.NotNull(session);
+        Assert.NotNull(actionSession);
+        Assert.NotNull(controller);
+        Assert.NotNull(result);
+        Assert.True(result!.CommandResult.Succeeded, result.CommandResult.FailureDetail ?? result.CommandResult.FailureReason?.ToString() ?? "unknown");
+        Assert.True(result.MovedOneCell);
+        Assert.Equal(result.AfterCoord, session!.World.GetEntityLocation(session.PlayerEntityId).Coord);
+        Assert.True(actionSession!.IsPostSubmitRefreshPending);
+
+        controller!.CompletePendingPostSubmitRefresh();
+
+        Assert.False(actionSession.IsPostSubmitRefreshPending);
+    }
+
 }

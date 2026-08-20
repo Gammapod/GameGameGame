@@ -7,6 +7,7 @@ internal enum PlayControlIntentKind
 {
     None,
     Cancel,
+    TogglePlayerPanel,
     AimMove,
     ConfirmMove,
     ClearMoveAim
@@ -16,6 +17,7 @@ internal sealed record PlayControlIntent(PlayControlIntentKind Kind, Direction? 
 {
     public static PlayControlIntent None { get; } = new(PlayControlIntentKind.None);
     public static PlayControlIntent Cancel { get; } = new(PlayControlIntentKind.Cancel);
+    public static PlayControlIntent TogglePlayerPanel { get; } = new(PlayControlIntentKind.TogglePlayerPanel);
     public static PlayControlIntent ConfirmMove { get; } = new(PlayControlIntentKind.ConfirmMove);
     public static PlayControlIntent ClearMoveAim { get; } = new(PlayControlIntentKind.ClearMoveAim);
     public static PlayControlIntent AimMove(Direction direction) => new(PlayControlIntentKind.AimMove, direction);
@@ -30,6 +32,7 @@ internal static class PlayInputController
             keyboard.KeysDown.Select(key => key.Key),
             keyboard.KeysReleased.Select(key => key.Key),
             keyboard.IsKeyReleased(Keys.Escape),
+            keyboard.IsKeyReleased(Keys.I),
             MovementPreviewKeyboardReader.IsConfirmReleased(keyboard),
             hasMovementPreview);
     }
@@ -38,12 +41,18 @@ internal static class PlayInputController
         IEnumerable<Keys> keysDown,
         IEnumerable<Keys> keysReleased,
         bool cancelReleased,
+        bool playerPanelToggleReleased,
         bool confirmReleased,
         bool hasMovementPreview)
     {
         if (cancelReleased)
         {
             return PlayControlIntent.Cancel;
+        }
+
+        if (playerPanelToggleReleased)
+        {
+            return PlayControlIntent.TogglePlayerPanel;
         }
 
         var heldDirection = MovementPreviewKeyboardReader.ReadHeldDirection(keysDown);

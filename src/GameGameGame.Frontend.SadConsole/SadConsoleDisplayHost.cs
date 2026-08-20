@@ -14,6 +14,8 @@ internal static class SadConsoleDisplayHost
         {
             if (mode == FrontendWindowMode.Fullscreen)
             {
+                EnsureWindowBorderless(false);
+
                 var (widthPixels, heightPixels) = ResolveDevicePixels(displaySettings);
                 global::SadConsole.Game.Instance.ResizeWindow(widthPixels, heightPixels, resizeOutputSurface: true);
 
@@ -28,11 +30,22 @@ internal static class SadConsoleDisplayHost
                 return new SadConsoleDisplayHostResult(mode, widthPixels, heightPixels, $"Fullscreen {widthPixels}x{heightPixels}px.");
             }
 
-            if (global::SadConsole.Host.Global.GraphicsDeviceManager is not null
-                && global::SadConsole.Host.Global.GraphicsDeviceManager.IsFullScreen)
+            if (mode == FrontendWindowMode.BorderlessWindowed)
             {
-                global::SadConsole.Game.Instance.ToggleFullScreen();
+                EnsureExclusiveFullscreen(false);
+
+                var (widthPixels, heightPixels) = ResolveDevicePixels(displaySettings);
+                global::SadConsole.Game.Instance.ResizeWindow(widthPixels, heightPixels, resizeOutputSurface: true);
+                EnsureWindowBorderless(true);
+
+                global::SadConsole.Host.Global.RecreateRenderOutput?.Invoke(widthPixels, heightPixels);
+                global::SadConsole.Host.Global.ResetRendering?.Invoke();
+                return new SadConsoleDisplayHostResult(mode, widthPixels, heightPixels, $"Borderless {widthPixels}x{heightPixels}px.");
             }
+
+            // Windowed
+            EnsureExclusiveFullscreen(false);
+            EnsureWindowBorderless(false);
 
             global::SadConsole.Game.Instance.ResizeWindow(displaySettings.StartupWindowWidthPixels, displaySettings.StartupWindowHeightPixels, resizeOutputSurface: true);
             global::SadConsole.Host.Global.RecreateRenderOutput?.Invoke(displaySettings.StartupWindowWidthPixels, displaySettings.StartupWindowHeightPixels);
@@ -43,6 +56,20 @@ internal static class SadConsoleDisplayHost
         {
             return new SadConsoleDisplayHostResult(mode, displaySettings.StartupWindowWidthPixels, displaySettings.StartupWindowHeightPixels, $"Display mode change failed: {ex.Message}");
         }
+    }
+
+    private static void EnsureExclusiveFullscreen(bool desired)
+    {
+        if (global::SadConsole.Host.Global.GraphicsDeviceManager is not null
+            && global::SadConsole.Host.Global.GraphicsDeviceManager.IsFullScreen != desired)
+        {
+            global::SadConsole.Game.Instance.ToggleFullScreen();
+        }
+    }
+
+    private static void EnsureWindowBorderless(bool desired)
+    {
+        global::SadConsole.Game.Instance.MonoGameInstance.Window.IsBorderless = desired;
     }
 
     public static (int Width, int Height) ResolveDevicePixels(SadConsoleDisplaySettings displaySettings)

@@ -52,6 +52,7 @@ internal sealed record EntityInspectionPanelModel(
     int Bulk,
     bool HasInventory,
     IReadOnlyList<EntityInspectionPortraitCell> PortraitCells,
+    IReadOnlyList<EntityInspectionPortraitCell> InventoryCells,
     IReadOnlyList<EntityInspectionActionRow> Actions)
 {
     public static EntityInspectionPanelModel GalleryExample() => new(
@@ -71,6 +72,7 @@ internal sealed record EntityInspectionPanelModel(
             new(1, 2, 160, Color.DimGray, Color.Black),
             new(2, 2, 160, Color.DimGray, Color.Black)
         ],
+        [],
         [
             new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionPush, ("targetName", "Debug Push Block")), Selectable: true),
             new EntityInspectionActionRow(

@@ -57,9 +57,7 @@ internal sealed class Candii16PlayspaceOverlayConsole : global::SadConsole.Conso
         if (cell.HighlightKind is { } highlightKind)
         {
             var decorators = Surface[cell.X, cell.Y].Decorators?.ToList() ?? [];
-            var highlight = highlightKind == CellHighlightKind.EntityTarget
-                ? CellHighlightPresentation.EntityTarget(_tilesetProfile)
-                : CellHighlightPresentation.MovePreview(_tilesetProfile);
+            var highlight = new PlayHighlightState(new GameGameGame.Core.GridCoord(cell.X, cell.Y), highlightKind).Presentation(_tilesetProfile);
             decorators.Add(new global::SadConsole.CellDecorator(highlight.Foreground, highlight.Glyph, highlight.Mirror));
             Surface[cell.X, cell.Y].Decorators = decorators;
         }
@@ -117,8 +115,14 @@ internal sealed class EntityInspectionPlayspaceOverlayPresenter(global::SadConso
 
         if (layout.InventoryRegion is { } inventoryRegion)
         {
-            _inventory = EnsureOverlay(_inventory, inventoryRegion, 5, 3);
+            var width = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.X) + 1);
+            var height = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.Y) + 1);
+            _inventory = EnsureOverlay(_inventory, inventoryRegion, width, height);
             _inventory.RedrawBackdrop();
+            foreach (var cell in model.InventoryCells)
+            {
+                _inventory.DrawCell(cell);
+            }
         }
         else
         {

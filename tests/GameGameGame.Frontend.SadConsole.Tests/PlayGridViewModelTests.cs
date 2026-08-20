@@ -27,4 +27,18 @@ public sealed class PlayGridViewModelTests
         Assert.Equal(252, playerCell.FacingGlyph);
         Assert.Equal(global::SadConsole.Mirror.None, playerCell.FacingMirror);
     }
+
+    [Fact]
+    public void TryCellAtUsesCoordinatesWithoutLinearSearchSemantics()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var tileset = TilesetProfileLoader.LoadCandii();
+        var grid = PlayGridViewModel.FromSession(session, tileset);
+
+        Assert.Same(grid.Cells[0], grid.TryCellAt(0, 0));
+        Assert.Null(grid.TryCellAt(-1, 0));
+        Assert.Null(grid.TryCellAt(grid.Width, grid.Height));
+    }
 }

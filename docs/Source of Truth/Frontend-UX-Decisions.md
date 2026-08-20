@@ -289,3 +289,43 @@ Each decision should include:
 - **Implementation anchors:** `PlayActionCandidateModel.cs`, `EntityInspectionActionRow.Candidate`, `InspectionActionChoiceProjector`, `PlayActionCandidateResolver`, and `PlayActionCandidateModelTests`.
 - **Implications:** Candidate outcome terminology should avoid implying visible prompt behavior has happened; use “follow-up needed” rather than “prompt opened” for inert classification. The first concrete action workflow should update the visual-language spec and decision log for that action only, without claiming global prompt semantics.
 - **Status:** Active / infrastructure checkpoint only.
+
+### FED-034: Player inventory panel is always visible and `I` toggles focus
+
+- **Decision:** The new Play mode shows the controlled actor's player panel as an always-visible bottom-left overlay. Pressing `I` toggles focus between the grid and the player panel; `Esc`/Left also returns panel focus to the grid. The panel attempts to show the actor's inventory immediately by projecting cells from the actor's registered inventory plane.
+- **Reasoning:** The player inventory/status surface is needed before designing action prompt semantics. Making it always visible avoids prematurely deciding open/close lifecycle and lets focus semantics be tested independently from action execution. Reusing entity-inspection overlay/panel/mixed-Candii patterns keeps visual language consistent and avoids inventing another panel framework.
+- **Implementation anchors:** `PlayPlayerPanelController`, `PlayInputController.TogglePlayerPanel`, `PlayModeConsole.HandlePlayerPanelKeyboard(...)`, `PlayModeInspectionLayout.PlayerPanelBounds`, `InspectionInventoryProjector`, and `MixedTilesetPlayspaceOverlay` inventory drawing.
+- **Implications:** Player-panel action execution remains inert until action-specific workflows are designed. Future layout work may revise always-visible placement, but should preserve explicit focus ownership and avoid grid input fallthrough while the panel is focused.
+- **Status:** Active / first implementation.
+
+### FED-035: Inspection action highlight resolution has a shared seam
+
+- **Decision:** Inspection-focused entity highlights resolve through `PlayActionHighlightResolver`, which maps the currently selected inspection action row to a highlight kind. The initial refactor only distinguishes selectable rows, which keep generic entity-target language, from greyed-out rows, which use no-action language. Action-specific mappings such as Pickup are intentionally added one at a time.
+- **Reasoning:** The player-facing rule is that highlights communicate the action to be taken, but bulk-wiring every action highlight would create visual promises before each action workflow is designed. A shared resolver seam lets us add and test one action highlight at a time without repeatedly changing `PlayModeConsole` or renderer code.
+- **Implementation anchors:** `PlayActionHighlightResolver`, `PlayInspectionController.FocusedActionHighlightKind()`, `PlayModeConsole.ResolveEntityTargetHighlightKind()`, `CellHighlightKind.NoAction`, and tileset roles `pickupHighlight`/`dropHighlight`/`enterHighlight`/`exitHighlight`/`transferHighlight`/`noActionHighlight`.
+- **Implications:** Next action-specific highlight should be Pickup. Unavailable action rows should consistently resolve to no-action. Other valid action rows should remain generic `EntityTarget` until their semantics are explicitly promoted.
+- **Status:** Active / refactor seam implemented.
+
+### FED-036: Pickup is the first action-specific inspection highlight
+
+- **Decision:** A selectable Pickup action row maps the inspected entity highlight to `CellHighlightKind.Pickup` / `pickupHighlight`. Greyed-out Pickup rows continue to map to no-action.
+- **Reasoning:** Pickup is the first likely concrete non-move action path and is simple to distinguish from generic entity inspection without committing to all action-specific highlight semantics at once.
+- **Implementation anchors:** `PlayActionHighlightResolver`, `CellHighlightPresentation.Pickup(...)`, `TilesetRoles.PickupHighlight`, and `PlayActionCandidateModelTests.ActionHighlightResolverUsesPickupForSelectablePickupRows`.
+- **Implications:** Other valid action rows remain generic `EntityTarget` until their UX semantics are intentionally promoted. Pickup execution/destination selection remains deferred.
+- **Status:** Active / first action-specific highlight implemented.
+
+### FED-037: Pickup uses focused inventory-cell destination selection
+
+- **Decision:** Confirming a selectable Pickup inspection action enters a focused inventory selection state over the controlled actor's inventory. Empty valid inventory cells use pickup highlight language; occupied or invalid cells use no-action highlight language. Confirming an empty valid cell submits Pickup through `PlayActionSessionController`; occupied/invalid cells cannot be selected.
+- **Reasoning:** Pickup requires a destination that is not necessarily adjacent in the world grid. Reusing the always-visible player inventory panel makes the destination explicit and keeps legality in Core `ActionChoiceRequest` destination facts rather than adding frontend placement rules.
+- **Implementation anchors:** `PlayInventorySelectionController`, `PlayModeConsole.HandleInventorySelectionKeyboard(...)`, `PlayActionSessionController.SubmitPickup(...)`, `InspectionInventoryProjector` inventory highlights, and `PlayActionCandidateModelTests.InventorySelectionConfirmsPickupIntoSelectedPlayerInventoryCell`.
+- **Implications:** This establishes inventory-cell selection as a focus/input concept, but only for Pickup so far. Other actions that need source/destination selection should reuse the focus model only after their visual and input semantics are designed. Future work should generalize the controller beyond Pickup once a second action path needs it.
+- **Status:** Active / first functional Pickup slice.
+
+### FED-038: Play input is organized as a selection stack
+
+- **Decision:** New Play mode names and routes interaction through a selection stack: Adjacent selection, Action selection, and Cell selection. Only the top selection frame receives input. Lower frames remain contextual but cannot mutate while a deeper frame is active. Successful action submission clears the stack back to Adjacent selection for the next turn.
+- **Reasoning:** Pickup exposed a focus inconsistency: inventory-cell selection could visually coexist with adjacent/action context, but lower selections must not change while the player is choosing a destination cell. The stack vocabulary gives future action workflows a precise design shape and prevents accidental fallthrough between grid aim, action rows, and cell pickers.
+- **Implementation anchors:** `PlaySelectionStack`, `PlaySelectionFrameKind`, `PlayModeConsole.ProcessKeyboard(...)`, `PlayModeConsole.ResolveAdjacentSelectionCoord()`, and `PlaySelectionStackTests`.
+- **Implications:** Define each action workflow as a stack before implementation. Current stacks: Move = Adjacent empty cell -> submit; Pickup = Adjacent entity -> Inspection action Pickup -> Player inventory cell empty valid destination -> submit. Cancelling cell selection currently pops back toward action/adjacent context; successful Pickup returns to Adjacent selection and never to the inspection panel.
+- **Status:** Active.

@@ -33,6 +33,14 @@ public sealed class PlayInputControllerTests
     }
 
     [Fact]
+    public void IKeyReleaseTogglesPlayerPanelFocus()
+    {
+        var intent = Read(keysReleased: [Keys.I]);
+
+        Assert.Equal(PlayControlIntentKind.TogglePlayerPanel, intent.Kind);
+    }
+
+    [Fact]
     public void InspectionFocusConsumesMovementKeysInsteadOfProducingGridInput()
     {
         var intent = PlayInspectionInputController.ReadKeys([Keys.Right]);
@@ -42,7 +50,6 @@ public sealed class PlayInputControllerTests
 
     [Theory]
     [InlineData(Keys.Escape, (int)PlayInspectionInputIntentKind.ReturnToGrid)]
-    [InlineData(Keys.Left, (int)PlayInspectionInputIntentKind.ReturnToGrid)]
     [InlineData(Keys.Up, (int)PlayInspectionInputIntentKind.PreviousAction)]
     [InlineData(Keys.Down, (int)PlayInspectionInputIntentKind.NextAction)]
     [InlineData(Keys.Enter, (int)PlayInspectionInputIntentKind.ConfirmAction)]
@@ -54,11 +61,20 @@ public sealed class PlayInputControllerTests
         Assert.Equal((PlayInspectionInputIntentKind)expected, intent.Kind);
     }
 
+    [Fact]
+    public void InspectionFocusConsumesLeftDirectionInsteadOfReturningToGrid()
+    {
+        var intent = PlayInspectionInputController.ReadKeys([Keys.Left]);
+
+        Assert.Equal(PlayInspectionInputIntentKind.Consume, intent.Kind);
+    }
+
     private static PlayControlIntent Read(IReadOnlyList<Keys>? keysDown = null, IReadOnlyList<Keys>? keysReleased = null, bool hasPreview = false) =>
         PlayInputController.ReadKeys(
             keysDown ?? [],
             keysReleased ?? [],
             cancelReleased: keysReleased?.Contains(Keys.Escape) == true,
+            playerPanelToggleReleased: keysReleased?.Contains(Keys.I) == true,
             confirmReleased: keysReleased?.Any(key => key is Keys.Space or Keys.Enter) == true,
             hasPreview);
 }

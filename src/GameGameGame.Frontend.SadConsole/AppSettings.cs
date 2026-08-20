@@ -13,7 +13,8 @@ internal enum FrontendInputMode
 internal enum FrontendWindowMode
 {
     Fullscreen,
-    Windowed
+    Windowed,
+    BorderlessWindowed
 }
 
 internal sealed record FrontendSadConsoleSettings(
@@ -25,7 +26,7 @@ internal sealed record FrontendSadConsoleSettings(
     string? LastSelectedScenarioEntryId = null)
 {
     public static FrontendSadConsoleSettings Default { get; } = new(
-        FrontendWindowMode.Fullscreen,
+        FrontendWindowMode.BorderlessWindowed,
         WindowWidthPixels: 1280,
         WindowHeightPixels: 720,
         UiScale: 2,

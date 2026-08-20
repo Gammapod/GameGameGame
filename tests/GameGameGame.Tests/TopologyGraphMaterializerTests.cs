@@ -146,6 +146,25 @@ public sealed class TopologyGraphMaterializerTests
         Assert.Equal(FailureReason.MoveOutOfBounds, graphWest.FailureReason);
     }
 
+    [Fact]
+    public void ScopedMaterializationCacheReusesGraphUntilMovementInvalidatesWorldTopology()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+
+        using var cacheScope = TopologyGraphMaterializer.BeginCacheScope();
+
+        var first = TopologyGraphMaterializer.Materialize(world);
+        var second = TopologyGraphMaterializer.Materialize(world);
+
+        Assert.Same(first, second);
+
+        Assert.True(movement.TryMove(world, TestWorld.PlayerId, Direction.East));
+
+        var afterMove = TopologyGraphMaterializer.Materialize(world);
+        Assert.NotSame(first, afterMove);
+    }
+
     private static void AddEntity(
         WorldState world,
         EntityId entityId,

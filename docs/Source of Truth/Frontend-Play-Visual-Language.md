@@ -56,6 +56,23 @@ Use this template when promoting a visual treatment into a stable rule:
 
 ## General rules
 
+### Play selection modes form a stack
+
+**Player meaning:** Only the top/current selection mode can change. Earlier selections remain contextual but cannot mutate while a deeper choice is active.
+
+**Visual language:** The active selection mode owns input and highlight updates. Lower stack selections may remain highlighted to show context.
+
+**Current implementation:** `PlaySelectionStack`, `PlaySelectionFrameKind`, and `PlayModeConsole` input routing.
+
+**Rules:**
+
+- **Adjacent selection:** base mode. The player chooses/highlights a space adjacent to the controlled actor. Movement aim belongs here.
+- **Action selection:** the player chooses an action from an inspection/player panel. Adjacent selection is suspended and the adjacent target remains locked.
+- **Cell selection:** the player chooses any cell in a relevant space. Adjacent and action selection are suspended; no other selection may change.
+- Once a stack has all information required to submit an action and that action succeeds, clear back to adjacent selection for the next turn.
+
+**Open questions:** Specific stacks for Drop, Push, Transfer, Enter, and Exit are deferred until those actions are implemented.
+
 ### Highlights communicate the action to be taken
 
 **Player meaning:** A highlighted grid cell communicates what confirming/selecting that cell will do, not merely that the cell is interesting.
@@ -69,6 +86,7 @@ Use this template when promoting a visual treatment into a stable rule:
 - Do not use one generic highlight for different player outcomes once those outcomes can be distinguished.
 - Preserve entity glyph identity under highlights; highlights are presentation overlays, not entity glyph replacements.
 - If a future cell has exactly one concrete action available, an action-specific highlight/icon may be introduced only after that action's UX semantics are designed.
+- When inspection action focus is active, the current action row may refine the highlighted cell's visual role. Greyed-out/unavailable action rows use no-action language.
 
 **Open questions:** Action-specific highlights for Pickup, Drop, Push, Transfer, Enter/Exit, and future actions are deferred until those workflows are designed one-by-one.
 
@@ -76,7 +94,7 @@ Use this template when promoting a visual treatment into a stable rule:
 
 **Player meaning:** The focused UI region owns input; grid aim/movement should not change behind a focused panel or picker.
 
-**Visual language:** Focus should be visible on the focused panel, row, picker, or overlay. Current inspection-action focus uses a selected action row marker/color in the inspection overlay.
+**Visual language:** Focus should be visible on the focused panel, row, picker, or overlay. Current inspection-action and player-panel focus use selected action row marker/color in their overlays.
 
 **Current implementation:** `PlayFocusMode`, `PlayInspectionInputController`, `PlayInspectionController`, and inspection action row rendering.
 
@@ -86,7 +104,7 @@ Use this template when promoting a visual treatment into a stable rule:
 - Grid movement input is locked while an inspection/player panel or future picker has focus.
 - `Esc`/Left-style return paths should visibly and semantically return focus to the previous owner.
 
-**Open questions:** Player inventory overlay focus language and future picker focus language are deferred.
+**Open questions:** Future picker focus language is deferred.
 
 ## Current visual treatments
 
@@ -122,6 +140,38 @@ Use this template when promoting a visual treatment into a stable rule:
 
 **Open questions:** Whether entity-target highlights should specialize by the single available action is deferred.
 
+### No-action highlight
+
+**Player meaning:** The selected/focused action row cannot currently be executed for the highlighted target.
+
+**Visual language:** Distinct no-action decorator from the tileset role `noActionHighlight`.
+
+**Current implementation:** `CellHighlightKind.NoAction`, `CellHighlightPresentation.NoAction(...)`, and `PlayActionHighlightResolver`.
+
+**Rules:**
+
+- Use while inspection action focus is active and the selected action row is greyed out/unavailable.
+- This communicates unavailable action state, not movement blockage in general.
+
+**Open questions:** Final no-action color/glyph treatment may evolve with action-specific highlight polish.
+
+### Pickup highlight
+
+**Player meaning:** The focused inspection action is Pickup for the highlighted entity.
+
+**Visual language:** Distinct pickup decorator from the tileset role `pickupHighlight`.
+
+**Current implementation:** `CellHighlightKind.Pickup`, `CellHighlightPresentation.Pickup(...)`, and `PlayActionHighlightResolver` for selectable Pickup candidates.
+
+**Rules:**
+
+- Use only when inspection action focus is active and the selected row is a selectable Pickup candidate.
+- Greyed-out Pickup rows use no-action language instead.
+- During Pickup destination selection, empty valid player-inventory cells use pickup language; occupied or otherwise invalid cells use no-action language.
+- Current stack: Adjacent selection over entity -> Inspection action selection over Pickup -> Player inventory cell selection over empty valid cell -> submit Pickup -> return to Adjacent selection.
+
+**Open questions:** Pickup selection currently targets player inventory cells; other destination surfaces, alternate layouts, and final text/control polish remain open.
+
 ### Inspection action rows
 
 **Player meaning:** The inspection panel lists known action candidates or unavailable action facts for the inspected entity.
@@ -136,3 +186,20 @@ Use this template when promoting a visual treatment into a stable rule:
 - Unavailable rows should communicate that Core/Content exposed a candidate/fact that cannot currently execute, not that the UI invented a local rule.
 
 **Open questions:** Prompt, picker, auto-submit, and action-specific confirmation semantics are deferred until after the player inventory/self-inspection overlay exists and then should be designed one action at a time.
+
+### Player inventory/status panel
+
+**Player meaning:** The bottom-left player panel is the controlled actor's own status/inventory/action surface. When focused, it owns input; when unfocused, it remains visible as ambient player state.
+
+**Visual language:** Always-visible bottom-left translucent overlay using the same panel, portrait, action-row, and mixed-Candii inventory-cell language as entity inspection.
+
+**Current implementation:** `PlayPlayerPanelController`, `PlayModeInspectionLayout.PlayerPanelBounds`, `EntityInspectionPanelModel`, `InspectionInventoryProjector`, and `EntityInspectionOverlayConsole`.
+
+**Rules:**
+
+- The player panel remains visible in Play mode for now.
+- `I` toggles focus between the grid and the player panel.
+- While the player panel is focused, grid movement/aim input is locked.
+- Inventory cells are projected from the controlled actor's registered inventory plane when available.
+
+**Open questions:** Player-panel action execution, prompt/follow-up semantics, and action-specific inventory selection language are deferred.

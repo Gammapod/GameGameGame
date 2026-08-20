@@ -19,7 +19,7 @@ internal sealed record ScenarioBrowserDebugOverlay(
             $"scenario list: y={layout.ListY} h={layout.ListHeight} selected={model.SelectedIndex + 1}/{model.Entries.Count} viewport={model.Viewport(layout.ListHeight).StartIndex + 1}-{model.Viewport(layout.ListHeight).EndIndexExclusive}",
             $"selected: {model.SelectedEntry?.ScenarioId ?? "none"} ({(model.SelectedEntry?.IsWorkspaceBacked == true ? "workspace" : "file/none")})",
             $"selector: {(model.ActionSelectorOpen ? "open" : "closed")} option={model.SelectedActionOption}",
-            $"diagnostics: {model.Diagnostics.Count} | window: {windowMode} | input: {model.ActiveInputMode} | F11 toggles fullscreen/windowed"
+            $"diagnostics: {model.Diagnostics.Count} | window: {windowMode} | input: {model.ActiveInputMode} | F11 cycles window mode"
         ]);
 }
 
@@ -36,9 +36,12 @@ internal sealed class ScenarioBrowserChromeState(FrontendWindowMode windowMode =
 
     public FrontendWindowMode ToggleWindowMode()
     {
-        WindowMode = WindowMode == FrontendWindowMode.Fullscreen
-            ? FrontendWindowMode.Windowed
-            : FrontendWindowMode.Fullscreen;
+        WindowMode = WindowMode switch
+        {
+            FrontendWindowMode.Fullscreen => FrontendWindowMode.BorderlessWindowed,
+            FrontendWindowMode.BorderlessWindowed => FrontendWindowMode.Windowed,
+            _ => FrontendWindowMode.Fullscreen,
+        };
         return WindowMode;
     }
 }

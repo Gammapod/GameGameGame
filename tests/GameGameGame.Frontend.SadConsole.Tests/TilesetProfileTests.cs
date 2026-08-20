@@ -32,6 +32,13 @@ public sealed class TilesetProfileTests
         Assert.Equal(252, profile.Roles.FacingNS);
         Assert.Equal(253, profile.Roles.FacingWE);
         Assert.Equal(218, profile.Roles.MoveHighlight);
+        Assert.Equal(217, profile.Roles.EntityHighlight);
+        Assert.Equal(216, profile.Roles.PickupHighlight);
+        Assert.Equal(215, profile.Roles.DropHighlight);
+        Assert.Equal(214, profile.Roles.EnterHighlight);
+        Assert.Equal(213, profile.Roles.ExitHighlight);
+        Assert.Equal(212, profile.Roles.TransferHighlight);
+        Assert.Equal(211, profile.Roles.NoActionHighlight);
         Assert.Equal((252, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.North));
         Assert.Equal((252, global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.South));
         Assert.Equal((253, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.East));
@@ -40,6 +47,28 @@ public sealed class TilesetProfileTests
         Assert.Equal((251, global::SadConsole.Mirror.Horizontal), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.NorthEast));
         Assert.Equal((251, global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.SouthWest));
         Assert.Equal((251, global::SadConsole.Mirror.Horizontal | global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.SouthEast));
+    }
+
+    [Fact]
+    public void NoActionHighlightUsesNoActionHighlightGlyph()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        var highlight = CellHighlightPresentation.NoAction(profile);
+
+        Assert.Equal(CellHighlightKind.NoAction, highlight.Kind);
+        Assert.Equal(211, highlight.Glyph);
+    }
+
+    [Fact]
+    public void PickupHighlightUsesPickupHighlightGlyph()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        var highlight = CellHighlightPresentation.Pickup(profile);
+
+        Assert.Equal(CellHighlightKind.Pickup, highlight.Kind);
+        Assert.Equal(216, highlight.Glyph);
     }
 
     [Fact]

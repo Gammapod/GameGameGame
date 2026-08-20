@@ -17,4 +17,8 @@ internal sealed record PlayMovementResult(
 internal sealed class PlayMovementController(PlayActionSessionController actionSession)
 {
     public PlayMovementResult Move(Direction direction) => actionSession.SubmitMove(direction);
+
+    public PlayMovementResult MoveAndDeferRefresh(Direction direction) => actionSession.SubmitMoveAndDeferRefresh(direction);
+
+    public void CompletePendingPostSubmitRefresh() => actionSession.CompletePendingPostSubmitRefresh();
 }

@@ -314,7 +314,45 @@ public static class TopologyGraphTraversalService
 
 public static class TopologyGraphMaterializer
 {
+    private static readonly AsyncLocal<CacheScope?> ActiveCacheScope = new();
+
+    public static IDisposable BeginCacheScope()
+    {
+        if (ActiveCacheScope.Value is not null)
+        {
+            return NoopDisposable.Instance;
+        }
+
+        var scope = new CacheScope(ActiveCacheScope.Value);
+        ActiveCacheScope.Value = scope;
+        return scope;
+    }
+
+    public static void Invalidate(WorldState world)
+    {
+        for (var scope = ActiveCacheScope.Value; scope is not null; scope = scope.Parent)
+        {
+            scope.Graphs.Remove(world);
+        }
+    }
+
     public static TopologyGraph Materialize(WorldState world)
+    {
+        if (ActiveCacheScope.Value is { } cacheScope)
+        {
+            if (!cacheScope.Graphs.TryGetValue(world, out var cached))
+            {
+                cached = MaterializeUncached(world);
+                cacheScope.Graphs[world] = cached;
+            }
+
+            return cached;
+        }
+
+        return MaterializeUncached(world);
+    }
+
+    private static TopologyGraph MaterializeUncached(WorldState world)
     {
         var nodes = world.Nodes.Values
             .Select(node => CreateNode(world, node))
@@ -328,6 +366,43 @@ public static class TopologyGraphMaterializer
         MaterializeSourceCellLinkEdges(world, nodeIdsBySource, edges);
 
         return new TopologyGraph(nodes, edges);
+    }
+
+    private sealed class CacheScope(CacheScope? parent) : IDisposable
+    {
+        private bool _disposed;
+
+        public CacheScope? Parent { get; } = parent;
+
+        public Dictionary<WorldState, TopologyGraph> Graphs { get; } = new(ReferenceEqualityComparer.Instance);
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (ActiveCacheScope.Value == this)
+            {
+                ActiveCacheScope.Value = Parent;
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public static readonly NoopDisposable Instance = new();
+
+        private NoopDisposable()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private static TopologyNode CreateNode(WorldState world, Node node)

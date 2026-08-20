@@ -202,6 +202,7 @@ public sealed class MovementService
         world.Occupancy.Remove(entity.OccupiedNodeId);
         world.Occupancy[nodeId] = entityId;
         world.Entities[entityId] = entity with { OccupiedNodeId = nodeId };
+        TopologyGraphMaterializer.Invalidate(world);
 
         return true;
     }

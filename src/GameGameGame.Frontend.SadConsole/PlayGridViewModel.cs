@@ -27,7 +27,9 @@ internal sealed record PlayGridViewModel(
     PlaneId PlaneId,
     EntityId? ContainerEntityId)
 {
-    public PlayCellVisual? TryCellAt(int x, int y) => Cells.FirstOrDefault(cell => cell.X == x && cell.Y == y);
+    private readonly IReadOnlyDictionary<(int X, int Y), PlayCellVisual> _cellsByCoord = Cells.ToDictionary(cell => (cell.X, cell.Y));
+
+    public PlayCellVisual? TryCellAt(int x, int y) => _cellsByCoord.TryGetValue((x, y), out var cell) ? cell : null;
 
     public PlayCellVisual CellAt(int x, int y) => TryCellAt(x, y)
         ?? throw new InvalidOperationException($"Cell ({x},{y}) is outside rendered plane {PlaneId}.");
@@ -183,5 +185,100 @@ internal static class PlayGridRenderer
         {
             target.Surface[x, y].Decorators = decorators;
         }
+    }
+}
+
+internal sealed record PlayRenderedGridCell(
+    int Glyph,
+    Color Foreground,
+    Color Background,
+    int? FacingGlyph,
+    SadMirror FacingMirror,
+    int? HighlightGlyph,
+    Color? HighlightForeground,
+    SadMirror HighlightMirror);
+
+internal sealed class PlayGridSurfacePresenter
+{
+    private readonly Dictionary<(int X, int Y), PlayRenderedGridCell> _drawnCells = [];
+    private FrontendRect? _drawnGridBounds;
+
+    public void Invalidate()
+    {
+        _drawnCells.Clear();
+        _drawnGridBounds = null;
+    }
+
+    public void Draw(
+        global::SadConsole.Console target,
+        FrontendRect bounds,
+        PlayGridViewModel model,
+        IReadOnlySet<EntityId>? hiddenEntityIds = null,
+        GridCoord? movementPreviewCoord = null,
+        CellHighlightPresentation? movementPreviewHighlight = null)
+    {
+        var gridBounds = PlayGridRenderer.ResolveGridBounds(bounds, model);
+        if (_drawnGridBounds != gridBounds)
+        {
+            _drawnCells.Clear();
+            _drawnGridBounds = gridBounds;
+        }
+
+        foreach (var cell in model.Cells)
+        {
+            var x = gridBounds.X + cell.X;
+            var y = gridBounds.Y + cell.Y;
+            var entityHidden = cell.EntityId is { } entityId && hiddenEntityIds?.Contains(entityId) == true;
+            var highlight = movementPreviewCoord == new GridCoord(cell.X, cell.Y) ? movementPreviewHighlight : null;
+            var state = ToRenderedCell(cell, entityHidden, highlight);
+            var key = (x, y);
+            if (_drawnCells.TryGetValue(key, out var previous) && previous == state)
+            {
+                continue;
+            }
+
+            DrawCell(target, x, y, state);
+            _drawnCells[key] = state;
+        }
+    }
+
+    private static PlayRenderedGridCell ToRenderedCell(PlayCellVisual cell, bool entityHidden, CellHighlightPresentation? highlight)
+    {
+        var glyph = !entityHidden && cell.EntityGlyph is { } entityGlyph ? entityGlyph : cell.BackdropGlyph;
+        var foreground = !entityHidden && cell.EntityGlyph is not null ? cell.EntityForeground ?? Color.White : cell.BackdropForeground;
+        return new PlayRenderedGridCell(
+            glyph,
+            foreground,
+            cell.BackdropBackground,
+            !entityHidden && cell.FacingGlyph is { } facingGlyph && cell.EntityGlyph is not null ? facingGlyph : null,
+            cell.FacingMirror,
+            highlight?.Glyph,
+            highlight?.Foreground,
+            highlight?.Mirror ?? SadMirror.None);
+    }
+
+    private static void DrawCell(global::SadConsole.Console target, int x, int y, PlayRenderedGridCell state)
+    {
+        if (x < 0 || y < 0 || x >= target.Width || y >= target.Height)
+        {
+            return;
+        }
+
+        target.Surface[x, y].Glyph = state.Glyph;
+        target.Surface[x, y].Foreground = state.Foreground;
+        target.Surface[x, y].Background = state.Background;
+        target.Surface[x, y].Mirror = SadMirror.None;
+        var decorators = new List<global::SadConsole.CellDecorator>();
+        if (state.FacingGlyph is { } facingGlyph)
+        {
+            decorators.Add(new global::SadConsole.CellDecorator(Color.LightYellow, facingGlyph, state.FacingMirror));
+        }
+
+        if (state.HighlightGlyph is { } highlightGlyph && state.HighlightForeground is { } highlightForeground)
+        {
+            decorators.Add(new global::SadConsole.CellDecorator(highlightForeground, highlightGlyph, state.HighlightMirror));
+        }
+
+        target.Surface[x, y].Decorators = decorators.Count == 0 ? null : decorators;
     }
 }
