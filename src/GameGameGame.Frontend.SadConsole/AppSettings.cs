@@ -14,7 +14,8 @@ internal enum FrontendWindowMode
 {
     Fullscreen,
     Windowed,
-    BorderlessWindowed
+    BorderlessWindowed,
+    OverlaySafeBorderlessWindowed
 }
 
 internal sealed record FrontendSadConsoleSettings(
@@ -26,13 +27,14 @@ internal sealed record FrontendSadConsoleSettings(
     string? LastSelectedScenarioEntryId = null)
 {
     public static FrontendSadConsoleSettings Default { get; } = new(
-        FrontendWindowMode.BorderlessWindowed,
+        FrontendWindowMode.OverlaySafeBorderlessWindowed,
         WindowWidthPixels: 1280,
         WindowHeightPixels: 720,
         UiScale: 2,
         FrontendInputMode.Keyboard);
 
     public bool StartFullscreen => WindowMode == FrontendWindowMode.Fullscreen;
+    public bool StartBorderless => WindowMode is FrontendWindowMode.BorderlessWindowed or FrontendWindowMode.OverlaySafeBorderlessWindowed;
 }
 
 internal static class FrontendSadConsoleSettingsStore
@@ -61,11 +63,18 @@ internal static class FrontendSadConsoleSettingsStore
         try
         {
             return JsonSerializer.Deserialize<FrontendSadConsoleSettings>(File.ReadAllText(settingsPath), JsonOptions)
-                ?? FrontendSadConsoleSettings.Default;
+                is { } settings
+                ? Normalize(settings)
+                : FrontendSadConsoleSettings.Default;
         }
         catch
         {
             return FrontendSadConsoleSettings.Default;
         }
     }
+
+    private static FrontendSadConsoleSettings Normalize(FrontendSadConsoleSettings settings) =>
+        settings.WindowMode == FrontendWindowMode.Windowed
+            ? settings
+            : settings with { WindowMode = FrontendWindowMode.OverlaySafeBorderlessWindowed };
 }

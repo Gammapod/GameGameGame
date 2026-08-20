@@ -23,7 +23,7 @@ internal sealed record ScenarioBrowserDebugOverlay(
         ]);
 }
 
-internal sealed class ScenarioBrowserChromeState(FrontendWindowMode windowMode = FrontendWindowMode.Fullscreen, bool layoutDebugVisible = false)
+internal sealed class ScenarioBrowserChromeState(FrontendWindowMode windowMode = FrontendWindowMode.OverlaySafeBorderlessWindowed, bool layoutDebugVisible = false)
 {
     public bool LayoutDebugVisible { get; private set; } = layoutDebugVisible;
     public FrontendWindowMode WindowMode { get; private set; } = windowMode;
@@ -38,9 +38,8 @@ internal sealed class ScenarioBrowserChromeState(FrontendWindowMode windowMode =
     {
         WindowMode = WindowMode switch
         {
-            FrontendWindowMode.Fullscreen => FrontendWindowMode.BorderlessWindowed,
-            FrontendWindowMode.BorderlessWindowed => FrontendWindowMode.Windowed,
-            _ => FrontendWindowMode.Fullscreen,
+            FrontendWindowMode.Windowed => FrontendWindowMode.OverlaySafeBorderlessWindowed,
+            _ => FrontendWindowMode.Windowed,
         };
         return WindowMode;
     }

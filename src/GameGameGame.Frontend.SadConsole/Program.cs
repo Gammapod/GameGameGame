@@ -22,7 +22,7 @@ var configuration = Builder.GetBuilder()
         fonts.SetDefaultFontSize(display.FontSizePreset);
     })
     .SetWindowSizeInPixels(display.StartupWindowWidthPixels, display.StartupWindowHeightPixels)
-    .SetStartingScreen(_ => new ScenarioBrowserConsole(catalog, shell, display, settings.WindowMode))
+    .SetStartingScreen(_ => new ScenarioBrowserConsole(catalog, shell, display, settings.WindowMode, applyWindowModeOnFirstUpdate: true))
     .IsStartingScreenFocused(true);
 
 global::SadConsole.Game.Create(configuration);

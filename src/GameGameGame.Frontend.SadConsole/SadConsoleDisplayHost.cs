@@ -8,6 +8,8 @@ internal sealed record SadConsoleDisplayHostResult(
 
 internal static class SadConsoleDisplayHost
 {
+    private const int OverlaySafeBorderlessInsetPixels = 2;
+
     public static SadConsoleDisplayHostResult ApplyWindowMode(FrontendWindowMode mode, SadConsoleDisplaySettings displaySettings)
     {
         try
@@ -41,6 +43,21 @@ internal static class SadConsoleDisplayHost
                 global::SadConsole.Host.Global.RecreateRenderOutput?.Invoke(widthPixels, heightPixels);
                 global::SadConsole.Host.Global.ResetRendering?.Invoke();
                 return new SadConsoleDisplayHostResult(mode, widthPixels, heightPixels, $"Borderless {widthPixels}x{heightPixels}px.");
+            }
+
+            if (mode == FrontendWindowMode.OverlaySafeBorderlessWindowed)
+            {
+                EnsureExclusiveFullscreen(false);
+
+                var (deviceWidthPixels, deviceHeightPixels) = ResolveDevicePixels(displaySettings);
+                var widthPixels = Math.Max(1, deviceWidthPixels - OverlaySafeBorderlessInsetPixels);
+                var heightPixels = Math.Max(1, deviceHeightPixels - OverlaySafeBorderlessInsetPixels);
+                global::SadConsole.Game.Instance.ResizeWindow(widthPixels, heightPixels, resizeOutputSurface: true);
+                EnsureWindowBorderless(true);
+
+                global::SadConsole.Host.Global.RecreateRenderOutput?.Invoke(widthPixels, heightPixels);
+                global::SadConsole.Host.Global.ResetRendering?.Invoke();
+                return new SadConsoleDisplayHostResult(mode, widthPixels, heightPixels, $"Overlay-safe borderless {widthPixels}x{heightPixels}px.");
             }
 
             // Windowed

@@ -14,6 +14,7 @@ internal sealed class ScenarioBrowserConsole : Console
     private readonly TilesetProfile _tilesetProfile;
     private readonly ScenarioBrowserChromeState _chromeState;
     private readonly SadConsoleDisplaySettings _displaySettings;
+    private readonly bool _applyWindowModeOnFirstUpdate;
     private OverlayPanelConsole? _actionSelectorOverlay;
     private OverlayPanelConsole? _toastOverlay;
     private string _message = "Choose a scenario. Debug-room is the current target.";
@@ -23,9 +24,11 @@ internal sealed class ScenarioBrowserConsole : Console
         WorkspaceScenarioCatalogResult catalog,
         FrontendDisplayShell shell,
         SadConsoleDisplaySettings displaySettings,
-        FrontendWindowMode windowMode = FrontendWindowMode.Fullscreen,
+        FrontendWindowMode windowMode = FrontendWindowMode.OverlaySafeBorderlessWindowed,
         bool layoutDebugVisible = false,
-        int selectedIndex = 0)
+        int selectedIndex = 0,
+        string? initialMessage = null,
+        bool applyWindowModeOnFirstUpdate = false)
         : base(shell.LogicalWidth, shell.LogicalHeight)
     {
         _catalog = catalog;
@@ -35,11 +38,28 @@ internal sealed class ScenarioBrowserConsole : Console
         _tilesetProfile = TilesetProfileLoader.LoadCandii();
         _chromeState = new ScenarioBrowserChromeState(windowMode, layoutDebugVisible);
         _displaySettings = displaySettings;
+        _applyWindowModeOnFirstUpdate = applyWindowModeOnFirstUpdate;
+        if (!string.IsNullOrWhiteSpace(initialMessage))
+        {
+            _message = initialMessage;
+        }
         UseKeyboard = true;
         UseMouse = true;
         IsFocused = true;
         FocusedMode = global::SadConsole.FocusBehavior.Set;
         Redraw();
+    }
+
+    public override void Update(TimeSpan delta)
+    {
+        base.Update(delta);
+
+        if (!_applyWindowModeOnFirstUpdate)
+        {
+            return;
+        }
+
+        ApplyStartupWindowMode();
     }
 
     public override bool ProcessKeyboard(Keyboard keyboard)
@@ -144,10 +164,26 @@ internal sealed class ScenarioBrowserConsole : Console
             _displaySettings,
             result.WindowMode,
             _chromeState.LayoutDebugVisible,
-            _model.SelectedIndex)
+            _model.SelectedIndex,
+            result.Message)
         {
             _message = result.Message
         };
+        global::SadConsole.Game.Instance.Screen = replacement;
+    }
+
+    private void ApplyStartupWindowMode()
+    {
+        var result = SadConsoleDisplayHost.ApplyWindowMode(_chromeState.WindowMode, _displaySettings);
+        var shell = FrontendDisplayShell.Resolve(result.PixelWidth, result.PixelHeight, _displaySettings);
+        var replacement = new ScenarioBrowserConsole(
+            _catalog,
+            shell,
+            _displaySettings,
+            result.WindowMode,
+            _chromeState.LayoutDebugVisible,
+            _model.SelectedIndex,
+            result.Message);
         global::SadConsole.Game.Instance.Screen = replacement;
     }
 

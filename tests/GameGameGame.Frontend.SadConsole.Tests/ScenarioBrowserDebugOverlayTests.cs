@@ -16,7 +16,7 @@ public sealed class ScenarioBrowserDebugOverlayTests
         var shell = FrontendDisplayShell.Resolve(1280, 720, SadConsoleDisplaySettings.FromSettings(FrontendSadConsoleSettings.Default));
         var layout = ScenarioBrowserLayout.Resolve(shell.DrawableBounds);
 
-        var overlay = ScenarioBrowserDebugOverlay.Build(model, shell, layout, FrontendWindowMode.Fullscreen);
+        var overlay = ScenarioBrowserDebugOverlay.Build(model, shell, layout, FrontendWindowMode.OverlaySafeBorderlessWindowed);
 
         Assert.True(overlay.IsVisible);
         Assert.Contains(overlay.Rows, row => row.Contains("screen cells", StringComparison.Ordinal));
@@ -34,7 +34,7 @@ public sealed class ScenarioBrowserDebugOverlayTests
 
         Assert.True(state.ToggleLayoutDebug());
         Assert.False(state.ToggleLayoutDebug());
-        Assert.Equal(FrontendWindowMode.Fullscreen, state.ToggleWindowMode());
+        Assert.Equal(FrontendWindowMode.OverlaySafeBorderlessWindowed, state.ToggleWindowMode());
         Assert.Equal(FrontendWindowMode.Windowed, state.ToggleWindowMode());
     }
 }

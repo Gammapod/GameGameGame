@@ -329,3 +329,11 @@ Each decision should include:
 - **Implementation anchors:** `PlaySelectionStack`, `PlaySelectionFrameKind`, `PlayModeConsole.ProcessKeyboard(...)`, `PlayModeConsole.ResolveAdjacentSelectionCoord()`, and `PlaySelectionStackTests`.
 - **Implications:** Define each action workflow as a stack before implementation. Current stacks: Move = Adjacent empty cell -> submit; Pickup = Adjacent entity -> Inspection action Pickup -> Player inventory cell empty valid destination -> submit. Cancelling cell selection currently pops back toward action/adjacent context; successful Pickup returns to Adjacent selection and never to the inspection panel.
 - **Status:** Active.
+
+### FED-039: Release-oriented SadConsole uses DirectX with overlay-safe borderless by default
+
+- **Decision:** `GameGameGame.Frontend.SadConsole` is treated as the release-oriented SadConsole app on Windows and uses the MonoGame WindowsDX backend. Its default player-facing window mode is overlay-safe borderless; F11 toggles between overlay-safe borderless and windowed until a full settings screen exists.
+- **Reasoning:** Windows Game Bar and common capture/overlay tools are more reliable with DirectX than DesktopGL/OpenGL. Exact-monitor borderless windows can still be promoted into fullscreen-like presentation paths where overlays receive input but are not visibly composited, so the default borderless mode intentionally avoids exact monitor dimensions.
+- **Implementation anchors:** `MonoGame.Framework.WindowsDX`, `FrontendWindowMode.OverlaySafeBorderlessWindowed`, `SadConsoleDisplayHost.ApplyWindowMode(...)`, and `ScenarioBrowserChromeState.ToggleWindowMode()`.
+- **Implications:** Keep the legacy/debug `GameGameGame.SadConsole` project separate for now. Future release settings UI should preserve a simple player choice between overlay-safe borderless and windowed unless a tested exclusive/fullscreen mode is explicitly added.
+- **Status:** Active / initial DirectX overlay-safe default implemented.
