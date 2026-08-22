@@ -35,7 +35,7 @@ Related documents:
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the canonical entity-panel, breadcrumb, and log UX model.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records frontend UI-bible presentation standards that guide implementation but are not Core behavior invariants.
 - `docs/Source of Truth/testing-charter.md` records frontend testing workflow expectations and the Core/frontend TDD split.
-- `docs/Plans/SadConsole-Frontend-Roadmap.md` records the staged implementation roadmap.
+- `docs/Plans/Frontend-SadConsole-Rolling-Board.md` records active frontend implementation work.
 - `docs/Archived/Frontend-Testing-Strategy-Proposal.md` records the approved initial frontend testing strategy that established the current test project and charter guidance.
 - `docs/Archived/SadConsole-Spike-Findings.md` records prototype evidence behind these constraints.
 - `docs/Source of Truth/invariants.md` records stable Core behavior contracts and test traces.

@@ -2,7 +2,7 @@
 id: plan.high-level-roadmap
 title: High-Level Roadmap
 kind: roadmap
-status: active
+status: archived
 truth_rank: 50
 truth_domains: [planning-priority]
 owners: [core-owner]
@@ -19,7 +19,7 @@ related:
 ---
 # High-Level Roadmap
 
-Status: Active roadmap. Canonical action vertical slices are the selected release direction.
+Status: Archived roadmap. Superseded by the three active rolling boards in `docs/Plans/Core-Rolling-Board.md`, `docs/Plans/Content-Rolling-Board.md`, and `docs/Plans/Frontend-SadConsole-Rolling-Board.md`.
 
 Read when:
 
@@ -33,8 +33,8 @@ Related source of truth:
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` describes maintainer-facing implemented support tiers and layer coverage.
 - `docs/Source of Truth/Content-Authoring-Manual.md` describes what content authors and content-editing agents can safely author today.
 - `docs/Source of Truth/planning-index.md` describes planning-document navigation and reading order.
-- `docs/Plans/SadConsole-UI-Specification.md` consolidates frontend-owned UI layout/layering/resizing/mouse/render-style specifications that should not be duplicated in roadmap backlog bullets.
-- `docs/Plans/Topology-Service-Plan.md` preserves the deferred Core topology-service plan for shared adjacency, graph overlays, topological rays, and future entanglement/portal-like mechanics.
+- `docs/Source of Truth/SadConsole-UI-Specification.md` consolidates frontend-owned UI layout/layering/resizing/mouse/render-style specifications that should not be duplicated in roadmap backlog bullets.
+- `docs/Archived/Topology-Service-Plan.md` preserves the deferred Core topology-service plan for shared adjacency, graph overlays, topological rays, and future entanglement/portal-like mechanics.
 
 ## Current strategic direction
 
@@ -224,7 +224,7 @@ Previous immediate Gamma priority, now on hold:
 
 Previously planned next sprint, now on hold:
 
-- Stages 0-5 of `docs/Plans/SadConsole-Frontend-Roadmap.md` paved the initial frontend contracts, and the archived SadConsole UI pattern discovery sprint rebuilt the editor as the default componentized SadConsole UI with core service-backed authoring parity. The selected Gamma work now continues from `docs/Plans/Gamma-Editor-MVP-Plan.md`: improve turn-0 preview quality, complete Simulation handoff/return from the componentized editor, add a first provenance-backed source jump, and then harden for release. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole editor/debug-browser path unless explicitly re-selected as fallback polish.
+- Stages 0-5 of `docs/Archived/SadConsole-Frontend-Roadmap.md` paved the initial frontend contracts, and the archived SadConsole UI pattern discovery sprint rebuilt the editor as the default componentized SadConsole UI with core service-backed authoring parity. The selected Gamma work continued from `docs/Archived/Gamma-Editor-MVP-Plan.md`: improve turn-0 preview quality, complete Simulation handoff/return from the componentized editor, add a first provenance-backed source jump, and then harden for release. Console breadcrumb display is deferred/subsumed by the entity-panel projection and SadConsole editor/debug-browser path unless explicitly re-selected as fallback polish.
 
 Gamma/editor target statement:
 
@@ -259,7 +259,7 @@ Long-term frontend direction:
 
 - SadConsole is the preferred canonical debug/editor browser direction while final frontend-engine choice remains deferred.
 - That frontend should support title/menu flow, content loading, play, and eventually content editing.
-- Major frontend feature work should follow the shared-contract paving sequence in `docs/Plans/SadConsole-Frontend-Roadmap.md` so frontend-owner work does not require Core knowledge or duplicate simulation semantics.
+- Major frontend feature work followed the shared-contract paving sequence in `docs/Archived/SadConsole-Frontend-Roadmap.md` so frontend-owner work did not require Core knowledge or duplicate simulation semantics.
 - The retired Avalonia editor should not return as a dependency of scenario materialization, scenario running, scenario recording, or future headless tooling. Scenario/tooling services should be UI-agnostic so a future commercial-engine frontend can consume the same Core/Content capabilities without inheriting retired UI assumptions.
 
 Current decision point: Sprint 21 completed Console scenario catalog/listing. Gate 5 template spawning and Gate 6 reactions are no longer the default next work; they remain backlog items until tester feedback or a specific scenario need re-promotes mechanics expansion.
@@ -548,7 +548,7 @@ Priority order:
 2. Continue SadConsole debug-browser UX polish over the completed shared history/session/action/target/log/panel contracts.
 3. Entity panel chain UX: improve inspected containment/breadcrumb panel behavior, auto-focus, collapse/expand, and dense local activity readability.
 4. Action-prompt targeting polish: show valid targets/destinations, skip invalid cells where practical, and explain blocked pickup/drop/enter/exit choices without inventing frontend-only simulation rules.
-5. Apply `docs/Plans/SadConsole-UI-Specification.md` when this bucket needs layout/layering/resizing, mouse hit-testing, collapsible/pinned panels, user-customizable layouts, floating overlays, nested component regions, active-actor/focus/facing/target render styles, or configurable theme/layout profiles.
+5. Apply `docs/Source of Truth/SadConsole-UI-Specification.md` when this bucket needs layout/layering/resizing, mouse hit-testing, collapsible/pinned panels, user-customizable layouts, floating overlays, nested component regions, active-actor/focus/facing/target render styles, or configurable theme/layout profiles.
 6. Saved runlog/playback UX: test inspector or runlog stepper with forward/back controls, plus richer visual state debugging backed by shared history. Frontend-owned for SadConsole presentation; saved history/runlog facts remain shared tooling concerns.
 7. History playback / SadConsole-rendered visual export for shareable debug artifacts. Frontend-owned for rendering/export UX over shared history.
 8. Distribution for SadConsole feedback builds; browser/HTML5 hosting is deferred unless a later frontend-technology checkpoint re-promotes it.
@@ -570,11 +570,11 @@ This table summarizes findings from the completed spike; it does not imply that 
 | Expand/collapse panels and keyboard focus | Partially covered; prototype supports collapse/expand and Tab focus, but layout/focus rules are not production-ready. |
 | Keyboard-first play/inspect/action modes | Partially covered; Play, Inspect, pickup/drop/enter/exit prompt modes exist and need polish. |
 | Action valid-target highlighting/skipping | Not covered. |
-| Mouse hit-testing/click inspection | Not covered; tracked as UI-N05 in `docs/Plans/SadConsole-UI-Specification.md`. |
-| Facing/target/active-actor visualization | Partially covered elsewhere by headless debug rendering; not yet a strong SadConsole UX. Tracked as UI-N07 in `docs/Plans/SadConsole-UI-Specification.md`. |
+| Mouse hit-testing/click inspection | Not covered; tracked as UI-N05 in `docs/Source of Truth/SadConsole-UI-Specification.md`. |
+| Facing/target/active-actor visualization | Partially covered elsewhere by headless debug rendering; not yet a strong SadConsole UX. Tracked as UI-N07 in `docs/Source of Truth/SadConsole-UI-Specification.md`. |
 | Local per-panel logs from universal turn trace | Partially covered in production SadConsole through history-backed global/local action logs with conservative autonomous anchors. |
 | Itch.io browser/HTML5 distribution | Deferred; current SadConsole feedback builds target desktop `net10.0` with `MonoGame.Framework.DesktopGL`, so browser export remains a later technology-risk investigation rather than a current requirement. |
-| Reusable panel layout geometry/view models | Partially covered; consolidated under UI-M01/UI-M02 and related notes in `docs/Plans/SadConsole-UI-Specification.md`. |
+| Reusable panel layout geometry/view models | Partially covered; consolidated under UI-M01/UI-M02 and related notes in `docs/Source of Truth/SadConsole-UI-Specification.md`. |
 | Runlog stepper / debug playback frontend | Not covered; backlog now prefers saved runlogs/history playback over extending the legacy recorder. |
 | Integrated editor affordances | Not covered; must reuse existing editor/API concepts when promoted. |
 | Final frontend engine choice | Not covered; SadConsole is now the preferred canonical debug/browser direction, with final engine comparison deferred until packaging, editor-widget, mouse, or layout evidence requires it. |
@@ -584,7 +584,7 @@ Dependencies:
 - Depends on shared Core/Content/Headless/Editor service/API contracts staying frontend-agnostic.
 - Frontend behavior must not contradict engine/editor capability contracts or add frontend-only simulation semantics.
 - Final frontend-engine choice should wait until play controls, inspection-chain interaction, mouse convenience, local logs, layout complexity, packaging, and in-game editing needs are clearer; short-term work should still pave SadConsole as the canonical debug/browser direction.
-- Interactive breadcrumbs and richer visual inspection belong in this consolidated SadConsole/frontend bucket. Collapsible/pinned panel layout mechanics are specified in `docs/Plans/SadConsole-UI-Specification.md` and should be planned there when promoted.
+- Interactive breadcrumbs and richer visual inspection belong in this consolidated SadConsole/frontend bucket. Collapsible/pinned panel layout mechanics are specified in `docs/Source of Truth/SadConsole-UI-Specification.md` and should be planned there when promoted.
 
 Promotion trigger:
 
@@ -639,7 +639,7 @@ Dependencies:
 
 Promotion trigger:
 
-- Continue promoting through `docs/Plans/Canonical-Actions-Vertical-Slice-Plan.md` when canonical action rooms need arbitrary controlled entities, control-source changes, or multi-entity/team control.
+- Continue promoting through the active rolling boards when canonical action rooms need arbitrary controlled entities, control-source changes, or multi-entity/team control.
 
 ### Bucket 11: Long-horizon diegetic/meta systems
 

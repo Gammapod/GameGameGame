@@ -10,7 +10,7 @@ Use this process at the end of each development sprint before selecting the next
 
 Wrap-up outputs should usually include:
 
-- updated `docs/Plans/High-Level-Roadmap.md`;
+- updated the relevant active rolling board in `docs/Plans/`;
 - archived completed planning documents under `docs/Archived/`;
 - a short active next-sprint plan when there is enough agreement to preserve context;
 - process-improvement notes when the sprint revealed workflow friction.

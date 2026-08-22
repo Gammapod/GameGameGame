@@ -1,6 +1,6 @@
 # Ecology Baseline Metrics
 
-Status: Baseline planning artifact captured after the engine refactor, before selecting the next ecology sprint.
+Status: Archived baseline planning artifact captured after the engine refactor, before selecting the next ecology sprint. Active ecology follow-up is tracked through the Content rolling board.
 
 Source content: `src/GameGameGame.Content/Beta/Ecology/EcologyVignettes.yaml`
 

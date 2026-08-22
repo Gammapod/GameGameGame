@@ -16,7 +16,7 @@ related:
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
-  - plan.sadconsole-frontend-roadmap
+  - plan.frontend-sadconsole-rolling-board
   - plan.sadconsole-playmode-layout-pattern-sprint
   - plan.new-play-mode-mvp-sprint
 ---

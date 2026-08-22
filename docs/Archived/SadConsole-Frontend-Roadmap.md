@@ -2,7 +2,7 @@
 id: plan.sadconsole-frontend-roadmap
 title: SadConsole Frontend Roadmap
 kind: backlog-reference
-status: active
+status: archived
 truth_rank: 55
 truth_domains: [planning-priority, frontend-presentation]
 owners: [frontend-owner]
@@ -20,7 +20,7 @@ related:
 ---
 # SadConsole Frontend Roadmap
 
-Status: Active roadmap/backlog reference for SadConsole/frontend work selection.
+Status: Archived roadmap/backlog reference. Superseded by `docs/Plans/Frontend-SadConsole-Rolling-Board.md` for active frontend work selection.
 
 Read when:
 
@@ -46,7 +46,7 @@ Related source of truth:
 
 ## Direction
 
-SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. New active frontend work is moving to `src/GameGameGame.Frontend.SadConsole` under `docs/Plans/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`. The existing `src/GameGameGame.SadConsole` project remains buildable/reference-only while useful components, tests, patterns, glyph decisions, and display lessons are mined; it should not receive new product-surface features.
+SadConsole remains the preferred canonical debug/editor browser direction, with final frontend-engine selection deferred. The new `src/GameGameGame.Frontend.SadConsole` workstream was started under the archived `docs/Archived/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`; active frontend work now lives in `docs/Plans/Frontend-SadConsole-Rolling-Board.md`. The existing `src/GameGameGame.SadConsole` project remains reference-only while useful components, tests, patterns, glyph decisions, and display lessons are mined; it should not receive new product-surface features.
 
 The former Console frontend has been removed. Simple developer commands, scenario scanning, reports, and recording workflows should live in shared Content/Headless tooling or future explicit CLI tools rather than reviving Console-specific UI workflows. New rich UI investment should prefer SadConsole or shared frontend-neutral services.
 

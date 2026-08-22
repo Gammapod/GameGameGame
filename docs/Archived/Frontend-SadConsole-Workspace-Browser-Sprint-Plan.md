@@ -2,7 +2,7 @@
 id: plan.frontend-sadconsole-workspace-browser-sprint
 title: Frontend SadConsole Workspace Browser Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 45
 truth_domains: [planning-priority, frontend-presentation, implementation-navigation, test-trace]
 owners: [frontend-owner, core-owner]
@@ -25,7 +25,7 @@ related:
 
 # Frontend SadConsole Workspace Browser Sprint Plan
 
-Status: Active spike-branch sprint plan for starting the new SadConsole-based frontend project and proving workspace-backed scenario browsing before rebuilding Play mode.
+Status: Archived spike-branch sprint plan. The new `GameGameGame.Frontend.SadConsole` project exists; active frontend work now lives in `docs/Plans/Frontend-SadConsole-Rolling-Board.md`.
 
 ## Goal
 

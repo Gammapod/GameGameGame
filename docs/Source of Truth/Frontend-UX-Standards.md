@@ -38,7 +38,7 @@ Related documents:
 - `docs/Source of Truth/Frontend-Editor-Simulation-Flow.mmd` diagrams the current Editor/Simulation context model.
 - `docs/Source of Truth/Entity-Panel-UX-Spec.md` records the entity-panel, breadcrumb, and log UX model.
 - `docs/Source of Truth/Frontend-Game-Text.md` records draft player-facing log message ID slots; final wording is intentionally deferred.
-- `docs/Plans/SadConsole-Frontend-Roadmap.md` records staged implementation work.
+- `docs/Plans/Frontend-SadConsole-Rolling-Board.md` records active frontend implementation work.
 
 ## Purpose
 

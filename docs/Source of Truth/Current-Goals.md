@@ -15,8 +15,9 @@ read_when:
   - checking which active plan or reference log owns follow-up planning context
 related:
   - source.planning-index
-  - plan.high-level-roadmap
-  - plan.sadconsole-frontend-roadmap
+  - plan.core-rolling-board
+  - plan.content-rolling-board
+  - plan.frontend-sadconsole-rolling-board
   - source.capability-gap-log
   - plan.sprint-retrospective
 ---
@@ -39,31 +40,29 @@ Do not read when:
 
 ## Current strategic priority
 
-The active release direction is canonical action vertical slices: freeze the current broad Action Step catalog as legacy/prototype-compatible, then promote actions one at a time with engine rules, POV/affordance facts, frontend log IDs, content test rooms, editor support, componentized play-mode consumption, and Core-owned runtime control-source / Action Choice support for arbitrary controlled entities.
+The active direction is a stabilization-and-topology follow-through after completing user-facing semantics for most current actions: document the current Core/Content semantics, make the new SadConsole frontend the normal maintained frontend, then advance topology/POV, topology-aware targeting, merged/overlapping topology authorship, action workflow maintainability, and user-facing log semantics through the rolling boards.
 
 ## Active planning bridge
 
-- Active roadmap: `docs/Plans/High-Level-Roadmap.md`.
-- Active architecture/refactor plan: `docs/Plans/Multi-Document-Content-Workspace-Compiler-Sprint-Plan.md`, for introducing a multi-document ContentWorkspace/ContentCompiler subsystem while preserving one-document APIs as compatibility adapters.
-- Active focused sprint plan: none selected; use the multi-document content workspace/compiler plan when selecting the next content/editor composition slice, otherwise choose the next canonical action vertical slice from the roadmap backlog.
-- Recently archived focused sprint plans: `docs/Archived/Content-Workspace-Surface-Implementation-Plan.md`, `docs/Archived/Content-Validation-Compiler-Migration-Sprint-Plan.md`, `docs/Archived/Graph-First-Runtime-Topology-Migration-Plan.md`, `docs/Archived/SadConsole-Inventory-Space-Zoom-Sprint-Plan.md`, `docs/Archived/SadConsole-Dynamic-Entity-Lifecycle-Demo-Sprint-Plan.md`, `docs/Archived/Create-Destroy-Polymorph-Vertical-Slice-Sprint-Plan.md`, `docs/Archived/SadConsole-Linked-Containment-Play-Mode-Sprint-Plan.md`, `docs/Archived/Play-Mode-Interaction-Sprint-Plan.md`, `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`, and `docs/Archived/Topology-Service-Phase-1-Sprint-Plan.md`.
-- Broader frontend backlog/reference: `docs/Plans/SadConsole-Frontend-Roadmap.md`.
+- Active Core rolling board: `docs/Plans/Core-Rolling-Board.md`.
+- Active Content rolling board: `docs/Plans/Content-Rolling-Board.md`.
+- Active Frontend rolling board: `docs/Plans/Frontend-SadConsole-Rolling-Board.md`.
+- Active focused sprint plan: none selected; use the relevant rolling board when selecting the next Core, Content, or Frontend slice.
+- Recently archived planning docs: `docs/Archived/High-Level-Roadmap.md`, `docs/Archived/SadConsole-Frontend-Roadmap.md`, `docs/Archived/Multi-Document-Content-Workspace-Compiler-Sprint-Plan.md`, `docs/Archived/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`, and `docs/Archived/Ecology-Baseline-Metrics.md`.
 - Content/scenario capability gaps: `docs/Source of Truth/Capability-Gap-Log.md`.
 - Recent process observations and open retrospective questions: `docs/Archived/Sprint-Retrospective.md`.
 - Historical context: `docs/Archived/`, read only when current docs link to an archived document or when investigating why a system was shaped a certain way.
 
 ## Current highest-priority backlog buckets
 
-Trust `docs/Plans/High-Level-Roadmap.md` for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
+Trust the three active rolling boards for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Implement the multi-document ContentWorkspace/ContentCompiler composition sprint, using the completed one-document compiler and type-first surface as runway while preserving compatibility adapters.
-2. Select the next canonical action vertical slice from the roadmap backlog using the completed Move, Pickup/Drop seam, Enter/Exit, Transfer, and Play-mode interaction evidence.
-3. Canonical runtime control-source / Action Choice model follow-through.
-4. Componentized Gamma play-mode follow-through over canonical action/Action Choice/POV/log services.
-5. Delta point-of-view follow-through where needed by canonical actions.
-6. Gamma SadConsole Editor MVP and broader SadConsole/debug-browser contract follow-through.
-7. Scenario/testing/tooling feedback loop and scenario/content packaging.
-8. Deferred mechanics/content systems: movement/peer primitives, inventory/containment/transfer follow-ups, spawning/templates, runtime scale, behavior reuse, reactions, and long-horizon diegetic/meta systems.
+1. Update Core/Content-owned content-facing semantics documentation based on existing implemented behavior before selecting new implementation work.
+2. Quarantine the old SadConsole frontend from default build/test/package workflows and make `GameGameGame.Frontend.SadConsole` the documented real frontend.
+3. Make the new frontend topology/POV based so play rendering can show reachable spaces across layer boundaries rather than one room plane.
+4. Implement topology-aware targeting distance semantics in Core/Content: all eight adjacent cells to a target entity count as distance `0`, with further cells using Manhattan distance from that adjacency boundary.
+5. Expand merged topology authorship for overlapping/non-euclidean content experiments, Content-owned with Core collaboration.
+6. Later: introduce an action workflow descriptor seam after old-frontend quarantine, and add a dedicated user-facing Log component with Core/Content collaboration on structured log semantics.
 
 ## Maintenance rule
 

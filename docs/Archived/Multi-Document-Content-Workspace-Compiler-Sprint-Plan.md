@@ -2,7 +2,7 @@
 id: plan.multi-document-content-workspace-compiler-sprint
 title: Multi-Document Content Workspace Compiler Sprint Plan
 kind: plan
-status: active
+status: archived
 truth_rank: 45
 truth_domains: [planning-priority, implementation-navigation, test-trace]
 owners: [core-owner]
@@ -24,7 +24,7 @@ related:
 
 # Multi-Document Content Workspace Compiler Sprint Plan
 
-Status: Active sprint plan for moving Content from a one-document compiler/surface to a multi-document workspace compiler suitable for scenario composition, canonical shipped content, and separate user-authored content.
+Status: Archived sprint plan. Active Content/Core selection now lives in the rolling boards; use this document as historical context for future multi-document workspace/compiler work.
 
 Archived runway/context:
 

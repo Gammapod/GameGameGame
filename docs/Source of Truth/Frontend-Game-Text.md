@@ -17,7 +17,7 @@ related:
   - source.frontend-ux-invariants
   - source.frontend-ux-standards
   - source.action-step-outcome-and-affordance-logic
-  - plan.high-level-roadmap
+  - plan.frontend-sadconsole-rolling-board
 ---
 # Frontend Game Text
 

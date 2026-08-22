@@ -16,7 +16,7 @@ read_when:
 related:
   - source.frontend-ux-standards
   - source.frontend-play-visual-language
-  - plan.sadconsole-frontend-roadmap
+  - plan.frontend-sadconsole-rolling-board
 ---
 # Frontend UX Decision Log
 
@@ -33,7 +33,7 @@ Related documents:
 - `docs/Source of Truth/Frontend-UX-Standards.md` records the current UI-bible standards.
 - `docs/Source of Truth/Frontend-Play-Visual-Language.md` records player-facing Play-mode visual semantics.
 - `docs/Source of Truth/Frontend-Editor-Simulation-Flow.mmd` diagrams the current Editor/Simulation context model.
-- `docs/Plans/SadConsole-Frontend-Roadmap.md` records staged implementation work and backlog items.
+- `docs/Plans/Frontend-SadConsole-Rolling-Board.md` records active frontend implementation work and backlog items.
 
 ## Format
 
@@ -235,7 +235,7 @@ Each decision should include:
 - **Decision:** New active frontend work starts in `src/GameGameGame.Frontend.SadConsole`, with tests in `tests/GameGameGame.Frontend.SadConsole.Tests`. The existing `src/GameGameGame.SadConsole` project remains buildable/reference-only until useful components, tests, patterns, glyph decisions, and display lessons have been mined, but the new project must not reference it.
 - **Reasoning:** The multi-document content/workspace refactor intentionally broke assumptions in the old frontend. Starting a clean project avoids preserving legacy Debug/Edit shell architecture while still allowing SadConsole research and component patterns to be cannibalized deliberately.
 - **Implications:** The first checkpoint is a workspace-backed scenario browser that shows `debug-room`; Play mode is rebuilt after that checkpoint. Debug mode is abandoned as a first-class route. Editor mode is deferred and should be reinvented around shared workspace/editor services. Reusable components promoted into the new frontend should receive readable gallery examples and focused tests once stable.
-- **Status:** Active / spike sprint planned by `docs/Plans/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`.
+- **Status:** Completed / archived. Historical spike sprint context lives in `docs/Archived/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`.
 
 ### FED-027: Frontend.SadConsole consumes workspace scenario services rather than an API v2
 

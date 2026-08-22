@@ -43,7 +43,7 @@ Do not read when:
 - Frontend UX lane: start with `docs/Source of Truth/Frontend-UX-Invariants.md` for frontend/shared-service boundaries and test traces, then `docs/Source of Truth/Frontend-UX-Standards.md` for concrete presentation and interaction guidance. Use `docs/Source of Truth/Frontend-Play-Visual-Language.md` for new Play-mode player-facing visual semantics, `docs/Source of Truth/Frontend-UX-Decisions.md` for chronological rationale, `docs/Source of Truth/Frontend-Editor-Simulation-Flow.mmd` for the Editor/Simulation context diagram, `docs/Source of Truth/Entity-Panel-UX-Spec.md` for the entity-panel/breadcrumb/log model, and `docs/Source of Truth/SadConsole-UI-Specification.md` for the living SadConsole UI layout planning matrix. Archived focused frontend plans record completed or inactive implementation context.
 - Glossary lane: `docs/Source of Truth/glossary.md` records shared terminology such as spatial direction and adjacency vocabulary.
 - Current-goals lane: `docs/Source of Truth/Current-Goals.md` records the mostly stable current project direction and bridges source-of-truth facts to active planning documents.
-- Planning lane: `docs/Plans/High-Level-Roadmap.md`, active plans, and `docs/Source of Truth/Capability-Gap-Log.md` record detailed priorities, promotion triggers, selected work, and scenario-discovered gaps.
+- Planning lane: `docs/Plans/Core-Rolling-Board.md`, `docs/Plans/Content-Rolling-Board.md`, `docs/Plans/Frontend-SadConsole-Rolling-Board.md`, and `docs/Source of Truth/Capability-Gap-Log.md` record current priorities, selected work, ownership, and scenario-discovered gaps.
 
 ## Required reading order for planning/content work
 
@@ -59,15 +59,15 @@ Do not read when:
 4. `docs/Source of Truth/Current-Goals.md`
    - Source of truth for the current selected direction and active planning bridge.
    - Use this before opening detailed roadmap or active-plan documents.
-5. `docs/Plans/High-Level-Roadmap.md`
-     - Canonical source of truth for active strategic direction, prioritized backlog buckets, deferred ideas, dependencies, and promotion triggers.
-6. `docs/Source of Truth/vertical-slice-map.md`
-     - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
-     - Read selectively when a planned slice spans multiple layers.
-7. `docs/Plans/SadConsole-Frontend-Roadmap.md`
-     - Active broader frontend roadmap/reference for SadConsole/debug-browser contracts and future frontend work selection.
-8. `docs/Plans/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`
-     - Active spike-branch sprint plan for creating `GameGameGame.Frontend.SadConsole`, establishing `GameGameGame.Frontend.SadConsole.Tests`, proving workspace-backed scenario browsing for `debug-room`, and then starting the new Play surface.
+5. `docs/Source of Truth/vertical-slice-map.md`
+      - Cross-layer navigation map for implementation work that touches Core, Content, Editor, Agent API, GUI, tests, and docs.
+      - Read selectively when a planned slice spans multiple layers.
+6. `docs/Plans/Core-Rolling-Board.md`
+     - Active rolling board for Core-owned near-term implementation, build/workflow, and shared-service slices that do not need a dedicated sprint plan.
+7. `docs/Plans/Content-Rolling-Board.md`
+     - Active rolling board for Content-owned authoring, validation, scenario, and experiment-support slices that do not need a dedicated sprint plan.
+8. `docs/Plans/Frontend-SadConsole-Rolling-Board.md`
+     - Active rolling board for the new `GameGameGame.Frontend.SadConsole` workstream and small frontend-owned slices.
 9. `docs/Source of Truth/Capability-Gap-Log.md`
      - Living source-of-truth log for scenario-discovered gaps, including headless-only, frontend, reporting, Action Step, and engine/system gaps. Not an active implementation plan.
 10. `docs/Source of Truth/Design-Quirks-and-Gotchas.md`
@@ -121,7 +121,7 @@ Use `docs/Source of Truth/Current-Goals.md` for the mostly stable current projec
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Mostly stable current project direction and active planning bridge belongs in `Current-Goals.md`.
 - Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
-- Active implementation details belong in an active sprint/release plan under `docs/Plans/`; completed or inactive focused plans live under `docs/Archived/`.
+- Active implementation details belong in the relevant rolling board under `docs/Plans/` unless a deliberately selected focused sprint/release plan is created; completed or inactive focused plans live under `docs/Archived/`.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
 - Avoid duplicating long explanations across documents; link to the authoritative doc instead.

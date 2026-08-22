@@ -270,7 +270,9 @@ Near-term work focuses on turning individual simulation capabilities into comple
 Detailed priorities and implementation plans are documented in:
 
 - `docs/Source of Truth/Current-Goals.md`
-- `docs/Plans/High-Level-Roadmap.md`
+- `docs/Plans/Core-Rolling-Board.md`
+- `docs/Plans/Content-Rolling-Board.md`
+- `docs/Plans/Frontend-SadConsole-Rolling-Board.md`
 - `docs/Source of Truth/planning-index.md`
 
 ## Attribution

@@ -32,7 +32,7 @@ Related documents:
 
 - `docs/Source of Truth/Frontend-UX-Invariants.md` records broad frontend UX constraints and layer boundaries.
 - `docs/Source of Truth/Frontend-UX-Standards.md` records UI-bible presentation standards for entity-neutral display, glyph consistency, local activity, and action highlighting.
-- `docs/Plans/SadConsole-Frontend-Roadmap.md` records staged implementation work.
+- `docs/Plans/Frontend-SadConsole-Rolling-Board.md` records active frontend implementation work.
 - `docs/Archived/SadConsole-Spike-Findings.md` records prototype evidence.
 - `docs/Source of Truth/Engine-Editor-Capabilities.md` records implemented support tiers.
 

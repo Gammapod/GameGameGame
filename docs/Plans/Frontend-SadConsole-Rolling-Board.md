@@ -11,6 +11,8 @@ related:
   - source.frontend-ux-standards
   - source.frontend-ux-decisions
   - source.frontend-game-text
+  - plan.core-rolling-board
+  - plan.content-rolling-board
 ---
 
 # Frontend SadConsole Rolling Board
@@ -30,82 +32,70 @@ Purpose: Track small, continuously updated user stories without creating a dedic
 
 ## Now
 
-No active item selected. Pull from **Next** when ready.
+### Make new frontend Play mode topology/POV based
+
+**User story:** As a player, I see the spaces available from my controlled actor's point of view, including reachable spaces across layer/topology boundaries, rather than a single current room plane.
+
+**Owners:** Frontend, consuming Core/Content projection seams.
+
+**Priority dependency:** Start after the immediate documentation and old-frontend build-quarantine refactors have made the new frontend the normal maintained surface.
+
+**Plan:**
+
+- Replace the single-plane `PlayGridViewModel` assumption with a topology/POV visible-cell model.
+- Consume shared `PointOfViewService`, `ActorPovPlayProjectionService`, and/or `TopologyVisibilityProjectionService` facts rather than deriving ancestry or reachability in the frontend.
+- Preserve source plane/node/layout identity so merged layers, inventory-boundary links, and later overlapping spaces can be presented without losing provenance.
+- Keep line-of-sight/audibility claims out of presentation until Core/Content provide those facts.
+
+**Done when:**
+
+- The new frontend can render a controlled actor POV set instead of only one selected plane.
+- Cells reached across topology seams retain enough identity for inspection, highlighting, and action selection.
+- Existing one-room scenarios still render through the new model.
 
 ## Next
 
-### Design first action prompt semantics after inventory overlay
-
-**User story:** As a player, I can complete one specific non-move action through a deliberately designed focused flow rather than inheriting old frontend prompt assumptions.
-
-**Plan:**
-
-- Start only after the player inventory/self-inspection overlay exists.
-- Pick one action path, likely Pickup or Drop.
-- Decide its prompt/focus/submit behavior in isolation.
-- Reuse inert `PlayActionCandidate`/`PlayActionPromptLayer` data where useful.
-- Update focus routing and overlays only for that action's accepted flow.
-
-**Done when:**
-
-- One action's user-facing semantics are documented and implemented.
-- The implementation does not imply global prompt behavior for unrelated actions.
+No active frontend-owned item queued after the topology/POV slice. Pull from **Later** or the Core/Content boards when dependencies are satisfied.
 
 ## Later
 
-### Wire Pickup action selection
+### Introduce an action workflow descriptor seam
 
-**User story:** As a player, when inspecting an adjacent pickup target, I can choose Pickup and place it in my inventory without being asked for choices that are already deducible.
+**User story:** As a frontend developer, I can change one action's player-facing workflow without adding another modal branch or switch case in every Play component.
 
-**Plan:**
+**Owners:** Frontend + Core. Tracked primarily on `plan.core-rolling-board` until the Core descriptor seam exists.
 
-- Select Pickup from the inspected-entity panel action list.
-- Query/use the new frontend Play action session controller's current Core `ActionChoiceRequest`.
-- If there is exactly one valid destination, submit directly.
-- If multiple valid destinations exist, focus a player-inventory destination picker.
-- Submit through the shared Core action-choice submission path.
-- Redraw world and panels after result.
-
-**Done when:**
-
-- Pickup executes from the inspection panel.
-- Destination selection only appears when needed.
-- Failure/result/status text is shown through frontend text-message IDs.
-
-### Wire Drop action selection
-
-**User story:** As a player, I can choose Drop from the player panel, select an inventory item, and drop it into a valid adjacent destination.
+**Priority dependency:** Do after the old frontend is quarantined from default workflows.
 
 **Plan:**
 
-- Select Drop from the player panel action list.
-- Focus a player-inventory source picker for occupied carried items.
-- If exactly one valid adjacent/world destination is available, submit directly.
-- Otherwise focus a destination picker.
-- Submit through the shared Core action-choice submission path.
+- Consume Core-owned workflow/action-choice descriptors for target source, follow-up prompts, submit shape, and action-specific affordance facts.
+- Keep focus, layout, animation, and component presentation frontend-owned.
+- Migrate existing Move/Pickup/Drop/Enter/Exit/Transfer/Push workflows incrementally.
 
 **Done when:**
 
-- Drop executes from the player panel.
-- Occupied inventory source selection works.
-- Destination auto-submit/destination prompt behavior follows the “do not ask what can be deduced” rule.
+- Existing action workflows still work through the new descriptor seam.
+- Individual action workflow changes no longer require unrelated switch edits across Play components.
 
-### Decide old frontend quarantine/main-frontend policy
+### Create a dedicated user-facing Log component
 
-**User story:** As a developer, I want the new frontend to become the primary maintained frontend once it covers the old frontend's remaining useful interaction paths.
+**User story:** As a player, I can review important action outcomes through a readable log component that complements animation rather than duplicating debug traces.
+
+**Owners:** Frontend, with Core and Content collaboration required.
 
 **Plan:**
 
-- Revisit after the new frontend can execute at least one non-move canonical action path, preferably Pickup/Drop.
-- Decide whether the old `src/GameGameGame.SadConsole` project becomes reference-only/quarantined.
-- Identify old tests to migrate, delete, or keep only for shared-service protection.
-- Update source-of-truth docs and normal workflow expectations.
+- Decide which outcomes deserve user-facing log rows. Minimum rule: any action that resolves to an animation should also produce a log row.
+- Consume structured Core/Content outcome/log projections rather than parsing trace text.
+- Define component layout, clipping, focus, and relationship to inspection panels.
+- Defer true perception/line-of-sight/audibility claims until Core/Content provide those facts.
 
 **Done when:**
 
-- Docs clearly state frontend ownership/status.
-- Old frontend no longer drives new UX decisions except as archived/reference material.
-- Normal build/test expectations are explicit.
+- A reusable Play log component exists.
+- Animated action outcomes have corresponding user-facing log rows.
+- Debug traces remain available separately from player-facing logs.
 
 ## Completed
 

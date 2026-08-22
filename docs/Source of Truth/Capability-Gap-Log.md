@@ -20,7 +20,7 @@ related:
 ---
 # Capability Gap Log
 
-Status: Living source-of-truth log for scenario-discovered capability gaps, not an active implementation plan. New work should only be promoted from this log through `docs/Plans/High-Level-Roadmap.md` after the active roadmap re-prioritizes it.
+Status: Living source-of-truth log for scenario-discovered capability gaps, not an active implementation plan. New work should only be promoted from this log through the active Core, Content, or Frontend rolling board after the relevant owner prioritizes it.
 
 Read when:
 
