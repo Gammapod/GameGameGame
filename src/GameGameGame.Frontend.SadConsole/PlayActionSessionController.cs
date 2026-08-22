@@ -290,6 +290,33 @@ internal sealed class PlayActionSessionController
         return result;
     }
 
+    public ControlledActorCommandResult SubmitPush(EntityId targetId, Direction direction)
+    {
+        if (CurrentActionChoiceRequest is not { } request)
+        {
+            throw new InvalidOperationException("No Core Action Choice request is active.");
+        }
+
+        EnsureHistoryControlledActor(ControlledActorId);
+        ControlledActorCommandResult result;
+        using (_performance?.Measure(PlayPerformanceCounterKind.SubmitCore))
+        {
+            result = _history.SubmitPushActionChoice(
+                _actionChoices,
+                request,
+                targetId,
+                direction,
+                _emptyActionPlans,
+                RefreshTargets);
+        }
+
+        using (_performance?.Measure(PlayPerformanceCounterKind.SubmitRefresh))
+        {
+            RefreshAfterControlledSubmission(result.Succeeded);
+        }
+        return result;
+    }
+
     private void RefreshAfterControlledSubmission(bool succeeded)
     {
         if (succeeded)

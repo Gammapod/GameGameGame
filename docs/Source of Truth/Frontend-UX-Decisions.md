@@ -361,3 +361,11 @@ Each decision should include:
 - **Implementation anchors:** `PlayInventorySelectionController.TryBeginTransferItems()/MoveTransferItem()/ConfirmTransfer()`, `PlayActionSessionController.SubmitTransfer(...)`, and `PlayActionCandidateProjector.TransferCandidates(...)`.
 - **Implications:** Future Give/Take affordances may be added as filtered shortcuts over the same Transfer choice, but should not become separate frontend legality paths unless Core exposes separate action semantics.
 - **Status:** Active / initial functional Transfer workflow.
+
+### FED-043: Push uses canonical target-first Action Choice, not PushFacing
+
+- **Decision:** In new Play mode, Push is selected from an inspected adjacent target and then chooses a Core-projected target-relative push direction. Submission sends the inspected target plus selected direction through the action session controller. The debug-room player action plan uses canonical `Push`, not legacy `PushFacing`, so Core exposes target-first `ActionChoiceKind.Push` rows.
+- **Reasoning:** `PushFacing` is legacy facing/blocker behavior and does not mean “push the inspected adjacent target.” Canonical `Push` already exposes valid target entities and valid directions through shared Action Choice facts, which keeps target and direction legality out of the frontend.
+- **Implementation anchors:** `PlayActionWorkflowController.TryBeginPushDirection()/ConfirmPush()`, `PlayActionSessionController.SubmitPush(...)`, `PlayActionHighlightResolver`, and `src/GameGameGame.Content/Canonical/Creatures/DebugPlayer.yaml`.
+- **Implications:** Do not silently mutate actor Facing/Target to make Push rows appear. If a future bump-push UX is desired, design it separately over an explicit Core/shared capability rather than synthesizing target-first Push from `PushFacing`.
+- **Status:** Active / initial functional Push workflow.

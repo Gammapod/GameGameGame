@@ -34,6 +34,7 @@ public sealed class TilesetProfileTests
         Assert.Equal(218, profile.Roles.MoveHighlight);
         Assert.Equal(217, profile.Roles.EntityHighlight);
         Assert.Equal(216, profile.Roles.PickupHighlight);
+        Assert.Equal(210, profile.Roles.PushHighlight);
         Assert.Equal(215, profile.Roles.DropHighlight);
         Assert.Equal(214, profile.Roles.EnterHighlight);
         Assert.Equal(213, profile.Roles.ExitHighlight);
@@ -69,6 +70,17 @@ public sealed class TilesetProfileTests
 
         Assert.Equal(CellHighlightKind.Pickup, highlight.Kind);
         Assert.Equal(216, highlight.Glyph);
+    }
+
+    [Fact]
+    public void PushHighlightUsesPushHighlightGlyph()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        var highlight = CellHighlightPresentation.Push(profile);
+
+        Assert.Equal(CellHighlightKind.Push, highlight.Kind);
+        Assert.Equal(210, highlight.Glyph);
     }
 
     [Fact]

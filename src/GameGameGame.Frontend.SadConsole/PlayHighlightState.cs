@@ -9,6 +9,7 @@ internal sealed record PlayHighlightState(GridCoord Coord, CellHighlightKind Kin
         CellHighlightKind.MovePreview => CellHighlightPresentation.MovePreview(tilesetProfile),
         CellHighlightKind.EntityTarget => CellHighlightPresentation.EntityTarget(tilesetProfile),
         CellHighlightKind.Pickup => CellHighlightPresentation.Pickup(tilesetProfile),
+        CellHighlightKind.Push => CellHighlightPresentation.Push(tilesetProfile),
         CellHighlightKind.Drop => CellHighlightPresentation.Drop(tilesetProfile),
         CellHighlightKind.Enter => CellHighlightPresentation.Enter(tilesetProfile),
         CellHighlightKind.Exit => CellHighlightPresentation.Exit(tilesetProfile),

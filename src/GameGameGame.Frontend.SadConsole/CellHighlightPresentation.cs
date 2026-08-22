@@ -7,6 +7,7 @@ internal enum CellHighlightKind
     MovePreview,
     EntityTarget,
     Pickup,
+    Push,
     Drop,
     Enter,
     Exit,
@@ -34,6 +35,11 @@ internal sealed record CellHighlightPresentation(
         CellHighlightKind.Pickup,
         tilesetProfile.Roles.PickupHighlight,
         new Color((byte)80, (byte)255, (byte)120, (byte)180));
+
+    public static CellHighlightPresentation Push(TilesetProfile tilesetProfile) => new(
+        CellHighlightKind.Push,
+        tilesetProfile.Roles.PushHighlight,
+        new Color((byte)255, (byte)160, (byte)80, (byte)180));
 
     public static CellHighlightPresentation Drop(TilesetProfile tilesetProfile) => new(
         CellHighlightKind.Drop,

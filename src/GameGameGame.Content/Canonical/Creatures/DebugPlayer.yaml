@@ -23,7 +23,7 @@ actionPlans:
       steps:
       - kind: Move
         directionMode: Forward
-      - kind: PushFacing
+      - kind: Push
         directionMode: Forward
       - kind: TransformAdjacentToInventory
       - kind: TransformInventoryToAdjacent

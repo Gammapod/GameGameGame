@@ -8,6 +8,7 @@ internal enum PlayActionWorkflowKind
     PickupDestination,
     DropSource,
     DropDestination,
+    PushDirection,
     ExitDestination,
     TransferItem
 }
@@ -25,7 +26,9 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
     private EntityId? _pickupTargetId;
     private EntityId? _dropSourceId;
+    private EntityId? _pushTargetId;
     private EntityId? _transferCounterpartyId;
+    private Direction? _selectedPushDirection;
     private int _transferItemIndex;
     private PlayActionWorkflowKind _mode;
 
@@ -35,6 +38,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
     public CellHighlightKind TargetHighlightKind => _mode == PlayActionWorkflowKind.DropDestination ? CellHighlightKind.Drop : CellHighlightKind.Pickup;
     public bool IsDropSourceSelection => _mode == PlayActionWorkflowKind.DropSource;
     public bool IsDropDestinationSelection => _mode == PlayActionWorkflowKind.DropDestination;
+    public bool IsPushDirectionSelection => _mode == PlayActionWorkflowKind.PushDirection;
     public bool IsExitDestinationSelection => _mode == PlayActionWorkflowKind.ExitDestination;
     public bool IsTransferItemSelection => _mode == PlayActionWorkflowKind.TransferItem;
 
@@ -66,6 +70,24 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
         return true;
     }
 
+    public bool TryBeginPushDirection(EntityId targetId)
+    {
+        var first = PushChoice()?.PushDirections(targetId).FirstOrDefault(option => option.CanExecute);
+        if (first is null)
+        {
+            return false;
+        }
+
+        _pickupTargetId = null;
+        _dropSourceId = null;
+        _pushTargetId = targetId;
+        _selectedPushDirection = first.Direction;
+        _transferCounterpartyId = null;
+        _mode = PlayActionWorkflowKind.PushDirection;
+        SelectedCoord = first.Destination?.Coord ?? actionSession.World.GetEntityLocation(targetId).Coord.Offset(first.Direction);
+        return true;
+    }
+
     public bool TryBeginExitDestination()
     {
         var first = ExitChoice()?.DirectionOptions.FirstOrDefault(option => option.CanExecute);
@@ -76,6 +98,8 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
         _pickupTargetId = null;
         _dropSourceId = null;
+        _pushTargetId = null;
+        _selectedPushDirection = null;
         _transferCounterpartyId = null;
         _mode = PlayActionWorkflowKind.ExitDestination;
         SelectedCoord = first.Destination?.Coord ?? new GridCoord(0, 0);
@@ -102,6 +126,8 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
     {
         _pickupTargetId = null;
         _dropSourceId = null;
+        _pushTargetId = null;
+        _selectedPushDirection = null;
         _transferCounterpartyId = null;
         _mode = PlayActionWorkflowKind.None;
     }
@@ -128,6 +154,18 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
         if (_mode == PlayActionWorkflowKind.TransferItem)
         {
             return false;
+        }
+
+        if (_mode == PlayActionWorkflowKind.PushDirection)
+        {
+            if (_pushTargetId is not { } targetId || PushChoice()?.PushDirections(targetId).FirstOrDefault(option => option.Direction == direction) is not { } option)
+            {
+                return false;
+            }
+
+            _selectedPushDirection = direction;
+            SelectedCoord = option.Destination?.Coord ?? actionSession.World.GetEntityLocation(targetId).Coord.Offset(direction);
+            return true;
         }
 
         if (_mode == PlayActionWorkflowKind.ExitDestination)
@@ -181,6 +219,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
     {
         PlayActionWorkflowKind.PickupDestination => ConfirmPickup(),
         PlayActionWorkflowKind.DropDestination => ConfirmDrop(),
+        PlayActionWorkflowKind.PushDirection => ConfirmPush(),
         PlayActionWorkflowKind.ExitDestination => ConfirmExit(),
         PlayActionWorkflowKind.TransferItem => ConfirmTransfer(),
         _ => null
@@ -188,7 +227,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
     public PlayHighlightState? InventoryHighlight()
     {
-        if (!IsActive || _mode is PlayActionWorkflowKind.DropDestination or PlayActionWorkflowKind.ExitDestination or PlayActionWorkflowKind.TransferItem)
+        if (!IsActive || _mode is PlayActionWorkflowKind.DropDestination or PlayActionWorkflowKind.PushDirection or PlayActionWorkflowKind.ExitDestination or PlayActionWorkflowKind.TransferItem)
         {
             return null;
         }
@@ -201,9 +240,14 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
     public PlayHighlightState? GridHighlight()
     {
-        if (_mode != PlayActionWorkflowKind.DropDestination && _mode != PlayActionWorkflowKind.ExitDestination)
+        if (_mode != PlayActionWorkflowKind.DropDestination && _mode != PlayActionWorkflowKind.PushDirection && _mode != PlayActionWorkflowKind.ExitDestination)
         {
             return null;
+        }
+
+        if (_mode == PlayActionWorkflowKind.PushDirection)
+        {
+            return new PlayHighlightState(SelectedCoord, IsSelectedPushDirectionValid() ? CellHighlightKind.Push : CellHighlightKind.NoAction);
         }
 
         if (_mode == PlayActionWorkflowKind.ExitDestination)
@@ -270,6 +314,22 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
         var actorPlane = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).PlaneId;
         var result = actionSession.SubmitDrop(sourceId, new PlaneCoord(actorPlane, SelectedCoord));
+        if (result.Succeeded)
+        {
+            Cancel();
+        }
+
+        return result;
+    }
+
+    public ControlledActorCommandResult? ConfirmPush()
+    {
+        if (_mode != PlayActionWorkflowKind.PushDirection || _pushTargetId is not { } targetId || _selectedPushDirection is not { } direction || !IsSelectedPushDirectionValid())
+        {
+            return null;
+        }
+
+        var result = actionSession.SubmitPush(targetId, direction);
         if (result.Succeeded)
         {
             Cancel();
@@ -426,6 +486,11 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
             && DropChoice()?.Destinations(sourceId).Any(option => option.Destination == destination && option.CanExecute) == true;
     }
 
+    public bool IsSelectedPushDirectionValid() =>
+        _pushTargetId is { } targetId
+        && _selectedPushDirection is { } direction
+        && PushChoice()?.PushDirections(targetId).Any(option => option.Direction == direction && option.CanExecute) == true;
+
     public bool IsSelectedExitDestinationValid() => SelectedExitDirection() is not null;
 
     public PlaneId? ExitDestinationPlaneId() => ExitChoice()?.DirectionOptions.FirstOrDefault(option => option.CanExecute && option.Destination is not null)?.Destination?.PlaneId;
@@ -450,6 +515,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
     }
 
     private ActionChoice? PickupChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Pickup);
+    private ActionChoice? PushChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Push);
     private ActionChoice? DropChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop);
     private ActionChoice? ExitChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Exit);
     private IEnumerable<ActionChoice> TransferChoices() => actionSession.CurrentActionChoiceRequest?.Choices.Where(choice => choice.Kind == ActionChoiceKind.Transfer) ?? [];

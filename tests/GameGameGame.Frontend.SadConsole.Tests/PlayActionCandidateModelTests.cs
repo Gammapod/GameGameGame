@@ -104,6 +104,23 @@ public sealed class PlayActionCandidateModelTests
     }
 
     [Fact]
+    public void ActionHighlightResolverUsesPushForSelectablePushRows()
+    {
+        var targetId = new EntityId("target");
+        var candidate = new PlayActionCandidate(
+            PlayActionCandidateSource.InspectionEntity(targetId),
+            ActionChoiceKind.Push,
+            PlayActionCandidateProjector.ActionText(ActionChoiceKind.Push, targetId),
+            IsValid: true,
+            IsComplete: true);
+        var row = new EntityInspectionActionRow(candidate.Text, Selectable: true, Candidate: candidate);
+
+        var kind = PlayActionHighlightResolver.ForInspectionAction(row);
+
+        Assert.Equal(CellHighlightKind.Push, kind);
+    }
+
+    [Fact]
     public void ActionHighlightResolverUsesNoActionForGreyedOutRows()
     {
         var row = new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionNoValidActions), Selectable: false);
@@ -218,6 +235,29 @@ public sealed class PlayActionCandidateModelTests
 
         Assert.True(result.Succeeded, result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown");
         Assert.Equal(session.World.GetRegisteredInventoryPlaneId(targetId), session.World.GetEntityLocation(session.PlayerEntityId).PlaneId);
+    }
+
+    [Fact]
+    public void PushSelectionChoosesDirectionAndSubmitsThroughCore()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+        var selection = new PlayActionWorkflowController(actionSession);
+        var targetId = new EntityId("debugPushBlock");
+
+        var rows = InspectionActionChoiceProjector.Project(actionSession.CurrentActionChoiceRequest, targetId);
+        Assert.Contains(rows, row => row.Selectable && row.Candidate is { Kind: ActionChoiceKind.Push });
+        Assert.True(selection.TryBeginPushDirection(targetId));
+        Assert.True(selection.SelectDirection(Direction.South));
+        Assert.Equal(CellHighlightKind.Push, selection.GridHighlight()?.Kind);
+        var result = selection.ConfirmCurrentSubmission();
+
+        Assert.NotNull(result);
+        Assert.True(result!.Succeeded, result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown");
+        Assert.False(selection.IsActive);
+        Assert.Equal(new GridCoord(4, 5), session.World.GetEntityLocation(targetId).Coord);
     }
 
     [Fact]

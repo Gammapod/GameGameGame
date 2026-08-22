@@ -48,6 +48,7 @@
     "moveHighlight": 218,
     "entityHighlight": 217,
     "pickupHighlight": 216,
+    "pushHighlight": 210,
     "dropHighlight": 215,
     "enterHighlight": 214,
     "exitHighlight": 213,

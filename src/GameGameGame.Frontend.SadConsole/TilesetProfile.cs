@@ -31,6 +31,7 @@ internal sealed record TilesetRoles(
     int MoveHighlight,
     int EntityHighlight,
     int PickupHighlight,
+    int PushHighlight,
     int DropHighlight,
     int EnterHighlight,
     int ExitHighlight,

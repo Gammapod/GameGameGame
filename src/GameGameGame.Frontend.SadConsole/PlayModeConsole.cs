@@ -194,6 +194,21 @@ internal sealed class PlayModeConsole : Console
                 return;
             }
 
+            if (_actionWorkflow.IsPushDirectionSelection)
+            {
+                var pushResult = _actionWorkflow.ConfirmCurrentSubmission();
+                if (pushResult is null)
+                {
+                    _message = "Choose a valid push direction.";
+                    Redraw();
+                    return;
+                }
+
+                CompleteActionSubmission(pushResult, "Pushed.", "Push blocked");
+                Redraw();
+                return;
+            }
+
             if (_actionWorkflow.IsExitDestinationSelection)
             {
                 var exitResult = _actionWorkflow.ConfirmCurrentSubmission();
@@ -256,6 +271,8 @@ internal sealed class PlayModeConsole : Console
                 ? _actionWorkflow.IsSelectedDropSourceValid() ? "Choose droppable item. Enter selects source." : "Inventory item cannot be dropped."
                 : _actionWorkflow.IsDropDestinationSelection
                 ? _actionWorkflow.IsSelectedDropDestinationValid() ? "Choose drop destination. Enter drops." : "Drop destination unavailable."
+                : _actionWorkflow.IsPushDirectionSelection
+                ? _actionWorkflow.IsSelectedPushDirectionValid() ? "Choose push direction. Enter pushes." : "Push direction unavailable."
                 : _actionWorkflow.IsExitDestinationSelection
                 ? _actionWorkflow.IsSelectedExitDestinationValid() ? "Choose exit destination. Enter exits." : "Exit destination unavailable."
                 : _actionWorkflow.IsSelectedPickupDestinationValid()
@@ -344,6 +361,8 @@ internal sealed class PlayModeConsole : Console
 
                 _message = TryBeginPickupInventorySelection()
                     ? "Choose pickup destination. Enter picks up, Esc cancels."
+                    : TryBeginPushDirectionSelection()
+                    ? "Choose push direction. Enter pushes, Esc cancels."
                     : TryBeginTransferItemSelection()
                     ? _actionWorkflow.TransferItemSummary()
                     : _inspection.ConfirmSelectedActionMessage();
@@ -376,6 +395,24 @@ internal sealed class PlayModeConsole : Console
         }
 
         if (!_actionWorkflow.TryBeginTransferItems(counterpartyId))
+        {
+            return false;
+        }
+
+        _selectionStack.EnterCellSelection();
+        _playerPanel.MarkWorldChanged();
+        return true;
+    }
+
+    private bool TryBeginPushDirectionSelection()
+    {
+        var row = _inspection.SelectedActionRow;
+        if (row is not { Selectable: true, Candidate.Kind: ActionChoiceKind.Push, Candidate.Source.EntityId: { } targetId })
+        {
+            return false;
+        }
+
+        if (!_actionWorkflow.TryBeginPushDirection(targetId))
         {
             return false;
         }

@@ -17,6 +17,7 @@ internal static class PlayActionHighlightResolver
         return row.Candidate?.Kind switch
         {
             GameGameGame.Core.ActionChoiceKind.Pickup => CellHighlightKind.Pickup,
+            GameGameGame.Core.ActionChoiceKind.Push => CellHighlightKind.Push,
             GameGameGame.Core.ActionChoiceKind.Enter => CellHighlightKind.Enter,
             GameGameGame.Core.ActionChoiceKind.Transfer => CellHighlightKind.Transfer,
             _ => CellHighlightKind.EntityTarget
