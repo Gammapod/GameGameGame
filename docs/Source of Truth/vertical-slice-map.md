@@ -59,7 +59,7 @@ Use this as a navigation map, not a mandatory scope checklist. A slice may inten
    - Update `Engine-Editor-Capabilities.md` when actual support status or layer coverage changes.
    - Update `Content-Authoring-Manual.md` when content-editor-facing authoring guidance or limits change.
 10. **Planning/backlog documentation**
-   - Update active plan or `High-Level-Roadmap.md` when scope changes, gaps are deferred, or follow-up items are promoted.
+   - Update the relevant active rolling board when scope changes, gaps are deferred, or follow-up items are promoted.
 
 ## Common vertical slices
 

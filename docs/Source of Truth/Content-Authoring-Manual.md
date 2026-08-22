@@ -84,16 +84,17 @@ Default workflow:
 | Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. Content-editing agents may use session-aware `ggg_content_*` tools from `GameGameGame.Content.Tools` for direct AgentContentEditorApi-backed open/create/snapshot/validate/save workflows. |
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
 | Presentations | Assign/edit presentation data used by authored templates. |
-| Inventory / containment | Inventory dimensions, bulk, aperture, and carried entity layout. |
+| Inventory / containment | Inventory dimensions, bulk, aperture, carried entity layout, nullable inventory-boundary policies, experimental topology policies, and first-slice merged inventory layer joins. |
 | Actor state | Initial actor `Facing` through `actionStateDefaults.facing`; target-selection rules through preferred `targeting` profiles or legacy `targetingRules`. |
 | Action-plan assignment | Assign or clear an entity template's default action plan. |
 | Action plans | Create, edit, delete, reorder, preview, and validate action plans. |
-| Canonical behavior chains | Add, remove, and reorder catalog-backed Action Steps. |
+| Canonical behavior chains | Add, remove, reorder, preview, and validate catalog-backed Action Steps, including current promoted canonical steps and prototype-compatible experiment steps. |
 | Scenarios | Persist scenario name/root/player template/player entity ID/player start placement, plus first-slice authored player-control bindings from player/input IDs to materialized entity IDs. |
 | Scenario materialization | Materialize persisted scenarios through shared content/editor services. |
 | Playable session launch | Create frontend-neutral playable sessions from persisted scenarios or catalog entries through the shared Content launcher, including world, registry/presentation lookup, action plans, player entity, active plane/container, diagnostics, runtime failures, and capability gaps. |
 | Scenario execution | Launch persisted scenarios in the official SadConsole frontend directly by content file/scenario ID or through the SadConsole scenario browser populated from one file, folder discovery, or a curated manifest. Scenario catalog candidate scanning lives in Content through `ScenarioCatalogScanService`/`ScenarioCatalog.ScanCandidates`, but curated manifests are the author-facing source for sections, ordering, descriptions, status/lifecycle, tags, provenance, and browsing intent. Run persisted scenario reports by scenario ID with final-state and inventory/containment summaries; request compact player narrative projection message IDs/args through `ggg_content_run_scenario_player_log_by_id`; request combined validation/preview/materialization/run reports; run root-only compatibility reports when intentionally inspecting a scenario-root template without player insertion. |
 | Scenario recording | Legacy fallback: record persisted scenarios to PNG frames and GIF artifacts when reports/SadConsole are insufficient. Future visual recording should prefer history playback / SadConsole-rendered export. |
+| Ecology experiments | Author spatial individual-based ecology vignettes with existing target rules, pickup/drop/transfer, template-backed creation, polymorph, destroy, and action-step costs; cooldowns, age timers, density gates, and structured ecological time-series remain gaps. |
 | Gap logging | Record unsupported desired behavior in the active capability gap log. |
 
 For maintainer-facing layer coverage, support tiers, and parity details, use `docs/Source of Truth/Engine-Editor-Capabilities.md`.
@@ -139,7 +140,7 @@ Supported `enterPolicy` values are `FirstUnoccupiedRowMajor` and `FarthestFromOc
 
 Experimental `topologyPolicy` values are `None`, `ConnectsInward`, `ConnectsOutward`, and `ConnectsInwardAndOutward`. `ConnectsOutward` makes matching edge/corner cells in the entity's inventory topologically adjacent to the exterior cell in the same direction from the inventory owner. `ConnectsInward` makes exterior cells adjacent to the owner lead inward to preferred inventory edge cells; cardinal inward links choose the second-from-left cell on north/south edges and the second-from-top cell on west/east edges when available, while intercardinal links choose inventory corners. Directed topology policy affects normal movement, player movement choices/affordances, and adjacency-based interactions such as pickup. It is intentionally separate from `enterPolicy`/`exitPolicy`, which still govern explicit constrained Enter/Exit-style inventory transitions.
 
-Experimental merged inventory layer `joins` can connect separated contributed inventory spaces by source cell instead of by overlapping layout coordinates. The currently supported YAML shape is `joins: [{ from: { owner: roomA, edge: East }, to: { owner: hallAB, edge: West }, align: Center }]`; edges must be cardinal and `Center` selects the center cell of each referenced owner edge, such as a 3x3 room east-middle cell to a 5x1 hallway west endpoint. Validation rejects conflicting links that give the same source cell/direction two destinations. Editable documents, the shared editor service, agent API, and frontend editor snapshots preserve and list this shape.
+Experimental merged inventory layer `joins` can connect separated contributed inventory spaces by source cell instead of by overlapping layout coordinates. The currently supported YAML shape is `joins: [{ from: { owner: roomA, edge: East }, to: { owner: hallAB, edge: West }, align: Center }]`; edges must be cardinal and `Center` selects the center cell of each referenced owner edge, such as a 3x3 room east-middle cell to a 5x1 hallway west endpoint. Validation rejects conflicting links that give the same source cell/direction two destinations. Editable documents, the shared editor service, agent API, and frontend editor snapshots preserve and list this shape. Current examples: `src/GameGameGame.Content/Beta/Topology/TopologyPolicyShowcase.yaml`, `src/GameGameGame.Content/Beta/Topology/RoomHallAlignedJoinShowcase.yaml`, and `src/GameGameGame.Content/Beta/Topology/MergedInventoryLayerShowcase.yaml`. Do not rely on accidental overlapping layout projection as authored semantics yet; explicit overlap/fold vocabulary, non-center joins, asymmetric joins, and topology-aware targeting distance are active follow-up topics on the rolling boards.
 
 For player-controlled actors, the shared Core Action Choice seam can expose authored `TransformAdjacentToInventory`/`PickupTarget` as selectable adjacent pickup targets plus inventory-slot destinations, authored `TransformInventoryToAdjacent`/`DropFacing` as selectable carried sources plus adjacent map destinations, authored `EnterTarget` as Enter target choices, authored `ExitFacing` as Exit direction choices, and authored `Transfer` as a counterparty-then-item workflow over the actor and counterparty inventories. Player-facing menu vocabulary may present them as Pickup, Drop, Enter, Exit, and Transfer/Give/Take as appropriate.
 
@@ -157,6 +158,8 @@ Current content-facing actor state:
 Author initial `Facing` through `actionStateDefaults.facing` or the corresponding editor/API workflow.
 
 Author target selection on entity templates with the preferred `targeting` profile or legacy `targetingRules`. A `targeting` profile has one shared `range` for the actor, optional `defaultLocality`, and a set of rules; each rule has a numeric `slot`, recommended stable `label`, optional content-facing `hint`, optional `targetTemplateId`, zero or more `targetCapabilities`, and optional `locality.origins` such as `CurrentPlace`, `OwnInventory`, or `PeerInventories`. Think of the rule as a sentence: the label is the content-defined verb (`loves`), the target template is the noun (`gold`), target capabilities are adjectives (`portable` via `PickupTarget`, `enterable` via `EnterTarget`, etc.), and locality says where the actor looks. At the beginning of an entity turn, before its action plan is evaluated, each rule selects the nearest candidate within the actor's targeting range that matches the optional template and all configured capabilities, then writes that entity into both the numeric target slot and the label when present. Shared candidate preview can report matching candidates and provenance without mutating target slots. Legacy `targetingRules[].range` remains loadable as compatibility data. Target-consuming Action Steps should reference `targetLabel` for normal content, `targetSelf: true` when the actor is intentionally its own target, and numeric `targetSlot` only as an advanced compatibility escape hatch. If a referenced label has no current target on the executing actor, the step fails/falls through. In frontend/editor workflows, target labels are read as requirements from the selected/default Action Plan; authors normally edit only the template rule's target template, target capabilities, locality, and shared range for each required label. Template rules whose labels are not referenced by the current default Action Plan are preserved as authored data and should be shown as unused/orphaned rather than deleted automatically.
+
+Current targeting limits matter for merged-space and ecology experiments: rules select one nearest candidate, not a set; ordering still uses current same-plane coordinate distance rather than the upcoming topology-aware targeting distance; and there are no authorable count/density predicates. Use layout, costs, inventory limits, or separate templates as workarounds, and log a gap when a scenario needs local population counts, crowding, morale, or graph-distance target selection.
 
 Do not author arbitrary state variables for new content. Scenario-level per-entity initial `Target` overrides are not part of the current normal authoring surface; use template target rules instead, or track the need through the gap log when rules are insufficient.
 
@@ -187,7 +190,7 @@ Authoring model:
 - A failed/non-acting step may fall through to the next step, depending on the step.
 - Use Action Step order to express simple fallback behavior.
 - Target acquisition is not authored as an Action Step for new content. Use entity-template `targeting` profiles instead, and set target-consuming Action Step `targetLabel` values to the matching stable labels when a plan needs multiple target concepts.
-- Facing changes after successful directional movement; use the promoted canonical `Move` Action Step for new adjacent movement in canon-promoted content. Existing prototype-compatible movement Action Steps such as `MoveFacing`, `Backstep`, `StrafeClockwise`, and `StrafeAnticlockwise` remain available only for legacy/prototype scenarios while migration continues.
+- Facing changes after successful directional movement; use the promoted canonical `Move` Action Step for new adjacent movement in canon-promoted content. Existing movement helpers such as `MoveFacing` and `Backstep` remain prototype-compatible for experiments/old fixtures, while retired coordinate target-movement helpers such as `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, and `StrafeAnticlockwise` should be replaced by `TargetPathMove` in new graph-first content.
 
 Do not use for new normal content:
 
@@ -201,91 +204,110 @@ Maintainer/runtime details for canonical, transitional, and legacy action-plan f
 
 ## Currently authorable Action Step catalog
 
-This table is the content-facing catalog of currently authorable behavior-chain Action Steps. Keep rows compact when adding new steps. Put layer details and deep runtime semantics in `Engine-Editor-Capabilities.md` instead.
+This table is the content-facing catalog of currently authorable behavior-chain Action Steps. Keep rows compact when adding new steps. Put layer details and deep runtime semantics in `Engine-Editor-Capabilities.md` and outcome/fallthrough details in `Action-Step-Outcome-And-Affordance-Logic.md`.
 
-Planning note: the archived canonical-actions release plan froze the current broad Action Step catalog as legacy/prototype-compatible for release purposes, then promoted actions one at a time through complete vertical slices. Until a future active plan reselects a step for promotion, authors may still use the currently supported steps below, but content intended to prove release-canonical behavior should follow the new two-room fixture requirement established in `docs/Archived/Canonical-Actions-Vertical-Slice-Plan.md`.
+Status vocabulary:
 
-### Canon-promoted content allowlist stopgap
+- **Promoted canonical:** preferred for release-facing/canon-promoted content and player-facing action semantics.
+- **Prototype-compatible:** implemented in Core/YAML/validation/editor/API and usable for Beta/Delta experiments, but not yet a release-canonical authoring baseline.
+- **Legacy/retired:** loadable or historical compatibility only; do not use in new normal content unless explicitly maintaining old fixtures.
 
-Until the legacy/prototype Action Steps are removed, content under `src/GameGameGame.Content/Canonical` and other canon-promoted fixtures must use this stopgap allowlist. Prefer the canonical row even when a compatibility alias currently has identical runtime semantics.
+### Canon-promoted content allowlist
+
+Content under `src/GameGameGame.Content/Canonical` and other canon-promoted fixtures must use this allowlist. Prefer the canonical row even when a compatibility alias currently has identical runtime semantics.
 
 | Player-facing action/need | Canon-promoted Action Step(s) to author | Forbidden in canon-promoted content | Notes |
 |---|---|---|---|
-| Move | `Move` with explicit `directionMode` | `MoveFacing`, `Backstep`, `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise` | Prototype movement helpers remain loadable for old scenarios, but canonical fixtures should use promoted movement. |
-| Pickup | `TransformAdjacentToInventory` | `PickupTarget` | `PickupTarget` is only a compatibility name for the same pickup semantics. |
-| Drop | `TransformInventoryToAdjacent` | `DropFacing` | `DropFacing` is only a compatibility name for the same adjacent-drop semantics. |
-| Give | `Transfer` with `transferDirection: ActorToTarget` | `GiveTarget` | Canonical transfer selects a concrete moving entity and adjacent counterparty; legacy give transfers the first actor-carried entity to `Target`. |
-| Take | `Transfer` with `transferDirection: TargetToActor` | `TakeTarget` | Canonical transfer selects a concrete moving entity from the counterparty; legacy take transfers the first target-carried entity. |
-| Enter | `EnterTarget` | none yet | Current promoted enter command has no renamed replacement yet. Use it only for explicit canon-promoted Enter coverage. |
-| Exit | `ExitFacing` | none yet | Current promoted exit command has no renamed replacement yet. Use it only for explicit canon-promoted Exit coverage. |
-| Push | `Push` with explicit `directionMode` | `PushFacing` | `PushFacing` is the older bump/facing shortcut. |
+| Move | `Move` with explicit `directionMode` | `MoveFacing`, `Backstep`, retired target-relative helpers | Promoted canonical adjacent movement. |
+| Pickup | `TransformAdjacentToInventory` | `PickupTarget` | `PickupTarget` is compatibility naming for the same pickup semantics. |
+| Drop | `TransformInventoryToAdjacent` | `DropFacing` | `DropFacing` is compatibility naming for the same adjacent-drop semantics. |
+| Give | `Transfer` with `transferDirection: ActorToTarget` | `GiveTarget` | Canonical transfer selects a concrete moving entity and adjacent counterparty. |
+| Take | `Transfer` with `transferDirection: TargetToActor` | `TakeTarget` | Canonical transfer selects a concrete moving entity from the counterparty. |
+| Enter | `EnterTarget` | none yet | Current promoted enter command has no renamed replacement yet. |
+| Exit | `ExitFacing` | none yet | Current promoted exit command has no renamed replacement yet. |
+| Push | `Push` with explicit `directionMode` | `PushFacing` | Canonical Push moves only the target. `PushFacing` is the older bump/facing shortcut. |
+| Lifecycle/state alteration | `CreateEntity`, `PolymorphTarget`, `DestroyTarget` | `CreateFacing` | Canonical for computer-controlled lifecycle/state management. Player-facing workflows are not polished yet; use mostly for autonomous actors unless a scenario explicitly accepts rough interaction. |
 
 If canon-promoted content appears to need a forbidden step, first try to express it through the allowed row. If the allowed row cannot express the scenario, log a capability gap instead of adding new canonical content that depends on the forbidden step.
 
-### Movement and facing
+### Promoted canonical steps
 
-| Step | Reads | Writes | Author-facing behavior | Common use |
+| Step | Reads | Writes | Author-facing behavior | Examples / notes |
 |---|---|---|---|---|
-| `Move` | `directionMode`; `Facing` for relative modes | position; post-action `Facing` becomes actual moved direction | Promoted canonical adjacent movement. `directionMode` is required and may be one of the 8 absolute directions or the 8 relative modes; current editor-service authoring defaults missing `directionMode` to `Forward`. Failed movement preserves position/Facing and does not write `Target`. | ordinary movement, canonical movement rooms, player-controlled movement foundation |
-| `MoveFacing` | `Facing` | `Target` when blocked by entity; post-action `Facing` remains movement direction | Move one cell in facing direction; falls through when movement cannot act. | wandering, bump discovery, approach chains |
-| `Backstep` | `Facing` | `Target` when blocked by entity; post-action `Facing` becomes movement direction | Move one cell opposite facing; falls through when movement cannot act. | retreat, spacing, obstacle response |
+| `Move` | `directionMode`; `Facing` for relative modes | position; post-action `Facing` becomes actual moved direction | Resolves an absolute or relative 8-way direction and moves one adjacent step when legal/open. Failed movement preserves position/Facing and does not write `Target`. | Use for ordinary movement and canon-promoted movement rooms. |
+| `TransformAdjacentToInventory` | `Target` | carried inventory state | Preferred pickup name. Moves the current adjacent target into actor inventory using row-major destination selection; falls through when target/inventory/space/aperture checks fail. | `PickupTarget` remains compatibility naming. |
+| `TransformInventoryToAdjacent` | `Facing` | carried/world placement | Preferred drop name. Moves the first carried entity into the adjacent facing destination; falls through when no carried entity or destination/policy/aperture checks fail. | `DropFacing` remains compatibility naming. |
+| `Transfer` | moving entity target label/slot; adjacent counterparty direction; `transferDirection` | actor/counterparty inventory state | Atomically transfers a selected concrete entity between actor and adjacent counterparty. `ActorToTarget` checks counterparty enter policy; `TargetToActor` checks counterparty/source exit policy. | Use for give/take/handoff. Does not yet support authoring an inventory-internal predicate such as “first potion in chest”; target the concrete moving entity where possible. |
+| `EnterTarget` | `Target` | actor/container inventory state | Enters an adjacent target inventory at the coordinate selected by target `enterPolicy`; falls through on missing/non-adjacent/non-enterable/full/aperture failure. | See topology examples under `src/GameGameGame.Content/Beta/Topology/`. |
+| `ExitFacing` | `Facing` | actor/container/world placement | Exits the current containing entity toward `Facing`, respecting source `exitPolicy` and aperture. | Usually authored on actors that may already be contained. |
+| `Push` | `Target`; `directionMode` | target position | Forces an adjacent selected target to move one adjacent step in target-relative `directionMode` when the target bulk fits actor aperture and the destination is legal/open. The actor does not move. | Use instead of `PushFacing` for new player-facing push semantics. |
+| `DestroyTarget` | `Target` | world/entity state | Recursively destroys the current target and its inventory descendants; current behavior rejects self-destruction. | Canonical lifecycle/state alteration for autonomous actors; player-facing workflow polish remains follow-up. Direct destroy can be opaque for ecology; prefer material pickup-plus-cost conversion when modeling consumption. |
+| `CreateEntity` | `templateId`; `createPlacement`; `directionMode` when placement is `Facing` | world/entity state | Creates a runtime entity from an authored template. Default placement is first open adjacent cell; `createPlacement: Facing` uses resolved `directionMode`. New entities receive template name, inventory dimensions, bulk, aperture, policies, topology policy, default action plan, initial facing, runtime template identity for content/presentation lookup, and inventory plane when applicable. | Canonical lifecycle/spawning for autonomous actors; player-facing workflow polish remains follow-up. Template-backed spawning/reproduction. See lifecycle and ecology examples. |
+| `PolymorphTarget` | `Target` or `targetSelf`; `templateId` | target entity data/default plan | Changes the selected entity to another authored template while preserving runtime entity ID, current location, current inventory contents, and existing facing. It applies the new template name/bulk/aperture/policies/topology policy/default action plan/template identity. | Canonical lifecycle/state alteration for autonomous actors; player-facing workflow polish remains follow-up. Lifecycle phases such as egg -> caterpillar -> cocoon -> butterfly in `CreateDestroyPolymorphShowcase.yaml`. |
 
-### Inventory and adjacent interaction
+### Prototype-compatible steps for experiments and existing Beta/Delta content
 
-| Step | Reads | Writes | Author-facing behavior | Common use |
+| Step | Reads | Writes | Author-facing behavior | Examples / notes |
 |---|---|---|---|---|
-| `TransformAdjacentToInventory` | `Target` | carried inventory state | Preferred name for pickup semantics: transform the current adjacent target into actor inventory; falls through when pickup cannot act. | collectors, item pickup after bump/acquisition |
-| `TransformInventoryToAdjacent` | `Facing` | carried/world placement | Preferred name for adjacent drop semantics: transform the first carried entity into the facing adjacent cell; falls through when drop cannot act. | droppers, stash behavior, inventory demos |
-| `PickupTarget` | `Target` | carried inventory state | Compatibility name for `TransformAdjacentToInventory`. | existing/prototype pickup content |
-| `DropFacing` | `Facing` | carried/world placement | Compatibility name for `TransformInventoryToAdjacent`. | existing/prototype drop content |
-| `Transfer` | moving entity target label/slot; adjacent counterparty direction; `transferDirection` | actor/counterparty inventory state | Preferred canonical peer transfer. `ActorToTarget` moves the selected actor-owned item into the adjacent counterparty, checking the counterparty's `EnterPolicy`; `TargetToActor` moves the selected counterparty-owned item into the actor, checking the counterparty/source `ExitPolicy`. Current editor-service authoring defaults missing `directionMode` to `Forward` and missing `transferDirection` to `TargetToActor`. | peer transfer, offering, taking, handoff demos, player inventory exchange |
-| `GiveTarget` | `Target` | actor/target inventory state | Compatibility/prototype give shortcut: transfer the first actor-carried entity into target inventory; falls through when target/inventory/space/aperture checks fail. Prefer `Transfer` for new canonical content. | older peer transfer/offering demos |
-| `TakeTarget` | `Target` | target/actor inventory state | Compatibility/prototype take shortcut: transfer the first target-carried entity into actor inventory; falls through when target contents or actor inventory/space/aperture checks fail. Prefer `Transfer` for new canonical content. | older taking/stealing prototypes |
-| `EnterTarget` | `Target` | actor/container inventory state | Enter an adjacent target's inventory at the first open row-major coordinate; falls through when target adjacency, inventory, space, or aperture checks fail. | rooms-inside-entities, containers as spaces |
-| `ExitFacing` | `Facing` | actor/container/world placement | Exit the current containing entity toward facing; falls through when not contained, blocked, out of bounds, or aperture checks fail. | leaving entered containers/rooms |
-| `PushFacing` | `Facing` | world positions | Push blocking entity one cell in facing direction, then move actor into blocker original cell; consumes the turn on success. | shovers, obstacle interaction |
+| `MoveFacing` | `Facing` | position; `Target` when blocked by entity | Moves one cell in `Facing`; when blocked by an entity, writes that blocker to `Target` and falls through. | Useful for legacy bump-discovery chains, but prefer `Move` for canon-promoted content. |
+| `Backstep` | `Facing` | position; `Target` when blocked by entity | Moves opposite `Facing` while preserving original `Facing`; falls through on failure. | Retreat/spacing experiments. |
+| `PickupTarget` | `Target` | carried inventory state | Compatibility name for `TransformAdjacentToInventory`. | Existing Beta content may still use it. |
+| `DropFacing` | `Facing` | carried/world placement | Compatibility name for `TransformInventoryToAdjacent`. | Existing Beta content may still use it. |
+| `GiveTarget` | `Target` | actor/target inventory state | Transfers the actor's first carried entity to the current target inventory using deterministic row-major selection. | Prefer `Transfer` when authoring new canonical peer transfer. |
+| `TakeTarget` | `Target` | target/actor inventory state | Transfers the target's first carried entity into actor inventory using deterministic row-major selection. | Used by prototype theft/economy scenarios; prefer `Transfer` when the moving entity can be selected explicitly. |
+| `TargetPathMove` | `Target`; `pathMode`; `desiredDistance` for MaintainDistance/Orbit; `orbitDirection` for Orbit | position; post-action `Facing` becomes actual moved direction | Graph-native target-relative movement. `SeekAdjacency` and `FleeAdjacency` move relative to target adjacency; `MaintainDistance` and `Orbit` use authored integer distance bands. Can cross source-cell-link topology. | Used in `src/GameGameGame.Content/Beta/Ecology/EcologyVignettes.yaml` and `src/GameGameGame.Content/Beta/User/RatBarnScenario.yaml`. Orbit still uses coordinate projection geometry for angular ordering. |
+| `ApplyPrePlan` / `ApplyMainPlan` / `ApplyPostPlan` | target label/slot or `targetSelf`; `planId` | target one-turn action-plan override | Installs the referenced plan as the target's one-turn pre/main/post override, replacing any existing override in that slot; the applying actor consumes its turn on success. | Temporary fear/confusion/possession-style experiments. |
 
-### Target-relative movement
+### Legacy/retired compatibility only
 
-| Step | Reads | Writes | Author-facing behavior | Common use |
-|---|---|---|---|---|
-| `SeekTarget` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that reduces Manhattan distance to target; falls through if target is invalid or no reducing move can act. | chasing, following, collecting |
-| `FleeTarget` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Move one cardinal step that increases Manhattan distance from target; falls through if no valid escape move can act. | fleeing, avoidance |
-| `MaintainChebyshevDistanceTwo` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Move toward or away from target to approach Chebyshev distance 2; falls through when already at distance 2 or unable to improve. | kiting, spacing, ranged-position demos |
-| `StrafeClockwise` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Attempt clockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
-| `StrafeAnticlockwise` | target label preferred; target slot default `1` | position; post-action `Facing` becomes movement direction | Attempt anticlockwise perpendicular movement relative to the seek direction toward target. | orbiting, evasive movement |
+Do not use these in new normal content. They may remain in old fixtures or tests while migration continues.
 
-### World mutation / prototype utility
+| Step | Status | Replacement / guidance |
+|---|---|---|
+| `CreateFacing` | Prototype placeholder spawner; legacy for new spawning | Creates an untemplated placeholder-like entity in the facing cell. Prefer template-backed `CreateEntity`. `GAP-001` remains relevant only to this placeholder path. |
+| `PushFacing` | Compatibility push shortcut | Pushes the facing blocker and moves the actor into the blocker original cell. Prefer canonical `Push`, which moves only the target. |
+| `AcquireNearestTarget` | Retired metadata-setting targeting step for new authoring | Use template `targeting` profiles/rules with stable labels. |
+| `SeekTarget`, `FleeTarget`, `MaintainChebyshevDistanceTwo`, `StrafeClockwise`, `StrafeAnticlockwise` | Retired coordinate target-movement helpers for new graph-first authoring | Use `TargetPathMove` with `pathMode` instead. Existing old showcase files may remain compatibility references. |
+| `TurnLeft`, `TurnRight`, `ReverseFacing` | Legacy metadata-only facing steps | Prefer movement/facing consequences or explicit content scenarios that do not require turn-only facing mutation. |
+| Legacy low-level checks/effects and linked primitive/fallback plans | Compatibility shape | Prefer ordered `behavior.steps` chains. |
 
-| Step | Reads | Writes | Author-facing behavior | Common use |
-|---|---|---|---|---|
-| `DestroyTarget` | `Target` | world/entity state | Destroy current target when valid; current first pass rejects self-destruction. | destructive actors, cleanup demos |
-| `CreateFacing` | `Facing` | world/entity state | Create a placeholder entity in the facing cell when open. | prototype creation/spawning demos |
-| `ApplyPrePlan` | target label preferred or target slot default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn pre-plan, replacing any existing pre-plan override; the applying actor's turn is consumed on success. | fear/confusion-style temporary behavior override |
-| `ApplyMainPlan` | target label preferred or target slot default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn main-plan override, replacing its default main behavior for the next turn. | temporary possession-like/simple behavior replacement |
-| `ApplyPostPlan` | target label preferred or target slot default `1`; `planId` | target action-plan override state | Apply the referenced action plan as the target entity's one-turn post-plan, tried after its main plan falls through. | temporary fallback/cleanup behavior |
+### Action-step costs
+
+Behavior steps may include optional `costs` entries, each with `templateId` and positive `quantity`. Costs are paid from the actor's carried inventory recursively by runtime template ID. If any required quantity is missing, the step fails/falls through with a missing-cost reason and no cost is consumed. When the step itself succeeds, the selected cost entities are recursively destroyed. Duplicate cost template IDs are invalid; combine quantities into one entry.
+
+Common uses:
+
+```yaml
+- kind: CreateEntity
+  templateId: glowcapGrub
+  createPlacement: AdjacentOpen
+  costs:
+  - templateId: glowcapSpore
+    quantity: 2
+```
+
+Costs are useful for ecology/economy loops such as `spores -> grub`, `grub -> guano`, or `coin -> hired bruiser` in `src/GameGameGame.Content/Beta/Ecology/EcologyVignettes.yaml`. They are not cooldowns, timers, hunger, durability, or barter permissions; use the gap workflow for those needs.
 
 Common chain patterns:
 
 | Goal | Chain |
 |---|---|
 | Move and pick up blockers/items | `Move -> TransformAdjacentToInventory` |
-| Chase a selected target | `SeekTarget`, with a template `targetingRules` slot selecting the desired target type |
-| Flee a selected target | `FleeTarget`, with a template `targetingRules` slot selecting the desired target type |
-| Keep distance before fallback behavior | `MaintainChebyshevDistanceTwo -> StrafeClockwise`, with template `targetingRules` selecting the target |
-| Try to move, then push target | `Move -> Push` |
-| Make a selected target try a temporary behavior next turn | `ApplyPrePlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn pre-plan |
-| Temporarily replace or append selected target behavior next turn | `ApplyMainPlan` or `ApplyPostPlan`, with `targetSlot` selecting the affected entity and `planId` referencing the one-turn override plan |
+| Move along graph topology toward/away from a selected target | `TargetPathMove` with `pathMode: SeekAdjacency` or `FleeAdjacency`, plus template targeting rule for the label |
+| Maintain or orbit a distance band around a selected target | `TargetPathMove` with `pathMode: MaintainDistance` or `Orbit`, `desiredDistance`, and `orbitDirection` where required |
+| Try to push a selected adjacent target | `Push` with explicit `directionMode`, plus a targeting rule selecting a pushable target |
+| Template-backed reproduction/spawning | `CreateEntity` with `templateId`, optional `createPlacement`, and optional `costs` |
+| Lifecycle transition | `PolymorphTarget` with `targetSelf: true` or a selected target label |
+| Material consumption/conversion | `PickupTarget` / `TransformAdjacentToInventory` before costed `CreateEntity`, `DestroyTarget`, or `PolymorphTarget` |
+| Make a selected target try a temporary behavior next turn | `ApplyPrePlan`, with `targetLabel` and `planId` referencing the one-turn pre-plan |
+| Temporarily replace or append selected target behavior next turn | `ApplyMainPlan` or `ApplyPostPlan`, with `targetLabel` and `planId` |
 | Drop carried entity forward, otherwise move | `TransformInventoryToAdjacent -> Move` |
 | Transfer a specific targeted item to or from an adjacent counterparty | `Transfer`, with `targetLabel`/`targetSlot`, `directionMode`, and `transferDirection` |
-| Canonical give/take pair with an adjacent counterparty | `Transfer` with `ActorToTarget`, then `Transfer` with `TargetToActor` when both directions should be available |
 | Move into a targeted container, then later leave it | `Move -> EnterTarget`; contained actor can use `ExitFacing` |
 
-Targeting rules currently select by optional template ID, target-capability adjectives, same-plane Manhattan range, and nearest deterministic tie-break. A rule may be noun-only (`thief loves gold`), adjective-only (`thief loves portables`), or noun-plus-adjective (`thief loves portable gold`). Supported target capabilities are the Action Steps that expose non-mutating target affordance checks: `PickupTarget`, `EnterTarget`, `GiveTarget`, `TakeTarget`, `DestroyTarget`, and `PushFacing`. Capability rules are validated against the template's default behavior chain: the referenced capability step should exist and consume the same target label/slot. Use stable labels such as `danger`, `home`, `food`, or `shelter` when one entity needs different content-defined target concepts; numeric slots are still stored for compatibility but should not be the primary reference in new action steps.
+Targeting rules currently select by optional template ID, target-capability adjectives, same-plane coordinate range, and nearest deterministic tie-break. A rule may be noun-only (`thief loves gold`), adjective-only (`thief loves portables`), or noun-plus-adjective (`thief loves portable gold`). Supported target capabilities are the Action Steps that expose non-mutating target affordance checks: `TransformAdjacentToInventory`/`PickupTarget`, `EnterTarget`, `GiveTarget`, `TakeTarget`, `DestroyTarget`, and canonical `Push`; `PushFacing` remains compatibility-only for older bump-push content. Capability rules are validated against the template's default behavior chain: the referenced capability step should exist and consume the same target label/slot. Use stable labels such as `danger`, `home`, `food`, or `shelter` when one entity needs different content-defined target concepts; numeric slots are still stored for compatibility but should not be the primary reference in new action steps.
 
-`Transfer` currently selects a concrete moving entity through the actor's target label/slot state. It does not yet support authoring an item predicate such as "first potion in this inventory"; use `targetingRules` when a same-plane target can select the moving entity directly, or log a capability gap when inventory-internal item matching is needed. Legacy `GiveTarget` and `TakeTarget` use first-item deterministic selection only. None of the current peer-transfer steps support barter/trade permissions or transfer restrictions yet. Runtime reports identify transferred entity ID/name and coordinates; template IDs are not shown because runtime entities do not currently carry template IDs.
-
-`CreateFacing` creates a placeholder entity rather than an authored template-backed spawn. Use it for prototype creation showcases only.
+`Transfer` currently selects a concrete moving entity through the actor's target label/slot state. It does not yet support authoring an item predicate such as "first potion in this inventory"; use targeting rules when a target can select the moving entity directly, or log a capability gap when inventory-internal item matching is needed. Legacy `GiveTarget` and `TakeTarget` use first-item deterministic selection only. None of the current peer-transfer steps support barter/trade permissions or transfer restrictions yet.
 
 ## Scenario authoring
 

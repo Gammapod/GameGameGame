@@ -120,7 +120,7 @@ Use `docs/Source of Truth/Current-Goals.md` for the mostly stable current projec
 - Canonical Action Step outcome and verb-affordance decision tables belong in `Action-Step-Outcome-And-Affordance-Logic.md`.
 - Cross-layer implementation navigation belongs in `vertical-slice-map.md`.
 - Mostly stable current project direction and active planning bridge belongs in `Current-Goals.md`.
-- Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in `High-Level-Roadmap.md`.
+- Priorities, backlog buckets, dependencies, defer reasons, and promotion triggers belong in the relevant active rolling board under `docs/Plans/`.
 - Active implementation details belong in the relevant rolling board under `docs/Plans/` unless a deliberately selected focused sprint/release plan is created; completed or inactive focused plans live under `docs/Archived/`.
 - Completed implementation plans should move to `docs/Archived/` and be summarized, not duplicated, in active planning docs.
 - Retrospective/process observations belong in `Sprint-Retrospective.md` until a consolidated sprint workflow document supersedes scattered process notes.
