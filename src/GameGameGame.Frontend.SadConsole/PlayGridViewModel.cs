@@ -136,8 +136,8 @@ internal static class PlayGridRenderer
         FrontendRect bounds,
         PlayGridViewModel model,
         IReadOnlySet<EntityId>? hiddenEntityIds = null,
-        GridCoord? movementPreviewCoord = null,
-        CellHighlightPresentation? movementPreviewHighlight = null)
+        GridCoord? highlightCoord = null,
+        CellHighlightPresentation? cellHighlight = null)
     {
         var gridBounds = ResolveGridBounds(bounds, model);
 
@@ -152,7 +152,7 @@ internal static class PlayGridRenderer
                 SetGlyph(target, x, y, entityGlyph, cell.EntityForeground ?? Color.White, cell.BackdropBackground);
             }
 
-            ApplyDecorators(target, x, y, cell, entityHidden, movementPreviewCoord == new GridCoord(cell.X, cell.Y) ? movementPreviewHighlight : null);
+            ApplyDecorators(target, x, y, cell, entityHidden, highlightCoord == new GridCoord(cell.X, cell.Y) ? cellHighlight : null);
         }
     }
 
@@ -170,7 +170,7 @@ internal static class PlayGridRenderer
         target.Surface[x, y].Decorators = null;
     }
 
-    private static void ApplyDecorators(global::SadConsole.Console target, int x, int y, PlayCellVisual cell, bool entityHidden, CellHighlightPresentation? movementPreviewHighlight)
+    private static void ApplyDecorators(global::SadConsole.Console target, int x, int y, PlayCellVisual cell, bool entityHidden, CellHighlightPresentation? cellHighlight)
     {
         var decorators = new List<global::SadConsole.CellDecorator>();
         if (!entityHidden && cell.FacingGlyph is { } facingGlyph && cell.EntityGlyph is not null)
@@ -178,9 +178,9 @@ internal static class PlayGridRenderer
             decorators.Add(new global::SadConsole.CellDecorator(Color.LightYellow, facingGlyph, cell.FacingMirror));
         }
 
-        if (movementPreviewHighlight is not null)
+        if (cellHighlight is not null)
         {
-            decorators.Add(new global::SadConsole.CellDecorator(movementPreviewHighlight.Foreground, movementPreviewHighlight.Glyph, movementPreviewHighlight.Mirror));
+            decorators.Add(new global::SadConsole.CellDecorator(cellHighlight.Foreground, cellHighlight.Glyph, cellHighlight.Mirror));
         }
 
         if (decorators.Count > 0)
@@ -216,8 +216,8 @@ internal sealed class PlayGridSurfacePresenter
         FrontendRect bounds,
         PlayGridViewModel model,
         IReadOnlySet<EntityId>? hiddenEntityIds = null,
-        GridCoord? movementPreviewCoord = null,
-        CellHighlightPresentation? movementPreviewHighlight = null)
+        GridCoord? highlightCoord = null,
+        CellHighlightPresentation? cellHighlight = null)
     {
         var gridBounds = PlayGridRenderer.ResolveGridBounds(bounds, model);
         if (_drawnGridBounds != gridBounds)
@@ -231,7 +231,7 @@ internal sealed class PlayGridSurfacePresenter
             var x = gridBounds.X + cell.X;
             var y = gridBounds.Y + cell.Y;
             var entityHidden = cell.EntityId is { } entityId && hiddenEntityIds?.Contains(entityId) == true;
-            var highlight = movementPreviewCoord == new GridCoord(cell.X, cell.Y) ? movementPreviewHighlight : null;
+            var highlight = highlightCoord == new GridCoord(cell.X, cell.Y) ? cellHighlight : null;
             var state = ToRenderedCell(cell, entityHidden, highlight);
             var key = (x, y);
             if (_drawnCells.TryGetValue(key, out var previous) && previous == state)

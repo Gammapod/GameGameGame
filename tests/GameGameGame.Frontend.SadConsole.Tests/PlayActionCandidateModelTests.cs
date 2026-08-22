@@ -114,13 +114,13 @@ public sealed class PlayActionCandidateModelTests
     }
 
     [Fact]
-    public void InventorySelectionConfirmsPickupIntoSelectedPlayerInventoryCell()
+    public void ActionWorkflowConfirmsPickupIntoSelectedPlayerInventoryCell()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
         var actionSession = new PlayActionSessionController(session);
-        var selection = new PlayInventorySelectionController(actionSession);
+        var selection = new PlayActionWorkflowController(actionSession);
         var targetId = new EntityId("debugScrap3");
 
         Assert.True(selection.TryBeginPickup(targetId));
@@ -149,13 +149,13 @@ public sealed class PlayActionCandidateModelTests
     }
 
     [Fact]
-    public void InventorySelectionConfirmsDropFromPlayerInventoryToAdjacentCell()
+    public void ActionWorkflowConfirmsDropFromPlayerInventoryToAdjacentCell()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
         var actionSession = new PlayActionSessionController(session);
-        var selection = new PlayInventorySelectionController(actionSession);
+        var selection = new PlayActionWorkflowController(actionSession);
         var targetId = new EntityId("debugScrap3");
 
         Assert.True(selection.TryBeginPickup(targetId));
@@ -186,7 +186,7 @@ public sealed class PlayActionCandidateModelTests
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
         var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
         var actionSession = new PlayActionSessionController(session);
-        var selection = new PlayInventorySelectionController(actionSession);
+        var selection = new PlayActionWorkflowController(actionSession);
         var targetId = new EntityId("debugScrap3");
 
         Assert.True(selection.TryBeginPickup(targetId));
@@ -230,7 +230,7 @@ public sealed class PlayActionCandidateModelTests
         MoveNextToDebugChest(actionSession);
         var enter = actionSession.SubmitEnter(new EntityId("debugChest"));
         Assert.True(enter.Succeeded, enter.FailureDetail ?? enter.FailureReason?.ToString() ?? "unknown");
-        var selection = new PlayInventorySelectionController(actionSession);
+        var selection = new PlayActionWorkflowController(actionSession);
 
         var rows = InspectionActionChoiceProjector.ProjectPlayerInventory(actionSession.CurrentActionChoiceRequest);
         Assert.Contains(rows, row => row.Selectable && row.Candidate is { Source.Kind: PlayActionCandidateSourceKind.PlayerInventory, Kind: ActionChoiceKind.Exit });
@@ -246,6 +246,51 @@ public sealed class PlayActionCandidateModelTests
         Assert.True(exit!.Succeeded, exit.FailureDetail ?? exit.FailureReason?.ToString() ?? "unknown");
         Assert.False(selection.IsActive);
         Assert.NotEqual(session.World.GetRegisteredInventoryPlaneId(new EntityId("debugChest")), session.World.GetEntityLocation(session.PlayerEntityId).PlaneId);
+    }
+
+    [Fact]
+    public void TransferSelectionListsCoreItemsAndSubmitsSelectedItem()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+        MoveNextToDebugChest(actionSession);
+        var selection = new PlayActionWorkflowController(actionSession);
+        var counterpartyId = new EntityId("debugChest");
+
+        var rows = InspectionActionChoiceProjector.Project(actionSession.CurrentActionChoiceRequest, counterpartyId);
+        Assert.Single(rows, row => row.Candidate is { Kind: ActionChoiceKind.Transfer });
+        Assert.Contains(rows, row => row.Selectable && row.Candidate is { Kind: ActionChoiceKind.Transfer });
+        Assert.True(selection.TryBeginTransferItems(counterpartyId));
+        var transferRows = selection.TransferSelectionRows();
+        var transferOptions = selection.TransferSelectionOptions();
+        Assert.NotEmpty(transferRows);
+        Assert.NotEmpty(transferOptions);
+        Assert.Single(transferRows, row => row.IsSelected);
+        Assert.Single(transferOptions, option => option.IsSelected && option.Highlight?.Kind == CellHighlightKind.Transfer);
+        Assert.Contains(transferRows, row => row.EntityName == "debugScrap1" || row.EntityName == "debugScrap2");
+        Assert.Null(selection.InventoryHighlight());
+        var firstHighlight = selection.TransferInventoryHighlightFor(actionSession.ControlledActorId);
+        Assert.Equal(CellHighlightKind.Transfer, firstHighlight?.Kind);
+        Assert.Contains("Give", selection.TransferItemSummary(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("debugScrap", selection.TransferItemSummary(), StringComparison.OrdinalIgnoreCase);
+        Assert.True(selection.MoveTransferItem(1));
+        var secondHighlight = selection.TransferInventoryHighlightFor(actionSession.ControlledActorId);
+        Assert.Equal(CellHighlightKind.Transfer, secondHighlight?.Kind);
+        Assert.NotEqual(firstHighlight?.Coord, secondHighlight?.Coord);
+        var transfer = selection.ConfirmTransfer();
+
+        Assert.NotNull(transfer);
+        Assert.True(transfer!.Succeeded, transfer.FailureDetail ?? transfer.FailureReason?.ToString() ?? "unknown");
+        Assert.False(selection.IsActive);
+        var chestPlaneId = session.World.GetRegisteredInventoryPlaneId(counterpartyId);
+        Assert.NotNull(chestPlaneId);
+        var chestPlane = session.World.Planes[chestPlaneId.Value];
+        var chestOccupants = Enumerable.Range(0, chestPlane.Width)
+            .SelectMany(x => Enumerable.Range(0, chestPlane.Height).Select(y => session.World.GetOccupant(new PlaneCoord(chestPlaneId.Value, new GridCoord(x, y)))))
+            .ToList();
+        Assert.Contains(chestOccupants, occupant => occupant is not null);
     }
 
     private static void MoveNextToDebugChest(PlayActionSessionController actionSession)

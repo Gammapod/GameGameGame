@@ -263,6 +263,33 @@ internal sealed class PlayActionSessionController
         return result;
     }
 
+    public ControlledActorCommandResult SubmitTransfer(EntityId counterpartyId, EntityId movingEntityId)
+    {
+        if (CurrentActionChoiceRequest is not { } request)
+        {
+            throw new InvalidOperationException("No Core Action Choice request is active.");
+        }
+
+        EnsureHistoryControlledActor(ControlledActorId);
+        ControlledActorCommandResult result;
+        using (_performance?.Measure(PlayPerformanceCounterKind.SubmitCore))
+        {
+            result = _history.SubmitTransferActionChoice(
+                _actionChoices,
+                request,
+                counterpartyId,
+                movingEntityId,
+                _emptyActionPlans,
+                RefreshTargets);
+        }
+
+        using (_performance?.Measure(PlayPerformanceCounterKind.SubmitRefresh))
+        {
+            RefreshAfterControlledSubmission(result.Succeeded);
+        }
+        return result;
+    }
+
     private void RefreshAfterControlledSubmission(bool succeeded)
     {
         if (succeeded)

@@ -18,6 +18,7 @@ internal static class PlayActionHighlightResolver
         {
             GameGameGame.Core.ActionChoiceKind.Pickup => CellHighlightKind.Pickup,
             GameGameGame.Core.ActionChoiceKind.Enter => CellHighlightKind.Enter,
+            GameGameGame.Core.ActionChoiceKind.Transfer => CellHighlightKind.Transfer,
             _ => CellHighlightKind.EntityTarget
         };
     }

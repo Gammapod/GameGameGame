@@ -353,3 +353,11 @@ Each decision should include:
 - **Implementation anchors:** `PlayActionSessionController.SubmitEnter(...)`, `PlayActionSessionController.SubmitExit(...)`, `PlayInventorySelectionController.TryBeginExitDestination()/ConfirmExit()`, and `PlayActionCandidateProjector.ForPlayerInventory(...)`.
 - **Implications:** If future UX wants explicit Enter placement, Core should first expose destination choices and an Enter submission payload that includes the chosen destination. Exit visual selection may feel adjacency-like, but must continue to render Core-projected destinations rather than recomputing topology in the frontend.
 - **Status:** Active / initial functional Enter and Exit workflow.
+
+### FED-042: Transfer is one counterparty-first action with Give/Take item labels
+
+- **Decision:** In new Play mode, Transfer starts from an inspected adjacent counterparty and appears as one inspection action even when authored plans expose multiple Transfer steps. Selecting Transfer opens an item picker popup over Core-projected `TransferItems(counterpartyId)`. Items from the actor inventory are labeled as Give, items from the counterparty inventory are labeled as Take, the selected item is highlighted with transfer language in the owning inventory panel, and submission sends only `counterpartyId` plus `movingEntityId` through the action session controller.
+- **Reasoning:** Core models Transfer as one action choice rather than separate Give and Take actions. A counterparty-first workflow maps directly to `ActionChoiceKind.Transfer`, keeps adjacency and item legality in Core, and still gives players clear direction labels.
+- **Implementation anchors:** `PlayInventorySelectionController.TryBeginTransferItems()/MoveTransferItem()/ConfirmTransfer()`, `PlayActionSessionController.SubmitTransfer(...)`, and `PlayActionCandidateProjector.TransferCandidates(...)`.
+- **Implications:** Future Give/Take affordances may be added as filtered shortcuts over the same Transfer choice, but should not become separate frontend legality paths unless Core exposes separate action semantics.
+- **Status:** Active / initial functional Transfer workflow.

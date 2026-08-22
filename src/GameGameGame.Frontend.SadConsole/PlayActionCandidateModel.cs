@@ -115,7 +115,10 @@ internal static class PlayActionCandidateProjector
             });
         }
 
-        return candidates;
+        return candidates
+            .GroupBy(candidate => (candidate.Kind, candidate.Source.Kind, candidate.Source.EntityId))
+            .Select(group => group.FirstOrDefault(candidate => candidate.IsValid) ?? group.First())
+            .ToList();
     }
 
     public static IReadOnlyList<PlayActionCandidate> ForPlayerInventory(ActionChoiceRequest? request)

@@ -1,3 +1,4 @@
+using GameGameGame.Core;
 using SadRogue.Primitives;
 
 namespace GameGameGame.Frontend.SadConsole;
@@ -30,6 +31,8 @@ internal sealed record EntityInspectionPanelLayout(
 }
 
 internal sealed record EntityInspectionActionRow(FrontendTextMessage Text, bool Selectable, FrontendTextMessage? FailureReason = null, PlayActionCandidate? Candidate = null);
+
+internal sealed record PlayTransferSelectionRow(EntityId MovingEntityId, string Verb, string EntityName, bool IsSelected);
 
 internal sealed record EntityInspectionPortraitCell(
     int X,

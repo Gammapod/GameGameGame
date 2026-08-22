@@ -2,27 +2,41 @@ using GameGameGame.Core;
 
 namespace GameGameGame.Frontend.SadConsole;
 
-internal sealed class PlayInventorySelectionController(PlayActionSessionController actionSession)
+internal enum PlayActionWorkflowKind
 {
-    private enum InventorySelectionMode
-    {
-        None,
-        PickupDestination,
-        DropSource,
-        DropDestination,
-        ExitDestination
-    }
+    None,
+    PickupDestination,
+    DropSource,
+    DropDestination,
+    ExitDestination,
+    TransferItem
+}
+
+internal sealed record PlayActionSelectionOption(
+    string Label,
+    bool IsValid,
+    bool IsSelected,
+    PlayHighlightState? Highlight = null,
+    EntityId? EntityId = null,
+    Direction? Direction = null);
+
+internal sealed class PlayActionWorkflowController(PlayActionSessionController actionSession)
+{
 
     private EntityId? _pickupTargetId;
     private EntityId? _dropSourceId;
-    private InventorySelectionMode _mode;
+    private EntityId? _transferCounterpartyId;
+    private int _transferItemIndex;
+    private PlayActionWorkflowKind _mode;
 
-    public bool IsActive => _mode != InventorySelectionMode.None;
+    public PlayActionWorkflowKind Mode => _mode;
+    public bool IsActive => _mode != PlayActionWorkflowKind.None;
     public GridCoord SelectedCoord { get; private set; }
-    public CellHighlightKind TargetHighlightKind => _mode == InventorySelectionMode.DropDestination ? CellHighlightKind.Drop : CellHighlightKind.Pickup;
-    public bool IsDropSourceSelection => _mode == InventorySelectionMode.DropSource;
-    public bool IsDropDestinationSelection => _mode == InventorySelectionMode.DropDestination;
-    public bool IsExitDestinationSelection => _mode == InventorySelectionMode.ExitDestination;
+    public CellHighlightKind TargetHighlightKind => _mode == PlayActionWorkflowKind.DropDestination ? CellHighlightKind.Drop : CellHighlightKind.Pickup;
+    public bool IsDropSourceSelection => _mode == PlayActionWorkflowKind.DropSource;
+    public bool IsDropDestinationSelection => _mode == PlayActionWorkflowKind.DropDestination;
+    public bool IsExitDestinationSelection => _mode == PlayActionWorkflowKind.ExitDestination;
+    public bool IsTransferItemSelection => _mode == PlayActionWorkflowKind.TransferItem;
 
     public bool TryBeginPickup(EntityId targetId)
     {
@@ -33,7 +47,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
         _pickupTargetId = targetId;
         _dropSourceId = null;
-        _mode = InventorySelectionMode.PickupDestination;
+        _mode = PlayActionWorkflowKind.PickupDestination;
         SelectedCoord = FirstValidPickupDestination(targetId, planeId, width, height) ?? new GridCoord(0, 0);
         return true;
     }
@@ -47,7 +61,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
         _pickupTargetId = null;
         _dropSourceId = null;
-        _mode = InventorySelectionMode.DropSource;
+        _mode = PlayActionWorkflowKind.DropSource;
         SelectedCoord = FirstValidDropSource(planeId, width, height) ?? new GridCoord(0, 0);
         return true;
     }
@@ -62,8 +76,25 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
         _pickupTargetId = null;
         _dropSourceId = null;
-        _mode = InventorySelectionMode.ExitDestination;
+        _transferCounterpartyId = null;
+        _mode = PlayActionWorkflowKind.ExitDestination;
         SelectedCoord = first.Destination?.Coord ?? new GridCoord(0, 0);
+        return true;
+    }
+
+    public bool TryBeginTransferItems(EntityId counterpartyId)
+    {
+        if (!TransferChoices().Any(choice => choice.TransferCounterparties.Any(option => option.CounterpartyId == counterpartyId && option.CanExecute))
+            || ValidTransferItems(counterpartyId).Count == 0)
+        {
+            return false;
+        }
+
+        _pickupTargetId = null;
+        _dropSourceId = null;
+        _transferCounterpartyId = counterpartyId;
+        _transferItemIndex = 0;
+        _mode = PlayActionWorkflowKind.TransferItem;
         return true;
     }
 
@@ -71,18 +102,19 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
     {
         _pickupTargetId = null;
         _dropSourceId = null;
-        _mode = InventorySelectionMode.None;
+        _transferCounterpartyId = null;
+        _mode = PlayActionWorkflowKind.None;
     }
 
     public bool CancelDropDestinationToSource()
     {
-        if (_mode != InventorySelectionMode.DropDestination)
+        if (_mode != PlayActionWorkflowKind.DropDestination)
         {
             return false;
         }
 
         _dropSourceId = null;
-        _mode = InventorySelectionMode.DropSource;
+        _mode = PlayActionWorkflowKind.DropSource;
         if (TryResolvePlayerInventory(out var planeId, out var width, out var height))
         {
             SelectedCoord = FirstValidDropSource(planeId, width, height) ?? new GridCoord(0, 0);
@@ -93,7 +125,12 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public bool Move(Direction direction)
     {
-        if (_mode == InventorySelectionMode.ExitDestination)
+        if (_mode == PlayActionWorkflowKind.TransferItem)
+        {
+            return false;
+        }
+
+        if (_mode == PlayActionWorkflowKind.ExitDestination)
         {
             if (ExitChoice()?.DirectionOptions.FirstOrDefault(option => option.Direction == direction) is not { } option)
             {
@@ -104,7 +141,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
             return true;
         }
 
-        if (_mode == InventorySelectionMode.DropDestination)
+        if (_mode == PlayActionWorkflowKind.DropDestination)
         {
             var actor = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).Coord;
             var nextDropCoord = actor.Offset(direction);
@@ -134,14 +171,29 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
         return true;
     }
 
+    public bool SelectDirection(Direction direction) => Move(direction);
+
+    public bool SelectNextOption(int delta) => _mode == PlayActionWorkflowKind.TransferItem
+        ? MoveTransferItem(delta)
+        : false;
+
+    public ControlledActorCommandResult? ConfirmCurrentSubmission() => _mode switch
+    {
+        PlayActionWorkflowKind.PickupDestination => ConfirmPickup(),
+        PlayActionWorkflowKind.DropDestination => ConfirmDrop(),
+        PlayActionWorkflowKind.ExitDestination => ConfirmExit(),
+        PlayActionWorkflowKind.TransferItem => ConfirmTransfer(),
+        _ => null
+    };
+
     public PlayHighlightState? InventoryHighlight()
     {
-        if (!IsActive || _mode == InventorySelectionMode.DropDestination)
+        if (!IsActive || _mode is PlayActionWorkflowKind.DropDestination or PlayActionWorkflowKind.ExitDestination or PlayActionWorkflowKind.TransferItem)
         {
             return null;
         }
 
-        var kind = _mode == InventorySelectionMode.DropSource
+        var kind = _mode == PlayActionWorkflowKind.DropSource
             ? IsSelectedDropSourceValid() ? CellHighlightKind.Drop : CellHighlightKind.NoAction
             : IsSelectedPickupDestinationValid() ? CellHighlightKind.Pickup : CellHighlightKind.NoAction;
         return new PlayHighlightState(SelectedCoord, kind);
@@ -149,12 +201,12 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public PlayHighlightState? GridHighlight()
     {
-        if (_mode != InventorySelectionMode.DropDestination && _mode != InventorySelectionMode.ExitDestination)
+        if (_mode != PlayActionWorkflowKind.DropDestination && _mode != PlayActionWorkflowKind.ExitDestination)
         {
             return null;
         }
 
-        if (_mode == InventorySelectionMode.ExitDestination)
+        if (_mode == PlayActionWorkflowKind.ExitDestination)
         {
             return new PlayHighlightState(SelectedCoord, IsSelectedExitDestinationValid() ? CellHighlightKind.Exit : CellHighlightKind.NoAction);
         }
@@ -192,7 +244,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public bool ConfirmDropSource()
     {
-        if (_mode != InventorySelectionMode.DropSource || !TryResolvePlayerInventory(out var planeId, out _, out _))
+        if (_mode != PlayActionWorkflowKind.DropSource || !TryResolvePlayerInventory(out var planeId, out _, out _))
         {
             return false;
         }
@@ -204,14 +256,14 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
         }
 
         _dropSourceId = sourceId;
-        _mode = InventorySelectionMode.DropDestination;
+        _mode = PlayActionWorkflowKind.DropDestination;
         SelectedCoord = FirstValidDropDestination() ?? actionSession.World.GetEntityLocation(actionSession.ControlledActorId).Coord;
         return true;
     }
 
     public ControlledActorCommandResult? ConfirmDrop()
     {
-        if (_mode != InventorySelectionMode.DropDestination || _dropSourceId is not { } sourceId || !IsSelectedDropDestinationValid())
+        if (_mode != PlayActionWorkflowKind.DropDestination || _dropSourceId is not { } sourceId || !IsSelectedDropDestinationValid())
         {
             return null;
         }
@@ -228,7 +280,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public ControlledActorCommandResult? ConfirmExit()
     {
-        if (_mode != InventorySelectionMode.ExitDestination || SelectedExitDirection() is not { } direction)
+        if (_mode != PlayActionWorkflowKind.ExitDestination || SelectedExitDirection() is not { } direction)
         {
             return null;
         }
@@ -242,9 +294,117 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
         return result;
     }
 
+    public bool MoveTransferItem(int delta)
+    {
+        if (_mode != PlayActionWorkflowKind.TransferItem || _transferCounterpartyId is not { } counterpartyId)
+        {
+            return false;
+        }
+
+        var items = ValidTransferItems(counterpartyId);
+        if (items.Count == 0)
+        {
+            return false;
+        }
+
+        var next = Math.Clamp(_transferItemIndex + delta, 0, items.Count - 1);
+        if (next == _transferItemIndex)
+        {
+            return false;
+        }
+
+        _transferItemIndex = next;
+        return true;
+    }
+
+    public string TransferItemSummary()
+    {
+        if (_mode != PlayActionWorkflowKind.TransferItem || _transferCounterpartyId is not { } counterpartyId)
+        {
+            return "No transfer item selected.";
+        }
+
+        var items = ValidTransferItems(counterpartyId);
+        if (items.Count == 0)
+        {
+            return "No transferable items.";
+        }
+
+        var item = items[Math.Clamp(_transferItemIndex, 0, items.Count - 1)];
+        var verb = item.TransferDirection == TransferDirection.ActorToTarget ? "Give" : "Take";
+        return $"{verb} {TransferItemLabel(item.MovingEntityId)} ({_transferItemIndex + 1}/{items.Count}). Enter transfers.";
+    }
+
+    public ControlledActorCommandResult? ConfirmTransfer()
+    {
+        if (_mode != PlayActionWorkflowKind.TransferItem || _transferCounterpartyId is not { } counterpartyId)
+        {
+            return null;
+        }
+
+        var items = ValidTransferItems(counterpartyId);
+        if (items.Count == 0)
+        {
+            return null;
+        }
+
+        var item = items[Math.Clamp(_transferItemIndex, 0, items.Count - 1)];
+        var result = actionSession.SubmitTransfer(counterpartyId, item.MovingEntityId);
+        if (result.Succeeded)
+        {
+            Cancel();
+        }
+
+        return result;
+    }
+
+    public IReadOnlyList<PlayTransferSelectionRow> TransferSelectionRows()
+    {
+        return TransferSelectionOptions()
+            .Select(option => new PlayTransferSelectionRow(
+                option.EntityId ?? new EntityId(option.Label),
+                option.Label.Split(':')[0],
+                option.EntityId?.Value ?? option.Label,
+                option.IsSelected))
+            .ToList();
+    }
+
+    public IReadOnlyList<PlayActionSelectionOption> TransferSelectionOptions()
+    {
+        if (_mode != PlayActionWorkflowKind.TransferItem || _transferCounterpartyId is not { } counterpartyId)
+        {
+            return [];
+        }
+
+        var items = ValidTransferItems(counterpartyId);
+        return items.Select((item, index) =>
+            {
+                var selected = index == _transferItemIndex;
+                return new PlayActionSelectionOption(
+                    $"{(item.TransferDirection == TransferDirection.ActorToTarget ? "Give" : "Take")}: {TransferItemLabel(item.MovingEntityId)}",
+                    item.CanExecute,
+                    selected,
+                    selected ? new PlayHighlightState(actionSession.World.GetEntityLocation(item.MovingEntityId).Coord, CellHighlightKind.Transfer) : null,
+                    item.MovingEntityId);
+            })
+            .ToList();
+    }
+
+    public PlayHighlightState? TransferInventoryHighlightFor(EntityId ownerId)
+    {
+        if (_mode != PlayActionWorkflowKind.TransferItem || SelectedTransferItem() is not { } item || item.OwnerEntityId != ownerId)
+        {
+            return null;
+        }
+
+        return actionSession.World.Entities.ContainsKey(item.MovingEntityId)
+            ? new PlayHighlightState(actionSession.World.GetEntityLocation(item.MovingEntityId).Coord, CellHighlightKind.Transfer)
+            : null;
+    }
+
     public bool IsSelectedDropSourceValid()
     {
-        if (_mode != InventorySelectionMode.DropSource || !TryResolvePlayerInventory(out var planeId, out _, out _))
+        if (_mode != PlayActionWorkflowKind.DropSource || !TryResolvePlayerInventory(out var planeId, out _, out _))
         {
             return false;
         }
@@ -255,7 +415,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public bool IsSelectedDropDestinationValid()
     {
-        if (_mode != InventorySelectionMode.DropDestination || _dropSourceId is not { } sourceId)
+        if (_mode != PlayActionWorkflowKind.DropDestination || _dropSourceId is not { } sourceId)
         {
             return false;
         }
@@ -292,6 +452,28 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
     private ActionChoice? PickupChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Pickup);
     private ActionChoice? DropChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop);
     private ActionChoice? ExitChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Exit);
+    private IEnumerable<ActionChoice> TransferChoices() => actionSession.CurrentActionChoiceRequest?.Choices.Where(choice => choice.Kind == ActionChoiceKind.Transfer) ?? [];
+
+    private IReadOnlyList<ActionChoiceTransferItemOption> ValidTransferItems(EntityId counterpartyId) =>
+        TransferChoices()
+            .SelectMany(choice => choice.TransferItems(counterpartyId))
+            .Where(item => item.CanExecute)
+            .GroupBy(item => item.MovingEntityId)
+            .Select(group => group.First())
+            .ToList();
+
+    private ActionChoiceTransferItemOption? SelectedTransferItem()
+    {
+        if (_transferCounterpartyId is not { } counterpartyId)
+        {
+            return null;
+        }
+
+        var items = ValidTransferItems(counterpartyId);
+        return items.Count == 0 ? null : items[Math.Clamp(_transferItemIndex, 0, items.Count - 1)];
+    }
+
+    private static string TransferItemLabel(EntityId entityId) => entityId.Value;
 
     private Direction? SelectedExitDirection() => ExitChoice()?.DirectionOptions.FirstOrDefault(option =>
             option.CanExecute &&

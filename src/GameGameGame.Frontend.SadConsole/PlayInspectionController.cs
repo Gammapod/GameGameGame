@@ -22,6 +22,7 @@ internal sealed class PlayInspectionController(
     private EntityId? _cachedEntityId;
     private EntityInspectionPanelModel? _cachedModel;
     private PlayHighlightState? _cachedHighlight;
+    private PlayHighlightState? _cachedInventoryHighlight;
     private EntityId? _drawnEntityId;
     private FrontendRect? _drawnBounds;
     private bool _drawnEmpty;
@@ -84,14 +85,14 @@ internal sealed class PlayInspectionController(
 
     public EntityInspectionActionRow? SelectedActionRow => _cachedModel?.Actions.ElementAtOrDefault(SelectedActionIndex);
 
-    public void Draw(FrontendRect? bounds, PlayGridViewModel grid, PlayCellVisual? inspectedCell, PlayHighlightState? highlight)
+    public void Draw(FrontendRect? bounds, PlayGridViewModel grid, PlayCellVisual? inspectedCell, PlayHighlightState? highlight, PlayHighlightState? inventoryHighlight = null)
     {
-        var model = ResolveModel(grid, inspectedCell, highlight);
+        var model = ResolveModel(grid, inspectedCell, highlight, inventoryHighlight);
         SelectedActionIndex = ClampActionIndex(SelectedActionIndex);
         DrawOverlay(bounds, inspectedCell?.EntityId, model);
     }
 
-    private EntityInspectionPanelModel? ResolveModel(PlayGridViewModel grid, PlayCellVisual? inspectedCell, PlayHighlightState? highlight)
+    private EntityInspectionPanelModel? ResolveModel(PlayGridViewModel grid, PlayCellVisual? inspectedCell, PlayHighlightState? highlight, PlayHighlightState? inventoryHighlight)
     {
         var entityId = inspectedCell?.EntityId;
         if (entityId is null)
@@ -99,12 +100,13 @@ internal sealed class PlayInspectionController(
             _modelChanged = _cachedModel is not null || _cachedEntityId is not null;
             _cachedEntityId = null;
             _cachedHighlight = null;
+            _cachedInventoryHighlight = null;
             _cachedModel = null;
             _modelDirty = false;
             return null;
         }
 
-        if (!_modelDirty && _cachedEntityId == entityId && _cachedHighlight == highlight && _cachedModel is not null)
+        if (!_modelDirty && _cachedEntityId == entityId && _cachedHighlight == highlight && _cachedInventoryHighlight == inventoryHighlight && _cachedModel is not null)
         {
             _modelChanged = false;
             return _cachedModel;
@@ -112,7 +114,8 @@ internal sealed class PlayInspectionController(
 
         _cachedEntityId = entityId;
         _cachedHighlight = highlight;
-        _cachedModel = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspectedCell!, actionSession.CurrentActionChoiceRequest, tilesetProfile, highlight);
+        _cachedInventoryHighlight = inventoryHighlight;
+        _cachedModel = EntityInspectionPanelModelFactory.FromEntity(session, grid, inspectedCell!, actionSession.CurrentActionChoiceRequest, tilesetProfile, highlight, inventoryHighlight);
         _modelDirty = false;
         _modelChanged = true;
         return _cachedModel;

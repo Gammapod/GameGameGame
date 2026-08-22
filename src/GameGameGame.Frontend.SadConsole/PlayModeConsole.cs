@@ -21,7 +21,7 @@ internal sealed class PlayModeConsole : Console
     private readonly PlayPerformanceMetrics _performance = new();
     private readonly PlayInspectionController _inspection;
     private readonly PlayPlayerPanelController _playerPanel;
-    private readonly PlayInventorySelectionController _inventorySelection;
+    private readonly PlayActionWorkflowController _actionWorkflow;
     private readonly PlayMovementAnimationPresenter _animationPresenter;
     private readonly Action _returnToBrowser;
     private PlayGridViewModel _grid;
@@ -43,7 +43,7 @@ internal sealed class PlayModeConsole : Console
         _movement = new PlayMovementController(_actionSession);
         _inspection = new PlayInspectionController(this, session, _actionSession, displaySettings, tilesetProfile);
         _playerPanel = new PlayPlayerPanelController(this, session, _actionSession, displaySettings, tilesetProfile);
-        _inventorySelection = new PlayInventorySelectionController(_actionSession);
+        _actionWorkflow = new PlayActionWorkflowController(_actionSession);
         _animationPresenter = new PlayMovementAnimationPresenter(this, shell, tilesetProfile, PlayAnimationSettings.Default, session.PlayerEntityId);
         _grid = PlayGridViewModel.FromSession(session, tilesetProfile);
         UseKeyboard = true;
@@ -56,7 +56,7 @@ internal sealed class PlayModeConsole : Console
     {
         if (_selectionStack.TopKind == PlaySelectionFrameKind.CellSelection)
         {
-            HandleInventorySelectionKeyboard(keyboard);
+            HandleActionWorkflowKeyboard(keyboard);
             return true;
         }
 
@@ -122,11 +122,11 @@ internal sealed class PlayModeConsole : Console
         }
     }
 
-    private void HandleInventorySelectionKeyboard(Keyboard keyboard)
+    private void HandleActionWorkflowKeyboard(Keyboard keyboard)
     {
         if (keyboard.IsKeyReleased(Keys.Escape))
         {
-            if (_inventorySelection.CancelDropDestinationToSource())
+            if (_actionWorkflow.CancelDropDestinationToSource())
             {
                 _message = "Drop destination cancelled. Choose droppable inventory item.";
                 _playerPanel.MarkWorldChanged();
@@ -134,8 +134,8 @@ internal sealed class PlayModeConsole : Console
                 return;
             }
 
-            var wasExitSelection = _inventorySelection.IsExitDestinationSelection;
-            _inventorySelection.Cancel();
+            var wasExitSelection = _actionWorkflow.IsExitDestinationSelection;
+            _actionWorkflow.Cancel();
             if (wasExitSelection)
             {
                 _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
@@ -149,9 +149,24 @@ internal sealed class PlayModeConsole : Console
 
         if (MovementPreviewKeyboardReader.IsConfirmReleased(keyboard))
         {
-            if (_inventorySelection.IsDropSourceSelection)
+            if (_actionWorkflow.IsTransferItemSelection)
             {
-                if (_inventorySelection.ConfirmDropSource())
+                var transferResult = _actionWorkflow.ConfirmCurrentSubmission();
+                if (transferResult is null)
+                {
+                    _message = "Choose a transferable item.";
+                    Redraw();
+                    return;
+                }
+
+                CompleteActionSubmission(transferResult, "Transferred.", "Transfer blocked");
+                Redraw();
+                return;
+            }
+
+            if (_actionWorkflow.IsDropSourceSelection)
+            {
+                if (_actionWorkflow.ConfirmDropSource())
                 {
                     _message = "Choose adjacent drop destination. Enter drops, Esc cancels.";
                     _playerPanel.MarkWorldChanged();
@@ -164,9 +179,9 @@ internal sealed class PlayModeConsole : Console
                 return;
             }
 
-            if (_inventorySelection.IsDropDestinationSelection)
+            if (_actionWorkflow.IsDropDestinationSelection)
             {
-                var dropResult = _inventorySelection.ConfirmDrop();
+                var dropResult = _actionWorkflow.ConfirmCurrentSubmission();
                 if (dropResult is null)
                 {
                     _message = "Choose an empty valid adjacent cell.";
@@ -174,25 +189,14 @@ internal sealed class PlayModeConsole : Console
                     return;
                 }
 
-                if (dropResult.Succeeded)
-                {
-                    _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
-                    _inspection.MarkWorldChanged();
-                    _playerPanel.MarkWorldChanged();
-                    _movementPreview.Clear();
-                    _selectionStack.ClearToAdjacentSelection();
-                    _inspection.ReturnToGrid();
-                    _playerPanel.ReturnToGrid();
-                }
-
-                _message = dropResult.Succeeded ? "Dropped." : $"Drop blocked: {dropResult.FailureDetail ?? dropResult.FailureReason?.ToString() ?? "unknown"}";
+                CompleteActionSubmission(dropResult, "Dropped.", "Drop blocked");
                 Redraw();
                 return;
             }
 
-            if (_inventorySelection.IsExitDestinationSelection)
+            if (_actionWorkflow.IsExitDestinationSelection)
             {
-                var exitResult = _inventorySelection.ConfirmExit();
+                var exitResult = _actionWorkflow.ConfirmCurrentSubmission();
                 if (exitResult is null)
                 {
                     _message = "Choose a valid exit direction.";
@@ -200,23 +204,12 @@ internal sealed class PlayModeConsole : Console
                     return;
                 }
 
-                if (exitResult.Succeeded)
-                {
-                    _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
-                    _inspection.MarkWorldChanged();
-                    _playerPanel.MarkWorldChanged();
-                    _movementPreview.Clear();
-                    _selectionStack.ClearToAdjacentSelection();
-                    _inspection.ReturnToGrid();
-                    _playerPanel.ReturnToGrid();
-                }
-
-                _message = exitResult.Succeeded ? "Exited." : $"Exit blocked: {exitResult.FailureDetail ?? exitResult.FailureReason?.ToString() ?? "unknown"}";
+                CompleteActionSubmission(exitResult, "Exited.", "Exit blocked");
                 Redraw();
                 return;
             }
 
-            var result = _inventorySelection.ConfirmPickup();
+            var result = _actionWorkflow.ConfirmCurrentSubmission();
             if (result is null)
             {
                 _message = "Choose an empty valid inventory cell.";
@@ -224,31 +217,48 @@ internal sealed class PlayModeConsole : Console
                 return;
             }
 
-            if (result.Succeeded)
-            {
-                _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
-                _inspection.MarkWorldChanged();
-                _playerPanel.MarkWorldChanged();
-                _movementPreview.Clear();
-                _selectionStack.ClearToAdjacentSelection();
-                _inspection.ReturnToGrid();
-                _playerPanel.ReturnToGrid();
-            }
-
-            _message = result.Succeeded ? "Picked up." : $"Pickup blocked: {result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown"}";
+            CompleteActionSubmission(result, "Picked up.", "Pickup blocked");
             Redraw();
             return;
         }
 
-        if (PlayInventorySelectionInputController.ReadDirection(keyboard) is { } direction && _inventorySelection.Move(direction))
+        if (_actionWorkflow.IsTransferItemSelection)
         {
-            _message = _inventorySelection.IsDropSourceSelection
-                ? _inventorySelection.IsSelectedDropSourceValid() ? "Choose droppable item. Enter selects source." : "Inventory item cannot be dropped."
-                : _inventorySelection.IsDropDestinationSelection
-                ? _inventorySelection.IsSelectedDropDestinationValid() ? "Choose drop destination. Enter drops." : "Drop destination unavailable."
-                : _inventorySelection.IsExitDestinationSelection
-                ? _inventorySelection.IsSelectedExitDestinationValid() ? "Choose exit destination. Enter exits." : "Exit destination unavailable."
-                : _inventorySelection.IsSelectedPickupDestinationValid()
+            var itemIntent = PlayInspectionInputController.Read(keyboard);
+            switch (itemIntent.Kind)
+            {
+                case PlayInspectionInputIntentKind.PreviousAction:
+                    if (_actionWorkflow.SelectNextOption(-1))
+                    {
+                        _message = _actionWorkflow.TransferItemSummary();
+                        _inspection.MarkWorldChanged();
+                        _playerPanel.MarkWorldChanged();
+                        Redraw();
+                    }
+                    return;
+                case PlayInspectionInputIntentKind.NextAction:
+                    if (_actionWorkflow.SelectNextOption(1))
+                    {
+                        _message = _actionWorkflow.TransferItemSummary();
+                        _inspection.MarkWorldChanged();
+                        _playerPanel.MarkWorldChanged();
+                        Redraw();
+                    }
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        if (PlayActionWorkflowInputController.ReadDirection(keyboard) is { } direction && _actionWorkflow.SelectDirection(direction))
+        {
+            _message = _actionWorkflow.IsDropSourceSelection
+                ? _actionWorkflow.IsSelectedDropSourceValid() ? "Choose droppable item. Enter selects source." : "Inventory item cannot be dropped."
+                : _actionWorkflow.IsDropDestinationSelection
+                ? _actionWorkflow.IsSelectedDropDestinationValid() ? "Choose drop destination. Enter drops." : "Drop destination unavailable."
+                : _actionWorkflow.IsExitDestinationSelection
+                ? _actionWorkflow.IsSelectedExitDestinationValid() ? "Choose exit destination. Enter exits." : "Exit destination unavailable."
+                : _actionWorkflow.IsSelectedPickupDestinationValid()
                 ? "Choose pickup destination. Enter picks up."
                 : "Inventory cell unavailable.";
             _playerPanel.MarkWorldChanged();
@@ -291,7 +301,7 @@ internal sealed class PlayModeConsole : Console
         }
     }
 
-    private void CompleteImmediateAction(ControlledActorCommandResult result, string successVerb, string failureVerb)
+    private void CompleteActionSubmission(ControlledActorCommandResult result, string successVerb, string failureVerb)
     {
         if (result.Succeeded)
         {
@@ -334,6 +344,8 @@ internal sealed class PlayModeConsole : Console
 
                 _message = TryBeginPickupInventorySelection()
                     ? "Choose pickup destination. Enter picks up, Esc cancels."
+                    : TryBeginTransferItemSelection()
+                    ? _actionWorkflow.TransferItemSummary()
                     : _inspection.ConfirmSelectedActionMessage();
                 Redraw();
                 break;
@@ -351,7 +363,25 @@ internal sealed class PlayModeConsole : Console
             return false;
         }
 
-        CompleteImmediateAction(_actionSession.SubmitEnter(targetId), "Entered.", "Enter blocked");
+        CompleteActionSubmission(_actionSession.SubmitEnter(targetId), "Entered.", "Enter blocked");
+        return true;
+    }
+
+    private bool TryBeginTransferItemSelection()
+    {
+        var row = _inspection.SelectedActionRow;
+        if (row is not { Selectable: true, Candidate.Kind: ActionChoiceKind.Transfer, Candidate.Source.EntityId: { } counterpartyId })
+        {
+            return false;
+        }
+
+        if (!_actionWorkflow.TryBeginTransferItems(counterpartyId))
+        {
+            return false;
+        }
+
+        _selectionStack.EnterCellSelection();
+        _playerPanel.MarkWorldChanged();
         return true;
     }
 
@@ -363,7 +393,7 @@ internal sealed class PlayModeConsole : Console
             return false;
         }
 
-        if (!_inventorySelection.TryBeginPickup(targetId))
+        if (!_actionWorkflow.TryBeginPickup(targetId))
         {
             return false;
         }
@@ -381,7 +411,7 @@ internal sealed class PlayModeConsole : Console
             return false;
         }
 
-        if (!_inventorySelection.TryBeginDropSource())
+        if (!_actionWorkflow.TryBeginDropSource())
         {
             return false;
         }
@@ -399,12 +429,12 @@ internal sealed class PlayModeConsole : Console
             return false;
         }
 
-        if (!_inventorySelection.TryBeginExitDestination())
+        if (!_actionWorkflow.TryBeginExitDestination())
         {
             return false;
         }
 
-        if (_inventorySelection.ExitDestinationPlaneId() is { } exitPlaneId)
+        if (_actionWorkflow.ExitDestinationPlaneId() is { } exitPlaneId)
         {
             _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile, exitPlaneId);
         }
@@ -553,12 +583,18 @@ internal sealed class PlayModeConsole : Console
                 && _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
                     ? destination
                     : (GridCoord?)null;
-            var gridSelectionHighlight = _inventorySelection.GridHighlight();
+            var gridSelectionHighlight = _actionWorkflow.GridHighlight();
             var highlight = gridSelectionHighlight ?? ResolveHighlight(previewCoord);
             var inspectedCell = _inspection.ResolveInspectedCell(_grid, previewCoord);
             _gridPresenter.Draw(this, layout.GridBounds, visibleGrid, hidden, gridSelectionHighlight?.Coord ?? movementPreviewCoord ?? previewCoord, highlight?.Presentation(_tilesetProfile));
-            _playerPanel.Draw(layout.PlayerPanelBounds, _grid, highlight, _inventorySelection.InventoryHighlight());
-            _inspection.Draw(layout.InspectionBounds, _grid, inspectedCell, highlight);
+            var playerInventoryHighlight = _actionWorkflow.InventoryHighlight()
+                ?? _actionWorkflow.TransferInventoryHighlightFor(_actionSession.ControlledActorId);
+            var inspectedInventoryHighlight = inspectedCell?.EntityId is { } inspectedEntityId
+                ? _actionWorkflow.TransferInventoryHighlightFor(inspectedEntityId)
+                : null;
+            _playerPanel.Draw(layout.PlayerPanelBounds, _grid, highlight, playerInventoryHighlight);
+            _inspection.Draw(layout.InspectionBounds, _grid, inspectedCell, highlight, inspectedInventoryHighlight);
+            DrawTransferSelectionPopup(layout);
             if (_performance.OverlayVisible)
             {
                 DrawPerformanceOverlay();
@@ -576,6 +612,41 @@ internal sealed class PlayModeConsole : Console
             }
 
             Surface.IsDirty = true;
+        }
+    }
+
+    private void DrawTransferSelectionPopup(PlayModeInspectionLayout layout)
+    {
+        if (!_actionWorkflow.IsTransferItemSelection)
+        {
+            return;
+        }
+
+        var rows = _actionWorkflow.TransferSelectionRows();
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        var width = Math.Min(Math.Max(24, rows.Max(row => row.Verb.Length + row.EntityName.Length + 6)), Math.Max(24, layout.GridBounds.Width - 2));
+        var height = Math.Min(rows.Count + 3, Math.Max(5, layout.GridBounds.Height));
+        var x = layout.GridBounds.X + Math.Max(0, (layout.GridBounds.Width - width) / 2);
+        var y = layout.GridBounds.Y + Math.Max(0, layout.GridBounds.Height - height - 1);
+        var bounds = new FrontendRect(x, y, width, height);
+        PanelRenderer.DrawPanel(this, bounds, _tilesetProfile.Roles.PanelBorder, Color.Gold, Color.Black);
+        Print(x + 2, y, "Transfer", Color.White);
+        Print(x + 1, y + 1, "Up/Down choose, Enter transfer", Color.Gray);
+        for (var index = 0; index < rows.Count && index + 2 < height - 1; index++)
+        {
+            var row = rows[index];
+            var prefix = row.IsSelected ? "> " : "  ";
+            var text = prefix + row.Verb + ": " + row.EntityName;
+            if (text.Length > width - 2)
+            {
+                text = text[..(width - 2)];
+            }
+
+            Print(x + 1, y + 2 + index, text, row.IsSelected ? Color.LightCyan : Color.Cyan);
         }
     }
 
@@ -610,8 +681,8 @@ internal sealed class PlayModeConsole : Console
         return new PlayHighlightState(value, kind);
     }
 
-    private CellHighlightKind ResolveEntityTargetHighlightKind() => _inventorySelection.IsActive
-        ? _inventorySelection.TargetHighlightKind
+    private CellHighlightKind ResolveEntityTargetHighlightKind() => _actionWorkflow.IsActive
+        ? _actionWorkflow.TargetHighlightKind
         : _selectionStack.TopKind == PlaySelectionFrameKind.ActionSelection
         ? _inspection.FocusedActionHighlightKind()
         : CellHighlightKind.EntityTarget;
