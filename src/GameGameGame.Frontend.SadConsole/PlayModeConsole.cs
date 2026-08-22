@@ -134,7 +134,12 @@ internal sealed class PlayModeConsole : Console
                 return;
             }
 
+            var wasExitSelection = _inventorySelection.IsExitDestinationSelection;
             _inventorySelection.Cancel();
+            if (wasExitSelection)
+            {
+                _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+            }
             _selectionStack.PopToActionOrAdjacent();
             _message = "Inventory selection cancelled.";
             _playerPanel.MarkWorldChanged();
@@ -185,6 +190,32 @@ internal sealed class PlayModeConsole : Console
                 return;
             }
 
+            if (_inventorySelection.IsExitDestinationSelection)
+            {
+                var exitResult = _inventorySelection.ConfirmExit();
+                if (exitResult is null)
+                {
+                    _message = "Choose a valid exit direction.";
+                    Redraw();
+                    return;
+                }
+
+                if (exitResult.Succeeded)
+                {
+                    _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+                    _inspection.MarkWorldChanged();
+                    _playerPanel.MarkWorldChanged();
+                    _movementPreview.Clear();
+                    _selectionStack.ClearToAdjacentSelection();
+                    _inspection.ReturnToGrid();
+                    _playerPanel.ReturnToGrid();
+                }
+
+                _message = exitResult.Succeeded ? "Exited." : $"Exit blocked: {exitResult.FailureDetail ?? exitResult.FailureReason?.ToString() ?? "unknown"}";
+                Redraw();
+                return;
+            }
+
             var result = _inventorySelection.ConfirmPickup();
             if (result is null)
             {
@@ -215,6 +246,8 @@ internal sealed class PlayModeConsole : Console
                 ? _inventorySelection.IsSelectedDropSourceValid() ? "Choose droppable item. Enter selects source." : "Inventory item cannot be dropped."
                 : _inventorySelection.IsDropDestinationSelection
                 ? _inventorySelection.IsSelectedDropDestinationValid() ? "Choose drop destination. Enter drops." : "Drop destination unavailable."
+                : _inventorySelection.IsExitDestinationSelection
+                ? _inventorySelection.IsSelectedExitDestinationValid() ? "Choose exit destination. Enter exits." : "Exit destination unavailable."
                 : _inventorySelection.IsSelectedPickupDestinationValid()
                 ? "Choose pickup destination. Enter picks up."
                 : "Inventory cell unavailable.";
@@ -247,6 +280,8 @@ internal sealed class PlayModeConsole : Console
             case PlayInspectionInputIntentKind.ConfirmAction:
                 _message = TryBeginDropSourceSelection()
                     ? "Choose droppable inventory item. Enter selects source, Esc cancels."
+                    : TryBeginExitDestinationSelection()
+                    ? "Choose exit direction. Enter exits, Esc cancels."
                     : _playerPanel.ConfirmSelectedActionMessage();
                 Redraw();
                 break;
@@ -254,6 +289,22 @@ internal sealed class PlayModeConsole : Console
             default:
                 break;
         }
+    }
+
+    private void CompleteImmediateAction(ControlledActorCommandResult result, string successVerb, string failureVerb)
+    {
+        if (result.Succeeded)
+        {
+            _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+            _inspection.MarkWorldChanged();
+            _playerPanel.MarkWorldChanged();
+            _movementPreview.Clear();
+            _selectionStack.ClearToAdjacentSelection();
+            _inspection.ReturnToGrid();
+            _playerPanel.ReturnToGrid();
+        }
+
+        _message = result.Succeeded ? successVerb : $"{failureVerb}: {result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown"}";
     }
 
     private void HandleInspectionKeyboard(PlayInspectionInputIntent intent)
@@ -275,6 +326,12 @@ internal sealed class PlayModeConsole : Console
                 Redraw();
                 break;
             case PlayInspectionInputIntentKind.ConfirmAction:
+                if (TrySubmitEnterAction())
+                {
+                    Redraw();
+                    break;
+                }
+
                 _message = TryBeginPickupInventorySelection()
                     ? "Choose pickup destination. Enter picks up, Esc cancels."
                     : _inspection.ConfirmSelectedActionMessage();
@@ -284,6 +341,18 @@ internal sealed class PlayModeConsole : Console
             default:
                 break;
         }
+    }
+
+    private bool TrySubmitEnterAction()
+    {
+        var row = _inspection.SelectedActionRow;
+        if (row is not { Selectable: true, Candidate.Kind: ActionChoiceKind.Enter, Candidate.Source.EntityId: { } targetId })
+        {
+            return false;
+        }
+
+        CompleteImmediateAction(_actionSession.SubmitEnter(targetId), "Entered.", "Enter blocked");
+        return true;
     }
 
     private bool TryBeginPickupInventorySelection()
@@ -315,6 +384,29 @@ internal sealed class PlayModeConsole : Console
         if (!_inventorySelection.TryBeginDropSource())
         {
             return false;
+        }
+
+        _selectionStack.EnterCellSelection();
+        _playerPanel.MarkWorldChanged();
+        return true;
+    }
+
+    private bool TryBeginExitDestinationSelection()
+    {
+        var row = _playerPanel.SelectedActionRow;
+        if (row is not { Selectable: true, Candidate.Kind: ActionChoiceKind.Exit })
+        {
+            return false;
+        }
+
+        if (!_inventorySelection.TryBeginExitDestination())
+        {
+            return false;
+        }
+
+        if (_inventorySelection.ExitDestinationPlaneId() is { } exitPlaneId)
+        {
+            _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile, exitPlaneId);
         }
 
         _selectionStack.EnterCellSelection();

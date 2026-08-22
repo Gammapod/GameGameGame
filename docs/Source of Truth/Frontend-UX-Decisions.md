@@ -345,3 +345,11 @@ Each decision should include:
 - **Implementation anchors:** `PlayActionCandidateProjector.ForPlayerInventory(...)`, `InspectionActionChoiceProjector.ProjectPlayerInventory(...)`, `PlayPlayerPanelController.SelectedActionRow`, `PlayInventorySelectionController.TryBeginDropSource()/ConfirmDropSource()/ConfirmDrop()`, and `PlayActionSessionController.SubmitDrop(...)`.
 - **Implications:** Future self/inventory/context actions such as Exit or Transfer should start from actor-level Action Choice facts when they are not naturally inspected-target actions. Player-panel action ordering, wording, and layout remain provisional.
 - **Status:** Active / initial functional Drop workflow.
+
+### FED-041: Enter submits inspected target and Exit uses Core direction destinations
+
+- **Decision:** In new Play mode, Enter is selected from an inspected adjacent entity and submits immediately with the selected target entity. It does not prompt for an inventory destination cell because Core Enter choices do not expose that payload. Exit is selected from the player inventory panel and enters direction selection; the highlighted destination is the Core-projected `DirectionOption.Destination`, and submission sends only the selected direction.
+- **Reasoning:** Current Core `ActionChoiceKind.Enter` exposes target entities only, while `ActionChoiceKind.Exit` exposes direction options with destination hints. The frontend should preserve those semantics rather than inventing destination-cell selection or parent-relative geometry rules.
+- **Implementation anchors:** `PlayActionSessionController.SubmitEnter(...)`, `PlayActionSessionController.SubmitExit(...)`, `PlayInventorySelectionController.TryBeginExitDestination()/ConfirmExit()`, and `PlayActionCandidateProjector.ForPlayerInventory(...)`.
+- **Implications:** If future UX wants explicit Enter placement, Core should first expose destination choices and an Enter submission payload that includes the chosen destination. Exit visual selection may feel adjacency-like, but must continue to render Core-projected destinations rather than recomputing topology in the frontend.
+- **Status:** Active / initial functional Enter and Exit workflow.

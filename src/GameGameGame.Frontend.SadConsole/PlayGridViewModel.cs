@@ -34,9 +34,11 @@ internal sealed record PlayGridViewModel(
     public PlayCellVisual CellAt(int x, int y) => TryCellAt(x, y)
         ?? throw new InvalidOperationException($"Cell ({x},{y}) is outside rendered plane {PlaneId}.");
 
-    public static PlayGridViewModel FromSession(PlayableScenarioSession session, TilesetProfile tilesetProfile)
+    public static PlayGridViewModel FromSession(PlayableScenarioSession session, TilesetProfile tilesetProfile, PlaneId? preferredPlaneId = null)
     {
-        var planeId = ResolveRenderedPlane(session);
+        var planeId = preferredPlaneId is { } requestedPlaneId && session.World.Planes.ContainsKey(requestedPlaneId)
+            ? requestedPlaneId
+            : ResolveRenderedPlane(session);
         var plane = session.World.Planes[planeId];
         var cells = new List<PlayCellVisual>();
 

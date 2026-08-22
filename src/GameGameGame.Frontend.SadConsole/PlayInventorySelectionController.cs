@@ -9,7 +9,8 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
         None,
         PickupDestination,
         DropSource,
-        DropDestination
+        DropDestination,
+        ExitDestination
     }
 
     private EntityId? _pickupTargetId;
@@ -21,6 +22,7 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
     public CellHighlightKind TargetHighlightKind => _mode == InventorySelectionMode.DropDestination ? CellHighlightKind.Drop : CellHighlightKind.Pickup;
     public bool IsDropSourceSelection => _mode == InventorySelectionMode.DropSource;
     public bool IsDropDestinationSelection => _mode == InventorySelectionMode.DropDestination;
+    public bool IsExitDestinationSelection => _mode == InventorySelectionMode.ExitDestination;
 
     public bool TryBeginPickup(EntityId targetId)
     {
@@ -50,6 +52,21 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
         return true;
     }
 
+    public bool TryBeginExitDestination()
+    {
+        var first = ExitChoice()?.DirectionOptions.FirstOrDefault(option => option.CanExecute);
+        if (first is null)
+        {
+            return false;
+        }
+
+        _pickupTargetId = null;
+        _dropSourceId = null;
+        _mode = InventorySelectionMode.ExitDestination;
+        SelectedCoord = first.Destination?.Coord ?? new GridCoord(0, 0);
+        return true;
+    }
+
     public void Cancel()
     {
         _pickupTargetId = null;
@@ -76,6 +93,17 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public bool Move(Direction direction)
     {
+        if (_mode == InventorySelectionMode.ExitDestination)
+        {
+            if (ExitChoice()?.DirectionOptions.FirstOrDefault(option => option.Direction == direction) is not { } option)
+            {
+                return false;
+            }
+
+            SelectedCoord = option.Destination?.Coord ?? SelectedCoord;
+            return true;
+        }
+
         if (_mode == InventorySelectionMode.DropDestination)
         {
             var actor = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).Coord;
@@ -121,9 +149,14 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     public PlayHighlightState? GridHighlight()
     {
-        if (_mode != InventorySelectionMode.DropDestination)
+        if (_mode != InventorySelectionMode.DropDestination && _mode != InventorySelectionMode.ExitDestination)
         {
             return null;
+        }
+
+        if (_mode == InventorySelectionMode.ExitDestination)
+        {
+            return new PlayHighlightState(SelectedCoord, IsSelectedExitDestinationValid() ? CellHighlightKind.Exit : CellHighlightKind.NoAction);
         }
 
         return new PlayHighlightState(SelectedCoord, IsSelectedDropDestinationValid() ? CellHighlightKind.Drop : CellHighlightKind.NoAction);
@@ -193,6 +226,22 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
         return result;
     }
 
+    public ControlledActorCommandResult? ConfirmExit()
+    {
+        if (_mode != InventorySelectionMode.ExitDestination || SelectedExitDirection() is not { } direction)
+        {
+            return null;
+        }
+
+        var result = actionSession.SubmitExit(direction);
+        if (result.Succeeded)
+        {
+            Cancel();
+        }
+
+        return result;
+    }
+
     public bool IsSelectedDropSourceValid()
     {
         if (_mode != InventorySelectionMode.DropSource || !TryResolvePlayerInventory(out var planeId, out _, out _))
@@ -217,6 +266,10 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
             && DropChoice()?.Destinations(sourceId).Any(option => option.Destination == destination && option.CanExecute) == true;
     }
 
+    public bool IsSelectedExitDestinationValid() => SelectedExitDirection() is not null;
+
+    public PlaneId? ExitDestinationPlaneId() => ExitChoice()?.DirectionOptions.FirstOrDefault(option => option.CanExecute && option.Destination is not null)?.Destination?.PlaneId;
+
     private GridCoord? FirstValidPickupDestination(EntityId targetId, PlaneId planeId, int width, int height)
     {
         var destinations = PickupChoice()?.Destinations(targetId)
@@ -238,6 +291,13 @@ internal sealed class PlayInventorySelectionController(PlayActionSessionControll
 
     private ActionChoice? PickupChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Pickup);
     private ActionChoice? DropChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop);
+    private ActionChoice? ExitChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Exit);
+
+    private Direction? SelectedExitDirection() => ExitChoice()?.DirectionOptions.FirstOrDefault(option =>
+            option.CanExecute &&
+            option.Destination is { } destination &&
+            destination.Coord == SelectedCoord)
+        ?.Direction;
 
     private GridCoord? FirstValidDropSource(PlaneId planeId, int width, int height)
     {

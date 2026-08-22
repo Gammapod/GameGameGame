@@ -87,6 +87,23 @@ public sealed class PlayActionCandidateModelTests
     }
 
     [Fact]
+    public void ActionHighlightResolverUsesEnterForSelectableEnterRows()
+    {
+        var targetId = new EntityId("target");
+        var candidate = new PlayActionCandidate(
+            PlayActionCandidateSource.InspectionEntity(targetId),
+            ActionChoiceKind.Enter,
+            PlayActionCandidateProjector.ActionText(ActionChoiceKind.Enter, targetId),
+            IsValid: true,
+            IsComplete: true);
+        var row = new EntityInspectionActionRow(candidate.Text, Selectable: true, Candidate: candidate);
+
+        var kind = PlayActionHighlightResolver.ForInspectionAction(row);
+
+        Assert.Equal(CellHighlightKind.Enter, kind);
+    }
+
+    [Fact]
     public void ActionHighlightResolverUsesNoActionForGreyedOutRows()
     {
         var row = new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionNoValidActions), Selectable: false);
@@ -183,5 +200,68 @@ public sealed class PlayActionCandidateModelTests
         Assert.True(selection.Move(Direction.North));
 
         Assert.Equal(actorCoord.Offset(Direction.North), selection.GridHighlight()?.Coord);
+    }
+
+    [Fact]
+    public void EnterChoiceSubmitsTargetWithoutFrontendDestinationSelection()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+        MoveNextToDebugChest(actionSession);
+        var targetId = new EntityId("debugChest");
+
+        var rows = InspectionActionChoiceProjector.Project(actionSession.CurrentActionChoiceRequest, targetId);
+        Assert.Contains(rows, row => row.Selectable && row.Candidate is { Kind: ActionChoiceKind.Enter });
+        var result = actionSession.SubmitEnter(targetId);
+
+        Assert.True(result.Succeeded, result.FailureDetail ?? result.FailureReason?.ToString() ?? "unknown");
+        Assert.Equal(session.World.GetRegisteredInventoryPlaneId(targetId), session.World.GetEntityLocation(session.PlayerEntityId).PlaneId);
+    }
+
+    [Fact]
+    public void ExitSelectionUsesCoreDirectionDestinationAndSubmitsDirection()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+        MoveNextToDebugChest(actionSession);
+        var enter = actionSession.SubmitEnter(new EntityId("debugChest"));
+        Assert.True(enter.Succeeded, enter.FailureDetail ?? enter.FailureReason?.ToString() ?? "unknown");
+        var selection = new PlayInventorySelectionController(actionSession);
+
+        var rows = InspectionActionChoiceProjector.ProjectPlayerInventory(actionSession.CurrentActionChoiceRequest);
+        Assert.Contains(rows, row => row.Selectable && row.Candidate is { Source.Kind: PlayActionCandidateSourceKind.PlayerInventory, Kind: ActionChoiceKind.Exit });
+        Assert.True(selection.TryBeginExitDestination());
+        Assert.NotNull(selection.ExitDestinationPlaneId());
+        Assert.True(selection.Move(Direction.East));
+        var highlight = selection.GridHighlight();
+
+        Assert.NotNull(highlight);
+        Assert.Equal(CellHighlightKind.Exit, highlight!.Kind);
+        var exit = selection.ConfirmExit();
+        Assert.NotNull(exit);
+        Assert.True(exit!.Succeeded, exit.FailureDetail ?? exit.FailureReason?.ToString() ?? "unknown");
+        Assert.False(selection.IsActive);
+        Assert.NotEqual(session.World.GetRegisteredInventoryPlaneId(new EntityId("debugChest")), session.World.GetEntityLocation(session.PlayerEntityId).PlaneId);
+    }
+
+    private static void MoveNextToDebugChest(PlayActionSessionController actionSession)
+    {
+        var inventoryPlane = actionSession.World.GetRegisteredInventoryPlaneId(actionSession.ControlledActorId);
+        Assert.NotNull(inventoryPlane);
+
+        var pickupScrap2 = actionSession.SubmitPickup(new EntityId("debugScrap2"), new PlaneCoord(inventoryPlane.Value, new GridCoord(0, 0)));
+        Assert.True(pickupScrap2.Succeeded, pickupScrap2.FailureDetail ?? pickupScrap2.FailureReason?.ToString() ?? "unknown");
+        var west = actionSession.SubmitMove(Direction.West);
+        Assert.True(west.CommandResult.Succeeded, west.CommandResult.FailureDetail ?? west.CommandResult.FailureReason?.ToString() ?? "unknown");
+        var pickupScrap1 = actionSession.SubmitPickup(new EntityId("debugScrap1"), new PlaneCoord(inventoryPlane.Value, new GridCoord(1, 0)));
+        Assert.True(pickupScrap1.Succeeded, pickupScrap1.FailureDetail ?? pickupScrap1.FailureReason?.ToString() ?? "unknown");
+        var westAgain = actionSession.SubmitMove(Direction.West);
+        Assert.True(westAgain.CommandResult.Succeeded, westAgain.CommandResult.FailureDetail ?? westAgain.CommandResult.FailureReason?.ToString() ?? "unknown");
+        var north = actionSession.SubmitMove(Direction.North);
+        Assert.True(north.CommandResult.Succeeded, north.CommandResult.FailureDetail ?? north.CommandResult.FailureReason?.ToString() ?? "unknown");
     }
 }

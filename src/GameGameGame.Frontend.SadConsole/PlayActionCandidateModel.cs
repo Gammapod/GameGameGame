@@ -125,23 +125,32 @@ internal static class PlayActionCandidateProjector
             return [];
         }
 
-        var dropChoice = request.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop);
-        if (dropChoice is null)
+        var candidates = new List<PlayActionCandidate>();
+        if (request.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop) is { } dropChoice)
         {
-            return [];
+            var anyValidSource = dropChoice.EntityOptions.Any(option => option.CanExecute && dropChoice.Destinations(option.TargetId).Any(destination => destination.CanExecute));
+            candidates.Add(new PlayActionCandidate(
+                    PlayActionCandidateSource.PlayerInventory(),
+                    ActionChoiceKind.Drop,
+                    FrontendTextMessage.Create(FrontendTextIds.InspectionActionGeneric, ("actionName", "Drop"), ("targetName", "item")),
+                    anyValidSource,
+                    IsComplete: false,
+                    Explanation: anyValidSource ? null : FrontendTextMessage.Create(FrontendTextIds.PlayActionUnavailable, ("reason", "No droppable item."))));
         }
 
-        var anyValidSource = dropChoice.EntityOptions.Any(option => option.CanExecute && dropChoice.Destinations(option.TargetId).Any(destination => destination.CanExecute));
-        return
-        [
-            new PlayActionCandidate(
+        if (request.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Exit) is { } exitChoice)
+        {
+            var anyValidDirection = exitChoice.DirectionOptions.Any(option => option.CanExecute);
+            candidates.Add(new PlayActionCandidate(
                 PlayActionCandidateSource.PlayerInventory(),
-                ActionChoiceKind.Drop,
-                FrontendTextMessage.Create(FrontendTextIds.InspectionActionGeneric, ("actionName", "Drop"), ("targetName", "item")),
-                anyValidSource,
+                ActionChoiceKind.Exit,
+                FrontendTextMessage.Create(FrontendTextIds.InspectionActionGeneric, ("actionName", "Exit"), ("targetName", "container")),
+                anyValidDirection,
                 IsComplete: false,
-                Explanation: anyValidSource ? null : FrontendTextMessage.Create(FrontendTextIds.PlayActionUnavailable, ("reason", "No droppable item.")))
-        ];
+                Explanation: anyValidDirection ? null : FrontendTextMessage.Create(FrontendTextIds.PlayActionUnavailable, ("reason", "No valid exit."))));
+        }
+
+        return candidates;
     }
 
     private static IEnumerable<PlayActionCandidate> PickupCandidates(ActionChoice choice, EntityId targetId)
