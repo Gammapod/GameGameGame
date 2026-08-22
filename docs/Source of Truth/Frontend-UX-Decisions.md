@@ -337,3 +337,11 @@ Each decision should include:
 - **Implementation anchors:** `MonoGame.Framework.WindowsDX`, `FrontendWindowMode.OverlaySafeBorderlessWindowed`, `SadConsoleDisplayHost.ApplyWindowMode(...)`, and `ScenarioBrowserChromeState.ToggleWindowMode()`.
 - **Implications:** Keep the legacy/debug `GameGameGame.SadConsole` project separate for now. Future release settings UI should preserve a simple player choice between overlay-safe borderless and windowed unless a tested exclusive/fullscreen mode is explicitly added.
 - **Status:** Active / initial DirectX overlay-safe default implemented.
+
+### FED-040: Drop starts from the player inventory action menu
+
+- **Decision:** In new Play mode, Drop is selected from the focused player inventory panel rather than from the inspected-entity action panel. Selecting Drop enters inventory source-cell selection, then adjacent world destination-cell selection, then submits through the action session controller.
+- **Reasoning:** Drop is actor/inventory-contextual rather than target-inspection-contextual. The actor-centric Core `ActionChoiceRequest` already exposes Drop source entities and per-source destinations, so the frontend can populate the player inventory action row and selection highlights without inventing portability, adjacency, or empty-destination legality.
+- **Implementation anchors:** `PlayActionCandidateProjector.ForPlayerInventory(...)`, `InspectionActionChoiceProjector.ProjectPlayerInventory(...)`, `PlayPlayerPanelController.SelectedActionRow`, `PlayInventorySelectionController.TryBeginDropSource()/ConfirmDropSource()/ConfirmDrop()`, and `PlayActionSessionController.SubmitDrop(...)`.
+- **Implications:** Future self/inventory/context actions such as Exit or Transfer should start from actor-level Action Choice facts when they are not naturally inspected-target actions. Player-panel action ordering, wording, and layout remain provisional.
+- **Status:** Active / initial functional Drop workflow.

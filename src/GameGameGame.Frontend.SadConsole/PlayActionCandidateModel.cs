@@ -4,7 +4,8 @@ namespace GameGameGame.Frontend.SadConsole;
 
 internal enum PlayActionCandidateSourceKind
 {
-    InspectionEntity
+    InspectionEntity,
+    PlayerInventory
 }
 
 internal sealed record PlayActionCandidateSource(
@@ -12,6 +13,7 @@ internal sealed record PlayActionCandidateSource(
     EntityId? EntityId = null)
 {
     public static PlayActionCandidateSource InspectionEntity(EntityId entityId) => new(PlayActionCandidateSourceKind.InspectionEntity, entityId);
+    public static PlayActionCandidateSource PlayerInventory() => new(PlayActionCandidateSourceKind.PlayerInventory);
 }
 
 internal sealed record PlayActionPromptChoice(
@@ -114,6 +116,32 @@ internal static class PlayActionCandidateProjector
         }
 
         return candidates;
+    }
+
+    public static IReadOnlyList<PlayActionCandidate> ForPlayerInventory(ActionChoiceRequest? request)
+    {
+        if (request is null)
+        {
+            return [];
+        }
+
+        var dropChoice = request.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop);
+        if (dropChoice is null)
+        {
+            return [];
+        }
+
+        var anyValidSource = dropChoice.EntityOptions.Any(option => option.CanExecute && dropChoice.Destinations(option.TargetId).Any(destination => destination.CanExecute));
+        return
+        [
+            new PlayActionCandidate(
+                PlayActionCandidateSource.PlayerInventory(),
+                ActionChoiceKind.Drop,
+                FrontendTextMessage.Create(FrontendTextIds.InspectionActionGeneric, ("actionName", "Drop"), ("targetName", "item")),
+                anyValidSource,
+                IsComplete: false,
+                Explanation: anyValidSource ? null : FrontendTextMessage.Create(FrontendTextIds.PlayActionUnavailable, ("reason", "No droppable item.")))
+        ];
     }
 
     private static IEnumerable<PlayActionCandidate> PickupCandidates(ActionChoice choice, EntityId targetId)

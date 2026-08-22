@@ -126,6 +126,14 @@ internal sealed class PlayModeConsole : Console
     {
         if (keyboard.IsKeyReleased(Keys.Escape))
         {
+            if (_inventorySelection.CancelDropDestinationToSource())
+            {
+                _message = "Drop destination cancelled. Choose droppable inventory item.";
+                _playerPanel.MarkWorldChanged();
+                Redraw();
+                return;
+            }
+
             _inventorySelection.Cancel();
             _selectionStack.PopToActionOrAdjacent();
             _message = "Inventory selection cancelled.";
@@ -136,6 +144,47 @@ internal sealed class PlayModeConsole : Console
 
         if (MovementPreviewKeyboardReader.IsConfirmReleased(keyboard))
         {
+            if (_inventorySelection.IsDropSourceSelection)
+            {
+                if (_inventorySelection.ConfirmDropSource())
+                {
+                    _message = "Choose adjacent drop destination. Enter drops, Esc cancels.";
+                    _playerPanel.MarkWorldChanged();
+                    Redraw();
+                    return;
+                }
+
+                _message = "Choose a droppable inventory item.";
+                Redraw();
+                return;
+            }
+
+            if (_inventorySelection.IsDropDestinationSelection)
+            {
+                var dropResult = _inventorySelection.ConfirmDrop();
+                if (dropResult is null)
+                {
+                    _message = "Choose an empty valid adjacent cell.";
+                    Redraw();
+                    return;
+                }
+
+                if (dropResult.Succeeded)
+                {
+                    _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+                    _inspection.MarkWorldChanged();
+                    _playerPanel.MarkWorldChanged();
+                    _movementPreview.Clear();
+                    _selectionStack.ClearToAdjacentSelection();
+                    _inspection.ReturnToGrid();
+                    _playerPanel.ReturnToGrid();
+                }
+
+                _message = dropResult.Succeeded ? "Dropped." : $"Drop blocked: {dropResult.FailureDetail ?? dropResult.FailureReason?.ToString() ?? "unknown"}";
+                Redraw();
+                return;
+            }
+
             var result = _inventorySelection.ConfirmPickup();
             if (result is null)
             {
@@ -162,7 +211,11 @@ internal sealed class PlayModeConsole : Console
 
         if (PlayInventorySelectionInputController.ReadDirection(keyboard) is { } direction && _inventorySelection.Move(direction))
         {
-            _message = _inventorySelection.IsSelectedPickupDestinationValid()
+            _message = _inventorySelection.IsDropSourceSelection
+                ? _inventorySelection.IsSelectedDropSourceValid() ? "Choose droppable item. Enter selects source." : "Inventory item cannot be dropped."
+                : _inventorySelection.IsDropDestinationSelection
+                ? _inventorySelection.IsSelectedDropDestinationValid() ? "Choose drop destination. Enter drops." : "Drop destination unavailable."
+                : _inventorySelection.IsSelectedPickupDestinationValid()
                 ? "Choose pickup destination. Enter picks up."
                 : "Inventory cell unavailable.";
             _playerPanel.MarkWorldChanged();
@@ -192,7 +245,9 @@ internal sealed class PlayModeConsole : Console
                 Redraw();
                 break;
             case PlayInspectionInputIntentKind.ConfirmAction:
-                _message = _playerPanel.ConfirmSelectedActionMessage();
+                _message = TryBeginDropSourceSelection()
+                    ? "Choose droppable inventory item. Enter selects source, Esc cancels."
+                    : _playerPanel.ConfirmSelectedActionMessage();
                 Redraw();
                 break;
             case PlayInspectionInputIntentKind.Consume:
@@ -240,6 +295,24 @@ internal sealed class PlayModeConsole : Console
         }
 
         if (!_inventorySelection.TryBeginPickup(targetId))
+        {
+            return false;
+        }
+
+        _selectionStack.EnterCellSelection();
+        _playerPanel.MarkWorldChanged();
+        return true;
+    }
+
+    private bool TryBeginDropSourceSelection()
+    {
+        var row = _playerPanel.SelectedActionRow;
+        if (row is not { Selectable: true, Candidate.Kind: ActionChoiceKind.Drop })
+        {
+            return false;
+        }
+
+        if (!_inventorySelection.TryBeginDropSource())
         {
             return false;
         }
@@ -388,9 +461,10 @@ internal sealed class PlayModeConsole : Console
                 && _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
                     ? destination
                     : (GridCoord?)null;
-            var highlight = ResolveHighlight(previewCoord);
+            var gridSelectionHighlight = _inventorySelection.GridHighlight();
+            var highlight = gridSelectionHighlight ?? ResolveHighlight(previewCoord);
             var inspectedCell = _inspection.ResolveInspectedCell(_grid, previewCoord);
-            _gridPresenter.Draw(this, layout.GridBounds, visibleGrid, hidden, movementPreviewCoord ?? previewCoord, highlight?.Presentation(_tilesetProfile));
+            _gridPresenter.Draw(this, layout.GridBounds, visibleGrid, hidden, gridSelectionHighlight?.Coord ?? movementPreviewCoord ?? previewCoord, highlight?.Presentation(_tilesetProfile));
             _playerPanel.Draw(layout.PlayerPanelBounds, _grid, highlight, _inventorySelection.InventoryHighlight());
             _inspection.Draw(layout.InspectionBounds, _grid, inspectedCell, highlight);
             if (_performance.OverlayVisible)

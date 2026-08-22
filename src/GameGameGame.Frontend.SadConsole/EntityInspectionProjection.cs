@@ -127,6 +127,17 @@ internal static class InspectionActionChoiceProjector
         return rows.Count == 0 ? [NoValidActions()] : rows;
     }
 
+    public static IReadOnlyList<EntityInspectionActionRow> ProjectPlayerInventory(ActionChoiceRequest? request)
+    {
+        var rows = new List<EntityInspectionActionRow>();
+        foreach (var candidate in PlayActionCandidateProjector.ForPlayerInventory(request))
+        {
+            rows.Add(Row(candidate));
+        }
+
+        return rows.Count == 0 ? [NoValidActions()] : rows;
+    }
+
     private static EntityInspectionActionRow NoValidActions() => new(
         FrontendTextMessage.Create(FrontendTextIds.InspectionActionNoValidActions),
         Selectable: false);

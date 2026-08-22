@@ -38,5 +38,5 @@ internal static class PlayInspectionInputController
 
 internal static class PlayInventorySelectionInputController
 {
-    public static Direction? ReadDirection(Keyboard keyboard) => MovementPreviewKeyboardReader.ReadHeldDirection(keyboard.KeysReleased.Select(key => key.Key));
+    public static Direction? ReadDirection(Keyboard keyboard) => MovementPreviewKeyboardReader.ReadHeldDirection(keyboard.KeysDown.Select(key => key.Key));
 }

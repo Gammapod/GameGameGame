@@ -13,7 +13,7 @@ internal sealed record PlaySelectionFrame(PlaySelectionFrameKind Kind, GridCoord
 {
     public static PlaySelectionFrame Adjacent { get; } = new(PlaySelectionFrameKind.AdjacentSelection);
     public static PlaySelectionFrame Action(GridCoord adjacentCoord) => new(PlaySelectionFrameKind.ActionSelection, adjacentCoord);
-    public static PlaySelectionFrame Cell(GridCoord adjacentCoord) => new(PlaySelectionFrameKind.CellSelection, adjacentCoord);
+    public static PlaySelectionFrame Cell(GridCoord? adjacentCoord) => new(PlaySelectionFrameKind.CellSelection, adjacentCoord);
 }
 
 internal sealed class PlaySelectionStack
@@ -33,7 +33,7 @@ internal sealed class PlaySelectionStack
 
     public void EnterCellSelection()
     {
-        var adjacentCoord = LockedAdjacentCoord ?? throw new InvalidOperationException("Cell selection requires an existing adjacent selection context.");
+        var adjacentCoord = LockedAdjacentCoord;
         if (TopKind != PlaySelectionFrameKind.CellSelection)
         {
             _frames.Push(PlaySelectionFrame.Cell(adjacentCoord));

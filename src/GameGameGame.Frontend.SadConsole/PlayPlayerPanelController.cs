@@ -20,6 +20,7 @@ internal sealed class PlayPlayerPanelController(
     private bool _modelDirty = true;
     private bool _modelChanged = true;
     private bool? _drawnFocused;
+    private int _selectedActionIndex;
 
     public bool IsFocused { get; private set; }
 
@@ -37,9 +38,26 @@ internal sealed class PlayPlayerPanelController(
 
     public void MarkWorldChanged() => _modelDirty = true;
 
-    public string MoveSelection(int delta) => "Player panel actions are not interactive yet.";
+    public EntityInspectionActionRow? SelectedActionRow => _cachedModel is { Actions.Count: > 0 } model
+        ? model.Actions[Math.Clamp(_selectedActionIndex, 0, model.Actions.Count - 1)]
+        : null;
 
-    public string ConfirmSelectedActionMessage() => "Player panel action semantics are deferred.";
+    public string MoveSelection(int delta)
+    {
+        var count = _cachedModel?.Actions.Count ?? 0;
+        if (count == 0)
+        {
+            return "No player actions.";
+        }
+
+        _selectedActionIndex = Math.Clamp(_selectedActionIndex + delta, 0, count - 1);
+        _drawnFocused = null;
+        return "Player panel action selected.";
+    }
+
+    public string ConfirmSelectedActionMessage() => SelectedActionRow is { Selectable: false, FailureReason: { } reason }
+        ? FrontendTextResolver.InspectionPrototype.Resolve(reason)
+        : "Player panel action semantics are deferred.";
 
     public void Draw(FrontendRect? bounds, PlayGridViewModel grid, PlayHighlightState? highlight, PlayHighlightState? inventoryHighlight = null)
     {
@@ -80,6 +98,11 @@ internal sealed class PlayPlayerPanelController(
             tilesetProfile,
             highlight,
             inventoryHighlight);
+        _cachedModel = _cachedModel with
+        {
+            Actions = InspectionActionChoiceProjector.ProjectPlayerInventory(actionSession.CurrentActionChoiceRequest)
+        };
+        _selectedActionIndex = Math.Clamp(_selectedActionIndex, 0, Math.Max(0, _cachedModel.Actions.Count - 1));
         _cachedHighlight = highlight;
         _cachedInventoryHighlight = inventoryHighlight;
         _modelDirty = false;
@@ -111,7 +134,7 @@ internal sealed class PlayPlayerPanelController(
             return;
         }
 
-        _overlay.Draw(model, selectedActionIndex: 0, actionMenuFocused: IsFocused);
+        _overlay.Draw(model, selectedActionIndex: _selectedActionIndex, actionMenuFocused: IsFocused);
         _drawnBounds = bounds;
         _drawnFocused = IsFocused;
         _modelChanged = false;

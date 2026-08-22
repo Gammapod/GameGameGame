@@ -117,4 +117,71 @@ public sealed class PlayActionCandidateModelTests
         Assert.NotNull(inventoryPlane);
         Assert.Equal(new PlaneCoord(inventoryPlane.Value, new GridCoord(0, 0)), session.World.GetEntityLocation(targetId));
     }
+
+    [Fact]
+    public void PlayerInventoryProjectionShowsDropFromActorChoiceRequest()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+
+        var rows = InspectionActionChoiceProjector.ProjectPlayerInventory(actionSession.CurrentActionChoiceRequest);
+
+        Assert.Contains(rows, row => row.Candidate is { Source.Kind: PlayActionCandidateSourceKind.PlayerInventory, Kind: ActionChoiceKind.Drop });
+    }
+
+    [Fact]
+    public void InventorySelectionConfirmsDropFromPlayerInventoryToAdjacentCell()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+        var selection = new PlayInventorySelectionController(actionSession);
+        var targetId = new EntityId("debugScrap3");
+
+        Assert.True(selection.TryBeginPickup(targetId));
+        var pickup = selection.ConfirmPickup();
+        Assert.NotNull(pickup);
+        Assert.True(pickup!.Succeeded, pickup.FailureDetail ?? pickup.FailureReason?.ToString() ?? "unknown");
+
+        Assert.True(selection.TryBeginDropSource());
+        Assert.Equal(CellHighlightKind.Drop, selection.InventoryHighlight()?.Kind);
+        Assert.True(selection.ConfirmDropSource());
+        Assert.Equal(CellHighlightKind.Drop, selection.GridHighlight()?.Kind);
+        Assert.True(selection.CancelDropDestinationToSource());
+        Assert.True(selection.IsDropSourceSelection);
+        Assert.True(selection.ConfirmDropSource());
+        var drop = selection.ConfirmDrop();
+
+        Assert.NotNull(drop);
+        Assert.True(drop!.Succeeded, drop.FailureDetail ?? drop.FailureReason?.ToString() ?? "unknown");
+        Assert.False(selection.IsActive);
+        var droppedLocation = session.World.GetEntityLocation(targetId);
+        Assert.Equal(session.World.GetEntityLocation(session.PlayerEntityId).PlaneId, droppedLocation.PlaneId);
+    }
+
+    [Fact]
+    public void DropDestinationSelectionHighlightsPressedAdjacentDirection()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var actionSession = new PlayActionSessionController(session);
+        var selection = new PlayInventorySelectionController(actionSession);
+        var targetId = new EntityId("debugScrap3");
+
+        Assert.True(selection.TryBeginPickup(targetId));
+        var pickup = selection.ConfirmPickup();
+        Assert.NotNull(pickup);
+        Assert.True(pickup!.Succeeded, pickup.FailureDetail ?? pickup.FailureReason?.ToString() ?? "unknown");
+        Assert.True(selection.TryBeginDropSource());
+        Assert.True(selection.ConfirmDropSource());
+
+        var actorCoord = session.World.GetEntityLocation(session.PlayerEntityId).Coord;
+        Assert.True(selection.Move(Direction.North));
+
+        Assert.Equal(actorCoord.Offset(Direction.North), selection.GridHighlight()?.Coord);
+    }
 }

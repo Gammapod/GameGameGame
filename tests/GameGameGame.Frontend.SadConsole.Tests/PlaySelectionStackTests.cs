@@ -42,6 +42,17 @@ public sealed class PlaySelectionStackTests
     }
 
     [Fact]
+    public void CellSelectionCanStartWithoutAdjacentContextForPlayerInventoryWorkflows()
+    {
+        var stack = new PlaySelectionStack();
+
+        stack.EnterCellSelection();
+
+        Assert.Equal(PlaySelectionFrameKind.CellSelection, stack.TopKind);
+        Assert.Null(stack.LockedAdjacentCoord);
+    }
+
+    [Fact]
     public void ClearToAdjacentSelectionClearsLockedCoord()
     {
         var stack = new PlaySelectionStack();
