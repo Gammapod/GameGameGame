@@ -69,9 +69,10 @@ internal sealed class PlayActionSessionController
 
     public PlayMovementResult SubmitMove(Direction direction)
     {
-        var before = World.Entities.ContainsKey(ControlledActorId)
-            ? World.GetEntityLocation(ControlledActorId).Coord
-            : new GridCoord(0, 0);
+        var beforeSource = World.Entities.ContainsKey(ControlledActorId)
+            ? World.GetEntityLocation(ControlledActorId)
+            : new PlaneCoord(Session.ActivePlaneId, new GridCoord(0, 0));
+        var before = beforeSource.Coord;
         var usedCoreChoice = CurrentActionChoiceRequest is { } request
             && request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move);
 
@@ -90,10 +91,11 @@ internal sealed class PlayActionSessionController
         }
 
         CompletePostSubmitRefresh(result.Succeeded);
-        var after = World.Entities.ContainsKey(ControlledActorId)
-            ? World.GetEntityLocation(ControlledActorId).Coord
-            : before;
-        return new PlayMovementResult(result, before, after, usedCoreChoice);
+        var afterSource = World.Entities.ContainsKey(ControlledActorId)
+            ? World.GetEntityLocation(ControlledActorId)
+            : beforeSource;
+        var after = afterSource.Coord;
+        return new PlayMovementResult(result, before, after, beforeSource, afterSource, usedCoreChoice);
     }
 
     public PlayMovementResult SubmitMoveAndDeferRefresh(Direction direction)
@@ -103,9 +105,10 @@ internal sealed class PlayActionSessionController
             CompletePendingPostSubmitRefresh();
         }
 
-        var before = World.Entities.ContainsKey(ControlledActorId)
-            ? World.GetEntityLocation(ControlledActorId).Coord
-            : new GridCoord(0, 0);
+        var beforeSource = World.Entities.ContainsKey(ControlledActorId)
+            ? World.GetEntityLocation(ControlledActorId)
+            : new PlaneCoord(Session.ActivePlaneId, new GridCoord(0, 0));
+        var before = beforeSource.Coord;
         var usedCoreChoice = CurrentActionChoiceRequest is { } request
             && request.Choices.Any(choice => choice.Kind == ActionChoiceKind.Move);
 
@@ -123,9 +126,10 @@ internal sealed class PlayActionSessionController
                 : _history.SubmitControlledCommand(_commands, ControlledActorCommand.Move(direction));
         }
 
-        var after = World.Entities.ContainsKey(ControlledActorId)
-            ? World.GetEntityLocation(ControlledActorId).Coord
-            : before;
+        var afterSource = World.Entities.ContainsKey(ControlledActorId)
+            ? World.GetEntityLocation(ControlledActorId)
+            : beforeSource;
+        var after = afterSource.Coord;
         if (result.Succeeded)
         {
             _postSubmitRefreshPending = true;
@@ -135,7 +139,7 @@ internal sealed class PlayActionSessionController
             CompletePostSubmitRefresh(succeeded: false);
         }
 
-        return new PlayMovementResult(result, before, after, usedCoreChoice);
+        return new PlayMovementResult(result, before, after, beforeSource, afterSource, usedCoreChoice);
     }
 
     public void CompletePendingPostSubmitRefresh()

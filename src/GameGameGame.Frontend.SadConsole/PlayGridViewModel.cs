@@ -15,7 +15,23 @@ internal sealed record PlayCellVisual(
     Color? EntityForeground = null,
     EntityId? EntityId = null,
     int? FacingGlyph = null,
-    SadMirror FacingMirror = SadMirror.None);
+    SadMirror FacingMirror = SadMirror.None,
+    bool IsInPointOfView = true,
+    bool IsDimmedByPointOfView = false,
+    TopologyNodeId? TopologyNodeId = null,
+    TopologyLayoutCoord? LayoutCoord = null,
+    PlaneCoord? SourceCoord = null);
+
+internal enum PlayGridDiagnosticCode
+{
+    DisplayCoordinateCollision
+}
+
+internal sealed record PlayGridDiagnostic(
+    PlayGridDiagnosticCode Code,
+    GridCoord DisplayCoord,
+    IReadOnlyList<PlaneCoord> SourceCoords,
+    string Message);
 
 internal sealed record PlayGridViewModel(
     string Title,
@@ -25,67 +41,160 @@ internal sealed record PlayGridViewModel(
     EntityId ControlledEntityId,
     GridCoord? ControlledEntityCoord,
     PlaneId PlaneId,
-    EntityId? ContainerEntityId)
+    EntityId? ContainerEntityId,
+    IReadOnlyList<PlayGridDiagnostic> Diagnostics)
 {
     private readonly IReadOnlyDictionary<(int X, int Y), PlayCellVisual> _cellsByCoord = Cells.ToDictionary(cell => (cell.X, cell.Y));
 
     public PlayCellVisual? TryCellAt(int x, int y) => _cellsByCoord.TryGetValue((x, y), out var cell) ? cell : null;
 
+    public GridCoord? TryDisplayCoordForSource(PlaneCoord sourceCoord)
+    {
+        var cell = Cells.FirstOrDefault(cell => cell.SourceCoord == sourceCoord);
+        return cell is null ? null : new GridCoord(cell.X, cell.Y);
+    }
+
     public PlayCellVisual CellAt(int x, int y) => TryCellAt(x, y)
         ?? throw new InvalidOperationException($"Cell ({x},{y}) is outside rendered plane {PlaneId}.");
 
-    public static PlayGridViewModel FromSession(PlayableScenarioSession session, TilesetProfile tilesetProfile, PlaneId? preferredPlaneId = null)
+    public static PlayGridViewModel FromSession(
+        PlayableScenarioSession session,
+        TilesetProfile tilesetProfile,
+        PlaneId? preferredPlaneId = null,
+        TopologyVisibilityProjection? topologyVisibility = null)
     {
         var planeId = preferredPlaneId is { } requestedPlaneId && session.World.Planes.ContainsKey(requestedPlaneId)
             ? requestedPlaneId
             : ResolveRenderedPlane(session);
         var plane = session.World.Planes[planeId];
-        var cells = new List<PlayCellVisual>();
-
-        for (var y = 0; y < plane.Height; y++)
+        var cellsByDisplayCoord = new Dictionary<(int X, int Y), PlayCellVisual>();
+        var diagnostics = new List<PlayGridDiagnostic>();
+        var visibleCellsBySource = topologyVisibility?.VisibleCells
+            .ToDictionary(cell => cell.Cell.SourceCoord, cell => cell);
+        if (topologyVisibility is null)
         {
-            for (var x = 0; x < plane.Width; x++)
+            for (var y = 0; y < plane.Height; y++)
             {
-                var coord = new PlaneCoord(planeId, new GridCoord(x, y));
-                var occupant = session.World.GetOccupant(coord);
-                var entityGlyph = occupant is { } entityId
-                    ? ResolveEntityGlyph(session, tilesetProfile, entityId)
-                    : (int?)null;
-                var facing = occupant is { } facingEntityId && session.World.GetActionFacing(facingEntityId) is { } direction
-                    ? tilesetProfile.Roles.FacingGlyph(direction)
-                    : ((int Glyph, SadMirror Mirror)?)null;
-
-                cells.Add(new PlayCellVisual(
-                    x,
-                    y,
-                    tilesetProfile.Roles.DefaultBackdrop,
-                    Color.Gray,
-                    Color.Black,
-                    entityGlyph,
-                    occupant == session.PlayerEntityId ? Color.Yellow : Color.White,
-                    occupant,
-                    facing?.Glyph,
-                    facing?.Mirror ?? SadMirror.None));
+                for (var x = 0; x < plane.Width; x++)
+                {
+                    var coord = new PlaneCoord(planeId, new GridCoord(x, y));
+                    var displayCoord = new GridCoord(x, y);
+                    AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
+                        session,
+                        tilesetProfile,
+                        coord,
+                        displayCoord,
+                        isInPointOfView: true,
+                        visibleCell: null));
+                }
             }
         }
+        else
+        {
+            foreach (var contextCell in topologyVisibility.ContextCells)
+            {
+                var displayCoord = contextCell.LayoutCoord?.Coord ?? contextCell.Cell.SourceCoord.Coord;
+                var isInPointOfView = visibleCellsBySource?.ContainsKey(contextCell.Cell.SourceCoord) == true;
+                AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
+                    session,
+                    tilesetProfile,
+                    contextCell.Cell.SourceCoord,
+                    displayCoord,
+                    isInPointOfView,
+                    isInPointOfView ? visibleCellsBySource![contextCell.Cell.SourceCoord] : contextCell));
+            }
+        }
+
+        var cells = cellsByDisplayCoord.Values
+            .OrderBy(cell => cell.Y)
+            .ThenBy(cell => cell.X)
+            .ToList();
+        var width = cells.Count == 0 ? plane.Width : Math.Max(plane.Width, cells.Max(cell => cell.X) + 1);
+        var height = cells.Count == 0 ? plane.Height : Math.Max(plane.Height, cells.Max(cell => cell.Y) + 1);
 
         var controlledCoord = session.World.Entities.ContainsKey(session.PlayerEntityId)
             && session.World.GetEntityLocation(session.PlayerEntityId).PlaneId == planeId
             ? session.World.GetEntityLocation(session.PlayerEntityId).Coord
             : (GridCoord?)null;
+        if (topologyVisibility is not null
+            && topologyVisibility.VisibleCells.FirstOrDefault(cell => cell.Cell == topologyVisibility.Origin)?.LayoutCoord is { } originLayoutCoord)
+        {
+            controlledCoord = originLayoutCoord.Coord;
+        }
+
         var containerEntityId = InventoryPlaneOwnership.TryFindOwner(session.World, planeId, out var ownerId)
             ? ownerId
             : (EntityId?)null;
 
         return new PlayGridViewModel(
             session.Name,
-            plane.Width,
-            plane.Height,
+            width,
+            height,
             cells,
             session.PlayerEntityId,
             controlledCoord,
             planeId,
-            containerEntityId);
+            containerEntityId,
+            diagnostics);
+    }
+
+    private static void AddCellVisual(
+        Dictionary<(int X, int Y), PlayCellVisual> cellsByDisplayCoord,
+        List<PlayGridDiagnostic> diagnostics,
+        PlayCellVisual cell)
+    {
+        var key = (cell.X, cell.Y);
+        if (cellsByDisplayCoord.TryGetValue(key, out var existing)
+            && existing.SourceCoord is { } existingSource
+            && cell.SourceCoord is { } newSource
+            && existingSource != newSource)
+        {
+            diagnostics.Add(new PlayGridDiagnostic(
+                PlayGridDiagnosticCode.DisplayCoordinateCollision,
+                new GridCoord(cell.X, cell.Y),
+                [existingSource, newSource],
+                $"Topology display coordinate ({cell.X},{cell.Y}) contains multiple source cells: {existingSource} and {newSource}."));
+        }
+
+        cellsByDisplayCoord[key] = cell;
+    }
+
+    private static PlayCellVisual BuildCellVisual(
+        PlayableScenarioSession session,
+        TilesetProfile tilesetProfile,
+        PlaneCoord sourceCoord,
+        GridCoord displayCoord,
+        bool isInPointOfView,
+        TopologyVisibleCellProjection? visibleCell)
+    {
+        var occupant = session.World.GetOccupant(sourceCoord);
+        var entityGlyph = occupant is { } entityId
+            ? ResolveEntityGlyph(session, tilesetProfile, entityId)
+            : (int?)null;
+        var facing = occupant is { } facingEntityId && session.World.GetActionFacing(facingEntityId) is { } direction
+            ? tilesetProfile.Roles.FacingGlyph(direction)
+            : ((int Glyph, SadMirror Mirror)?)null;
+        var backdropForeground = isInPointOfView ? Color.Gray : Color.DimGray;
+        var entityForeground = occupant == session.PlayerEntityId
+            ? Color.Yellow
+            : isInPointOfView ? Color.White : Color.DimGray;
+
+        return new PlayCellVisual(
+            displayCoord.X,
+            displayCoord.Y,
+            tilesetProfile.Roles.DefaultBackdrop,
+            backdropForeground,
+            Color.Black,
+            entityGlyph,
+            entityForeground,
+            occupant,
+            facing?.Glyph,
+            facing?.Mirror ?? SadMirror.None,
+            isInPointOfView,
+            !isInPointOfView,
+            visibleCell?.NodeId,
+            visibleCell?.LayoutCoord,
+            sourceCoord);
     }
 
     private static PlaneId ResolveRenderedPlane(PlayableScenarioSession session)
@@ -198,7 +307,18 @@ internal sealed record PlayRenderedGridCell(
     SadMirror FacingMirror,
     int? HighlightGlyph,
     Color? HighlightForeground,
-    SadMirror HighlightMirror);
+    SadMirror HighlightMirror)
+{
+    public static PlayRenderedGridCell Clear { get; } = new(
+        0,
+        Color.Black,
+        Color.Black,
+        null,
+        SadMirror.None,
+        null,
+        null,
+        SadMirror.None);
+}
 
 internal sealed class PlayGridSurfacePresenter
 {
@@ -226,6 +346,12 @@ internal sealed class PlayGridSurfacePresenter
             _drawnGridBounds = gridBounds;
         }
 
+        foreach (var stale in ResolveStaleDrawnCoordinatesForSparseModel(_drawnCells.Keys, gridBounds, model))
+        {
+            DrawCell(target, stale.X, stale.Y, PlayRenderedGridCell.Clear);
+            _drawnCells.Remove(stale);
+        }
+
         foreach (var cell in model.Cells)
         {
             var x = gridBounds.X + cell.X;
@@ -242,6 +368,22 @@ internal sealed class PlayGridSurfacePresenter
             DrawCell(target, x, y, state);
             _drawnCells[key] = state;
         }
+    }
+
+    internal static IReadOnlyList<(int X, int Y)> ResolveStaleDrawnCoordinatesForSparseModel(
+        IEnumerable<(int X, int Y)> previouslyDrawnCoordinates,
+        FrontendRect gridBounds,
+        PlayGridViewModel model)
+    {
+        var currentCoordinates = model.Cells
+            .Select(cell => (X: gridBounds.X + cell.X, Y: gridBounds.Y + cell.Y))
+            .ToHashSet();
+
+        return previouslyDrawnCoordinates
+            .Where(coord => !currentCoordinates.Contains(coord))
+            .OrderBy(coord => coord.Y)
+            .ThenBy(coord => coord.X)
+            .ToList();
     }
 
     private static PlayRenderedGridCell ToRenderedCell(PlayCellVisual cell, bool entityHidden, CellHighlightPresentation? highlight)

@@ -1,4 +1,5 @@
 using GameGameGame.Content;
+using GameGameGame.Core;
 using GameGameGame.Frontend.SadConsole;
 
 namespace GameGameGame.Frontend.SadConsole.Tests;
@@ -40,5 +41,246 @@ public sealed class PlayGridViewModelTests
         Assert.Same(grid.Cells[0], grid.TryCellAt(0, 0));
         Assert.Null(grid.TryCellAt(-1, 0));
         Assert.Null(grid.TryCellAt(grid.Width, grid.Height));
+    }
+
+    [Fact]
+    public void PlayGridViewModelMarksCellsOutsideTopologyPovAsDimmedContext()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var tileset = TilesetProfileLoader.LoadCandii();
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 0, contextDepth: 10);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        var playerCell = grid.CellAt(4, 3);
+        var contextCell = grid.CellAt(0, 0);
+        Assert.True(playerCell.IsInPointOfView);
+        Assert.False(contextCell.IsInPointOfView);
+        Assert.True(contextCell.IsDimmedByPointOfView);
+        Assert.NotEqual(playerCell.BackdropForeground, contextCell.BackdropForeground);
+    }
+
+    [Fact]
+    public void PlayGridViewModelIncludesVisibleCellsAcrossTopologySeams()
+    {
+        var path = Path.Combine(
+            TestRepository.Root(),
+            "src",
+            "GameGameGame.Content",
+            "Beta",
+            "Topology",
+            "RoomHallAlignedJoinShowcase.yaml");
+        var session = PlayableScenarioLauncher.CreateFromFile(path, "beta-room-hall-aligned-join");
+        var tileset = TilesetProfileLoader.LoadCandii();
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 2, contextDepth: 10);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        Assert.True(grid.Width >= 5);
+        var hallCell = grid.TryCellAt(3, 1);
+        Assert.NotNull(hallCell);
+        Assert.True(hallCell.IsInPointOfView);
+        Assert.NotNull(hallCell.TopologyNodeId);
+        Assert.Equal(new TopologyLayoutCoord(new GridCoord(3, 1)), hallCell.LayoutCoord);
+    }
+
+    [Fact]
+    public void PlayGridViewModelDoesNotDuplicatePlayerWhenTopologyLayoutDiffersFromSourcePlaneCoordinates()
+    {
+        var path = Path.Combine(
+            TestRepository.Root(),
+            "src",
+            "GameGameGame.Content",
+            "Beta",
+            "Topology",
+            "RoomHallAlignedJoinShowcase.yaml");
+        var session = PlayableScenarioLauncher.CreateFromFile(path, "beta-room-hall-aligned-join");
+        var tileset = TilesetProfileLoader.LoadCandii();
+        MoveEntity(session.World, session.PlayerEntityId, new PlaneCoord(new PlaneId("roomHallHallAB"), new GridCoord(1, 0)));
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 2, contextDepth: 10);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        var playerCells = grid.Cells.Where(cell => cell.EntityId == session.PlayerEntityId).ToList();
+        var playerCell = Assert.Single(playerCells);
+        Assert.Equal(new GridCoord(4, 1), new GridCoord(playerCell.X, playerCell.Y));
+        Assert.Equal(new GridCoord(4, 1), grid.ControlledEntityCoord);
+    }
+
+    [Fact]
+    public void PlayGridViewModelDoesNotFillMergedLayerBoundingBoxGaps()
+    {
+        var path = Path.Combine(
+            TestRepository.Root(),
+            "src",
+            "GameGameGame.Content",
+            "Beta",
+            "Topology",
+            "MergedInventoryLayerShowcase.yaml");
+        var session = PlayableScenarioLauncher.CreateFromFile(path, "delta-merged-inventory-layer-acceptance");
+        var tileset = TilesetProfileLoader.LoadCandii();
+        MoveEntity(session.World, session.PlayerEntityId, new PlaneCoord(new PlaneId("mergedLayerGateB"), new GridCoord(1, 0)));
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 10, contextDepth: 10);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        Assert.Null(grid.TryCellAt(3, 0));
+        Assert.Null(grid.TryCellAt(4, 0));
+        Assert.Null(grid.TryCellAt(0, 2));
+        Assert.Null(grid.TryCellAt(2, 3));
+    }
+
+    [Fact]
+    public void PlayGridViewModelDoesNotFillMergedLayerBoundingBoxGapsFromFirstContribution()
+    {
+        var path = Path.Combine(
+            TestRepository.Root(),
+            "src",
+            "GameGameGame.Content",
+            "Beta",
+            "Topology",
+            "MergedInventoryLayerShowcase.yaml");
+        var session = PlayableScenarioLauncher.CreateFromFile(path, "delta-merged-inventory-layer-acceptance");
+        var tileset = TilesetProfileLoader.LoadCandii();
+        MoveEntity(session.World, session.PlayerEntityId, new PlaneCoord(new PlaneId("mergedLayerGateA"), new GridCoord(1, 0)));
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, TopologyVisibilityProjectionService.DefaultPlayPovDepth, TopologyVisibilityProjectionService.DefaultPlayContextDepth);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        Assert.Null(grid.TryCellAt(3, 0));
+        Assert.Null(grid.TryCellAt(4, 0));
+        Assert.Null(grid.TryCellAt(0, 2));
+        Assert.Null(grid.TryCellAt(2, 3));
+    }
+
+    [Fact]
+    public void PlayGridViewModelDimsTopologyContextCellsOutsidePovRange()
+    {
+        var path = Path.Combine(
+            TestRepository.Root(),
+            "src",
+            "GameGameGame.Content",
+            "Beta",
+            "Topology",
+            "RoomHallAlignedJoinShowcase.yaml");
+        var session = PlayableScenarioLauncher.CreateFromFile(path, "beta-room-hall-aligned-join");
+        var tileset = TilesetProfileLoader.LoadCandii();
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 0, contextDepth: 2);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        var origin = grid.CellAt(1, 1);
+        var context = grid.CellAt(2, 1);
+        Assert.True(origin.IsInPointOfView);
+        Assert.False(context.IsInPointOfView);
+        Assert.True(context.IsDimmedByPointOfView);
+    }
+
+    [Fact]
+    public void PlayGridViewModelReportsTopologyCellsThatShareOneDisplayCoordinate()
+    {
+        var world = new WorldState();
+        AddPlane(world, new PlaneId("first"), 1, 1);
+        AddPlane(world, new PlaneId("second"), 1, 1);
+        var playerId = new EntityId("player");
+        AddEntity(world, playerId, "Player", new PlaneCoord(new PlaneId("first"), new GridCoord(0, 0)));
+        var session = new PlayableScenarioSession(
+            "collision",
+            "Collision",
+            world,
+            new PrototypeContentRegistry(new Dictionary<EntityTemplateId, EntityTemplate>(), new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(), new Dictionary<EntityTemplateId, EntityPresentation>()),
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            playerId,
+            new PlaneId("first"),
+            playerId,
+            CanPlay: true,
+            [],
+            [],
+            []);
+        var firstCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(new PlaneCoord(new PlaneId("first"), new GridCoord(0, 0))),
+            0,
+            null,
+            null,
+            null,
+            new TopologyNodeId("first:0,0"),
+            new TopologyLayoutCoord(new GridCoord(0, 0)));
+        var secondCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(new PlaneCoord(new PlaneId("second"), new GridCoord(0, 0))),
+            1,
+            null,
+            Direction.East,
+            TopologyEdgeKind.MergedInventoryLayer,
+            new TopologyNodeId("second:0,0"),
+            new TopologyLayoutCoord(new GridCoord(0, 0)));
+        var projection = new TopologyVisibilityProjection(
+            playerId,
+            firstCell.Cell,
+            1,
+            [firstCell, secondCell],
+            [],
+            [firstCell, secondCell],
+            []);
+
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), topologyVisibility: projection);
+
+        var diagnostic = Assert.Single(grid.Diagnostics, diagnostic => diagnostic.Code == PlayGridDiagnosticCode.DisplayCoordinateCollision);
+        Assert.Equal(new GridCoord(0, 0), diagnostic.DisplayCoord);
+        Assert.Contains(firstCell.Cell.SourceCoord, diagnostic.SourceCoords);
+        Assert.Contains(secondCell.Cell.SourceCoord, diagnostic.SourceCoords);
+        Assert.Single(grid.Cells);
+    }
+
+    [Fact]
+    public void PlayGridSurfacePresenterIdentifiesPreviouslyDrawnCellsMissingFromSparseTopologyModel()
+    {
+        var previous = new HashSet<(int X, int Y)> { (10, 10), (11, 10) };
+        var model = new PlayGridViewModel(
+            "Sparse",
+            Width: 2,
+            Height: 1,
+            [new PlayCellVisual(1, 0, 223, global::SadRogue.Primitives.Color.Gray, global::SadRogue.Primitives.Color.Black)],
+            new EntityId("player"),
+            new GridCoord(1, 0),
+            new PlaneId("plane"),
+            null,
+            []);
+
+        var stale = PlayGridSurfacePresenter.ResolveStaleDrawnCoordinatesForSparseModel(
+            previous,
+            new FrontendRect(9, 10, 2, 1),
+            model);
+
+        Assert.Equal([(11, 10)], stale);
+    }
+
+    private static void MoveEntity(GameGameGame.Core.WorldState world, EntityId entityId, PlaneCoord destination)
+    {
+        var entity = world.Entities[entityId];
+        world.Occupancy.Remove(entity.OccupiedNodeId);
+        var nodeId = world.GetNodeId(destination);
+        world.Occupancy.Add(nodeId, entityId);
+        world.Entities[entityId] = entity with { OccupiedNodeId = nodeId };
+    }
+
+    private static void AddPlane(WorldState world, PlaneId planeId, int width, int height)
+    {
+        world.Planes.Add(planeId, new Plane(planeId, planeId.Value, width, height));
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                world.AddNode(planeId, new GridCoord(x, y));
+            }
+        }
+    }
+
+    private static void AddEntity(WorldState world, EntityId entityId, string name, PlaneCoord location)
+    {
+        var nodeId = world.GetNodeId(location);
+        world.Entities.Add(entityId, new Entity(entityId, name, nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1));
+        world.Occupancy.Add(nodeId, entityId);
     }
 }

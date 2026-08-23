@@ -162,7 +162,8 @@ public sealed class PlayInspectionStateTests
         player,
         new GridCoord(1, 1),
         new PlaneId("plane"),
-        null);
+        null,
+        []);
 
     private static PlayGridViewModel GridWithDistantBlock(EntityId player, EntityId block) => new(
         "test",
@@ -178,7 +179,8 @@ public sealed class PlayInspectionStateTests
         player,
         new GridCoord(1, 1),
         new PlaneId("plane"),
-        null);
+        null,
+        []);
 
     private static PlayCellVisual Cell(int x, int y, EntityId? entityId = null) => new(
         x,

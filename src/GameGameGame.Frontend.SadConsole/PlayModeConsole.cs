@@ -45,11 +45,22 @@ internal sealed class PlayModeConsole : Console
         _playerPanel = new PlayPlayerPanelController(this, session, _actionSession, displaySettings, tilesetProfile);
         _actionWorkflow = new PlayActionWorkflowController(_actionSession);
         _animationPresenter = new PlayMovementAnimationPresenter(this, shell, tilesetProfile, PlayAnimationSettings.Default, session.PlayerEntityId);
-        _grid = PlayGridViewModel.FromSession(session, tilesetProfile);
+        _grid = BuildGrid();
         UseKeyboard = true;
         IsFocused = true;
         FocusedMode = global::SadConsole.FocusBehavior.Set;
         Redraw();
+    }
+
+    private PlayGridViewModel BuildGrid(PlaneId? preferredPlaneId = null)
+    {
+        var topologyVisibility = new TopologyVisibilityProjectionService().Project(
+            _session.World,
+            _actionSession.ControlledActorId,
+            TopologyVisibilityProjectionService.DefaultPlayPovDepth,
+            TopologyVisibilityProjectionService.DefaultPlayContextDepth);
+
+        return PlayGridViewModel.FromSession(_session, _tilesetProfile, preferredPlaneId, topologyVisibility);
     }
 
     public override bool ProcessKeyboard(Keyboard keyboard)
@@ -138,7 +149,7 @@ internal sealed class PlayModeConsole : Console
             _actionWorkflow.Cancel();
             if (wasExitSelection)
             {
-                _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+                _grid = BuildGrid();
             }
             _selectionStack.PopToActionOrAdjacent();
             _message = "Inventory selection cancelled.";
@@ -322,7 +333,7 @@ internal sealed class PlayModeConsole : Console
     {
         if (result.Succeeded)
         {
-            _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+            _grid = BuildGrid();
             _inspection.MarkWorldChanged();
             _playerPanel.MarkWorldChanged();
             _movementPreview.Clear();
@@ -473,7 +484,7 @@ internal sealed class PlayModeConsole : Console
 
         if (_actionWorkflow.ExitDestinationPlaneId() is { } exitPlaneId)
         {
-            _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile, exitPlaneId);
+            _grid = BuildGrid(exitPlaneId);
         }
 
         _selectionStack.EnterCellSelection();
@@ -546,7 +557,7 @@ internal sealed class PlayModeConsole : Console
         {
             using (_performance.Measure(PlayPerformanceCounterKind.GridRebuild))
             {
-                _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+                _grid = BuildGrid();
             }
 
             _message = result.CommandResult.FailureDetail is { Length: > 0 } detail
@@ -560,9 +571,14 @@ internal sealed class PlayModeConsole : Console
         _playerPanel.MarkWorldChanged();
         _message = $"Moved {direction}.";
         _movementPreview.Clear();
-        if (result.MovedOneCell)
+        var beforeDisplayCoord = beforeGrid.TryDisplayCoordForSource(result.BeforeSourceCoord);
+        var afterDisplayCoord = BuildGrid().TryDisplayCoordForSource(result.AfterSourceCoord);
+        if (beforeDisplayCoord is { } beforeDisplay
+            && afterDisplayCoord is { } afterDisplay
+            && IsAdjacentDisplayMove(beforeDisplay, afterDisplay)
+            && beforeGrid.TryCellAt(beforeDisplay.X, beforeDisplay.Y)?.EntityId == _actionSession.ControlledActorId)
         {
-            _animationPresenter.Start(beforeGrid, result.BeforeCoord, result.AfterCoord, direction);
+            _animationPresenter.Start(beforeGrid, beforeDisplay, afterDisplay, direction);
             Redraw();
             return;
         }
@@ -570,11 +586,16 @@ internal sealed class PlayModeConsole : Console
         _movement.CompletePendingPostSubmitRefresh();
         using (_performance.Measure(PlayPerformanceCounterKind.GridRebuild))
         {
-            _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+            _grid = BuildGrid();
         }
 
         Redraw();
     }
+
+    private static bool IsAdjacentDisplayMove(GridCoord before, GridCoord after) =>
+        before != after
+        && Math.Abs(after.X - before.X) <= 1
+        && Math.Abs(after.Y - before.Y) <= 1;
 
     private void EndAnimationAndRedrawFinalState()
     {
@@ -582,7 +603,7 @@ internal sealed class PlayModeConsole : Console
         _movement.CompletePendingPostSubmitRefresh();
         using (_performance.Measure(PlayPerformanceCounterKind.GridRebuild))
         {
-            _grid = PlayGridViewModel.FromSession(_session, _tilesetProfile);
+            _grid = BuildGrid();
         }
         Redraw();
         if (_queuedMovement.TryConsume(out var queuedDirection))
@@ -611,6 +632,8 @@ internal sealed class PlayModeConsole : Console
             var visibleGrid = _animationPresenter.BaseGrid ?? _grid;
             var actualGridBounds = PlayGridRenderer.ResolveGridBounds(layout.GridBounds, visibleGrid);
             ClearSurfaceExcept(actualGridBounds);
+            ClearSurfaceRegion(actualGridBounds);
+            _gridPresenter.Invalidate();
             DrawBorder();
             Print(2, 1, $"Play: {_session.Name} [{_session.ScenarioId}]", Color.White);
             Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Player: {_actionSession.ControlledActorId} | {_message}", Color.Gray);
@@ -741,6 +764,21 @@ internal sealed class PlayModeConsole : Console
                     continue;
                 }
 
+                SetGlyph(x, y, _tilesetProfile.Blank, Color.White, Color.Black);
+            }
+        }
+    }
+
+    private void ClearSurfaceRegion(FrontendRect region)
+    {
+        var minX = Math.Max(0, region.X);
+        var minY = Math.Max(0, region.Y);
+        var maxX = Math.Min(Width, region.X + region.Width);
+        var maxY = Math.Min(Height, region.Y + region.Height);
+        for (var y = minY; y < maxY; y++)
+        {
+            for (var x = minX; x < maxX; x++)
+            {
                 SetGlyph(x, y, _tilesetProfile.Blank, Color.White, Color.Black);
             }
         }

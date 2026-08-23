@@ -84,6 +84,34 @@ public sealed class ActorPovPlayProjectionTests
     }
 
     [Fact]
+    public void TopologyVisibilityProjectionReportsVisibleEntitiesWithinDepthLimitedReachability()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new TopologyVisibilityProjectionService();
+
+        var originOnly = service.Project(world, TestWorld.PlayerId, maxDepth: 0);
+        var nearby = service.Project(world, TestWorld.PlayerId, maxDepth: 1);
+
+        var originEntity = Assert.Single(originOnly.VisibleEntities);
+        Assert.Equal(TestWorld.PlayerId, originEntity.EntityId);
+        Assert.Equal(0, originEntity.Distance);
+        Assert.Contains(nearby.VisibleEntities, entity => entity.EntityId == TestWorld.SlimeId && entity.Distance == 1);
+    }
+
+    [Fact]
+    public void TopologyVisibilityProjectionSeparatesVisibleRangeFromDimmedContextRange()
+    {
+        var world = TestWorld.CreateWorld();
+        var service = new TopologyVisibilityProjectionService();
+
+        var projection = service.Project(world, TestWorld.PlayerId, maxDepth: 0, contextDepth: 1);
+
+        Assert.Contains(projection.VisibleCells, cell => cell.Cell == projection.Origin && cell.Distance == 0);
+        Assert.DoesNotContain(projection.VisibleCells, cell => cell.Direction == Direction.East);
+        Assert.Contains(projection.ContextCells, cell => cell.Direction == Direction.East && cell.Distance == 1);
+    }
+
+    [Fact]
     public void TopologyVisibilityProjectionReportsMissingObserverWithoutFrontendGuessing()
     {
         var service = new TopologyVisibilityProjectionService();

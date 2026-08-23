@@ -7,6 +7,8 @@ public sealed record TopologyVisibilityProjection(
     TopologyCellRef Origin,
     int MaxDepth,
     IReadOnlyList<TopologyVisibleCellProjection> VisibleCells,
+    IReadOnlyList<TopologyVisibleEntityProjection> VisibleEntities,
+    IReadOnlyList<TopologyVisibleCellProjection> ContextCells,
     IReadOnlyList<TopologyVisibilityDiagnostic> Diagnostics);
 
 public sealed record TopologyVisibleCellProjection(
@@ -15,6 +17,13 @@ public sealed record TopologyVisibleCellProjection(
     TopologyCellRef? From,
     Direction? Direction,
     TopologyEdgeKind? Kind,
+    TopologyNodeId? NodeId = null,
+    TopologyLayoutCoord? LayoutCoord = null);
+
+public sealed record TopologyVisibleEntityProjection(
+    EntityId EntityId,
+    TopologyCellRef Cell,
+    int Distance,
     TopologyNodeId? NodeId = null,
     TopologyLayoutCoord? LayoutCoord = null);
 
@@ -31,7 +40,10 @@ public sealed record TopologyVisibilityDiagnostic(
 
 public sealed class TopologyVisibilityProjectionService
 {
-    public TopologyVisibilityProjection Project(WorldState world, EntityId observerEntityId, int maxDepth)
+    public const int DefaultPlayPovDepth = 4;
+    public const int DefaultPlayContextDepth = 64;
+
+    public TopologyVisibilityProjection Project(WorldState world, EntityId observerEntityId, int maxDepth, int? contextDepth = null)
     {
         if (!world.Entities.ContainsKey(observerEntityId))
         {
@@ -39,6 +51,8 @@ public sealed class TopologyVisibilityProjectionService
                 observerEntityId,
                 new TopologyCellRef(new PlaneCoord(new PlaneId(string.Empty), new GridCoord(0, 0))),
                 maxDepth,
+                [],
+                [],
                 [],
                 [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.ObserverNotFound, $"Observer entity {observerEntityId} was not found.")]);
         }
@@ -51,6 +65,8 @@ public sealed class TopologyVisibilityProjectionService
                 origin,
                 maxDepth,
                 [],
+                [],
+                [],
                 [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.NegativeDepthNotSupported, "Topology visibility max depth must be non-negative.")]);
         }
 
@@ -62,18 +78,27 @@ public sealed class TopologyVisibilityProjectionService
                 origin,
                 maxDepth,
                 [],
+                [],
+                [],
                 [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.ObserverNotFound, $"Observer entity {observerEntityId} has no topology node at {origin}.")]);
         }
 
         var visibleCells = TopologyGraphTraversalService.Flood(graph, originNode.Id, maxDepth)
-            .Select(step => new TopologyVisibleCellProjection(
-                new TopologyCellRef(step.SourceCoord),
-                step.Distance,
-                step.FromNodeId is null || !graph.TryGetNode(step.FromNodeId.Value, out var fromNode) ? null : new TopologyCellRef(fromNode.SourceCoord),
-                step.Direction,
-                step.Kind,
-                step.NodeId,
-                step.LayoutCoord))
+            .Select(step => ToProjectionCell(graph, step))
+            .ToList();
+        var contextCells = TopologyGraphTraversalService.Flood(graph, originNode.Id, contextDepth ?? maxDepth)
+            .Select(step => ToProjectionCell(graph, step))
+            .ToList();
+
+        var visibleEntities = visibleCells
+            .Select(cell => (Cell: cell, EntityId: world.GetOccupant(cell.Cell.SourceCoord)))
+            .Where(item => item.EntityId is not null)
+            .Select(item => new TopologyVisibleEntityProjection(
+                item.EntityId!.Value,
+                item.Cell.Cell,
+                item.Cell.Distance,
+                item.Cell.NodeId,
+                item.Cell.LayoutCoord))
             .ToList();
 
         return new TopologyVisibilityProjection(
@@ -81,6 +106,17 @@ public sealed class TopologyVisibilityProjectionService
             origin,
             maxDepth,
             visibleCells,
+            visibleEntities,
+            contextCells,
             [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.LineOfSightNotImplemented, "Topology visibility currently reports depth-limited topology reachability, not line-of-sight or audibility.")]);
     }
+
+    private static TopologyVisibleCellProjection ToProjectionCell(TopologyGraph graph, TopologyGraphFloodStep step) => new(
+        new TopologyCellRef(step.SourceCoord),
+        step.Distance,
+        step.FromNodeId is null || !graph.TryGetNode(step.FromNodeId.Value, out var fromNode) ? null : new TopologyCellRef(fromNode.SourceCoord),
+        step.Direction,
+        step.Kind,
+        step.NodeId,
+        step.LayoutCoord);
 }

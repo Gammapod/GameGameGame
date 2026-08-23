@@ -6,6 +6,8 @@ internal sealed record PlayMovementResult(
     ControlledActorCommandResult CommandResult,
     GridCoord BeforeCoord,
     GridCoord AfterCoord,
+    PlaneCoord BeforeSourceCoord,
+    PlaneCoord AfterSourceCoord,
     bool UsedCoreActionChoice = false)
 {
     public bool MovedOneCell => CommandResult.Succeeded

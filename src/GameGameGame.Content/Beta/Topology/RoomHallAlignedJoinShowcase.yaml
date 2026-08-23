@@ -94,7 +94,7 @@ mergedLayers:
         y: 0
     - owner: roomHallHallAB
       origin:
-        x: 4
+        x: 3
         y: 1
     joins:
     - from:
