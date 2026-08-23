@@ -441,11 +441,10 @@ See `docs/Archived/Agent-Editor-API-Plan.md` for the historical implementation p
 
 Near-term work is tracked through the active rolling boards rather than the archived roadmap-style plans:
 
-1. keep this capability matrix and `Content-Authoring-Manual.md` aligned with existing implemented semantics before selecting new implementation work;
-2. quarantine the old SadConsole frontend from default build/test/package workflows so `GameGameGame.Frontend.SadConsole` is the normal maintained frontend;
-3. make the new frontend topology/POV based over shared Core/Content projection seams;
-4. implement topology-aware targeting distance semantics, including the selected rule that all eight cells adjacent to a target entity count as distance `0` and further cells use Manhattan distance from that adjacency boundary;
-5. expand merged topology authorship for intentional overlapping/non-euclidean content experiments;
-6. later, introduce an action workflow descriptor seam and a dedicated user-facing Log component over structured action outcomes.
+1. use the completed shared topology/POV foundation for polish and content experiments, keeping this capability matrix and `Content-Authoring-Manual.md` aligned as behavior stabilizes;
+2. implement topology-aware targeting distance semantics when selected content experiments need graph-distance candidate ordering, including the selected rule that all eight cells adjacent to a target entity count as distance `0` and further cells use Manhattan distance from that adjacency boundary;
+3. expand merged topology authorship for intentional overlapping/non-euclidean content experiments beyond the current center-aligned join vocabulary;
+4. introduce an action workflow descriptor seam when action UX churn becomes the selected bottleneck;
+5. add a dedicated user-facing Log component over structured action outcomes when gameplay readability is the selected frontend/content slice.
 
 Behavior templates, scheduler/speed work, reaction slots, diegetic action-plan entities, and broad new gameplay primitives remain conceptualized until selected for a concrete content/design need.

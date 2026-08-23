@@ -31,26 +31,15 @@ Purpose: Track small, continuously updated Core work without creating a dedicate
 
 ## Now
 
-### Add topology-aware targeting distance semantics
-
-**User story:** As a behavior author, I can target entities using distance semantics that survive merged, folded, and non-euclidean topology experiments.
-
-**Distance rule:** Cells adjacent to an entity in all eight directions count as distance `0` from that entity. Further cells use Manhattan distance from that adjacency boundary.
-
-**Plan:**
-
-- Specify the Core distance helper before changing targeting behavior.
-- Decide how the rule composes with graph/materialized topology links and same-cell/source-cell projections.
-- Update targeting candidate ordering/preview/reporting through shared services rather than frontend guesses.
-- Add tests for ordinary grids, diagonal adjacency, merged/source-cell links, and edge cases around occupied/current cells.
-
-**Done when:**
-
-- Targeting uses the documented distance rule through a shared Core/Content seam.
-- Existing targeting invariants remain traced or explicitly superseded.
-- Content/editor previews can explain why candidates were ordered or selected.
+No active Core-owned implementation item is currently in progress. Pull from **Next** when the next Core slice starts.
 
 ## Recently completed
+
+### 2026-08-23: Complete functional topology/POV foundation
+
+**Owners:** Core + Content + Frontend.
+
+**Completion notes:** Runtime topology is graph-first for movement, adjacency, pathing, action-choice movement destinations, topology visibility projection, and explicit source-cell-link seams. Merged-layer layout origins are projection metadata only and no longer create cross-contributor runtime adjacency by coordinate contact or overlap. Authored center-aligned merged-layer joins materialize source-cell links, diagonal movement can compose across explicit source-cell-link seams using the normal two-corner blocking rule, and frontend topology/POV rendering consumes shared projection and movement-edge facts without owning movement semantics.
 
 ### Update content-facing semantics documentation before new implementation
 
@@ -80,7 +69,24 @@ Purpose: Track small, continuously updated Core work without creating a dedicate
 
 ## Next
 
-No active Core-owned item queued after topology-aware targeting distance semantics. Pull from **Later** or the Content/Frontend boards when dependencies are satisfied.
+### Add topology-aware targeting distance semantics
+
+**User story:** As a behavior author, I can target entities using distance semantics that survive merged, folded, and non-euclidean topology experiments.
+
+**Distance rule:** Cells adjacent to an entity in all eight directions count as distance `0` from that entity. Further cells use Manhattan distance from that adjacency boundary.
+
+**Plan:**
+
+- Specify the Core distance helper before changing targeting behavior.
+- Decide how the rule composes with graph/materialized topology links and same-cell/source-cell projections.
+- Update targeting candidate ordering/preview/reporting through shared services rather than frontend guesses.
+- Add tests for ordinary grids, diagonal adjacency, merged/source-cell links, and edge cases around occupied/current cells.
+
+**Done when:**
+
+- Targeting uses the documented distance rule through a shared Core/Content seam.
+- Existing targeting invariants remain traced or explicitly superseded.
+- Content/editor previews can explain why candidates were ordered or selected.
 
 ## Later
 
@@ -109,7 +115,7 @@ No active Core-owned item queued after topology-aware targeting distance semanti
 
 **Owners:** Core + Frontend.
 
-**Priority dependency:** Do after the old frontend is quarantined from default workflows.
+**Priority dependency:** Old-frontend quarantine is complete; do when action UX churn becomes the selected bottleneck.
 
 **Plan:**
 

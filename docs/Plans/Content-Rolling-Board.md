@@ -58,24 +58,26 @@ No active Content-owned implementation item is currently in progress. Pull from 
 
 ## Next
 
-### Expand merged topology authorship for overlapping and non-euclidean experiments
+### Topology polish and merged-space content experiments
 
-**User story:** As a content author, I can intentionally author merged, overlapping, or folded spaces without relying on accidental layout collisions or narrow center-aligned joins.
+**User story:** As a content author, I can use the completed functional topology foundation to author clear, inspectable merged-space experiments and identify which polish or vocabulary gaps should be promoted next.
 
 **Owners:** Content, with Core collaboration required.
 
+**Foundation status:** Functional graph topology, topology/POV rendering, source-cell-link seams, center-aligned merged-layer joins, and diagonal seam movement are complete. Current merged-layer `spaces[].origin` values remain projection/layout metadata only; cross-contributor runtime movement, POV, pathing, and adjacency require explicit joins/source-cell links.
+
 **Plan:**
 
-- Clarify the authored vocabulary for merged layers, overlapping projections, folded topology, and source-cell identity.
-- Add or plan validation diagnostics that distinguish intentional overlap/fold semantics from accidental conflicts.
-- Extend authoring beyond the current first-slice cardinal center-aligned joins when Core semantics are ready.
-- Provide scenario/debug projections that show source cell, layout cell, and graph links distinctly.
+- Build or refine content examples that exercise intentional seams, negative/overlapping layout projection, room/hall loops, and player-readable POV/context presentation.
+- Record which polish items matter most in practice: debug labels, seam visualization, non-center joins, asymmetric/one-way joins, intentional overlap/fold vocabulary, or topology-aware targeting distance.
+- Add validation/reporting improvements when experiments expose confusing authoring failure modes.
+- Extend authoring beyond the current cardinal center-aligned joins only after the desired authored semantics are demonstrated by content examples.
 
 **Done when:**
 
-- Authors can express at least one intentional overlap/fold use case with clear validation behavior.
-- Core graph identity and Content YAML/materialization remain aligned.
-- Scenario reports/debug output make topology seams explainable.
+- At least one promoted experiment demonstrates the completed topology foundation without relying on accidental layout-coordinate adjacency.
+- Follow-up topology vocabulary is prioritized from content evidence rather than abstract capability wishlists.
+- Core graph identity, Content YAML/materialization, and frontend/debug presentation remain aligned.
 
 ## Later
 

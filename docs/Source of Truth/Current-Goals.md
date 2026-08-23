@@ -40,7 +40,7 @@ Do not read when:
 
 ## Current strategic priority
 
-The active direction is a stabilization-and-topology follow-through after completing user-facing semantics for most current actions: document the current Core/Content semantics, make the new SadConsole frontend the normal maintained frontend, then advance topology/POV, topology-aware targeting, merged/overlapping topology authorship, action workflow maintainability, and user-facing log semantics through the rolling boards.
+The active direction is a stabilization-and-content-experiment follow-through after completing user-facing semantics for most current actions and the functional topology/POV foundation: keep Core/Content semantics documented, keep the new SadConsole frontend as the normal maintained frontend, then use the rolling boards for topology polish, authored content experiments, topology-aware targeting when experiments need it, action workflow maintainability, and user-facing log semantics.
 
 ## Active planning bridge
 
@@ -57,12 +57,11 @@ The active direction is a stabilization-and-topology follow-through after comple
 
 Trust the three active rolling boards for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Update Core/Content-owned content-facing semantics documentation based on existing implemented behavior before selecting new implementation work.
-2. Quarantine the old SadConsole frontend from default build/test/package workflows and make `GameGameGame.Frontend.SadConsole` the documented real frontend.
-3. Make the new frontend topology/POV based so play rendering can show reachable spaces across layer boundaries rather than one room plane.
-4. Implement topology-aware targeting distance semantics in Core/Content: all eight adjacent cells to a target entity count as distance `0`, with further cells using Manhattan distance from that adjacency boundary.
-5. Expand merged topology authorship for overlapping/non-euclidean content experiments, Content-owned with Core collaboration.
-6. Later: introduce an action workflow descriptor seam after old-frontend quarantine, and add a dedicated user-facing Log component with Core/Content collaboration on structured log semantics.
+1. Use the completed topology/POV foundation for polish and content experiments: clearer debug/presentation affordances, intentional merged/overlapping/folded-space examples, and scenario evidence for authored seams.
+2. Implement topology-aware targeting distance semantics in Core/Content when a selected content experiment needs graph-distance candidate ordering: all eight adjacent cells to a target entity count as distance `0`, with further cells using Manhattan distance from that adjacency boundary.
+3. Expand merged topology authorship beyond current center-aligned joins for overlapping/non-euclidean content experiments, Content-owned with Core collaboration.
+4. Introduce an action workflow descriptor seam when action UX churn becomes the selected bottleneck.
+5. Add a dedicated user-facing Log component with Core/Content collaboration on structured action outcomes when gameplay readability is the selected frontend/content slice.
 
 ## Maintenance rule
 

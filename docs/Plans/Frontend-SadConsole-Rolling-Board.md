@@ -32,32 +32,29 @@ Purpose: Track small, continuously updated user stories without creating a dedic
 
 ## Now
 
-### Make new frontend Play mode topology/POV based
-
-**User story:** As a player, I see the spaces available from my controlled actor's point of view, including reachable spaces across layer/topology boundaries, rather than a single current room plane.
-
-**Owners:** Frontend, consuming Core/Content projection seams.
-
-**Priority dependency:** Start after the immediate documentation and old-frontend build-quarantine refactors have made the new frontend the normal maintained surface.
-
-**Plan:**
-
-- Replace the single-plane `PlayGridViewModel` assumption with a topology/POV visible-cell model.
-- Consume shared `PointOfViewService`, `ActorPovPlayProjectionService`, and/or `TopologyVisibilityProjectionService` facts rather than deriving ancestry or reachability in the frontend.
-- Preserve source plane/node/layout identity so merged layers, inventory-boundary links, and later overlapping spaces can be presented without losing provenance.
-- Keep line-of-sight/audibility claims out of presentation until Core/Content provide those facts.
-
-**Done when:**
-
-- The new frontend can render a controlled actor POV set instead of only one selected plane.
-- Cells reached across topology seams retain enough identity for inspection, highlighting, and action selection.
-- Existing one-room scenarios still render through the new model.
+No active frontend-owned implementation item is currently in progress. Pull from **Next** or **Later** when the next frontend slice starts.
 
 ## Next
 
-No active frontend-owned item queued after the topology/POV slice. Pull from **Later** or the Core/Content boards when dependencies are satisfied.
+No active frontend-owned item queued after the completed topology/POV foundation. Pull from **Later** or the Core/Content boards when dependencies are satisfied.
 
 ## Later
+
+### Topology/POV presentation polish
+
+**User story:** As a player, topology/POV spaces and seams are easier to understand visually after the functional shared topology foundation.
+
+**Owners:** Frontend, consuming Core/Content projection seams.
+
+**Plan:**
+
+- Improve dimmed-context, seam, overlap, and diagnostics presentation without adding frontend-owned movement or visibility semantics.
+- Keep line-of-sight/audibility claims out of presentation until Core/Content provide those facts.
+- Coordinate with Content when a scenario experiment needs specific visualization affordances.
+
+**Done when:**
+
+- The presentation makes authored seams/debug topology easier to inspect while preserving Core/Content source identity.
 
 ### Introduce an action workflow descriptor seam
 
@@ -65,7 +62,7 @@ No active frontend-owned item queued after the topology/POV slice. Pull from **L
 
 **Owners:** Frontend + Core. Tracked primarily on `plan.core-rolling-board` until the Core descriptor seam exists.
 
-**Priority dependency:** Do after the old frontend is quarantined from default workflows.
+**Priority dependency:** Old-frontend quarantine is complete; do when action UX churn becomes the selected bottleneck.
 
 **Plan:**
 
@@ -98,6 +95,27 @@ No active frontend-owned item queued after the topology/POV slice. Pull from **L
 - Debug traces remain available separately from player-facing logs.
 
 ## Completed
+
+### 2026-08-23: Make new frontend Play mode topology/POV based
+
+**User story:** As a player, I see the spaces available from my controlled actor's point of view, including reachable spaces across layer/topology boundaries, rather than a single current room plane.
+
+**Owners:** Frontend, consuming Core/Content projection seams.
+
+**Plan:**
+
+- Replace the single-plane `PlayGridViewModel` assumption with a topology/POV visible-cell model.
+- Consume shared `PointOfViewService`, `ActorPovPlayProjectionService`, and/or `TopologyVisibilityProjectionService` facts rather than deriving ancestry or reachability in the frontend.
+- Preserve source plane/node/layout identity so merged layers, inventory-boundary links, and later overlapping spaces can be presented without losing provenance.
+- Keep line-of-sight/audibility claims out of presentation until Core/Content provide those facts.
+
+**Done when:**
+
+- The new frontend can render a controlled actor POV set instead of only one selected plane.
+- Cells reached across topology seams retain enough identity for inspection, highlighting, and action selection.
+- Existing one-room scenarios still render through the new model.
+
+**Completion notes:** Functional topology/POV rendering is complete over shared Core/Content topology visibility projection facts. Display coordinates are normalized for rendering/animation while source/layout identity is preserved for inspection, movement highlights, and action selection. Overlapping visible cells prefer in-POV presentation over dimmed context, and movement/inspection previews resolve through Core movement edges rather than frontend display-coordinate guesses. Frontend-owner reviewed and approved the Core/frontend boundary split.
 
 ### 2026-08-16: Add player self-inspection/inventory panel
 
