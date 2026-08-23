@@ -11,15 +11,15 @@ public sealed class ScenarioRecordingTests : IDisposable
     [Fact]
     public void ScenarioRecordingServiceRecordsPersistedScenarioInitialStateAndFullTurns()
     {
-        var document = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+        var document = OpenBetaContent("CanonicalActions", "CanonicalTargetPathMovementShowcase.yaml");
         var outputDirectory = CreateOutputDirectory();
 
         var report = ScenarioRecordingService.Record(document, new ScenarioRecordingRequest(
-            ScenarioId: "beta-direct-chase",
+            ScenarioId: "beta-canonical-target-path-maze",
             TurnCount: 2,
             OutputDirectory: outputDirectory));
 
-        Assert.Equal("beta-direct-chase", report.ScenarioId);
+        Assert.Equal("beta-canonical-target-path-maze", report.ScenarioId);
         Assert.Empty(report.ValidationDiagnostics);
         Assert.Empty(report.RuntimeFailures);
         Assert.Equal(3, report.Frames.Count);
@@ -40,7 +40,7 @@ public sealed class ScenarioRecordingTests : IDisposable
     [Fact]
     public void ScenarioRecordingServiceReportsAuthoringDiagnosticsWithoutArtifacts()
     {
-        var document = OpenBetaContent("Targeting", "DirectChaseShowcase.yaml");
+        var document = OpenBetaContent("CanonicalActions", "CanonicalTargetPathMovementShowcase.yaml");
         var outputDirectory = CreateOutputDirectory();
 
         var report = ScenarioRecordingService.Record(document, new ScenarioRecordingRequest(

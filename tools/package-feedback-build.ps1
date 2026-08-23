@@ -36,7 +36,7 @@ if (Test-Path -LiteralPath $zipPath) {
 New-Item -ItemType Directory -Path $publishDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $stageParent -Force | Out-Null
 
-dotnet publish (Join-Path $repoRoot "src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj") `
+dotnet publish (Join-Path $repoRoot "src/GameGameGame.Frontend.SadConsole/GameGameGame.Frontend.SadConsole.csproj") `
     --configuration $Configuration `
     --runtime $Runtime `
     --self-contained true `
@@ -56,7 +56,7 @@ $readmePath = Join-Path $stageDirectory "README_FEEDBACK_BUILD.txt"
 Set-Content -LiteralPath $readmePath -Value @(
     "GameGameGame feedback build",
     "",
-    "Launch GameGameGame.exe to open the curated feedback scenario catalog.",
+    "Launch GameGameGame.Frontend.SadConsole.exe to open the curated feedback scenario catalog.",
     "Bundled YAML content includes the full packaged Beta content folder for inspection/editor use.",
     "The normal frontend catalog uses Content/Beta/Manifest.yaml, replaced from FeedbackManifest.yaml, so validation/debug/log-testing scenarios are not exposed through the curated scenario list."
 )

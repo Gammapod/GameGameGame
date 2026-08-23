@@ -397,8 +397,8 @@ public sealed class SimulationHistorySessionTests
     {
         var world = TestWorld.CreateWorld();
         var planTrace = new TraceNode("Plan slimePlan", TraceStatus.Success);
-        var stepTrace = new TraceNode("Action Step SeekTarget", TraceStatus.Success);
-        stepTrace.Add(TraceNode.Success("Primitive SeekTarget", "moved West"));
+        var stepTrace = new TraceNode("Action Step TargetPathMove", TraceStatus.Success);
+        stepTrace.Add(TraceNode.Success("Primitive TargetPathMove", "moved West"));
         planTrace.Add(stepTrace);
         var actionPlans = new Dictionary<EntityId, IEntityActionPlan>
         {
@@ -412,7 +412,7 @@ public sealed class SimulationHistorySessionTests
 
         var outcome = ActionLogProjection.FromHistory(history).Chronological.Single(row => row.ActorId == TestWorld.SlimeId);
         var attempt = Assert.Single(outcome.ActionStepAttempts);
-        Assert.Equal("SeekTarget", attempt.StepKind);
+        Assert.Equal("TargetPathMove", attempt.StepKind);
         Assert.Equal(TraceStatus.Success, attempt.Status);
         Assert.True(attempt.Stopped);
         Assert.Equal(["moved West"], attempt.Results);

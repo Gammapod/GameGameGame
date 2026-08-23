@@ -198,8 +198,8 @@ Each decision should include:
 
 - **Decision:** The first consumer-facing Play mode should start as a new isolated componentized mode inside `src/GameGameGame.SadConsole`, launched from a new `Play` scenario option. The existing debug Simulation/play path remains available but is relabeled `Debug`; `Edit` remains the editor route.
 - **Reasoning:** This creates a clean final-frontend growth path without duplicating SadConsole bootstrap, catalog/session wiring, component-gallery patterns, or shared-service consumption in a separate project too early. It also avoids extending the legacy debug play surface as the player-facing UX.
-- **Implications:** The MVP Play route renders only the controlled actor's current inventory space through a reusable layered inventory-space component in normal mode. Debug/editor workflows stay accessible but should not define the consumer Play UX. A separate frontend project can be reconsidered later if packaging, asset pipeline, final-engine choice, or product separation requires it.
-- **Status:** Active / implemented by `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`.
+- **Implications:** Historical context only. FED-026 and FED-040 supersede the project-location choice: active player-facing work now lives in `src/GameGameGame.Frontend.SadConsole` and the old project is reference-only.
+- **Status:** Superseded for project location / historical MVP context from `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`.
 
 ### FED-023: Canonical Push uses target-then-direction prompts in Consumer Play mode
 
@@ -232,7 +232,7 @@ Each decision should include:
 
 ### FED-026: New SadConsole frontend project supersedes old project for active player-facing work
 
-- **Decision:** New active frontend work starts in `src/GameGameGame.Frontend.SadConsole`, with tests in `tests/GameGameGame.Frontend.SadConsole.Tests`. The existing `src/GameGameGame.SadConsole` project remains buildable/reference-only until useful components, tests, patterns, glyph decisions, and display lessons have been mined, but the new project must not reference it.
+- **Decision:** New active frontend work starts in `src/GameGameGame.Frontend.SadConsole`, with tests in `tests/GameGameGame.Frontend.SadConsole.Tests`. The existing `src/GameGameGame.SadConsole` project remains reference-only until useful components, tests, patterns, glyph decisions, and display lessons have been mined, but the new project must not reference it.
 - **Reasoning:** The multi-document content/workspace refactor intentionally broke assumptions in the old frontend. Starting a clean project avoids preserving legacy Debug/Edit shell architecture while still allowing SadConsole research and component patterns to be cannibalized deliberately.
 - **Implications:** The first checkpoint is a workspace-backed scenario browser that shows `debug-room`; Play mode is rebuilt after that checkpoint. Debug mode is abandoned as a first-class route. Editor mode is deferred and should be reinvented around shared workspace/editor services. Reusable components promoted into the new frontend should receive readable gallery examples and focused tests once stable.
 - **Status:** Completed / archived. Historical spike sprint context lives in `docs/Archived/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`.
@@ -335,10 +335,17 @@ Each decision should include:
 - **Decision:** `GameGameGame.Frontend.SadConsole` is treated as the release-oriented SadConsole app on Windows and uses the MonoGame WindowsDX backend. Its default player-facing window mode is overlay-safe borderless; F11 toggles between overlay-safe borderless and windowed until a full settings screen exists.
 - **Reasoning:** Windows Game Bar and common capture/overlay tools are more reliable with DirectX than DesktopGL/OpenGL. Exact-monitor borderless windows can still be promoted into fullscreen-like presentation paths where overlays receive input but are not visibly composited, so the default borderless mode intentionally avoids exact monitor dimensions.
 - **Implementation anchors:** `MonoGame.Framework.WindowsDX`, `FrontendWindowMode.OverlaySafeBorderlessWindowed`, `SadConsoleDisplayHost.ApplyWindowMode(...)`, and `ScenarioBrowserChromeState.ToggleWindowMode()`.
-- **Implications:** Keep the legacy/debug `GameGameGame.SadConsole` project separate for now. Future release settings UI should preserve a simple player choice between overlay-safe borderless and windowed unless a tested exclusive/fullscreen mode is explicitly added.
+- **Implications:** Keep the legacy/debug `GameGameGame.SadConsole` project separate and outside default build/package workflows. Future release settings UI should preserve a simple player choice between overlay-safe borderless and windowed unless a tested exclusive/fullscreen mode is explicitly added.
 - **Status:** Active / initial DirectX overlay-safe default implemented.
 
-### FED-040: Drop starts from the player inventory action menu
+### FED-040: Frontend.SadConsole is the default build and package frontend
+
+- **Decision:** Default solution, CI, run, and feedback-package workflows target `GameGameGame.Frontend.SadConsole`; `GameGameGame.SadConsole` and its legacy tests are opt-in reference material only.
+- **Reasoning:** The new frontend is now the maintained player/debug/browser surface. Keeping the legacy app in default workflows let old runtime, packaging, and test assumptions silently gate unrelated work and could publish the wrong executable.
+- **Implications:** Packaging instructions and release feedback builds should name `GameGameGame.Frontend.SadConsole.exe`. Legacy source can remain in the repository for deliberate mining, but normal contributors should not be sent there by README, solution, CI, or feedback-build defaults.
+- **Status:** Active.
+
+### FED-041: Drop starts from the player inventory action menu
 
 - **Decision:** In new Play mode, Drop is selected from the focused player inventory panel rather than from the inspected-entity action panel. Selecting Drop enters inventory source-cell selection, then adjacent world destination-cell selection, then submits through the action session controller.
 - **Reasoning:** Drop is actor/inventory-contextual rather than target-inspection-contextual. The actor-centric Core `ActionChoiceRequest` already exposes Drop source entities and per-source destinations, so the frontend can populate the player inventory action row and selection highlights without inventing portability, adjacency, or empty-destination legality.
@@ -346,7 +353,7 @@ Each decision should include:
 - **Implications:** Future self/inventory/context actions such as Exit or Transfer should start from actor-level Action Choice facts when they are not naturally inspected-target actions. Player-panel action ordering, wording, and layout remain provisional.
 - **Status:** Active / initial functional Drop workflow.
 
-### FED-041: Enter submits inspected target and Exit uses Core direction destinations
+### FED-042: Enter submits inspected target and Exit uses Core direction destinations
 
 - **Decision:** In new Play mode, Enter is selected from an inspected adjacent entity and submits immediately with the selected target entity. It does not prompt for an inventory destination cell because Core Enter choices do not expose that payload. Exit is selected from the player inventory panel and enters direction selection; the highlighted destination is the Core-projected `DirectionOption.Destination`, and submission sends only the selected direction.
 - **Reasoning:** Current Core `ActionChoiceKind.Enter` exposes target entities only, while `ActionChoiceKind.Exit` exposes direction options with destination hints. The frontend should preserve those semantics rather than inventing destination-cell selection or parent-relative geometry rules.
@@ -354,7 +361,7 @@ Each decision should include:
 - **Implications:** If future UX wants explicit Enter placement, Core should first expose destination choices and an Enter submission payload that includes the chosen destination. Exit visual selection may feel adjacency-like, but must continue to render Core-projected destinations rather than recomputing topology in the frontend.
 - **Status:** Active / initial functional Enter and Exit workflow.
 
-### FED-042: Transfer is one counterparty-first action with Give/Take item labels
+### FED-043: Transfer is one counterparty-first action with Give/Take item labels
 
 - **Decision:** In new Play mode, Transfer starts from an inspected adjacent counterparty and appears as one inspection action even when authored plans expose multiple Transfer steps. Selecting Transfer opens an item picker popup over Core-projected `TransferItems(counterpartyId)`. Items from the actor inventory are labeled as Give, items from the counterparty inventory are labeled as Take, the selected item is highlighted with transfer language in the owning inventory panel, and submission sends only `counterpartyId` plus `movingEntityId` through the action session controller.
 - **Reasoning:** Core models Transfer as one action choice rather than separate Give and Take actions. A counterparty-first workflow maps directly to `ActionChoiceKind.Transfer`, keeps adjacency and item legality in Core, and still gives players clear direction labels.
@@ -362,7 +369,7 @@ Each decision should include:
 - **Implications:** Future Give/Take affordances may be added as filtered shortcuts over the same Transfer choice, but should not become separate frontend legality paths unless Core exposes separate action semantics.
 - **Status:** Active / initial functional Transfer workflow.
 
-### FED-043: Push uses canonical target-first Action Choice, not PushFacing
+### FED-044: Push uses canonical target-first Action Choice, not PushFacing
 
 - **Decision:** In new Play mode, Push is selected from an inspected adjacent target and then chooses a Core-projected target-relative push direction. Submission sends the inspected target plus selected direction through the action session controller. The debug-room player action plan uses canonical `Push`, not legacy `PushFacing`, so Core exposes target-first `ActionChoiceKind.Push` rows.
 - **Reasoning:** `PushFacing` is legacy facing/blocker behavior and does not mean “push the inspected adjacent target.” Canonical `Push` already exposes valid target entities and valid directions through shared Action Choice facts, which keeps target and direction legality out of the frontend.

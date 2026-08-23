@@ -153,8 +153,8 @@ GameGameGame.Core
   world state · topology · actions · turns · outcomes
        ┌────┴───────────────┐
        ▼                    ▼
-GameGameGame.SadConsole   GameGameGame.Headless
-interactive frontend      scenario/report tooling
+GameGameGame.Frontend.SadConsole   GameGameGame.Headless
+maintained desktop frontend        scenario/report tooling
 ```
 
 The primary boundary is deliberate: `GameGameGame.Core` does not depend on SadConsole. Content is loaded into runtime models and acted on through shared services; the frontend projects engine state into interaction and presentation models rather than reimplementing game rules.
@@ -166,7 +166,8 @@ The primary boundary is deliberate: `GameGameGame.Core` does not depend on SadCo
 | `src/GameGameGame.Core` | Runtime model, topology, containment, actions, turn execution, history, and gameplay services |
 | `src/GameGameGame.Content` | YAML loading, validation, editable documents, scenario materialization, and authoring services |
 | `src/GameGameGame.Content.Tools` | Local tooling over the shared content-editing APIs |
-| `src/GameGameGame.SadConsole` | Interactive play, debug, and content-browser frontend |
+| `src/GameGameGame.Frontend.SadConsole` | Maintained interactive play, debug, and content-browser frontend |
+| `src/GameGameGame.SadConsole` | Legacy/reference-only SadConsole frontend kept for explicit mining outside default workflows |
 | `src/GameGameGame.Headless` | UI-independent scenario recording and rendering support |
 | `src/GameGameGame.Documentation` | Documentation discovery and graph compilation |
 | `tests/*` | Engine, content, tooling, documentation, and frontend tests |
@@ -199,25 +200,14 @@ The SDK version is pinned in `global.json`.
 ### Start the application
 
 ```bash
-dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj
+dotnet run --project src/GameGameGame.Frontend.SadConsole/GameGameGame.Frontend.SadConsole.csproj
 ```
 
 On Windows, `Start.cmd` provides a convenience launcher.
 
-### Run a specific scenario
+### Choose a scenario
 
-```bash
-dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -- <content-file> <scenario-id>
-```
-
-Example:
-
-```bash
-dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj -- \
-  src/GameGameGame.Content/AlphaScenarioContent.yaml alpha-smoke
-```
-
-Curated scenario fixtures live primarily under `src/GameGameGame.Content/Beta`.
+The maintained frontend opens a scenario browser backed by the shared Content workspace catalog and packaged compatibility scenarios. Curated scenario fixtures live primarily under `src/GameGameGame.Content/Beta`.
 
 ## Build and test
 
@@ -243,7 +233,8 @@ A reviewer interested in the engine can begin with:
 For content and frontend integration:
 
 - `src/GameGameGame.Content` — YAML documents, validation, and materialization
-- `src/GameGameGame.SadConsole/Ui` — presentation and interaction components
+- `src/GameGameGame.Frontend.SadConsole` — maintained presentation and interaction components
+- `src/GameGameGame.SadConsole` — legacy/reference-only SadConsole source for deliberate mining
 - `tests/GameGameGame.Tests` — behavioral examples and invariants
 - `docs/Source of Truth/invariants.md` — maintained behavior contracts and test traces
 - `docs/Source of Truth/vertical-slice-map.md` — cross-layer navigation

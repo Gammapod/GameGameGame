@@ -73,6 +73,23 @@ Purpose: Track small, continuously updated Content work without creating a dedic
 
 ## Later
 
+### Establish a Content-owned test suite for promoted fixtures and scenario catalogs
+
+**User story:** As a content maintainer, I can evolve experimental Beta content while keeping promoted canonical scenarios and manifests under explicit Content-owned tests.
+
+**Plan:**
+
+- Move or split Content-owned checks out of the broad Core test project when they primarily validate YAML loading, authoring services, manifests, scenario fixtures, or playable catalog entries.
+- Update tests that still depend on legacy actions to canonical examples when they protect current authoring semantics; delete tests that only prove retired legacy scenarios run.
+- Define promotion criteria for canonical entities/scenarios before pinning them in tests, so experimental content can continue changing without false Core regressions.
+- Keep feedback manifests free of legacy/retired-action scenarios unless intentionally marked as non-playable archival references outside the curated feedback path.
+
+**Done when:**
+
+- Promoted canonical content has clear fixture ownership and targeted test coverage.
+- Experimental and legacy content do not silently gate Core semantic changes.
+- Content test failures point to authoring/catalog/fixture ownership rather than ambiguous engine regressions.
+
 ### Prepare richer ecology experiment authoring and observability
 
 **User story:** As a content experimenter, I can observe ecological dynamics through structured reports rather than final population counts only.

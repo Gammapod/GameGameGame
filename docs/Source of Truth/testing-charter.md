@@ -82,7 +82,7 @@ Frontend stub tests must not become permanent noise. Delete, replace, or complet
 Current frontend test projects:
 
 - `tests/GameGameGame.Frontend.SadConsole.Tests` for the new clean SadConsole frontend surface. This project should establish pure settings, display/drawable-bounds, scenario-browser, component-gallery, input-routing, and Play-surface view-model tests before renderer/input adapters are pinned.
-- `tests/GameGameGame.SadConsole.Tests` for the legacy/reference SadConsole project while it remains buildable and mined for useful components.
+- `tests/GameGameGame.SadConsole.Tests` for the legacy/reference SadConsole project only when it is explicitly built or mined outside default solution workflows.
 
 Archived strategy reference:
 
@@ -104,7 +104,7 @@ They are responsible for YAML loading, editable document roundtrips, editor serv
 
 SadConsole tests cover frontend-owned presentation and interaction-model logic without launching the real SadConsole window or asserting cell-perfect rendering.
 
-They are responsible for pure layout geometry, panel-chain selection, collapsed-card policy, prompt candidate filtering and cycling, local activity presentation rows, and future stable view-builder or hit-test behavior. They should use `InternalsVisibleTo("GameGameGame.SadConsole.Tests")` for frontend internals where needed rather than making test seams public API prematurely.
+They are responsible for pure layout geometry, panel-chain selection, collapsed-card policy, prompt candidate filtering and cycling, local activity presentation rows, and future stable view-builder or hit-test behavior. Legacy/reference-only seams may still use `InternalsVisibleTo("GameGameGame.SadConsole.Tests")` while mined explicitly, but normal maintained frontend seams should use the new frontend test assembly rather than making test seams public API prematurely.
 
 For `GameGameGame.Frontend.SadConsole.Tests`, prefer the same standard with the new assembly name. The first test trace should cover settings defaults, display/drawable-bounds resolution, workspace scenario browser view models, selection/request mapping, diagnostic display data, component-gallery screen models, and Play-surface layout over shared session/projection DTOs. These tests must not duplicate workspace composition, materialization, player insertion, action legality, turn advancement, command outcomes, diagnostics classification, or YAML mutation semantics.
 

@@ -70,20 +70,6 @@ sections:
     status: canonical-candidate
     tags: [feedback, showcase, entity-lifecycle, create, destroy, polymorph, flagship]
     source: Feedback build curated from Beta manifest
-  - contentPath: src\GameGameGame.Content\Beta\EntityLifecycle\MothLifecycleShowcase.yaml
-    scenarioId: delta-moth-lifecycle-showcase
-    name: Moth Lifecycle Showcase
-    description: Tester-facing multi-phase lifecycle room with moths, flowers, flame, leaves, and costed transformations.
-    status: canonical-candidate
-    tags: [feedback, showcase, entity-lifecycle, create, destroy, polymorph, costs, targeting]
-    source: Feedback build curated from Beta manifest
-  - contentPath: src\GameGameGame.Content\Beta\Containment\PocketBazaarShowcase.yaml
-    scenarioId: beta-pocket-bazaar
-    name: Pocket Bazaar
-    description: Canonical-candidate nested showcase bazaar with gameplay exhibits and inventory spaces for exploratory tester feedback.
-    status: canonical-candidate
-    tags: [feedback, showcase, canonical, candidate, bazaar, containment, nested, manual, exhibits]
-    source: Feedback build curated from Beta manifest
 - id: user
   name: User-Generated Scenarios
   description: User-authored scenarios are not feedback-exposed by this curated Phase 1 manifest.
