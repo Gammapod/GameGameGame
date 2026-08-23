@@ -2,6 +2,7 @@
 id: source.engine-editor-capabilities
 title: Engine-Editor Capability Matrix
 purpose: Maintainer-facing support tiers and layer coverage for engine/editor capabilities.
+summary: Capability matrix describing implemented, partial, planned, and unsupported engine/editor behavior across Core Content Editor agent API and frontend layers.
 kind: source-of-truth
 subkind: capability-matrix
 status: active

@@ -2,6 +2,7 @@
 id: source.testing-charter
 title: Testing Charter
 purpose: TDD workflow and testing expectations for semantic Core Content Editor and frontend behavior changes.
+summary: Testing policy for planned semantic changes, invariant traces, test placement, content tests, and frontend boundary coverage.
 kind: source-of-truth
 subkind: testing-charter
 status: active

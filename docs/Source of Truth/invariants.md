@@ -2,6 +2,7 @@
 id: source.invariants
 title: GameGameGame Invariants
 purpose: Stable Core behavior contracts and the tests that protect them.
+summary: Minimal functional requirements for entity/space behavior, actions, topology, content validation, and frontend boundaries that should influence tests.
 kind: source-of-truth
 subkind: invariant-trace
 status: active

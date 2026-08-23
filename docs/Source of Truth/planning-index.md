@@ -2,6 +2,7 @@
 id: source.planning-index
 title: Planning Index
 purpose: Start here for documentation lanes, current planning documents, and required reading order.
+summary: Source-of-truth navigation index for documentation lanes, active planning documents, reading order, and completed-plan archival expectations.
 kind: source-of-truth
 subkind: navigation-index
 status: active

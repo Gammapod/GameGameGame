@@ -105,6 +105,7 @@ public static class MarkdownFrontmatterParser
             Scalar(fields, "id"),
             Scalar(fields, "title"),
             Scalar(fields, "purpose"),
+            Scalar(fields, "summary"),
             Scalar(fields, "kind"),
             Scalar(fields, "subkind"),
             Scalar(fields, "status"),

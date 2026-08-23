@@ -6,6 +6,7 @@ public sealed record DocumentMetadata(
     string? Id,
     string? Title,
     string? Purpose,
+    string? Summary,
     string? Kind,
     string? Subkind,
     string? Status,
@@ -59,3 +60,7 @@ public sealed record TraversalProfile(string Id, IReadOnlyList<string> Lanes, IR
 public sealed record TraversalCoverageMetric(string DocumentId, string Path, int ProfileCount);
 
 public sealed record DocumentationGraphEdge(MarkdownDocument From, MarkdownDocument To, string Kind, string Label);
+
+public sealed record RoleReadPath(IReadOnlyList<MarkdownDocument> Documents, string Role, string? Topic, bool UsedFallback, IReadOnlyList<RoleReadPathMatch> Matches);
+
+public sealed record RoleReadPathMatch(MarkdownDocument Document, int Score, string Reason);

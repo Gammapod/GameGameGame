@@ -10,6 +10,11 @@ internal static class Program
 
         switch (command)
         {
+            case "help":
+            case "--help":
+            case "-h":
+                Console.Write(DocumentationHelpRenderer.Render());
+                return 0;
             case "lint":
                 return RunLint(root, graph);
             case "graph":
@@ -42,13 +47,14 @@ internal static class Program
                 return 0;
             case "read-path":
                 var role = ReadOption(args, "--role") ?? "core-owner";
-                if (string.Equals(ReadOption(args, "--format"), "briefing", StringComparison.OrdinalIgnoreCase))
+                var topic = ReadOption(args, "--topic");
+                if (topic is null && string.Equals(ReadOption(args, "--format"), "briefing", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.Write(RoleReadPathBriefingRenderer.Render(graph, role));
                 }
                 else
                 {
-                    PrintReadPath(graph, role);
+                    PrintReadPath(graph, role, topic);
                 }
                 return 0;
             case "check-planning":
@@ -72,7 +78,8 @@ internal static class Program
                 PrintTraversalMetrics(graph);
                 return 0;
             default:
-                Console.Error.WriteLine($"Unknown command '{command}'. Expected lint, graph, read-path, check-planning, traversal, traversal-mmd, or traversal-metrics.");
+                Console.Error.WriteLine($"Unknown command '{command}'.");
+                Console.Error.Write(DocumentationHelpRenderer.Render());
                 return 2;
         }
     }
@@ -106,14 +113,9 @@ internal static class Program
         }
     }
 
-    private static void PrintReadPath(DocumentationGraph graph, string role)
+    private static void PrintReadPath(DocumentationGraph graph, string role, string? topic)
     {
-        Console.WriteLine($"Read path for {role}:");
-        var index = 1;
-        foreach (var document in RoleReadPathGenerator.Generate(graph, role))
-        {
-            Console.WriteLine($"{index++}. {document.Metadata.Id} - {document.Path}");
-        }
+        Console.Write(RoleReadPathRenderer.Render(RoleReadPathGenerator.Generate(graph, role, topic)));
     }
 
     private static void PrintTraversal(DocumentationGraph graph, string profileId)

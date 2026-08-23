@@ -12,6 +12,7 @@ public sealed class DocumentationCompilerTests
 id: source.example
 title: Example Doc
 purpose: Short orientation summary.
+summary: One sentence document summary.
 kind: source-of-truth
 status: active
 owners: [core-owner]
@@ -35,6 +36,7 @@ Body text.
         Assert.Equal("source.example", document.Metadata.Id);
         Assert.Equal("Example Doc", document.Metadata.Title);
         Assert.Equal("Short orientation summary.", document.Metadata.Purpose);
+        Assert.Equal("One sentence document summary.", document.Metadata.Summary);
         Assert.Equal("source-of-truth", document.Metadata.Kind);
         Assert.Equal("active", document.Metadata.Status);
         Assert.Equal(["core-owner"], document.Metadata.Owners);
@@ -61,6 +63,76 @@ Body text.
         Assert.Contains("Purpose: Planning navigation.", briefing);
         Assert.Contains("Read when: starting a session", briefing);
         Assert.Contains("Purpose: Stable behavior contracts.", briefing);
+    }
+
+    [Fact]
+    public void DefaultReadPathRendererIncludesPurposeSummaryAndPath()
+    {
+        var graph = DocumentationGraph.Build([
+            SourceDocWithPurpose("docs/Source of Truth/planning-index.md", "source.planning-index", "navigation", "Planning navigation.", ["starting a session"], summary: "Where to start."),
+            SourceDocWithPurpose("docs/Source of Truth/invariants.md", "source.invariants", "invariant-trace", "Stable behavior contracts.", ["changing behavior"], summary: "Protected behavior list.")
+        ]);
+
+        var readPath = RoleReadPathRenderer.Render(graph, "core-owner");
+
+        Assert.Contains("Read path for core-owner:", readPath);
+        Assert.Contains("1. source.planning-index - docs/Source of Truth/planning-index.md", readPath);
+        Assert.Contains("For narrower follow-up discovery, rerun with --topic <topic>.", readPath);
+        Assert.Contains("Purpose: Planning navigation.", readPath);
+        Assert.Contains("Summary: Where to start.", readPath);
+        Assert.Contains("Summary: Protected behavior list.", readPath);
+    }
+
+    [Fact]
+    public void HelpRendererListsAgentFacingCommandsRolesAndOptions()
+    {
+        var help = DocumentationHelpRenderer.Render();
+
+        Assert.Contains("GameGameGame Documentation Tool", help);
+        Assert.Contains("read-path --role <role> [--topic <topic>]", help);
+        Assert.Contains("graph [--format json|mermaid|mmd]", help);
+        Assert.Contains("check-planning", help);
+        Assert.Contains("core-owner", help);
+        Assert.Contains("content-editor", help);
+        Assert.Contains("frontend-owner", help);
+    }
+
+    [Fact]
+    public void TopicFilteredReadPathKeepsNavigationAndMatchingRoleDocuments()
+    {
+        var graph = DocumentationGraph.Build([
+            SourceDocWithPurpose("docs/Source of Truth/planning-index.md", "source.planning-index", "navigation", "Planning navigation.", ["starting a session"], summary: "Where to start."),
+            SourceDocWithPurpose("docs/Source of Truth/invariants.md", "source.invariants", "invariant-trace", "Stable topology contracts.", ["changing topology behavior"], summary: "Topology rules."),
+            SourceDocWithPurpose("docs/Source of Truth/testing-charter.md", "source.testing-charter", "testing", "Testing expectations.", ["planning tests"], summary: "Test policy."),
+            SourceDocWithPurpose("docs/Source of Truth/Engine-Editor-Capabilities.md", "source.engine-editor-capabilities", "capability-matrix", "Capability support.", ["checking topology capability support"], summary: "Topology capability matrix."),
+            SourceDocWithPurpose("docs/Source of Truth/vertical-slice-map.md", "source.vertical-slice-map", "vertical-slice", "Implementation map.", ["cross-layer work"], summary: "Files and services.")
+        ]);
+
+        var path = RoleReadPathGenerator.Generate(graph, "core-owner", "topology");
+
+        Assert.Equal([
+            "source.planning-index",
+            "source.invariants",
+            "source.engine-editor-capabilities"
+        ], path.Documents.Select(d => d.Metadata.Id));
+        Assert.False(path.UsedFallback);
+        Assert.Contains(path.Matches, match => match.Document.Metadata.Id == "source.invariants" && match.Reason.Contains("topic 'topology'"));
+    }
+
+    [Fact]
+    public void TopicFilteredReadPathFallsBackToNormalRolePathWhenNothingMatches()
+    {
+        var graph = DocumentationGraph.Build([
+            SourceDocWithPurpose("docs/Source of Truth/planning-index.md", "source.planning-index", "navigation", "Planning navigation.", ["starting a session"]),
+            SourceDocWithPurpose("docs/Source of Truth/invariants.md", "source.invariants", "invariant-trace", "Stable behavior contracts.", ["changing behavior"])
+        ]);
+
+        var path = RoleReadPathGenerator.Generate(graph, "core-owner", "volcano");
+        var rendered = RoleReadPathRenderer.Render(path);
+
+        Assert.True(path.UsedFallback);
+        Assert.Equal(["source.planning-index", "source.invariants"], path.Documents.Select(d => d.Metadata.Id));
+        Assert.Contains("No documents in the core-owner read path matched topic 'volcano'; showing the default read path.", rendered);
     }
 
     [Fact]
@@ -541,7 +613,8 @@ truth_domains: [stable-contract]
         string lane,
         string purpose,
         string[] readWhen,
-        string[]? related = null)
+        string[]? related = null,
+        string? summary = null)
     {
         var relatedText = related is { Length: > 0 }
             ? $"related: [{string.Join(", ", related)}]"
@@ -557,6 +630,7 @@ owners: [core-owner]
 audience: [core-owner]
 lane: {{lane}}
 purpose: {{purpose}}
+summary: {{summary ?? $"Summary for {id}."}}
 read_when: [{{string.Join(", ", readWhen)}}]
 truth_rank: 30
 truth_domains: [stable-contract]
