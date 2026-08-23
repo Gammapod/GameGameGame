@@ -91,3 +91,37 @@ public sealed record ContentToolScenarioSummary(
     IReadOnlyDictionary<string, IReadOnlyList<EntityId>>? PlayerControls = null);
 
 public sealed record ContentToolScenarioManifestValidationSummary(bool IsValid, IReadOnlyList<string> Diagnostics);
+public sealed record ContentToolDescribeSchemaRequest(string Concept);
+
+public sealed record ContentToolAuthoringGuide(
+    string StartHere,
+    IReadOnlyList<string> AuthoritativeDocs,
+    IReadOnlyList<string> CurrentAuthoringSurface,
+    IReadOnlyList<string> FirstCalls,
+    IReadOnlyList<string> SafetyRules);
+
+public sealed record ContentToolSchemaField(
+    string Name,
+    string Type,
+    bool Required,
+    string Description,
+    IReadOnlyList<string>? AllowedValues = null,
+    bool NullableClears = false);
+
+public sealed record ContentToolSchemaDescription(
+    string Concept,
+    string Description,
+    IReadOnlyList<ContentToolSchemaField> Fields,
+    IReadOnlyList<string> Examples);
+
+public sealed record ContentToolWorkflowRecipe(
+    string Id,
+    string Title,
+    string WhenToUse,
+    IReadOnlyList<string> Steps,
+    IReadOnlyList<string> ToolSequence);
+
+public sealed record ContentToolExampleReference(
+    string Purpose,
+    string Path,
+    IReadOnlyList<string> ScenarioIds);

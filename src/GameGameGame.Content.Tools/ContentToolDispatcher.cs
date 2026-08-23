@@ -58,6 +58,10 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 ContentToolNames.OpenScenarioManifest => ContentToolResponse.Success(ScenarioCatalog.LoadManifest(((ContentToolScenarioManifestRequest)request).Path)),
                 ContentToolNames.ScanScenarioManifestCandidates => ContentToolResponse.Success(ScenarioCatalog.ScanCandidates(((ContentToolScenarioManifestScanRequest)request).FolderPath)),
                 ContentToolNames.ValidateScenarioManifest => ValidateScenarioManifest((ContentToolScenarioManifestValidateRequest)request),
+                ContentToolNames.GetAuthoringGuide => ContentToolResponse.Success(AuthoringGuide()),
+                ContentToolNames.DescribeSchema => ContentToolResponse.Success(DescribeSchema(ReadConcept(request))),
+                ContentToolNames.ListWorkflows => ContentToolResponse.Success(WorkflowRecipes()),
+                ContentToolNames.ListExamples => ContentToolResponse.Success(ExampleReferences()),
                 _ => ContentToolResponse.Failure(new AgentApiError("UnknownTool", $"Unknown content tool '{toolName}'.", Recoverable: true))
             };
         }
@@ -86,6 +90,112 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
     {
         var validation = ScenarioCatalog.ValidateManifest(request.Path, request.FolderPath);
         return ContentToolResponse.Success(new ContentToolScenarioManifestValidationSummary(validation.IsValid, validation.Diagnostics));
+    }
+
+    private static ContentToolAuthoringGuide AuthoringGuide() => new(
+        StartHere: "Open/create a content session, list and inspect existing content, make semantic edits, validate and canonical-validate, review snapshot diff, then save deliberately.",
+        AuthoritativeDocs:
+        [
+            "docs/Source of Truth/Content-Authoring-Manual.md",
+            "docs/Source of Truth/Engine-Editor-Capabilities.md",
+            "docs/Source of Truth/Capability-Gap-Log.md"
+        ],
+        CurrentAuthoringSurface:
+        [
+            "Documents: create/open/snapshot/validate/save sessions.",
+            "Entity templates: create, inspect, update core inventory/presentation/policy fields, and place carried entities.",
+            "Action plans: create, inspect, author behavior-chain steps, configure exposed step fields, preview.",
+            "Scenarios: list/get/upsert/materialize/run persisted scenarios and player narrative projections.",
+            "Scenario manifests: open curated manifests, scan candidates, validate curated coverage."
+        ],
+        FirstCalls:
+        [
+            "ggg_content_open_file or ggg_content_create_new",
+            "ggg_content_snapshot",
+            "ggg_content_list_entity_templates / ggg_content_list_action_plans / ggg_content_list_scenarios",
+            "ggg_content_list_action_steps",
+            "ggg_content_validate and ggg_content_validate_canonical_authoring"
+        ],
+        SafetyRules:
+        [
+            "Prefer ggg_content_* semantic tools over ad-hoc YAML edits when they cover the task.",
+            "Discovery/list/preview tools must not mutate content; save only with explicit save/save_as.",
+            "Use the snapshot diff and validation summaries before saving.",
+            "If a desired engine behavior cannot be authored through the listed surface, record a capability gap rather than inventing schema."
+        ]);
+
+    private static IReadOnlyList<ContentToolWorkflowRecipe> WorkflowRecipes() =>
+    [
+        new("open-review", "Open and review a content file", "Start any edit or audit of an existing YAML document.",
+            ["Open the file.", "Request a snapshot.", "Validate normal and canonical authoring rules.", "List entity templates, action plans, scenarios, and action-step catalog."],
+            [ContentToolNames.OpenFile, ContentToolNames.Snapshot, ContentToolNames.Validate, ContentToolNames.ValidateCanonicalAuthoring, ContentToolNames.ListEntityTemplates, ContentToolNames.ListActionPlans, ContentToolNames.ListScenarios, ContentToolNames.ListActionSteps]),
+        new("behavior-plan", "Create or edit a behavior-chain action plan", "Author normal action-plan behavior without legacy low-level YAML editing.",
+            ["Create or inspect an action plan.", "List action steps to choose supported kinds.", "Set/add/reorder behavior steps.", "Use field-specific setters for target labels, direction/path options, plan refs, and costs.", "Preview the action plan."],
+            [ContentToolNames.CreateActionPlan, ContentToolNames.ListActionSteps, ContentToolNames.SetActionPlanBehavior, ContentToolNames.AddActionPlanBehaviorStep, ContentToolNames.PreviewActionPlan]),
+        new("scenario-run", "Create or inspect a persisted scenario", "Check that authored content materializes and runs through shared Content/Core services.",
+            ["List or upsert scenarios.", "Materialize the scenario to catch authoring diagnostics.", "Run for a small turn count.", "Use player-log projection when compact player-facing rows are desired."],
+            [ContentToolNames.ListScenarios, ContentToolNames.UpsertScenario, ContentToolNames.MaterializeScenario, ContentToolNames.RunScenarioById, ContentToolNames.RunScenarioPlayerLogById]),
+        new("manifest-maintenance", "Maintain curated scenario manifests", "Reconcile scenario-browser manifest entries with content files.",
+            ["Scan a folder for candidates.", "Open the curated manifest.", "Validate manifest coverage and metadata.", "Treat the manifest as authoritative; scan output is reconciliation only."],
+            [ContentToolNames.ScanScenarioManifestCandidates, ContentToolNames.OpenScenarioManifest, ContentToolNames.ValidateScenarioManifest]),
+        new("safe-save-loop", "Safe save loop", "Finish any deliberate content edit.",
+            ["Validate.", "Canonical-validate.", "Review snapshot diff and dirty state.", "Save or save_as explicitly.", "Close when done."],
+            [ContentToolNames.Validate, ContentToolNames.ValidateCanonicalAuthoring, ContentToolNames.Snapshot, ContentToolNames.Save, ContentToolNames.Close])
+    ];
+
+    private static IReadOnlyList<ContentToolExampleReference> ExampleReferences() =>
+    [
+        new("Built-in content root and reusable canonical definitions", "src/GameGameGame.Content", []),
+        new("Curated Beta scenario manifest", "src/GameGameGame.Content/Beta/Manifest.yaml", []),
+        new("Targeting scenario examples", "src/GameGameGame.Content/Beta/Targeting", []),
+        new("Transfer scenario examples", "src/GameGameGame.Content/Beta/Transfer", []),
+        new("Topology scenario examples", "src/GameGameGame.Content/Beta/Topology", []),
+        new("Content/editor regression fixtures and inline examples", "tests/GameGameGame.Tests", [])
+    ];
+
+    private static ContentToolSchemaDescription DescribeSchema(string concept) => concept switch
+    {
+        "entityTemplateUpdate" => new(concept, "Partial update object for ggg_content_update_entity_template.",
+            [
+                new("name", "string", false, "Template display name."),
+                new("inventoryWidth", "integer", false, "Authored inventory width; 0 means no usable inventory."),
+                new("inventoryHeight", "integer", false, "Authored inventory height; 0 means no usable inventory."),
+                new("bulk", "integer", false, "Bulk for inventory/aperture rules."),
+                new("aperture", "integer", false, "Aperture for inventory transitions."),
+                new("enterPolicy", "string|null", false, "Authored enter-placement policy.", Enum.GetNames<EntityEnterPolicy>(), NullableClears: true),
+                new("exitPolicy", "string|null", false, "Authored exit-source policy.", Enum.GetNames<EntityExitPolicy>(), NullableClears: true),
+                new("topologyPolicy", "string", false, "Directed inventory-boundary topology policy.", Enum.GetNames<EntityTopologyPolicy>()),
+                new("clearEnterPolicy", "boolean", false, "Set true to clear enterPolicy."),
+                new("clearExitPolicy", "boolean", false, "Set true to clear exitPolicy."),
+                new("glyph", "one-character string", false, "Legacy/editor glyph."),
+                new("color", "string", false, "Presentation color.", Enum.GetNames<PresentationColor>())
+            ],
+            ["{ \"name\": \"Player\", \"inventoryWidth\": 0, \"inventoryHeight\": 0, \"bulk\": 1, \"aperture\": 5, \"glyph\": \"@\", \"color\": \"Yellow\" }"]),
+        "scenario" => new(concept, "Persisted scenario object for ggg_content_upsert_scenario.",
+            [
+                new("scenarioId", "string", true, "Stable scenario ID."),
+                new("name", "string", true, "Human-readable scenario name."),
+                new("scenarioRootEntityTemplateId", "string", true, "Root/container template to materialize."),
+                new("playerEntityTemplateId", "string|null", false, "Compatibility player template; can be null when using placed Player controllers.", NullableClears: true),
+                new("playerEntityId", "string|null", false, "Compatibility inserted player entity ID.", NullableClears: true),
+                new("playerStart", "coord|null", false, "Compatibility player start coordinate { x, y }.", NullableClears: true),
+                new("playerControls", "object", false, "Optional input/control binding map from player/input IDs to entity IDs.")
+            ],
+            ["{ \"scenarioId\": \"demo\", \"name\": \"Demo\", \"scenarioRootEntityTemplateId\": \"room\", \"playerEntityTemplateId\": \"player\", \"playerEntityId\": \"player1\", \"playerStart\": { \"x\": 0, \"y\": 0 } }"]),
+        "coord" => new(concept, "Grid coordinate object.", [new("x", "integer", true, "Horizontal coordinate."), new("y", "integer", true, "Vertical coordinate.")], ["{ \"x\": 1, \"y\": 2 }"]),
+        "behaviorStep" => new(concept, "Behavior-chain Action Step kind plus optional fields set by field-specific tools.",
+            [new("kind", "string", true, "Action Step kind.", Enum.GetNames<ActionPlanBehaviorStepKind>()), new("targetLabel", "string|null", false, "Stable labeled target reference.", NullableClears: true), new("targetSlot", "integer|null", false, "Compatibility numeric target slot.", NullableClears: true), new("costs", "cost[]", false, "Optional required costs consumed by the step.")],
+            ["{ \"kind\": \"Move\" }", "then call ggg_content_set_behavior_step_direction_mode for Move directionMode"]),
+        "cost" => new(concept, "Action Step cost descriptor.", [new("templateId", "string", true, "Entity template ID used as the cost item."), new("quantity", "integer", true, "Required quantity.")], ["{ \"templateId\": \"scrap\", \"quantity\": 3 }"]),
+        _ => new(concept, "Unknown schema concept. Use one of: entityTemplateUpdate, scenario, coord, behaviorStep, cost.", [], [])
+    };
+
+    private static string ReadConcept(object request)
+    {
+        if (request is ContentToolDescribeSchemaRequest typed) return typed.Concept;
+        if (request is JsonElement json && json.TryGetProperty("concept", out var concept)) return concept.GetString() ?? string.Empty;
+        var property = request.GetType().GetProperty("concept") ?? request.GetType().GetProperty("Concept");
+        return property?.GetValue(request)?.ToString() ?? string.Empty;
     }
 
     private ContentToolResponse WithSession(IContentToolSessionRequest request, Func<AgentContentEditorApi, ContentToolResponse> operation) =>
@@ -174,6 +284,8 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
         ContentToolNames.OpenScenarioManifest => arguments.Deserialize<ContentToolScenarioManifestRequest>(JsonOptions)!,
         ContentToolNames.ScanScenarioManifestCandidates => arguments.Deserialize<ContentToolScenarioManifestScanRequest>(JsonOptions)!,
         ContentToolNames.ValidateScenarioManifest => arguments.Deserialize<ContentToolScenarioManifestValidateRequest>(JsonOptions)!,
+        ContentToolNames.DescribeSchema => arguments.Deserialize<ContentToolDescribeSchemaRequest>(JsonOptions)!,
+        ContentToolNames.GetAuthoringGuide or ContentToolNames.ListWorkflows or ContentToolNames.ListExamples => new { },
         ContentToolNames.Snapshot or ContentToolNames.Validate or ContentToolNames.ValidateCanonicalAuthoring or ContentToolNames.Save or ContentToolNames.Close or ContentToolNames.ListEntityTemplates or ContentToolNames.ListActionPlans or ContentToolNames.ListActionSteps or ContentToolNames.ListScenarios => arguments.Deserialize<ContentToolSessionRequest>(JsonOptions)!,
         ContentToolNames.SaveAs => arguments.Deserialize<ContentToolSaveAsRequest>(JsonOptions)!,
         ContentToolNames.GetEntityTemplate or ContentToolNames.ListCarriedEntities => arguments.Deserialize<ContentToolEntityTemplateRequest>(JsonOptions)!,

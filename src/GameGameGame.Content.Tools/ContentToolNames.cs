@@ -43,4 +43,8 @@ public static class ContentToolNames
     public const string OpenScenarioManifest = "ggg_content_open_scenario_manifest";
     public const string ScanScenarioManifestCandidates = "ggg_content_scan_scenario_manifest_candidates";
     public const string ValidateScenarioManifest = "ggg_content_validate_scenario_manifest";
+    public const string GetAuthoringGuide = "ggg_content_get_authoring_guide";
+    public const string DescribeSchema = "ggg_content_describe_schema";
+    public const string ListWorkflows = "ggg_content_list_workflows";
+    public const string ListExamples = "ggg_content_list_examples";
 }

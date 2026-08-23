@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using GameGameGame.Core;
 
 namespace GameGameGame.Content.Tools;
 
@@ -46,7 +47,11 @@ public static class ContentToolCatalog
         ContentToolNames.PreviewAndRunScenarioById,
         ContentToolNames.OpenScenarioManifest,
         ContentToolNames.ScanScenarioManifestCandidates,
-        ContentToolNames.ValidateScenarioManifest
+        ContentToolNames.ValidateScenarioManifest,
+        ContentToolNames.GetAuthoringGuide,
+        ContentToolNames.DescribeSchema,
+        ContentToolNames.ListWorkflows,
+        ContentToolNames.ListExamples
     ];
 
     public static string Describe(string name) => name switch
@@ -92,6 +97,10 @@ public static class ContentToolCatalog
         ContentToolNames.OpenScenarioManifest => "Open a curated scenario manifest/catalog artifact with sections and entry metadata.",
         ContentToolNames.ScanScenarioManifestCandidates => "Scan a content folder for scenario candidates without making the scan authoritative.",
         ContentToolNames.ValidateScenarioManifest => "Validate a curated scenario manifest against content files and scanned unclassified candidates.",
+        ContentToolNames.GetAuthoringGuide => "Return a fresh-agent content-authoring guide with workflow, docs, and safety rules.",
+        ContentToolNames.DescribeSchema => "Describe an authoring concept schema, clear/null semantics, enum values, and examples.",
+        ContentToolNames.ListWorkflows => "List common machine-readable ggg_content workflow recipes.",
+        ContentToolNames.ListExamples => "List useful content example files and scenario IDs to inspect.",
         _ => "GameGameGame content editor tool."
     };
 
@@ -99,28 +108,44 @@ public static class ContentToolCatalog
     {
         var properties = new JsonObject();
         var required = new JsonArray();
-        void AddString(string property, bool isRequired = true)
+        void AddString(string property, bool isRequired = true, IReadOnlyList<string>? allowedValues = null, string? description = null, bool allowNull = false)
         {
-            properties[property] = new JsonObject { ["type"] = "string" };
+            var schema = new JsonObject { ["type"] = allowNull ? new JsonArray("string", "null") : "string" };
+            if (allowedValues is not null)
+            {
+                var values = allowedValues.Select(value => JsonValue.Create(value)).ToList<JsonNode?>();
+                if (allowNull) values.Add(null);
+                schema["enum"] = new JsonArray(values.ToArray());
+            }
+            if (description is not null) schema["description"] = description;
+            properties[property] = schema;
             if (isRequired) required.Add(property);
         }
-        void AddInteger(string property, bool isRequired = true)
+        void AddInteger(string property, bool isRequired = true, string? description = null, bool allowNull = false)
         {
-            properties[property] = new JsonObject { ["type"] = "integer" };
+            var schema = new JsonObject { ["type"] = allowNull ? new JsonArray("integer", "null") : "integer" };
+            if (description is not null) schema["description"] = description;
+            properties[property] = schema;
             if (isRequired) required.Add(property);
         }
-        void AddObject(string property, bool isRequired = true)
+        void AddObject(string property, bool isRequired = true, JsonObject? schema = null)
         {
-            properties[property] = new JsonObject { ["type"] = "object", ["additionalProperties"] = true };
+            properties[property] = schema ?? new JsonObject { ["type"] = "object", ["additionalProperties"] = true };
             if (isRequired) required.Add(property);
         }
-        void AddArray(string property, bool isRequired = true)
+        void AddArray(string property, bool isRequired = true, JsonObject? itemSchema = null)
         {
-            properties[property] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } };
+            properties[property] = new JsonObject { ["type"] = "array", ["items"] = itemSchema ?? new JsonObject { ["type"] = "string" } };
             if (isRequired) required.Add(property);
         }
 
-        if (name is not ContentToolNames.CreateNew)
+        var noSession = name is ContentToolNames.CreateNew
+            or ContentToolNames.GetAuthoringGuide
+            or ContentToolNames.DescribeSchema
+            or ContentToolNames.ListWorkflows
+            or ContentToolNames.ListExamples;
+
+        if (!noSession)
         {
             if (name is ContentToolNames.OpenFile or ContentToolNames.OpenScenarioManifest or ContentToolNames.ValidateScenarioManifest)
             {
@@ -141,23 +166,24 @@ public static class ContentToolCatalog
             case ContentToolNames.SaveAs: AddString("path"); break;
             case ContentToolNames.GetEntityTemplate or ContentToolNames.ListCarriedEntities: AddString("entityTemplateId"); break;
             case ContentToolNames.CreateEntityTemplate or ContentToolNames.CreateActionPlan: AddString("name"); break;
-            case ContentToolNames.UpdateEntityTemplate: AddString("entityTemplateId"); AddObject("update"); break;
-            case ContentToolNames.PlaceCarriedEntity: AddString("parentTemplateId"); AddString("carriedTemplateId"); AddObject("coord"); break;
+            case ContentToolNames.DescribeSchema: AddString("concept", allowedValues: ["entityTemplateUpdate", "scenario", "coord", "behaviorStep", "cost"]); break;
+            case ContentToolNames.UpdateEntityTemplate: AddString("entityTemplateId"); AddObject("update", schema: EntityTemplateUpdateSchema()); break;
+            case ContentToolNames.PlaceCarriedEntity: AddString("parentTemplateId"); AddString("carriedTemplateId"); AddObject("coord", schema: CoordSchema()); break;
             case ContentToolNames.GetActionPlan or ContentToolNames.PreviewActionPlan: AddString("actionPlanTemplateId"); break;
-            case ContentToolNames.SetActionPlanBehavior: AddString("actionPlanTemplateId"); AddArray("steps"); break;
-            case ContentToolNames.AddActionPlanBehaviorStep: AddString("actionPlanTemplateId"); AddString("kind"); break;
+            case ContentToolNames.SetActionPlanBehavior: AddString("actionPlanTemplateId"); AddArray("steps", itemSchema: EnumStringSchema<ActionPlanBehaviorStepKind>()); break;
+            case ContentToolNames.AddActionPlanBehaviorStep: AddString("actionPlanTemplateId"); AddString("kind", allowedValues: EnumNames<ActionPlanBehaviorStepKind>()); break;
             case ContentToolNames.MoveActionPlanBehaviorStep: AddString("actionPlanTemplateId"); AddInteger("fromIndex"); AddInteger("toIndex"); break;
             case ContentToolNames.RemoveActionPlanBehaviorStep: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); break;
-            case ContentToolNames.SetBehaviorStepTargetLabel: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("targetLabel", isRequired: false); break;
-            case ContentToolNames.SetBehaviorStepTargetSlot: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("targetSlot", isRequired: false); break;
-            case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false); break;
-            case ContentToolNames.SetBehaviorStepDirectionMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("directionMode", isRequired: false); break;
-            case ContentToolNames.SetBehaviorStepCosts: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddArray("costs"); break;
-            case ContentToolNames.SetBehaviorStepTargetPathMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("pathMode", isRequired: false); break;
-            case ContentToolNames.SetBehaviorStepDesiredDistance: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("desiredDistance", isRequired: false); break;
-            case ContentToolNames.SetBehaviorStepOrbitDirection: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("orbitDirection", isRequired: false); break;
+            case ContentToolNames.SetBehaviorStepTargetLabel: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("targetLabel", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepTargetSlot: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("targetSlot", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepDirectionMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("directionMode", isRequired: false, allowedValues: EnumNames<ActionPlanMoveDirectionMode>(), description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepCosts: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddArray("costs", itemSchema: CostSchema()); break;
+            case ContentToolNames.SetBehaviorStepTargetPathMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("pathMode", isRequired: false, allowedValues: EnumNames<ActionPlanTargetPathMode>(), description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepDesiredDistance: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("desiredDistance", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepOrbitDirection: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("orbitDirection", isRequired: false, allowedValues: EnumNames<ActionPlanOrbitDirection>(), description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario: AddString("scenarioId"); break;
-            case ContentToolNames.UpsertScenario: AddObject("scenario"); break;
+            case ContentToolNames.UpsertScenario: AddObject("scenario", schema: ScenarioSchema()); break;
             case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById: AddString("scenarioId"); AddInteger("turnCount"); if (name is ContentToolNames.RunScenarioPlayerLogById) AddString("observerEntityId", isRequired: false); break;
             case ContentToolNames.ValidateScenarioManifest: AddString("folderPath"); break;
         }
@@ -170,4 +196,76 @@ public static class ContentToolCatalog
             ["additionalProperties"] = false
         };
     }
+
+    private static IReadOnlyList<string> EnumNames<T>() where T : struct, Enum => Enum.GetNames<T>();
+
+    private static JsonObject EnumStringSchema<T>() where T : struct, Enum => new()
+    {
+        ["type"] = "string",
+        ["enum"] = new JsonArray(EnumNames<T>().Select(value => JsonValue.Create(value)).ToArray<JsonNode?>())
+    };
+
+    private static JsonObject NullableEnumSchema<T>(string description) where T : struct, Enum => new()
+    {
+        ["type"] = new JsonArray("string", "null"),
+        ["enum"] = new JsonArray(EnumNames<T>().Select(value => JsonValue.Create(value)).Append(null).ToArray<JsonNode?>()),
+        ["description"] = description
+    };
+
+    private static JsonObject CoordSchema() => new()
+    {
+        ["type"] = "object",
+        ["properties"] = new JsonObject { ["x"] = new JsonObject { ["type"] = "integer" }, ["y"] = new JsonObject { ["type"] = "integer" } },
+        ["required"] = new JsonArray("x", "y"),
+        ["additionalProperties"] = false
+    };
+
+    private static JsonObject CostSchema() => new()
+    {
+        ["type"] = "object",
+        ["properties"] = new JsonObject { ["templateId"] = new JsonObject { ["type"] = "string" }, ["quantity"] = new JsonObject { ["type"] = "integer" } },
+        ["required"] = new JsonArray("templateId", "quantity"),
+        ["additionalProperties"] = false
+    };
+
+    private static JsonObject EntityTemplateUpdateSchema() => new()
+    {
+        ["type"] = "object",
+        ["description"] = "Set nullable fields to null to clear them where listed.",
+        ["properties"] = new JsonObject
+        {
+            ["name"] = new JsonObject { ["type"] = "string" },
+            ["inventoryWidth"] = new JsonObject { ["type"] = "integer" },
+            ["inventoryHeight"] = new JsonObject { ["type"] = "integer" },
+            ["bulk"] = new JsonObject { ["type"] = "integer" },
+            ["aperture"] = new JsonObject { ["type"] = "integer" },
+            ["enterPolicy"] = NullableEnumSchema<EntityEnterPolicy>("Pass null with clearEnterPolicy=true to clear authored enter policy."),
+            ["exitPolicy"] = NullableEnumSchema<EntityExitPolicy>("Pass null with clearExitPolicy=true to clear authored exit policy."),
+            ["topologyPolicy"] = EnumStringSchema<EntityTopologyPolicy>(),
+            ["clearEnterPolicy"] = new JsonObject { ["type"] = "boolean" },
+            ["clearExitPolicy"] = new JsonObject { ["type"] = "boolean" },
+            ["presentationId"] = new JsonObject { ["type"] = "string" },
+            ["paletteId"] = new JsonObject { ["type"] = "string" },
+            ["glyph"] = new JsonObject { ["type"] = "string", ["minLength"] = 1, ["maxLength"] = 1 },
+            ["color"] = EnumStringSchema<PresentationColor>()
+        },
+        ["additionalProperties"] = false
+    };
+
+    private static JsonObject ScenarioSchema() => new()
+    {
+        ["type"] = "object",
+        ["properties"] = new JsonObject
+        {
+            ["scenarioId"] = new JsonObject { ["type"] = "string" },
+            ["name"] = new JsonObject { ["type"] = "string" },
+            ["scenarioRootEntityTemplateId"] = new JsonObject { ["type"] = "string" },
+            ["playerEntityTemplateId"] = new JsonObject { ["type"] = new JsonArray("string", "null") },
+            ["playerEntityId"] = new JsonObject { ["type"] = new JsonArray("string", "null") },
+            ["playerStart"] = CoordSchema(),
+            ["playerControls"] = new JsonObject { ["type"] = "object", ["additionalProperties"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } } }
+        },
+        ["required"] = new JsonArray("scenarioId", "name", "scenarioRootEntityTemplateId"),
+        ["additionalProperties"] = false
+    };
 }

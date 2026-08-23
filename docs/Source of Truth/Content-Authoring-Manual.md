@@ -67,6 +67,20 @@ Default workflow:
 7. Materialize or run scenarios when behavior needs inspection; use SadConsole/manual play for visual inspection and treat the current PNG/GIF recorder as legacy fallback tooling.
 8. Log a capability gap when desired content cannot be expressed cleanly with the authoring surface listed here.
 
+## Agent tool discovery quick start
+
+Fresh agent sessions should use the local `ggg-content` MCP server and its `ggg_content_*` tools instead of guessing YAML shapes. The tool server is configured in `.opencode/opencode.json` and exposes a discoverable catalog through normal MCP `tools/list`.
+
+Recommended first calls:
+
+1. `ggg_content_get_authoring_guide` for the start-here workflow, source-of-truth doc paths, current authoring surface, and safety rules.
+2. `ggg_content_list_workflows` for machine-readable recipes such as open/review, behavior-plan editing, scenario run review, manifest maintenance, and the safe save loop.
+3. `ggg_content_describe_schema` when an input object is not obvious. Supported concepts include `entityTemplateUpdate`, `scenario`, `coord`, `behaviorStep`, and `cost`; the response lists fields, enum values, clear/null semantics, and examples.
+4. `ggg_content_list_examples` for useful content/example locations to inspect before authoring.
+5. `ggg_content_list_action_steps` after opening/creating a session when choosing behavior-chain Action Step kinds and supported authored fields.
+
+Keep the normal safe save loop: validate, canonical-validate, review `ggg_content_snapshot` diff/dirty state, then call `ggg_content_save` or `ggg_content_save_as` deliberately. Discovery/list/preview tools are read-only; mutation tools should preserve the `{ ok, data, error, summary }` response envelope and session-based workflow.
+
 ## Authoring decision rules
 
 - Treat this manual as the content-facing authority for current authorability.

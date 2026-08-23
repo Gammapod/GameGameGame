@@ -2,11 +2,83 @@ using GameGameGame.Content;
 using GameGameGame.Content.Tools;
 using GameGameGame.Core;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace GameGameGame.Tests;
 
 public sealed class ContentToolDispatcherTests
 {
+    [Fact]
+    public void ContentToolCatalogExposesAgentDiscoveryTools()
+    {
+        Assert.Contains("ggg_content_get_authoring_guide", ContentToolCatalog.Names);
+        Assert.Contains("ggg_content_describe_schema", ContentToolCatalog.Names);
+        Assert.Contains("ggg_content_list_workflows", ContentToolCatalog.Names);
+        Assert.Contains("ggg_content_list_examples", ContentToolCatalog.Names);
+
+        var describeSchema = ContentToolCatalog.InputSchema("ggg_content_describe_schema");
+        Assert.Equal("string", describeSchema["properties"]!["concept"]!["type"]!.GetValue<string>());
+        var conceptEnum = Assert.IsType<JsonArray>(describeSchema["properties"]!["concept"]!["enum"]);
+        Assert.Contains(conceptEnum, value => value?.GetValue<string>() == "entityTemplateUpdate");
+        Assert.Contains(conceptEnum, value => value?.GetValue<string>() == "scenario");
+        Assert.Contains(conceptEnum, value => value?.GetValue<string>() == "behaviorStep");
+    }
+
+    [Fact]
+    public void ContentToolCatalogDescribesOpaqueSchemasWithEnumsAndObjectFields()
+    {
+        var updateSchema = ContentToolCatalog.InputSchema(ContentToolNames.UpdateEntityTemplate);
+        var update = updateSchema["properties"]!["update"]!;
+        Assert.NotNull(update["properties"]!["name"]);
+        Assert.NotNull(update["properties"]!["inventoryWidth"]);
+        Assert.NotNull(update["properties"]!["enterPolicy"]!["enum"]);
+        Assert.NotNull(update["properties"]!["topologyPolicy"]!["enum"]);
+        Assert.Equal("Set nullable fields to null to clear them where listed.", update["description"]!.GetValue<string>());
+
+        var placeSchema = ContentToolCatalog.InputSchema(ContentToolNames.PlaceCarriedEntity);
+        Assert.Equal("integer", placeSchema["properties"]!["coord"]!["properties"]!["x"]!["type"]!.GetValue<string>());
+        Assert.Equal("integer", placeSchema["properties"]!["coord"]!["properties"]!["y"]!["type"]!.GetValue<string>());
+
+        var costsSchema = ContentToolCatalog.InputSchema(ContentToolNames.SetBehaviorStepCosts);
+        var costItem = costsSchema["properties"]!["costs"]!["items"]!;
+        Assert.Equal("object", costItem["type"]!.GetValue<string>());
+        Assert.NotNull(costItem["properties"]!["templateId"]);
+        Assert.NotNull(costItem["properties"]!["quantity"]);
+
+        var addStepSchema = ContentToolCatalog.InputSchema(ContentToolNames.AddActionPlanBehaviorStep);
+        var kindEnum = Assert.IsType<JsonArray>(addStepSchema["properties"]!["kind"]!["enum"]);
+        Assert.Contains(kindEnum, value => value?.GetValue<string>() == nameof(ActionPlanBehaviorStepKind.Move));
+        Assert.Contains(kindEnum, value => value?.GetValue<string>() == nameof(ActionPlanBehaviorStepKind.TargetPathMove));
+    }
+
+    [Fact]
+    public void ContentToolDispatcherReturnsAuthoringGuideAndSchemaHelp()
+    {
+        var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
+
+        var guide = dispatcher.Invoke("ggg_content_get_authoring_guide", new { });
+        var schema = dispatcher.Invoke("ggg_content_describe_schema", new { concept = "scenario" });
+        var workflows = dispatcher.Invoke("ggg_content_list_workflows", new { });
+        var examples = dispatcher.Invoke("ggg_content_list_examples", new { });
+
+        Assert.True(guide.Ok, guide.Error?.Message);
+        var guideData = Assert.IsType<ContentToolAuthoringGuide>(guide.Data);
+        Assert.Contains("open/create", guideData.StartHere, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(guideData.AuthoritativeDocs, path => path.EndsWith("Content-Authoring-Manual.md", StringComparison.Ordinal));
+
+        Assert.True(schema.Ok, schema.Error?.Message);
+        var schemaData = Assert.IsType<ContentToolSchemaDescription>(schema.Data);
+        Assert.Equal("scenario", schemaData.Concept);
+        Assert.Contains(schemaData.Fields, field => field.Name == "scenarioRootEntityTemplateId" && field.Required);
+        Assert.Contains(schemaData.Examples, example => example.Contains("scenarioId", StringComparison.Ordinal));
+
+        Assert.True(workflows.Ok, workflows.Error?.Message);
+        Assert.Contains(Assert.IsAssignableFrom<IReadOnlyList<ContentToolWorkflowRecipe>>(workflows.Data), workflow => workflow.Id == "safe-save-loop");
+
+        Assert.True(examples.Ok, examples.Error?.Message);
+        Assert.Contains(Assert.IsAssignableFrom<IReadOnlyList<ContentToolExampleReference>>(examples.Data), example => example.Purpose.Contains("scenario", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public void ContentToolDispatcherKeepsSessionAcrossSemanticEditCalls()
     {
