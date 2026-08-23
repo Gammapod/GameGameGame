@@ -257,7 +257,7 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
-    public void MergedInventoryLayerConnectsTwoPlacedInventorySpacesAsOneTopology()
+    public void MergedInventoryLayerProjectionDoesNotConnectTwoPlacedInventorySpacesWithoutExplicitLink()
     {
         var world = TestWorld.CreateWorld();
         world.MergedInventoryLayers.Add(new MergedInventoryLayer(
@@ -275,18 +275,13 @@ public sealed class TopologyServiceTests
         var adjacency = movement.EvaluateAdjacency(world, playerEastEdge, slimeWestEdge);
         var notAdjacent = movement.EvaluateAdjacency(world, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), slimeWestEdge);
 
-        Assert.True(found);
-        Assert.Equal(slimeWestEdge, neighbor.Destination);
-        Assert.Equal(Direction.East, neighbor.Direction);
-        Assert.Equal(TopologyEdgeKind.MergedInventoryLayer, neighbor.Kind);
-        Assert.False(neighbor.IsBlocked);
-        Assert.True(adjacency.AreAdjacent);
-        Assert.Equal(Direction.East, adjacency.Direction);
+        Assert.False(found && neighbor.Destination == slimeWestEdge);
+        Assert.False(adjacency.AreAdjacent);
         Assert.False(notAdjacent.AreAdjacent);
     }
 
     [Fact]
-    public void TopologyGraphResolvesMergedInventoryLayerWithoutMergedInventoryWrapper()
+    public void TopologyGraphDoesNotResolveMergedInventoryLayerProjectionAsTopologyEdge()
     {
         var world = TestWorld.CreateWorld();
         world.MergedInventoryLayers.Add(new MergedInventoryLayer(
@@ -304,13 +299,8 @@ public sealed class TopologyServiceTests
         var adjacency = movement.EvaluateAdjacency(world, playerEastEdge, slimeWestEdge);
         var notAdjacent = movement.EvaluateAdjacency(world, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), slimeWestEdge);
 
-        Assert.True(found);
-        Assert.Equal(slimeWestEdge, neighbor.Destination);
-        Assert.Equal(Direction.East, neighbor.Direction);
-        Assert.Equal(TopologyEdgeKind.MergedInventoryLayer, neighbor.Kind);
-        Assert.False(neighbor.IsBlocked);
-        Assert.True(adjacency.AreAdjacent);
-        Assert.Equal(Direction.East, adjacency.Direction);
+        Assert.False(found && neighbor.Destination == slimeWestEdge);
+        Assert.False(adjacency.AreAdjacent);
         Assert.False(notAdjacent.AreAdjacent);
     }
 
@@ -344,6 +334,39 @@ public sealed class TopologyServiceTests
 
         Assert.True(movedWest);
         Assert.Equal(roomDoor, world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void DiagonalMovementCanCrossExplicitSeamWhenOneOrthogonalRouteExists()
+    {
+        var world = new WorldState();
+        var roomId = new EntityId("room-a");
+        var hallwayId = new EntityId("hall-ab");
+        var actorId = new EntityId("actor");
+        var roomPlaneId = new PlaneId("room-a-inventory");
+        var hallwayPlaneId = new PlaneId("hall-ab-inventory");
+        AddPlane(world, new Plane(TestWorld.WorldPlaneId, "World", 5, 5));
+        AddPlane(world, new Plane(roomPlaneId, "Room A Inventory", 3, 3));
+        AddPlane(world, new Plane(hallwayPlaneId, "Hall AB Inventory", 5, 1));
+        AddEntity(world, roomId, "Room A", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0)), inventoryWidth: 3, inventoryHeight: 3, bulk: 100, aperture: 100);
+        AddEntity(world, hallwayId, "Hall AB", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(2, 0)), inventoryWidth: 5, inventoryHeight: 1, bulk: 100, aperture: 100);
+        AddEntity(world, actorId, "Actor", new PlaneCoord(roomPlaneId, new GridCoord(2, 2)), inventoryWidth: 0, inventoryHeight: 0, bulk: 1, aperture: 1);
+        world.RegisterInventoryPlane(roomId, roomPlaneId);
+        world.RegisterInventoryPlane(hallwayId, hallwayPlaneId);
+        var roomDoor = new PlaneCoord(roomPlaneId, new GridCoord(2, 1));
+        var hallwayDoor = new PlaneCoord(hallwayPlaneId, new GridCoord(0, 0));
+        world.SourceCellLinks.Add(new SourceCellLink(roomDoor, Direction.East, hallwayDoor, Direction.West));
+        var movement = new MovementService();
+
+        var found = movement.TryGetMovementEdge(world, actorId, Direction.NorthEast, out var edge);
+        var moved = movement.TryMove(world, actorId, Direction.NorthEast);
+
+        Assert.True(found);
+        Assert.False(edge.IsBlocked);
+        Assert.Equal(hallwayDoor, edge.Destination);
+        Assert.Equal(TopologyEdgeKind.SourceCellLink, edge.Kind);
+        Assert.True(moved);
+        Assert.Equal(hallwayDoor, world.GetEntityLocation(actorId));
     }
 
     [Fact]
@@ -389,7 +412,7 @@ public sealed class TopologyServiceTests
     }
 
     [Fact]
-    public void MergedInventoryLayerDistanceTreatsPlacedSpacesAsOneRigidLayer()
+    public void MergedInventoryLayerDistanceDoesNotCrossProjectionWithoutExplicitLink()
     {
         var world = TestWorld.CreateWorld();
         world.MergedInventoryLayers.Add(new MergedInventoryLayer(
@@ -406,9 +429,9 @@ public sealed class TopologyServiceTests
         var movedExternally = new MovementService().TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)));
         var afterMove = traversal.Flood(world, origin, maxDepth: 3);
 
-        Assert.Contains(beforeMove, step => step.Coord == destination && step.Distance == 3);
+        Assert.DoesNotContain(beforeMove, step => step.Coord == destination);
         Assert.True(movedExternally);
-        Assert.Contains(afterMove, step => step.Coord == destination && step.Distance == 3);
+        Assert.DoesNotContain(afterMove, step => step.Coord == destination);
     }
 
     [Fact]
@@ -424,6 +447,7 @@ public sealed class TopologyServiceTests
         var movement = new MovementService();
         var origin = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0));
         var destination = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+        world.SourceCellLinks.Add(new SourceCellLink(origin, Direction.East, destination, Direction.West));
         Assert.True(movement.TryPlace(world, TestWorld.RockId, origin));
 
         var moved = movement.TryMove(world, TestWorld.RockId, Direction.East);
@@ -447,12 +471,15 @@ public sealed class TopologyServiceTests
                 new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 1))
             ]));
         var movement = new MovementService();
-        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1))));
+        var origin = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 1));
+        var destination = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+        world.SourceCellLinks.Add(new SourceCellLink(origin, Direction.East, destination, Direction.West));
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, origin));
 
         var moved = movement.TryMove(world, TestWorld.RockId, Direction.East);
 
         Assert.True(moved);
-        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.Equal(destination, world.GetEntityLocation(TestWorld.RockId));
         Assert.True(MergedInventoryLayerResolver.TryResolveCell(world, world.GetEntityLocation(TestWorld.RockId), out var cell));
         Assert.Equal(TestWorld.SlimeId, cell.Space.OwnerId);
         Assert.Equal(new GridCoord(3, 1), cell.LayerCoord);
@@ -472,6 +499,11 @@ public sealed class TopologyServiceTests
                 new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
                 new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
             ]));
+        world.SourceCellLinks.Add(new SourceCellLink(
+            new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0)),
+            Direction.East,
+            new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)),
+            Direction.West));
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
         Assert.True(movement.TryMove(world, TestWorld.RockId, Direction.East));
 
@@ -497,6 +529,16 @@ public sealed class TopologyServiceTests
                 new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0)),
                 new MergedInventorySpaceContribution(gateCId, new GridCoord(4, 0))
             ]));
+        world.SourceCellLinks.Add(new SourceCellLink(
+            new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0)),
+            Direction.East,
+            new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)),
+            Direction.West));
+        world.SourceCellLinks.Add(new SourceCellLink(
+            new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)),
+            Direction.East,
+            new PlaneCoord(gateCPlaneId, new GridCoord(0, 0)),
+            Direction.West));
         var movement = new MovementService();
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));
 
@@ -518,6 +560,11 @@ public sealed class TopologyServiceTests
                 new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
                 new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
             ]));
+        world.SourceCellLinks.Add(new SourceCellLink(
+            new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0)),
+            Direction.East,
+            new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)),
+            Direction.West));
         var movement = new MovementService();
         Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 4))));
         Assert.True(movement.TryPlace(world, TestWorld.SlimeId, new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4))));

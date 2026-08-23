@@ -1,8 +1,8 @@
 entityTemplates:
   debugRoomRoot:
     name: Debug Scenario Root
-    inventoryWidth: 3
-    inventoryHeight: 3
+    inventoryWidth: 5
+    inventoryHeight: 7
     weight: 1000
     carryingCapacity: 1000
     bulk: 1000
@@ -13,6 +13,45 @@ entityTemplates:
       coord:
         x: 1
         y: 1
+    - entityId: debugLoopHallEast
+      templateId: debugHallwayEastWest5x1
+      coord: { x: 2, y: 1 }
+    - entityId: debugLoopNodeEast
+      templateId: debugNodeRoom3x3
+      coord: { x: 3, y: 1 }
+    - entityId: debugLoopHallNorth
+      templateId: debugHallwayNorthSouth1x5
+      coord: { x: 3, y: 0 }
+    - entityId: debugLoopNodeNorth
+      templateId: debugNodeRoom3x3
+      coord: { x: 2, y: 0 }
+    - entityId: debugLoopHallWest
+      templateId: debugHallwayEastWest5x1
+      coord: { x: 1, y: 0 }
+    - entityId: debugLoopNodeWest
+      templateId: debugNodeRoom3x3
+      coord: { x: 0, y: 0 }
+    - entityId: debugLoopHallSouthUpper
+      templateId: debugHallwayNorthSouth1x5
+      coord: { x: 0, y: 1 }
+    - entityId: debugLoopNodeWestCenter
+      templateId: debugNodeRoom3x3
+      coord: { x: 0, y: 2 }
+    - entityId: debugLoopHallSouthLower
+      templateId: debugHallwayNorthSouth1x5
+      coord: { x: 0, y: 3 }
+    - entityId: debugLoopNodeSouthWest
+      templateId: debugNodeRoom3x3
+      coord: { x: 0, y: 4 }
+    - entityId: debugLoopHallEastSouth
+      templateId: debugHallwayEastWest5x1
+      coord: { x: 1, y: 4 }
+    - entityId: debugLoopNodeSouthEast
+      templateId: debugNodeRoom3x3
+      coord: { x: 2, y: 4 }
+    - entityId: debugLoopHallNorthReturn
+      templateId: debugHallwayNorthSouth1x5
+      coord: { x: 3, y: 4 }
 
   debugStartRoom:
     name: Debug Start Room
@@ -70,6 +109,33 @@ entityTemplates:
         x: 4
         y: 4
 
+  debugHallwayNorthSouth1x5:
+    name: Debug Hallway North-South 1x5
+    inventoryWidth: 1
+    inventoryHeight: 5
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+
+  debugHallwayEastWest5x1:
+    name: Debug Hallway East-West 5x1
+    inventoryWidth: 5
+    inventoryHeight: 1
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+
+  debugNodeRoom3x3:
+    name: Debug Node Room 3x3
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+
 presentations:
   debugRoomRoot:
     presentationId: space.debug-room
@@ -80,6 +146,21 @@ presentations:
     presentationId: space.debug-start-room
     paletteId: space.debug-room.default
     glyph: '.'
+    color: Gray
+  debugHallwayNorthSouth1x5:
+    presentationId: space.debug-hallway-north-south-1x5
+    paletteId: space.debug-room.default
+    glyph: '|'
+    color: Gray
+  debugHallwayEastWest5x1:
+    presentationId: space.debug-hallway-east-west-5x1
+    paletteId: space.debug-room.default
+    glyph: '-'
+    color: Gray
+  debugNodeRoom3x3:
+    presentationId: space.debug-node-room-3x3
+    paletteId: space.debug-room.default
+    glyph: 'o'
     color: Gray
 
 presentationCatalog:
@@ -97,6 +178,30 @@ presentationCatalog:
     - space
     - room
     - debug
+  space.debug-hallway-north-south-1x5:
+    name: Debug Hallway North-South 1x5
+    fallbackText: '|'
+    tags:
+    - space
+    - room
+    - hallway
+    - debug
+  space.debug-hallway-east-west-5x1:
+    name: Debug Hallway East-West 5x1
+    fallbackText: '-'
+    tags:
+    - space
+    - room
+    - hallway
+    - debug
+  space.debug-node-room-3x3:
+    name: Debug Node Room 3x3
+    fallbackText: 'o'
+    tags:
+    - space
+    - room
+    - node
+    - debug
 
 palettes:
   space.debug-room.default:
@@ -106,3 +211,78 @@ palettes:
       wall: Gray
 
 actionPlans: {}
+
+mergedLayers:
+  debugRoomLoopLayer:
+    spaces:
+    - owner: debugStartRoom
+      origin: { x: 0, y: 0 }
+    - owner: debugLoopHallEast
+      origin: { x: 9, y: 3 }
+    - owner: debugLoopNodeEast
+      origin: { x: 14, y: 2 }
+    - owner: debugLoopHallNorth
+      origin: { x: 15, y: -3 }
+    - owner: debugLoopNodeNorth
+      origin: { x: 14, y: -6 }
+    - owner: debugLoopHallWest
+      origin: { x: 9, y: -5 }
+    - owner: debugLoopNodeWest
+      origin: { x: 6, y: -6 }
+    - owner: debugLoopHallSouthUpper
+      origin: { x: 7, y: -3 }
+    - owner: debugLoopNodeWestCenter
+      origin: { x: 6, y: 2 }
+    - owner: debugLoopHallSouthLower
+      origin: { x: 7, y: 5 }
+    - owner: debugLoopNodeSouthWest
+      origin: { x: 6, y: 10 }
+    - owner: debugLoopHallEastSouth
+      origin: { x: 9, y: 11 }
+    - owner: debugLoopNodeSouthEast
+      origin: { x: 14, y: 10 }
+    - owner: debugLoopHallNorthReturn
+      origin: { x: 15, y: 5 }
+    joins:
+    - from: { owner: debugStartRoom, edge: East }
+      to: { owner: debugLoopHallEast, edge: West }
+      align: Center
+    - from: { owner: debugLoopHallEast, edge: East }
+      to: { owner: debugLoopNodeEast, edge: West }
+      align: Center
+    - from: { owner: debugLoopNodeEast, edge: North }
+      to: { owner: debugLoopHallNorth, edge: South }
+      align: Center
+    - from: { owner: debugLoopHallNorth, edge: North }
+      to: { owner: debugLoopNodeNorth, edge: South }
+      align: Center
+    - from: { owner: debugLoopNodeNorth, edge: West }
+      to: { owner: debugLoopHallWest, edge: East }
+      align: Center
+    - from: { owner: debugLoopHallWest, edge: West }
+      to: { owner: debugLoopNodeWest, edge: East }
+      align: Center
+    - from: { owner: debugLoopNodeWest, edge: South }
+      to: { owner: debugLoopHallSouthUpper, edge: North }
+      align: Center
+    - from: { owner: debugLoopHallSouthUpper, edge: South }
+      to: { owner: debugLoopNodeWestCenter, edge: North }
+      align: Center
+    - from: { owner: debugLoopNodeWestCenter, edge: South }
+      to: { owner: debugLoopHallSouthLower, edge: North }
+      align: Center
+    - from: { owner: debugLoopHallSouthLower, edge: South }
+      to: { owner: debugLoopNodeSouthWest, edge: North }
+      align: Center
+    - from: { owner: debugLoopNodeSouthWest, edge: East }
+      to: { owner: debugLoopHallEastSouth, edge: West }
+      align: Center
+    - from: { owner: debugLoopHallEastSouth, edge: East }
+      to: { owner: debugLoopNodeSouthEast, edge: West }
+      align: Center
+    - from: { owner: debugLoopNodeSouthEast, edge: North }
+      to: { owner: debugLoopHallNorthReturn, edge: South }
+      align: Center
+    - from: { owner: debugLoopHallNorthReturn, edge: North }
+      to: { owner: debugLoopNodeEast, edge: South }
+      align: Center

@@ -45,12 +45,18 @@ internal sealed record PlayGridViewModel(
     IReadOnlyList<PlayGridDiagnostic> Diagnostics)
 {
     private readonly IReadOnlyDictionary<(int X, int Y), PlayCellVisual> _cellsByCoord = Cells.ToDictionary(cell => (cell.X, cell.Y));
+    private readonly IReadOnlyDictionary<PlaneCoord, PlayCellVisual> _cellsBySourceCoord = Cells
+        .Where(cell => cell.SourceCoord is not null)
+        .ToDictionary(cell => cell.SourceCoord!.Value);
 
     public PlayCellVisual? TryCellAt(int x, int y) => _cellsByCoord.TryGetValue((x, y), out var cell) ? cell : null;
 
+    public PlayCellVisual? TryCellForSource(PlaneCoord sourceCoord) =>
+        _cellsBySourceCoord.TryGetValue(sourceCoord, out var cell) ? cell : null;
+
     public GridCoord? TryDisplayCoordForSource(PlaneCoord sourceCoord)
     {
-        var cell = Cells.FirstOrDefault(cell => cell.SourceCoord == sourceCoord);
+        var cell = TryCellForSource(sourceCoord);
         return cell is null ? null : new GridCoord(cell.X, cell.Y);
     }
 
@@ -91,10 +97,24 @@ internal sealed record PlayGridViewModel(
         }
         else
         {
-            foreach (var contextCell in topologyVisibility.ContextCells)
+            var projectedCells = topologyVisibility.ContextCells
+                .Select(contextCell => new
+                {
+                    Cell = contextCell,
+                    RawDisplayCoord = contextCell.LayoutCoord?.Coord ?? contextCell.Cell.SourceCoord.Coord,
+                    IsInPointOfView = visibleCellsBySource?.ContainsKey(contextCell.Cell.SourceCoord) == true
+                })
+                .ToList();
+            var minX = projectedCells.Count == 0 ? 0 : projectedCells.Min(cell => cell.RawDisplayCoord.X);
+            var minY = projectedCells.Count == 0 ? 0 : projectedCells.Min(cell => cell.RawDisplayCoord.Y);
+
+            foreach (var projectedCell in projectedCells)
             {
-                var displayCoord = contextCell.LayoutCoord?.Coord ?? contextCell.Cell.SourceCoord.Coord;
-                var isInPointOfView = visibleCellsBySource?.ContainsKey(contextCell.Cell.SourceCoord) == true;
+                var contextCell = projectedCell.Cell;
+                var displayCoord = new GridCoord(
+                    projectedCell.RawDisplayCoord.X - minX,
+                    projectedCell.RawDisplayCoord.Y - minY);
+                var isInPointOfView = projectedCell.IsInPointOfView;
                 AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
                     session,
                     tilesetProfile,
@@ -117,9 +137,9 @@ internal sealed record PlayGridViewModel(
             ? session.World.GetEntityLocation(session.PlayerEntityId).Coord
             : (GridCoord?)null;
         if (topologyVisibility is not null
-            && topologyVisibility.VisibleCells.FirstOrDefault(cell => cell.Cell == topologyVisibility.Origin)?.LayoutCoord is { } originLayoutCoord)
+            && cells.FirstOrDefault(cell => cell.SourceCoord == topologyVisibility.Origin.SourceCoord) is { } originCell)
         {
-            controlledCoord = originLayoutCoord.Coord;
+            controlledCoord = new GridCoord(originCell.X, originCell.Y);
         }
 
         var containerEntityId = InventoryPlaneOwnership.TryFindOwner(session.World, planeId, out var ownerId)
@@ -156,7 +176,20 @@ internal sealed record PlayGridViewModel(
                 $"Topology display coordinate ({cell.X},{cell.Y}) contains multiple source cells: {existingSource} and {newSource}."));
         }
 
-        cellsByDisplayCoord[key] = cell;
+        if (!cellsByDisplayCoord.TryGetValue(key, out var current) || ShouldReplaceDisplayedCell(current, cell))
+        {
+            cellsByDisplayCoord[key] = cell;
+        }
+    }
+
+    private static bool ShouldReplaceDisplayedCell(PlayCellVisual current, PlayCellVisual candidate)
+    {
+        if (candidate.IsInPointOfView != current.IsInPointOfView)
+        {
+            return candidate.IsInPointOfView;
+        }
+
+        return true;
     }
 
     private static PlayCellVisual BuildCellVisual(

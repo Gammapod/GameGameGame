@@ -29,6 +29,30 @@ public sealed class TopologyGraphMaterializerTests
     }
 
     [Fact]
+    public void MaterializeDoesNotCreateCrossContributorEdgesFromMergedLayerLayoutAdjacency()
+    {
+        var world = TestWorld.CreateWorld();
+        world.MergedInventoryLayers.Add(new MergedInventoryLayer(
+            new MergedInventoryLayerId("projection-only"),
+            [
+                new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
+                new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
+            ]));
+        var playerEastEdge = new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0));
+        var slimeWestEdge = new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0));
+
+        var graph = TopologyGraphMaterializer.Materialize(world);
+
+        Assert.True(graph.TryGetNode(new TopologyCellRef(playerEastEdge), out var playerNode));
+        Assert.True(graph.TryGetNode(new TopologyCellRef(slimeWestEdge), out var slimeNode));
+        Assert.NotEqual(playerNode.Id, slimeNode.Id);
+        Assert.Equal(new TopologyLayoutCoord(new GridCoord(2, 0)), playerNode.LayoutCoord);
+        Assert.Equal(new TopologyLayoutCoord(new GridCoord(3, 0)), slimeNode.LayoutCoord);
+        Assert.False(graph.TryGetNeighbor(new TopologyCellRef(playerEastEdge), Direction.East, out var neighbor)
+            && neighbor.Destination == slimeWestEdge);
+    }
+
+    [Fact]
     public void MaterializeEmitsDefaultGridEdgesFromSourceNodeProjection()
     {
         var world = TestWorld.CreateWorld();

@@ -362,8 +362,8 @@ public static class TopologyGraphMaterializer
 
         MaterializeDefaultGridEdges(world, nodeIdsBySource, edges);
         MaterializeEntityTopologyPolicyEdges(world, nodeIdsBySource, edges);
-        MaterializeMergedInventoryLayerEdges(world, nodeIdsBySource, edges);
         MaterializeSourceCellLinkEdges(world, nodeIdsBySource, edges);
+        MaterializeComposedIntercardinalEdges(world, edges);
 
         return new TopologyGraph(nodes, edges);
     }
@@ -581,98 +581,6 @@ public static class TopologyGraphMaterializer
 
     private static int SecondFromTop(int height) => Math.Min(1, Math.Max(0, height - 1));
 
-    private static void MaterializeMergedInventoryLayerEdges(
-        WorldState world,
-        IReadOnlyDictionary<PlaneCoord, TopologyNodeId> nodeIdsBySource,
-        List<TopologyGraphEdge> edges)
-    {
-        foreach (var layer in world.MergedInventoryLayers)
-        {
-            var cellsByLayerCoord = ResolveMergedLayerCells(world, layer)
-                .GroupBy(cell => cell.LayerCoord)
-                .ToDictionary(group => group.Key, group => group.ToList());
-            foreach (var originCell in cellsByLayerCoord.Values.SelectMany(cells => cells))
-            {
-                if (!nodeIdsBySource.TryGetValue(originCell.SourceCoord, out var sourceNodeId))
-                {
-                    continue;
-                }
-
-                foreach (var direction in DirectionMath.AllDirections)
-                {
-                    var destinationLayerCoord = originCell.LayerCoord.Offset(direction);
-                    if (!cellsByLayerCoord.TryGetValue(destinationLayerCoord, out var destinationCells))
-                    {
-                        continue;
-                    }
-
-                    var isBlocked = DirectionMath.OrthogonalCorners(direction) is { } corners &&
-                        IsOccupiedMergedLayerCoord(world, cellsByLayerCoord, originCell.LayerCoord.Offset(corners.First)) &&
-                        IsOccupiedMergedLayerCoord(world, cellsByLayerCoord, originCell.LayerCoord.Offset(corners.Second));
-                    foreach (var destinationCell in destinationCells)
-                    {
-                        if (!nodeIdsBySource.TryGetValue(destinationCell.SourceCoord, out var destinationNodeId))
-                        {
-                            continue;
-                        }
-
-                        edges.Add(new TopologyGraphEdge(
-                            sourceNodeId,
-                            direction,
-                            destinationNodeId,
-                            TopologyEdgeKind.MergedInventoryLayer,
-                            isBlocked,
-                            isBlocked ? FailureReason.MoveBlocked : null,
-                            isBlocked ? $"merged inventory layer intercardinal adjacency {direction} is blocked by both orthogonal corners" : null));
-                    }
-                }
-            }
-        }
-    }
-
-    private static IReadOnlyList<MergedInventoryLayerCell> ResolveMergedLayerCells(WorldState world, MergedInventoryLayer layer)
-    {
-        var cells = new List<MergedInventoryLayerCell>();
-        foreach (var space in layer.Spaces)
-        {
-            if (!world.Entities.TryGetValue(space.OwnerId, out var owner) ||
-                world.GetRegisteredInventoryPlaneId(space.OwnerId) is not { } inventoryPlaneId)
-            {
-                continue;
-            }
-
-            for (var y = 0; y < owner.InventoryHeight; y++)
-            {
-                for (var x = 0; x < owner.InventoryWidth; x++)
-                {
-                    var sourceCoord = new GridCoord(x, y);
-                    var planeCoord = new PlaneCoord(inventoryPlaneId, sourceCoord);
-                    if (!world.Planes.TryGetValue(inventoryPlaneId, out var plane) ||
-                        !plane.Contains(sourceCoord) ||
-                        !world.TryGetNodeId(planeCoord, out _))
-                    {
-                        continue;
-                    }
-
-                    cells.Add(new MergedInventoryLayerCell(
-                        layer,
-                        space,
-                        planeCoord,
-                        new GridCoord(space.Origin.X + x, space.Origin.Y + y)));
-                }
-            }
-        }
-
-        return cells;
-    }
-
-    private static bool IsOccupiedMergedLayerCoord(
-        WorldState world,
-        IReadOnlyDictionary<GridCoord, List<MergedInventoryLayerCell>> cellsByLayerCoord,
-        GridCoord layerCoord) =>
-        cellsByLayerCoord.TryGetValue(layerCoord, out var cells) &&
-        cells.Any(cell => world.GetOccupant(cell.SourceCoord) is not null);
-
     private static void TryAddSourceCellLinkEdge(
         WorldState world,
         IReadOnlyDictionary<PlaneCoord, TopologyNodeId> nodeIdsBySource,
@@ -700,6 +608,141 @@ public static class TopologyGraphMaterializer
             isValidDestination ? null : FailureReason.MoveOutOfBounds,
             isValidDestination ? null : $"source-cell link destination {destination} is not a valid node"));
     }
+
+    private static void MaterializeComposedIntercardinalEdges(WorldState world, List<TopologyGraphEdge> edges)
+    {
+        var cardinalEdgesBySourceDirection = edges
+            .Where(edge => !edge.IsBlocked && DirectionMath.OrthogonalCorners(edge.Direction) is null)
+            .GroupBy(edge => (edge.SourceNodeId, edge.Direction))
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        var existing = edges
+            .Select(edge => (edge.SourceNodeId, edge.Direction, edge.DestinationNodeId, edge.Kind))
+            .ToHashSet();
+
+        var composed = new List<TopologyGraphEdge>();
+        foreach (var sourceNodeId in edges.Select(edge => edge.SourceNodeId).Distinct())
+        {
+            foreach (var diagonal in DirectionMath.AllDirections)
+            {
+                if (DirectionMath.OrthogonalCorners(diagonal) is not { } corners)
+                {
+                    continue;
+                }
+
+                TryComposeIntercardinalPath(world, cardinalEdgesBySourceDirection, existing, composed, sourceNodeId, diagonal, corners.First, corners.Second);
+                TryComposeIntercardinalPath(world, cardinalEdgesBySourceDirection, existing, composed, sourceNodeId, diagonal, corners.Second, corners.First);
+            }
+        }
+
+        edges.AddRange(composed);
+    }
+
+    private static void TryComposeIntercardinalPath(
+        WorldState world,
+        IReadOnlyDictionary<(TopologyNodeId SourceNodeId, Direction Direction), List<TopologyGraphEdge>> cardinalEdgesBySourceDirection,
+        HashSet<(TopologyNodeId SourceNodeId, Direction Direction, TopologyNodeId DestinationNodeId, TopologyEdgeKind Kind)> existing,
+        List<TopologyGraphEdge> composed,
+        TopologyNodeId sourceNodeId,
+        Direction diagonal,
+        Direction firstDirection,
+        Direction secondDirection)
+    {
+        if (!cardinalEdgesBySourceDirection.TryGetValue((sourceNodeId, firstDirection), out var firstEdges))
+        {
+            return;
+        }
+
+        foreach (var firstEdge in firstEdges)
+        {
+            if (!cardinalEdgesBySourceDirection.TryGetValue((firstEdge.DestinationNodeId, secondDirection), out var secondEdges))
+            {
+                continue;
+            }
+
+            foreach (var secondEdge in secondEdges)
+            {
+                if (!CanComposeIntercardinalSeamEdge(firstEdge, secondEdge))
+                {
+                    continue;
+                }
+
+                var kind = ComposeEdgeKind(firstEdge.Kind, secondEdge.Kind);
+                if (!existing.Add((sourceNodeId, diagonal, secondEdge.DestinationNodeId, kind)))
+                {
+                    continue;
+                }
+
+                var isBlocked = BothOrthogonalIntermediateCellsAreOccupied(world, sourceNodeId, diagonal, cardinalEdgesBySourceDirection);
+                composed.Add(new TopologyGraphEdge(
+                    sourceNodeId,
+                    diagonal,
+                    secondEdge.DestinationNodeId,
+                    kind,
+                    isBlocked,
+                    isBlocked ? FailureReason.MoveBlocked : null,
+                    isBlocked ? $"intercardinal topology path {diagonal} is blocked by both orthogonal corners" : null));
+            }
+        }
+    }
+
+    private static bool CanComposeIntercardinalSeamEdge(TopologyGraphEdge firstEdge, TopologyGraphEdge secondEdge) =>
+        (firstEdge.Kind == TopologyEdgeKind.SourceCellLink || secondEdge.Kind == TopologyEdgeKind.SourceCellLink) &&
+        firstEdge.Kind != TopologyEdgeKind.EntityTopologyPolicy &&
+        secondEdge.Kind != TopologyEdgeKind.EntityTopologyPolicy;
+
+    private static TopologyEdgeKind ComposeEdgeKind(TopologyEdgeKind first, TopologyEdgeKind second)
+    {
+        if (first == TopologyEdgeKind.SourceCellLink || second == TopologyEdgeKind.SourceCellLink)
+        {
+            return TopologyEdgeKind.SourceCellLink;
+        }
+
+        if (first == TopologyEdgeKind.EntityTopologyPolicy || second == TopologyEdgeKind.EntityTopologyPolicy)
+        {
+            return TopologyEdgeKind.EntityTopologyPolicy;
+        }
+
+        if (first == TopologyEdgeKind.MergedInventoryLayer || second == TopologyEdgeKind.MergedInventoryLayer)
+        {
+            return TopologyEdgeKind.MergedInventoryLayer;
+        }
+
+        return TopologyEdgeKind.DefaultGrid;
+    }
+
+    private static bool BothOrthogonalIntermediateCellsAreOccupied(
+        WorldState world,
+        TopologyNodeId sourceNodeId,
+        Direction diagonal,
+        IReadOnlyDictionary<(TopologyNodeId SourceNodeId, Direction Direction), List<TopologyGraphEdge>> cardinalEdgesBySourceDirection)
+    {
+        if (DirectionMath.OrthogonalCorners(diagonal) is not { } corners ||
+            !TryGetFirstDestination(corners.First, out var firstCorner) ||
+            !TryGetFirstDestination(corners.Second, out var secondCorner))
+        {
+            return false;
+        }
+
+        return world.Occupancy.ContainsKey(new NodeId(firstCorner.Value)) &&
+            world.Occupancy.ContainsKey(new NodeId(secondCorner.Value));
+
+        bool TryGetFirstDestination(Direction direction, out TopologyNodeId nodeId)
+        {
+            if (cardinalEdgesBySourceDirection.TryGetValue((sourceNodeId, direction), out var edgesInDirection) &&
+                PreferredTopologyEdge(edgesInDirection) is { } edge)
+            {
+                nodeId = edge.DestinationNodeId;
+                return true;
+            }
+
+            nodeId = default;
+            return false;
+        }
+    }
+
+    private static TopologyGraphEdge? PreferredTopologyEdge(IEnumerable<TopologyGraphEdge> edges) =>
+        edges.OrderBy(edge => edge.Kind == TopologyEdgeKind.DefaultGrid ? 1 : 0).FirstOrDefault();
 }
 
 public sealed record TopologyEdgeFact(

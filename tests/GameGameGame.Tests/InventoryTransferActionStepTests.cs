@@ -188,6 +188,11 @@ public sealed class InventoryTransferActionStepTests
                 new MergedInventorySpaceContribution(TestWorld.PlayerId, new GridCoord(0, 0)),
                 new MergedInventorySpaceContribution(TestWorld.SlimeId, new GridCoord(3, 0))
             ]));
+        world.SourceCellLinks.Add(new SourceCellLink(
+            new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0)),
+            Direction.East,
+            new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)),
+            Direction.West));
         var movement = new MovementService();
         world.SetActionFacing(TestWorld.RockId, Direction.East);
         Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(2, 0))));

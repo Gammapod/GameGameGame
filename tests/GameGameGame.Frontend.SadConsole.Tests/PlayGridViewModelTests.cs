@@ -126,10 +126,10 @@ public sealed class PlayGridViewModelTests
 
         var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
 
-        Assert.Null(grid.TryCellAt(3, 0));
-        Assert.Null(grid.TryCellAt(4, 0));
-        Assert.Null(grid.TryCellAt(0, 2));
-        Assert.Null(grid.TryCellAt(2, 3));
+        AssertNoLayoutCell(grid, new GridCoord(3, 0));
+        AssertNoLayoutCell(grid, new GridCoord(4, 0));
+        AssertNoLayoutCell(grid, new GridCoord(0, 2));
+        AssertNoLayoutCell(grid, new GridCoord(2, 3));
     }
 
     [Fact]
@@ -149,10 +149,10 @@ public sealed class PlayGridViewModelTests
 
         var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
 
-        Assert.Null(grid.TryCellAt(3, 0));
-        Assert.Null(grid.TryCellAt(4, 0));
-        Assert.Null(grid.TryCellAt(0, 2));
-        Assert.Null(grid.TryCellAt(2, 3));
+        AssertNoLayoutCell(grid, new GridCoord(3, 0));
+        AssertNoLayoutCell(grid, new GridCoord(4, 0));
+        AssertNoLayoutCell(grid, new GridCoord(0, 2));
+        AssertNoLayoutCell(grid, new GridCoord(2, 3));
     }
 
     [Fact]
@@ -234,6 +234,163 @@ public sealed class PlayGridViewModelTests
     }
 
     [Fact]
+    public void MovementPreviewCellDoesNotInspectEntityAtDisplayAdjacentButTopologyDisconnectedOverlap()
+    {
+        var world = new WorldState();
+        var actorPlane = new PlaneId("actor-room");
+        var overlapPlane = new PlaneId("overlap-room");
+        AddPlane(world, actorPlane, 1, 1);
+        AddPlane(world, overlapPlane, 1, 1);
+        var actorId = new EntityId("actor");
+        var overlapBagId = new EntityId("overlapBag");
+        var actorSource = new PlaneCoord(actorPlane, new GridCoord(0, 0));
+        var bagSource = new PlaneCoord(overlapPlane, new GridCoord(0, 0));
+        AddEntity(world, actorId, "Actor", actorSource);
+        AddEntity(world, overlapBagId, "Overlap Bag", bagSource);
+        var actorCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(actorSource),
+            0,
+            null,
+            null,
+            null,
+            new TopologyNodeId("actor-room:0,0"),
+            new TopologyLayoutCoord(new GridCoord(1, 0)));
+        var bagCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(bagSource),
+            99,
+            null,
+            null,
+            null,
+            new TopologyNodeId("overlap-room:0,0"),
+            new TopologyLayoutCoord(new GridCoord(0, 0)));
+        var session = new PlayableScenarioSession(
+            "overlap",
+            "Overlap",
+            world,
+            new PrototypeContentRegistry(new Dictionary<EntityTemplateId, EntityTemplate>(), new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(), new Dictionary<EntityTemplateId, EntityPresentation>()),
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            actorId,
+            actorPlane,
+            actorId,
+            CanPlay: true,
+            [],
+            [],
+            []);
+        var projection = new TopologyVisibilityProjection(actorId, actorCell.Cell, 0, [actorCell], [], [actorCell, bagCell], []);
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), topologyVisibility: projection);
+
+        var displayAdjacent = grid.TryCellAt(0, 0);
+        var resolvedPreview = PlayModeConsole.ResolveMovementPreviewCell(world, actorId, Direction.West, grid);
+
+        Assert.Equal(overlapBagId, displayAdjacent?.EntityId);
+        Assert.Null(resolvedPreview);
+    }
+
+    [Fact]
+    public void PlayGridViewModelDrawsInPovCellOverOverlappingContextCell()
+    {
+        var world = new WorldState();
+        var actorPlane = new PlaneId("actor-room");
+        var overlapPlane = new PlaneId("overlap-room");
+        AddPlane(world, actorPlane, 1, 1);
+        AddPlane(world, overlapPlane, 1, 1);
+        var actorId = new EntityId("actor");
+        var overlapBagId = new EntityId("overlapBag");
+        var actorSource = new PlaneCoord(actorPlane, new GridCoord(0, 0));
+        var bagSource = new PlaneCoord(overlapPlane, new GridCoord(0, 0));
+        AddEntity(world, actorId, "Actor", actorSource);
+        AddEntity(world, overlapBagId, "Overlap Bag", bagSource);
+        var actorCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(actorSource),
+            0,
+            null,
+            null,
+            null,
+            new TopologyNodeId("actor-room:0,0"),
+            new TopologyLayoutCoord(new GridCoord(0, 0)));
+        var bagCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(bagSource),
+            99,
+            null,
+            null,
+            null,
+            new TopologyNodeId("overlap-room:0,0"),
+            new TopologyLayoutCoord(new GridCoord(0, 0)));
+        var session = new PlayableScenarioSession(
+            "overlap",
+            "Overlap",
+            world,
+            new PrototypeContentRegistry(new Dictionary<EntityTemplateId, EntityTemplate>(), new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(), new Dictionary<EntityTemplateId, EntityPresentation>()),
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            actorId,
+            actorPlane,
+            actorId,
+            CanPlay: true,
+            [],
+            [],
+            []);
+        var projection = new TopologyVisibilityProjection(actorId, actorCell.Cell, 0, [actorCell], [], [actorCell, bagCell], []);
+
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), topologyVisibility: projection);
+
+        var displayed = grid.CellAt(0, 0);
+        Assert.Equal(actorId, displayed.EntityId);
+        Assert.True(displayed.IsInPointOfView);
+        Assert.Equal(new GridCoord(0, 0), grid.ControlledEntityCoord);
+    }
+
+    [Fact]
+    public void PlayGridViewModelNormalizesNegativeTopologyLayoutCoordinatesForRendering()
+    {
+        var world = new WorldState();
+        var plane = new PlaneId("north-room");
+        AddPlane(world, plane, 2, 1);
+        var actorId = new EntityId("actor");
+        var actorSource = new PlaneCoord(plane, new GridCoord(0, 0));
+        var eastSource = new PlaneCoord(plane, new GridCoord(1, 0));
+        AddEntity(world, actorId, "Actor", actorSource);
+        var actorCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(actorSource),
+            0,
+            null,
+            null,
+            null,
+            new TopologyNodeId("north-room:0,0"),
+            new TopologyLayoutCoord(new GridCoord(-4, -6)));
+        var eastCell = new TopologyVisibleCellProjection(
+            new TopologyCellRef(eastSource),
+            1,
+            actorCell.Cell,
+            Direction.East,
+            TopologyEdgeKind.DefaultGrid,
+            new TopologyNodeId("north-room:1,0"),
+            new TopologyLayoutCoord(new GridCoord(-3, -6)));
+        var session = new PlayableScenarioSession(
+            "negative-layout",
+            "Negative Layout",
+            world,
+            new PrototypeContentRegistry(new Dictionary<EntityTemplateId, EntityTemplate>(), new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(), new Dictionary<EntityTemplateId, EntityPresentation>()),
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            actorId,
+            plane,
+            actorId,
+            CanPlay: true,
+            [],
+            [],
+            []);
+        var projection = new TopologyVisibilityProjection(actorId, actorCell.Cell, 1, [actorCell, eastCell], [], [actorCell, eastCell], []);
+
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), topologyVisibility: projection);
+
+        Assert.Equal(2, grid.Width);
+        Assert.Equal(1, grid.Height);
+        Assert.Equal(new GridCoord(0, 0), grid.ControlledEntityCoord);
+        Assert.Equal(new GridCoord(0, 0), grid.TryDisplayCoordForSource(actorSource));
+        Assert.Equal(new GridCoord(1, 0), grid.TryDisplayCoordForSource(eastSource));
+        Assert.Equal(new TopologyLayoutCoord(new GridCoord(-4, -6)), grid.CellAt(0, 0).LayoutCoord);
+    }
+
+    [Fact]
     public void PlayGridSurfacePresenterIdentifiesPreviouslyDrawnCellsMissingFromSparseTopologyModel()
     {
         var previous = new HashSet<(int X, int Y)> { (10, 10), (11, 10) };
@@ -264,6 +421,9 @@ public sealed class PlayGridViewModelTests
         world.Occupancy.Add(nodeId, entityId);
         world.Entities[entityId] = entity with { OccupiedNodeId = nodeId };
     }
+
+    private static void AssertNoLayoutCell(PlayGridViewModel grid, GridCoord layoutCoord) =>
+        Assert.DoesNotContain(grid.Cells, cell => cell.LayoutCoord == new TopologyLayoutCoord(layoutCoord));
 
     private static void AddPlane(WorldState world, PlaneId planeId, int width, int height)
     {

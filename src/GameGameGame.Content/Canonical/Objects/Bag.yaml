@@ -3,10 +3,8 @@ entityTemplates:
     name: Bag
     inventoryWidth: 3
     inventoryHeight: 3
-    weight: 1
-    carryingCapacity: 10
-    bulk: 1
-    aperture: 0
+    bulk: 9
+    aperture: 4
 
 presentations:
   bag:

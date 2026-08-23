@@ -522,10 +522,11 @@ internal sealed class PlayModeConsole : Console
             return;
         }
 
-        if (_movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
-            && _grid.TryCellAt(destination.X, destination.Y)?.EntityId is { } entityId
+        if (ResolveMovementPreviewCell(_session.World, _actionSession.ControlledActorId, _movementPreview.Direction, _grid) is { } destinationCell
+            && destinationCell.EntityId is { } entityId
             && entityId != _session.PlayerEntityId)
         {
+            var destination = new GridCoord(destinationCell.X, destinationCell.Y);
             _selectionStack.EnterActionSelection(destination);
             _inspection.FocusActions();
             _message = "Inspection actions focused. Up/Down choose, Esc returns.";
@@ -640,8 +641,8 @@ internal sealed class PlayModeConsole : Console
             var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _session.PlayerEntityId } : null;
             var previewCoord = ResolveAdjacentSelectionCoord();
             var movementPreviewCoord = _selectionStack.IsAdjacentSelection
-                && _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
-                    ? destination
+                && ResolveMovementPreviewCell(_session.World, _actionSession.ControlledActorId, _movementPreview.Direction, _grid) is { } movementPreviewCell
+                    ? new GridCoord(movementPreviewCell.X, movementPreviewCell.Y)
                     : (GridCoord?)null;
             var gridSelectionHighlight = _actionWorkflow.GridHighlight();
             var highlight = gridSelectionHighlight ?? ResolveHighlight(previewCoord);
@@ -748,10 +749,22 @@ internal sealed class PlayModeConsole : Console
         : CellHighlightKind.EntityTarget;
 
     private GridCoord? ResolveAdjacentSelectionCoord() => _selectionStack.IsAdjacentSelection
-        ? _movementPreview.TryDestination(_grid.ControlledEntityCoord ?? new GridCoord(0, 0), out var destination)
-            ? destination
+        ? ResolveMovementPreviewCell(_session.World, _actionSession.ControlledActorId, _movementPreview.Direction, _grid) is { } cell
+            ? new GridCoord(cell.X, cell.Y)
             : null
         : _selectionStack.LockedAdjacentCoord;
+
+    internal static PlayCellVisual? ResolveMovementPreviewCell(WorldState world, EntityId actorId, CoreDirection? direction, PlayGridViewModel grid)
+    {
+        if (direction is not { } resolvedDirection)
+        {
+            return null;
+        }
+
+        return new MovementService().TryGetMovementEdge(world, actorId, resolvedDirection, out var edge)
+            ? grid.TryCellForSource(edge.Destination)
+            : null;
+    }
 
     private void ClearSurfaceExcept(FrontendRect preservedRegion)
     {
