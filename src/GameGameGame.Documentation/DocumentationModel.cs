@@ -5,6 +5,7 @@ public sealed record MarkdownDocument(string Path, DocumentMetadata Metadata, st
 public sealed record DocumentMetadata(
     string? Id,
     string? Title,
+    string? Purpose,
     string? Kind,
     string? Subkind,
     string? Status,
@@ -50,6 +51,7 @@ public static class DocumentationDiagnosticCodes
     public const string ActivePlanInArchive = nameof(ActivePlanInArchive);
     public const string InvalidTruthRank = nameof(InvalidTruthRank);
     public const string UnknownTruthDomain = nameof(UnknownTruthDomain);
+    public const string PlanningItemNeedsUpdateMarker = nameof(PlanningItemNeedsUpdateMarker);
 }
 
 public sealed record TraversalProfile(string Id, IReadOnlyList<string> Lanes, IReadOnlyList<MarkdownDocument> Documents);

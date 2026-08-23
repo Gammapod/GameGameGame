@@ -1,6 +1,7 @@
 ---
 id: source.vertical-slice-map
 title: Vertical Slice Map
+purpose: Cross-layer implementation map for slices spanning Core Content Editor agent APIs GUI tests and docs.
 kind: source-of-truth
 subkind: implementation-navigation
 status: active

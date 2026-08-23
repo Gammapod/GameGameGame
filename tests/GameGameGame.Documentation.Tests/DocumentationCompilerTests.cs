@@ -11,6 +11,7 @@ public sealed class DocumentationCompilerTests
 ---
 id: source.example
 title: Example Doc
+purpose: Short orientation summary.
 kind: source-of-truth
 status: active
 owners: [core-owner]
@@ -33,6 +34,7 @@ Body text.
 
         Assert.Equal("source.example", document.Metadata.Id);
         Assert.Equal("Example Doc", document.Metadata.Title);
+        Assert.Equal("Short orientation summary.", document.Metadata.Purpose);
         Assert.Equal("source-of-truth", document.Metadata.Kind);
         Assert.Equal("active", document.Metadata.Status);
         Assert.Equal(["core-owner"], document.Metadata.Owners);
@@ -42,6 +44,23 @@ Body text.
         Assert.Equal(10, document.Metadata.TruthRank);
         Assert.Equal(["runtime-behavior", "test-trace"], document.Metadata.TruthDomains);
         Assert.Contains("Body text.", document.Body);
+    }
+
+    [Fact]
+    public void ReadPathBriefingIncludesPurposeAndReadWhenForAgentOrientation()
+    {
+        var graph = DocumentationGraph.Build([
+            SourceDocWithPurpose("docs/Source of Truth/planning-index.md", "source.planning-index", "navigation", "Planning navigation.", ["starting a session"]),
+            SourceDocWithPurpose("docs/Source of Truth/invariants.md", "source.invariants", "invariant-trace", "Stable behavior contracts.", ["changing behavior"])
+        ]);
+
+        var briefing = RoleReadPathBriefingRenderer.Render(graph, "core-owner");
+
+        Assert.Contains("Read path briefing for core-owner:", briefing);
+        Assert.Contains("1. source.planning-index - docs/Source of Truth/planning-index.md", briefing);
+        Assert.Contains("Purpose: Planning navigation.", briefing);
+        Assert.Contains("Read when: starting a session", briefing);
+        Assert.Contains("Purpose: Stable behavior contracts.", briefing);
     }
 
     [Fact]
@@ -263,6 +282,60 @@ code_refs:
     }
 
     [Fact]
+    public void DocumentationGraphJsonRendererOutputsDocumentsAndDiscoveryEdges()
+    {
+        var graph = DocumentationGraph.Build([
+            SourceDocWithPurpose("docs/Source of Truth/planning-index.md", "source.planning-index", "navigation", "Planning navigation.", ["starting a session"]),
+            SourceDocWithPurpose("docs/Source of Truth/invariants.md", "source.invariants", "invariant-trace", "Stable behavior contracts.", ["changing behavior"], related: ["source.planning-index"])
+        ]);
+
+        var json = DocumentationGraphJsonRenderer.Render(graph);
+
+        Assert.Contains("\"documents\"", json);
+        Assert.Contains("\"id\": \"source.invariants\"", json);
+        Assert.Contains("\"purpose\": \"Stable behavior contracts.\"", json);
+        Assert.Contains("\"edges\"", json);
+        Assert.Contains("\"from\": \"source.invariants\"", json);
+        Assert.Contains("\"to\": \"source.planning-index\"", json);
+    }
+
+    [Fact]
+    public void PlanningFreshnessAnalyzerFlagsNowItemsWithoutLastUpdatedMarker()
+    {
+        var board = MarkdownFrontmatterParser.Parse("docs/Plans/Core-Rolling-Board.md", """
+---
+id: plan.core-rolling-board
+title: Core Rolling Board
+kind: rolling-board
+status: active
+owners: [core-owner]
+audience: [core-owner]
+lane: core-rolling-board
+related: [source.planning-index]
+---
+# Core Rolling Board
+
+## Now
+
+### Improve documentation mapping
+
+**User story:** As a maintainer, I can orient quickly.
+
+## Next
+
+### Later item
+
+**Last updated:** 2026-08-23
+""");
+
+        var diagnostics = PlanningFreshnessAnalyzer.Analyze(DocumentationGraph.Build([board]));
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(DocumentationDiagnosticCodes.PlanningItemNeedsUpdateMarker, diagnostic.Code);
+        Assert.Contains("Improve documentation mapping", diagnostic.Message);
+    }
+
+    [Fact]
     public void LinterReportsInvalidTruthRankAndUnknownTruthDomain()
     {
         var document = MarkdownFrontmatterParser.Parse("docs/Source of Truth/a.md", """
@@ -454,6 +527,37 @@ owners: [{{string.Join(", ", owners ?? ["core-owner"])}}]
 audience: [{{string.Join(", ", audience ?? ["core-owner"])}}]
 lane: {{lane}}
 read_when: [testing docs]
+truth_rank: 30
+truth_domains: [stable-contract]
+{{relatedText}}
+---
+# {{id}}
+""");
+    }
+
+    private static MarkdownDocument SourceDocWithPurpose(
+        string path,
+        string id,
+        string lane,
+        string purpose,
+        string[] readWhen,
+        string[]? related = null)
+    {
+        var relatedText = related is { Length: > 0 }
+            ? $"related: [{string.Join(", ", related)}]"
+            : "related: []";
+
+        return MarkdownFrontmatterParser.Parse(path, $$"""
+---
+id: {{id}}
+title: {{id}}
+kind: source-of-truth
+status: active
+owners: [core-owner]
+audience: [core-owner]
+lane: {{lane}}
+purpose: {{purpose}}
+read_when: [{{string.Join(", ", readWhen)}}]
 truth_rank: 30
 truth_domains: [stable-contract]
 {{relatedText}}

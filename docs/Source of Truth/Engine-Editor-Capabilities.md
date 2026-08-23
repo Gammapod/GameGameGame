@@ -1,6 +1,7 @@
 ---
 id: source.engine-editor-capabilities
 title: Engine-Editor Capability Matrix
+purpose: Maintainer-facing support tiers and layer coverage for engine/editor capabilities.
 kind: source-of-truth
 subkind: capability-matrix
 status: active

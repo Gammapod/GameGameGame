@@ -31,46 +31,6 @@ Purpose: Track small, continuously updated Core work without creating a dedicate
 
 ## Now
 
-### Update content-facing semantics documentation before new implementation
-
-**User story:** As a content author or maintainer, I can understand the current implemented action/content semantics without reading engine source before we start the next implementation slice.
-
-**Owners:** Core + Content.
-
-**Plan:**
-
-- Update `docs/Source of Truth/Content-Authoring-Manual.md` for currently implemented semantics, including newer actions and known limits.
-- Reconcile `docs/Source of Truth/Engine-Editor-Capabilities.md` and action-step source-of-truth docs with actual Core/Content support where they lag.
-- Clearly classify promoted canonical, prototype-compatible, and legacy/retired action semantics.
-- Prefer examples that point to existing content/scenario fixtures rather than inventing new runtime behavior.
-
-**Done when:**
-
-- Content authors can tell which existing semantics are safe to use today.
-- Known limits for Create/Destroy/Polymorph, TargetPathMove, Push, costs, merged topology, and ecology-supporting semantics are explicitly documented or linked to gap logs.
-- No new production code is required for this item.
-
-### Quarantine old frontend from default build/package path
-
-**User story:** As a developer, I want default build, test, run, and feedback-package workflows to treat `GameGameGame.Frontend.SadConsole` as the real frontend and keep the old `GameGameGame.SadConsole` only as explicit reference material.
-
-**Priority dependency:** Start after the content-facing semantics documentation update above.
-
-**Plan:**
-
-- Remove old frontend and old frontend tests from default solution/CI/package dependencies, or move them behind an explicit opt-in reference-only workflow.
-- Publish/package `src/GameGameGame.Frontend.SadConsole` for feedback builds.
-- Update README/workflow docs so normal commands target the new frontend.
-- Keep old source available for reference unless a separate archival/removal decision is made.
-
-**Done when:**
-
-- Default `dotnet build`/CI/feedback package no longer depends on the old frontend.
-- Legacy frontend status is explicit and cannot silently gate normal work.
-- The new frontend is the documented run/package target.
-
-## Next
-
 ### Add topology-aware targeting distance semantics
 
 **User story:** As a behavior author, I can target entities using distance semantics that survive merged, folded, and non-euclidean topology experiments.
@@ -89,6 +49,38 @@ Purpose: Track small, continuously updated Core work without creating a dedicate
 - Targeting uses the documented distance rule through a shared Core/Content seam.
 - Existing targeting invariants remain traced or explicitly superseded.
 - Content/editor previews can explain why candidates were ordered or selected.
+
+## Recently completed
+
+### Update content-facing semantics documentation before new implementation
+
+**Completed:** 2026-08-23.
+
+**Notes:** Content-facing action/content semantics docs were reconciled before the next implementation slice. Promoted canonical, prototype-compatible, and legacy/retired semantics are now distinguished in the source-of-truth docs, including current notes for Create/Destroy/Polymorph, TargetPathMove, Push, costs, merged topology, and ecology-supporting semantics.
+
+### Quarantine old frontend from default build/package path
+
+**User story:** As a developer, I want default build, test, run, and feedback-package workflows to treat `GameGameGame.Frontend.SadConsole` as the real frontend and keep the old `GameGameGame.SadConsole` only as explicit reference material.
+
+**Completed:** 2026-08-23.
+
+**Plan:**
+
+- Remove old frontend and old frontend tests from default solution/CI/package dependencies, or move them behind an explicit opt-in reference-only workflow.
+- Publish/package `src/GameGameGame.Frontend.SadConsole` for feedback builds.
+- Update README/workflow docs so normal commands target the new frontend.
+- Keep old source available for reference unless a separate archival/removal decision is made.
+
+**Completion notes:**
+
+- Default `dotnet build`/CI/feedback package no longer depends on the old frontend.
+- Legacy frontend status is explicit and cannot silently gate normal work.
+- The new frontend is the documented run/package target.
+- Validation passed for the Release solution test run and feedback package publish.
+
+## Next
+
+No active Core-owned item queued after topology-aware targeting distance semantics. Pull from **Later** or the Content/Frontend boards when dependencies are satisfied.
 
 ## Later
 

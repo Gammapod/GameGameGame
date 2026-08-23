@@ -104,6 +104,7 @@ public static class MarkdownFrontmatterParser
         return new DocumentMetadata(
             Scalar(fields, "id"),
             Scalar(fields, "title"),
+            Scalar(fields, "purpose"),
             Scalar(fields, "kind"),
             Scalar(fields, "subkind"),
             Scalar(fields, "status"),

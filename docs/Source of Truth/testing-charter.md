@@ -1,6 +1,7 @@
 ---
 id: source.testing-charter
 title: Testing Charter
+purpose: TDD workflow and testing expectations for semantic Core Content Editor and frontend behavior changes.
 kind: source-of-truth
 subkind: testing-charter
 status: active

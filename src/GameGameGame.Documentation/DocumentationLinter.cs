@@ -15,6 +15,7 @@ public static partial class DocumentationLinter
     {
         "source-of-truth",
         "plan",
+        "rolling-board",
         "roadmap",
         "backlog-reference",
         "gap-log",
@@ -35,9 +36,13 @@ public static partial class DocumentationLinter
         "frontend-ux-invariants",
         "frontend-ux-standards",
         "frontend-ux-decisions",
+        "frontend-ux",
         "ux-spec",
         "vertical-slice",
         "current-goals",
+        "core-rolling-board",
+        "content-rolling-board",
+        "frontend-sadconsole",
         "glossary",
         "design-notes"
     };
@@ -55,6 +60,7 @@ public static partial class DocumentationLinter
         "action-logic",
         "frontend-boundary",
         "frontend-presentation",
+        "frontend-player-semantics",
         "frontend-rationale",
         "planning-priority",
         "implementation-navigation",

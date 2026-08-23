@@ -14,7 +14,15 @@ internal static class Program
                 return RunLint(root, graph);
             case "graph":
                 var highlightedProfile = ReadOption(args, "--highlight-profile");
-                if (args.Contains("--mmd", StringComparer.OrdinalIgnoreCase) || args.Contains("--mermaid", StringComparer.OrdinalIgnoreCase))
+                var graphFormat = ReadOption(args, "--format");
+                if (string.Equals(graphFormat, "json", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.Write(DocumentationGraphJsonRenderer.Render(graph));
+                }
+                else if (args.Contains("--mmd", StringComparer.OrdinalIgnoreCase) ||
+                         args.Contains("--mermaid", StringComparer.OrdinalIgnoreCase) ||
+                         string.Equals(graphFormat, "mermaid", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(graphFormat, "mmd", StringComparison.OrdinalIgnoreCase))
                 {
                     var traversal = highlightedProfile is null ? null : TraversalProfileGenerator.Generate(graph, highlightedProfile);
                     Console.Write(MermaidGraphRenderer.Render(graph, traversal));
@@ -34,7 +42,17 @@ internal static class Program
                 return 0;
             case "read-path":
                 var role = ReadOption(args, "--role") ?? "core-owner";
-                PrintReadPath(graph, role);
+                if (string.Equals(ReadOption(args, "--format"), "briefing", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.Write(RoleReadPathBriefingRenderer.Render(graph, role));
+                }
+                else
+                {
+                    PrintReadPath(graph, role);
+                }
+                return 0;
+            case "check-planning":
+                PrintPlanningFreshness(graph);
                 return 0;
             case "traversal":
                 var profile = ReadOption(args, "--profile") ?? "content-authoring";
@@ -54,7 +72,7 @@ internal static class Program
                 PrintTraversalMetrics(graph);
                 return 0;
             default:
-                Console.Error.WriteLine($"Unknown command '{command}'. Expected lint, graph, read-path, traversal, traversal-mmd, or traversal-metrics.");
+                Console.Error.WriteLine($"Unknown command '{command}'. Expected lint, graph, read-path, check-planning, traversal, traversal-mmd, or traversal-metrics.");
                 return 2;
         }
     }
@@ -116,6 +134,19 @@ internal static class Program
         {
             Console.WriteLine($"{metric.DocumentId}: {metric.ProfileCount} profiles - {metric.Path}");
         }
+    }
+
+    private static void PrintPlanningFreshness(DocumentationGraph graph)
+    {
+        var diagnostics = PlanningFreshnessAnalyzer.Analyze(graph);
+        foreach (var diagnostic in diagnostics)
+        {
+            Console.WriteLine($"{diagnostic.Code}: {diagnostic.Path}: {diagnostic.Message}");
+        }
+
+        Console.WriteLine(diagnostics.Count == 0
+            ? "Planning freshness check passed."
+            : $"Planning freshness check found {diagnostics.Count} advisory diagnostics.");
     }
 
     private static string? ReadOption(string[] args, string name)

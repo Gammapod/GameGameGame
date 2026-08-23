@@ -31,11 +31,17 @@ Purpose: Track small, continuously updated Content work without creating a dedic
 
 ## Now
 
+No active Content-owned implementation item is currently in progress. Pull from **Next** when the next content-authoring slice starts.
+
+## Recently completed
+
 ### Update content-facing semantics documentation before new implementation
 
 **User story:** As a content author, I can confidently use currently implemented action/content semantics without reverse-engineering Core or Beta scenario files.
 
 **Owners:** Content + Core.
+
+**Completed:** 2026-08-23.
 
 **Plan:**
 
@@ -44,7 +50,7 @@ Purpose: Track small, continuously updated Content work without creating a dedic
 - Link or add gap-log entries when current semantics are deliberately incomplete.
 - Prefer examples from existing Beta content where possible.
 
-**Done when:**
+**Completion notes:**
 
 - Content authors can tell which semantics are promoted, prototype-compatible, legacy, or unsupported.
 - Existing content experiments are documented as supported examples or explicitly marked experimental.

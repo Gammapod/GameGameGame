@@ -1,6 +1,7 @@
 ---
 id: source.invariants
 title: GameGameGame Invariants
+purpose: Stable Core behavior contracts and the tests that protect them.
 kind: source-of-truth
 subkind: invariant-trace
 status: active
