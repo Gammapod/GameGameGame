@@ -203,6 +203,68 @@ public static class TopologyGraphTraversalService
         return result;
     }
 
+    public static IReadOnlyList<TopologyGraphFloodStep> OctagonalDistanceFlood(
+        TopologyGraph graph,
+        TopologyNodeId originNodeId,
+        int maxDistance,
+        Func<TopologyGraphEdge, bool>? canTraverse = null)
+    {
+        if (maxDistance < 0 || !graph.TryGetNode(originNodeId, out var originNode))
+        {
+            return [];
+        }
+
+        canTraverse ??= static edge => !edge.IsBlocked;
+        var bestDistances = new Dictionary<TopologyNodeId, int> { [originNodeId] = 0 };
+        var previous = new Dictionary<TopologyNodeId, (TopologyNodeId From, Direction Direction, TopologyEdgeKind Kind)>();
+        var queue = new PriorityQueue<TopologyNodeId, (int Distance, int Sequence)>();
+        var sequence = 0;
+        queue.Enqueue(originNodeId, (0, sequence++));
+
+        while (queue.TryDequeue(out var currentNodeId, out var priority))
+        {
+            var currentDistance = priority.Distance;
+            if (bestDistances[currentNodeId] != currentDistance || currentDistance >= maxDistance)
+            {
+                continue;
+            }
+
+            foreach (var direction in DirectionMath.AllDirections)
+            {
+                foreach (var edge in graph.GetOutgoingEdges(currentNodeId, direction).Where(canTraverse))
+                {
+                    if (!graph.TryGetNode(edge.DestinationNodeId, out _))
+                    {
+                        continue;
+                    }
+
+                    var nextDistance = currentDistance + OctagonalEdgeCost(currentNodeId == originNodeId, edge.Direction);
+                    if (nextDistance > maxDistance)
+                    {
+                        continue;
+                    }
+
+                    if (bestDistances.TryGetValue(edge.DestinationNodeId, out var knownDistance) && knownDistance <= nextDistance)
+                    {
+                        continue;
+                    }
+
+                    bestDistances[edge.DestinationNodeId] = nextDistance;
+                    previous[edge.DestinationNodeId] = (currentNodeId, edge.Direction, edge.Kind);
+                    queue.Enqueue(edge.DestinationNodeId, (nextDistance, sequence++));
+                }
+            }
+        }
+
+        return bestDistances
+            .Select(item => ToFloodStep(graph, originNodeId, item.Key, item.Value, previous))
+            .OrderBy(step => step.Distance)
+            .ThenBy(step => step.LayoutCoord.Coord.Y)
+            .ThenBy(step => step.LayoutCoord.Coord.X)
+            .ThenBy(step => step.NodeId.Value, StringComparer.Ordinal)
+            .ToList();
+    }
+
     public static int? HalfStepDistanceToAny(
         TopologyGraph graph,
         TopologyNodeId originNodeId,
@@ -308,6 +370,28 @@ public static class TopologyGraphTraversalService
         path.Reverse();
         return path;
     }
+
+    private static TopologyGraphFloodStep ToFloodStep(
+        TopologyGraph graph,
+        TopologyNodeId originNodeId,
+        TopologyNodeId nodeId,
+        int distance,
+        IReadOnlyDictionary<TopologyNodeId, (TopologyNodeId From, Direction Direction, TopologyEdgeKind Kind)> previous)
+    {
+        var node = graph.TryGetNode(nodeId, out var resolvedNode)
+            ? resolvedNode
+            : throw new InvalidOperationException($"Topology graph flood references missing node {nodeId}");
+        if (nodeId == originNodeId)
+        {
+            return new TopologyGraphFloodStep(nodeId, node.SourceCoord, node.LayoutCoord, distance, FromNodeId: null, Direction: null, Kind: null);
+        }
+
+        var edge = previous[nodeId];
+        return new TopologyGraphFloodStep(nodeId, node.SourceCoord, node.LayoutCoord, distance, edge.From, edge.Direction, edge.Kind);
+    }
+
+    private static int OctagonalEdgeCost(bool fromOrigin, Direction direction) =>
+        fromOrigin || DirectionMath.OrthogonalCorners(direction) is null ? 1 : 2;
 
     private static int DefaultHalfStepCost(Direction direction) => DirectionMath.OrthogonalCorners(direction) is null ? 2 : 3;
 }

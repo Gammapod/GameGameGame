@@ -22,6 +22,7 @@ public static class TargetingCandidatePreviewService
     private static readonly MovementService Movement = new();
     private static readonly EntityInteractionAffordanceService Affordances = new(Movement);
     private static readonly TargetingLocalityCandidateService LocalityCandidates = new();
+    private static readonly TargetingDistanceService Distances = new();
 
     public static TargetingCandidatePreview Preview(WorldState world, PrototypeContentRegistry registry, EntityId actorId)
     {
@@ -34,6 +35,7 @@ public static class TargetingCandidatePreviewService
         var template = registry.GetEntityTemplate(actorTemplateId);
         var actorLocation = world.GetEntityLocation(actorId);
         var rules = GetRules(template);
+        var distances = Distances.GetOctagonalDistances(world, actorLocation, rules.Count == 0 ? 0 : rules.Max(rule => rule.Range));
         return new TargetingCandidatePreview(
             actorId,
             rules.Select(rule => new TargetingRuleCandidatePreview(
@@ -46,9 +48,7 @@ public static class TargetingCandidatePreviewService
                             candidate.EntityId,
                             candidate.Origin,
                             candidate.ReferenceEntityId,
-                            candidate.DistanceReferenceLocation.PlaneId == actorLocation.PlaneId
-                                ? ManhattanDistance(actorLocation.Coord, candidate.DistanceReferenceLocation.Coord)
-                                : int.MaxValue))
+                            distances.TryGetValue(candidate.DistanceReferenceLocation, out var distance) ? distance : int.MaxValue))
                         .Where(candidate => candidate.Distance <= rule.Range)
                         .OrderBy(candidate => candidate.Distance)
                         .ThenBy(candidate => candidate.EntityId.Value, StringComparer.Ordinal)
@@ -69,9 +69,6 @@ public static class TargetingCandidatePreviewService
             .Select(rule => (rule, rule.Range, rule.Locality ?? new TargetingLocalityQuery()))
             .ToList();
     }
-
-    private static int ManhattanDistance(GridCoord first, GridCoord second) =>
-        Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
 
     private static bool MatchesTargetTemplate(PrototypeContentRegistry registry, EntityId entityId, EntityTemplateId? targetTemplateId) =>
         targetTemplateId is null

@@ -35,6 +35,18 @@ No active Core-owned implementation item is currently in progress. Pull from **N
 
 ## Recently completed
 
+### 2026-08-23: Migrate targeting to Octagonal distance semantics
+
+**Owners:** Core + Content.
+
+**Completion notes:** Targeting profiles and shared targeting candidate previews now use the shared Octagonal distance helper for range filtering, nearest-candidate ordering, and reported candidate distances. Candidate locality still determines the distance reference point, including peer-inventory candidates using their containing peer as the reference. Targeting still selects one nearest candidate per rule; target sets/counts/density predicates remain future ecology/faction follow-up work.
+
+### 2026-08-23: Add initial Octagonal distance helper for POV visibility
+
+**Owners:** Core + Content.
+
+**Completion notes:** Added shared Core `OctagonalDistanceFlood` traversal and switched Content topology visibility projection/context distances to consume it. The observer origin is distance `0`; legal one-step directed topology adjacency is distance `1`; further bands expand through directed, unblocked topology edges with cardinal `+1` and intercardinal `+2`, so open rooms form octagonal bands while blocked diagonals, nonexistent cells, and source-cell-link topology constrain propagation.
+
 ### 2026-08-23: Complete functional topology/POV foundation
 
 **Owners:** Core + Content + Frontend.
@@ -69,24 +81,7 @@ No active Core-owned implementation item is currently in progress. Pull from **N
 
 ## Next
 
-### Add topology-aware targeting distance semantics
-
-**User story:** As a behavior author, I can target entities using distance semantics that survive merged, folded, and non-euclidean topology experiments.
-
-**Distance rule:** Cells adjacent to an entity in all eight directions count as distance `0` from that entity. Further cells use Manhattan distance from that adjacency boundary.
-
-**Plan:**
-
-- Specify the Core distance helper before changing targeting behavior.
-- Decide how the rule composes with graph/materialized topology links and same-cell/source-cell projections.
-- Update targeting candidate ordering/preview/reporting through shared services rather than frontend guesses.
-- Add tests for ordinary grids, diagonal adjacency, merged/source-cell links, and edge cases around occupied/current cells.
-
-**Done when:**
-
-- Targeting uses the documented distance rule through a shared Core/Content seam.
-- Existing targeting invariants remain traced or explicitly superseded.
-- Content/editor previews can explain why candidates were ordered or selected.
+No Core-owned item is currently queued. Pull from **Later** or the Content/Frontend boards when the next Core slice is selected.
 
 ## Later
 

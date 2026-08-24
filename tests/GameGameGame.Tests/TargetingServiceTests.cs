@@ -24,6 +24,21 @@ public sealed class TargetingServiceTests
     }
 
     [Fact]
+    public void RefreshTargetsUsesOctagonalDistanceForCandidateOrdering()
+    {
+        var registry = CreateTargetingRegistry();
+        var world = CreateTargetingWorld();
+        var mouse = new EntityId("mouse");
+        Spawn(registry, world, "mouse", mouse.Value, new GridCoord(2, 2));
+        Spawn(registry, world, "cat", "cardinalTwoCat", new GridCoord(4, 2));
+        Spawn(registry, world, "cat", "diagonalAdjacentCat", new GridCoord(3, 3));
+
+        TargetingService.RefreshTargets(world, registry, mouse);
+
+        Assert.Equal(new EntityId("diagonalAdjacentCat"), world.GetActionTarget(mouse, label: "danger"));
+    }
+
+    [Fact]
     public void RefreshTargetsClearsStaleTargetWhenNoMatchIsInRange()
     {
         var registry = CreateTargetingRegistry();
@@ -394,6 +409,33 @@ public sealed class TargetingServiceTests
         Assert.Equal(TargetingLocalityOrigin.PeerInventories, candidate.Origin);
         Assert.Equal(chest, candidate.ReferenceEntityId);
         Assert.Null(world.GetActionTarget(goblin, label: "wants"));
+    }
+
+    [Fact]
+    public void TargetingCandidatePreviewReportsOctagonalDistances()
+    {
+        var registry = CreateTargetingRegistry();
+        var world = CreateTargetingWorld();
+        var mouse = new EntityId("mouse");
+        Spawn(registry, world, "mouse", mouse.Value, new GridCoord(2, 2));
+        Spawn(registry, world, "cat", "cardinalTwoCat", new GridCoord(4, 2));
+        Spawn(registry, world, "cat", "diagonalAdjacentCat", new GridCoord(3, 3));
+
+        var preview = TargetingCandidatePreviewService.Preview(world, registry, mouse);
+
+        var rule = Assert.Single(preview.Rules);
+        Assert.Collection(
+            rule.Candidates,
+            candidate =>
+            {
+                Assert.Equal(new EntityId("diagonalAdjacentCat"), candidate.EntityId);
+                Assert.Equal(1, candidate.Distance);
+            },
+            candidate =>
+            {
+                Assert.Equal(new EntityId("cardinalTwoCat"), candidate.EntityId);
+                Assert.Equal(2, candidate.Distance);
+            });
     }
 
     private static PrototypeContentRegistry CreateTargetingRegistry() =>

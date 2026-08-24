@@ -58,8 +58,8 @@ The active direction is a stabilization-and-content-experiment follow-through af
 Trust the three active rolling boards for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
 1. Use the completed topology/POV foundation for polish and content experiments: clearer debug/presentation affordances, intentional merged/overlapping/folded-space examples, and scenario evidence for authored seams.
-2. Implement topology-aware targeting distance semantics in Core/Content when a selected content experiment needs graph-distance candidate ordering: all eight adjacent cells to a target entity count as distance `0`, with further cells using Manhattan distance from that adjacency boundary.
-3. Expand merged topology authorship beyond current center-aligned joins for overlapping/non-euclidean content experiments, Content-owned with Core collaboration.
+2. Expand merged topology authorship beyond current center-aligned joins for overlapping/non-euclidean content experiments, Content-owned with Core collaboration.
+3. Expand targeting/awareness beyond single nearest Octagonal-distance candidate selection when ecology or faction experiments need target sets, counts, or density predicates.
 4. Introduce an action workflow descriptor seam when action UX churn becomes the selected bottleneck.
 5. Add a dedicated user-facing Log component with Core/Content collaboration on structured action outcomes when gameplay readability is the selected frontend/content slice.
 

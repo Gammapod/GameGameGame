@@ -99,6 +99,23 @@ public sealed class ActorPovPlayProjectionTests
     }
 
     [Fact]
+    public void TopologyVisibilityProjectionUsesOctagonalDistanceBandsForPovReachability()
+    {
+        var world = new WorldState();
+        var observerId = new EntityId("observer");
+        var planeId = new PlaneId("pov-octagonal-room");
+        AddPlane(world, planeId, width: 5, height: 5);
+        AddEntity(world, observerId, "Observer", new PlaneCoord(planeId, new GridCoord(2, 2)));
+        var service = new TopologyVisibilityProjectionService();
+
+        var projection = service.Project(world, observerId, maxDepth: 3);
+
+        Assert.Contains(projection.VisibleCells, cell => cell.Cell.SourceCoord == new PlaneCoord(planeId, new GridCoord(3, 3)) && cell.Distance == 1);
+        Assert.Contains(projection.VisibleCells, cell => cell.Cell.SourceCoord == new PlaneCoord(planeId, new GridCoord(4, 3)) && cell.Distance == 2);
+        Assert.Contains(projection.VisibleCells, cell => cell.Cell.SourceCoord == new PlaneCoord(planeId, new GridCoord(4, 4)) && cell.Distance == 3);
+    }
+
+    [Fact]
     public void TopologyVisibilityProjectionSeparatesVisibleRangeFromDimmedContextRange()
     {
         var world = TestWorld.CreateWorld();
@@ -246,6 +263,18 @@ public sealed class ActorPovPlayProjectionTests
         var nodeId = world.GetNodeId(location);
         world.Entities.Add(entityId, new Entity(entityId, name, nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1));
         world.Occupancy.Add(nodeId, entityId);
+    }
+
+    private static void AddPlane(WorldState world, PlaneId planeId, int width, int height)
+    {
+        world.Planes.Add(planeId, new Plane(planeId, planeId.Value, width, height));
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                world.AddNode(planeId, new GridCoord(x, y));
+            }
+        }
     }
 
     private static void MoveEntity(WorldState world, EntityId entityId, PlaneCoord destination)

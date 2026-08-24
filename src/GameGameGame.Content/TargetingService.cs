@@ -7,6 +7,7 @@ public static class TargetingService
     private static readonly MovementService Movement = new();
     private static readonly EntityInteractionAffordanceService Affordances = new(Movement);
     private static readonly TargetingLocalityCandidateService LocalityCandidates = new();
+    private static readonly TargetingDistanceService Distances = new();
 
     public static void RefreshTargets(WorldState world, PrototypeContentRegistry registry, EntityId actorId)
     {
@@ -53,17 +54,17 @@ public static class TargetingService
         PlaneCoord actorLocation,
         EntityTargetingRule rule,
         int range,
-        TargetingLocalityQuery locality) =>
-        LocalityCandidates.Query(world, actorId, locality)
+        TargetingLocalityQuery locality)
+    {
+        var distances = Distances.GetOctagonalDistances(world, actorLocation, range);
+        return LocalityCandidates.Query(world, actorId, locality)
             .Where(entry => MatchesTargetTemplate(world, registry, entry.EntityId, rule.TargetTemplateId))
             .Where(entry => MatchesTargetCapabilities(world, actorId, entry.EntityId, rule.TargetCapabilities))
             .Select(entry => new
             {
                 entry.EntityId,
                 entry.DistanceReferenceLocation.Coord,
-                Distance = entry.DistanceReferenceLocation.PlaneId == actorLocation.PlaneId
-                    ? ManhattanDistance(actorLocation.Coord, entry.DistanceReferenceLocation.Coord)
-                    : int.MaxValue
+                Distance = distances.TryGetValue(entry.DistanceReferenceLocation, out var distance) ? distance : int.MaxValue
             })
             .Where(entry => entry.Distance <= range)
             .OrderBy(entry => entry.Distance)
@@ -72,6 +73,7 @@ public static class TargetingService
             .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
             .Select(entry => (EntityId?)entry.EntityId)
             .FirstOrDefault();
+    }
 
     private static IReadOnlyList<(EntityTargetingRule Rule, int Range, TargetingLocalityQuery Locality)> GetRules(EntityTemplate template)
     {
@@ -86,9 +88,6 @@ public static class TargetingService
             .Select(rule => (rule, rule.Range, rule.Locality ?? new TargetingLocalityQuery()))
             .ToList();
     }
-
-    private static int ManhattanDistance(GridCoord first, GridCoord second) =>
-        Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
 
     private static bool MatchesTargetTemplate(WorldState world, PrototypeContentRegistry registry, EntityId entityId, EntityTemplateId? targetTemplateId) =>
         targetTemplateId is null

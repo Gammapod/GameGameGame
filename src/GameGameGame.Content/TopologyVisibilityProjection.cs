@@ -83,10 +83,10 @@ public sealed class TopologyVisibilityProjectionService
                 [new TopologyVisibilityDiagnostic(TopologyVisibilityDiagnosticCode.ObserverNotFound, $"Observer entity {observerEntityId} has no topology node at {origin}.")]);
         }
 
-        var visibleCells = TopologyGraphTraversalService.Flood(graph, originNode.Id, maxDepth)
+        var visibleCells = TopologyGraphTraversalService.OctagonalDistanceFlood(graph, originNode.Id, maxDepth)
             .Select(step => ToProjectionCell(graph, step))
             .ToList();
-        var contextCells = TopologyGraphTraversalService.Flood(graph, originNode.Id, contextDepth ?? maxDepth)
+        var contextCells = TopologyGraphTraversalService.OctagonalDistanceFlood(graph, originNode.Id, contextDepth ?? maxDepth)
             .Select(step => ToProjectionCell(graph, step))
             .ToList();
 

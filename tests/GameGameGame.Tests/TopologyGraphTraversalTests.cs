@@ -93,6 +93,42 @@ public sealed class TopologyGraphTraversalTests
     }
 
     [Fact]
+    public void OctagonalDistanceFloodTreatsLegalAdjacencyAsDistanceOneThenExpandsManhattanBands()
+    {
+        var world = new WorldState();
+        var planeId = new PlaneId("octagonal-open-room");
+        AddPlane(world, new Plane(planeId, "Octagonal Open Room", 5, 5));
+        var origin = new PlaneCoord(planeId, new GridCoord(2, 2));
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        Assert.True(graph.TryGetNode(new TopologyCellRef(origin), out var originNode));
+
+        var flood = TopologyGraphTraversalService.OctagonalDistanceFlood(graph, originNode.Id, maxDistance: 3);
+
+        Assert.Contains(flood, step => step.SourceCoord == origin && step.Distance == 0);
+        Assert.Contains(flood, step => step.SourceCoord == new PlaneCoord(planeId, new GridCoord(3, 3)) && step.Distance == 1);
+        Assert.Contains(flood, step => step.SourceCoord == new PlaneCoord(planeId, new GridCoord(4, 2)) && step.Distance == 2);
+        Assert.Contains(flood, step => step.SourceCoord == new PlaneCoord(planeId, new GridCoord(4, 3)) && step.Distance == 2);
+        Assert.Contains(flood, step => step.SourceCoord == new PlaneCoord(planeId, new GridCoord(4, 4)) && step.Distance == 3);
+    }
+
+    [Fact]
+    public void OctagonalDistanceFloodDoesNotTreatTwoCornerBlockedDiagonalAsDistanceOne()
+    {
+        var world = new WorldState();
+        var planeId = new PlaneId("octagonal-blocked-corner");
+        AddPlane(world, new Plane(planeId, "Octagonal Blocked Corner", 3, 3));
+        var origin = new PlaneCoord(planeId, new GridCoord(1, 1));
+        AddEntity(world, new EntityId("northBlocker"), "North Blocker", new PlaneCoord(planeId, new GridCoord(1, 0)), inventoryWidth: 0, inventoryHeight: 0, bulk: 1, aperture: 1);
+        AddEntity(world, new EntityId("eastBlocker"), "East Blocker", new PlaneCoord(planeId, new GridCoord(2, 1)), inventoryWidth: 0, inventoryHeight: 0, bulk: 1, aperture: 1);
+        var graph = TopologyGraphMaterializer.Materialize(world);
+        Assert.True(graph.TryGetNode(new TopologyCellRef(origin), out var originNode));
+
+        var flood = TopologyGraphTraversalService.OctagonalDistanceFlood(graph, originNode.Id, maxDistance: 1);
+
+        Assert.DoesNotContain(flood, step => step.SourceCoord == new PlaneCoord(planeId, new GridCoord(2, 0)));
+    }
+
+    [Fact]
     public void GraphShortestPathToAnyCanFilterBlockedDestinationNodes()
     {
         var world = new WorldState();
