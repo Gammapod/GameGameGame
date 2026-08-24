@@ -40,7 +40,7 @@ Do not read when:
 
 ## Current strategic priority
 
-The active direction is a stabilization-and-content-experiment follow-through after completing user-facing semantics for most current actions and the functional topology/POV foundation: keep Core/Content semantics documented, keep the new SadConsole frontend as the normal maintained frontend, then use the rolling boards for topology polish, authored content experiments, topology-aware targeting when experiments need it, action workflow maintainability, and user-facing log semantics.
+The active direction is content-led ecology experimentation after completing user-facing semantics for most current actions and the functional topology/POV/Octagonal-distance foundation: keep Core/Content semantics documented, keep the new SadConsole frontend as the normal maintained frontend, then use the rolling boards for ecology scenarios, topology polish driven by those scenarios, richer awareness/count/density gaps when experiments need them, action workflow maintainability, and user-facing log semantics.
 
 ## Active planning bridge
 
@@ -57,8 +57,8 @@ The active direction is a stabilization-and-content-experiment follow-through af
 
 Trust the three active rolling boards for detailed priority order, dependencies, defer reasons, and promotion triggers. The short current ordering is:
 
-1. Use the completed topology/POV foundation for polish and content experiments: clearer debug/presentation affordances, intentional merged/overlapping/folded-space examples, and scenario evidence for authored seams.
-2. Expand merged topology authorship beyond current center-aligned joins for overlapping/non-euclidean content experiments, Content-owned with Core collaboration.
+1. Run content-led ecology experiments over the completed topology/POV/Octagonal-distance foundation: births, deaths, consumption, carrying-capacity pressure, local pursuit/avoidance, and scenario evidence for the next promoted gaps.
+2. Polish topology/POV presentation and merged-space authorship only as ecology/content experiments expose concrete needs, such as clearer debug labels, seam visualization, non-center joins, asymmetric/one-way joins, or intentional overlap/fold vocabulary.
 3. Expand targeting/awareness beyond single nearest Octagonal-distance candidate selection when ecology or faction experiments need target sets, counts, or density predicates.
 4. Introduce an action workflow descriptor seam when action UX churn becomes the selected bottleneck.
 5. Add a dedicated user-facing Log component with Core/Content collaboration on structured action outcomes when gameplay readability is the selected frontend/content slice.
