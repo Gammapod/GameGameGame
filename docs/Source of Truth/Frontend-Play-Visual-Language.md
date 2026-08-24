@@ -108,6 +108,22 @@ Use this template when promoting a visual treatment into a stable rule:
 
 ## Current visual treatments
 
+### Actor point-of-view visibility
+
+**Player meaning:** The normal Play grid shows only cells currently inside the controlled actor's topology point of view. Cells outside that point of view are unknown/irrelevant to immediate play and should not be shown as player-facing content.
+
+**Visual language:** In normal mode, outside-POV context cells are not drawn. `F8` is a debug-only toggle that restores the previous dim outside-POV context presentation for inspecting topology projection behavior.
+
+**Current implementation:** `TopologyVisibilityProjectionService`, `PlayGridViewModel.FromSession(..., showOutsidePointOfViewContext)`, and `PlayModeConsole` F8 handling.
+
+**Rules:**
+
+- Do not present outside-POV context cells in normal player-facing Play mode.
+- The dim outside-POV treatment is debug presentation only and must not imply line-of-sight/audibility semantics beyond the shared topology projection facts.
+- Keeping hidden context in layout bounds is allowed so toggling debug context does not change the relative position of visible POV cells.
+
+**Open questions:** Final player-facing visual language for sensing, memory, discovered-but-not-currently-visible cells, and richer topology awareness is deferred.
+
 ### Movement destination highlight
 
 **Player meaning:** Confirming will attempt to move the controlled actor toward the highlighted cell/direction.

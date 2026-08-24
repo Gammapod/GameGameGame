@@ -67,7 +67,8 @@ internal sealed record PlayGridViewModel(
         PlayableScenarioSession session,
         TilesetProfile tilesetProfile,
         PlaneId? preferredPlaneId = null,
-        TopologyVisibilityProjection? topologyVisibility = null)
+        TopologyVisibilityProjection? topologyVisibility = null,
+        bool showOutsidePointOfViewContext = false)
     {
         var planeId = preferredPlaneId is { } requestedPlaneId && session.World.Planes.ContainsKey(requestedPlaneId)
             ? requestedPlaneId
@@ -107,9 +108,16 @@ internal sealed record PlayGridViewModel(
                 .ToList();
             var minX = projectedCells.Count == 0 ? 0 : projectedCells.Min(cell => cell.RawDisplayCoord.X);
             var minY = projectedCells.Count == 0 ? 0 : projectedCells.Min(cell => cell.RawDisplayCoord.Y);
+            var maxX = projectedCells.Count == 0 ? plane.Width - 1 : projectedCells.Max(cell => cell.RawDisplayCoord.X);
+            var maxY = projectedCells.Count == 0 ? plane.Height - 1 : projectedCells.Max(cell => cell.RawDisplayCoord.Y);
 
             foreach (var projectedCell in projectedCells)
             {
+                if (!showOutsidePointOfViewContext && !projectedCell.IsInPointOfView)
+                {
+                    continue;
+                }
+
                 var contextCell = projectedCell.Cell;
                 var displayCoord = new GridCoord(
                     projectedCell.RawDisplayCoord.X - minX,
@@ -123,14 +131,45 @@ internal sealed record PlayGridViewModel(
                     isInPointOfView,
                     isInPointOfView ? visibleCellsBySource![contextCell.Cell.SourceCoord] : contextCell));
             }
+
+            if (cellsByDisplayCoord.Count == 0 && topologyVisibility.Origin.SourceCoord.PlaneId == planeId)
+            {
+                var originDisplayCoord = new GridCoord(
+                    topologyVisibility.Origin.SourceCoord.Coord.X - minX,
+                    topologyVisibility.Origin.SourceCoord.Coord.Y - minY);
+                AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
+                    session,
+                    tilesetProfile,
+                    topologyVisibility.Origin.SourceCoord,
+                    originDisplayCoord,
+                    isInPointOfView: true,
+                    visibleCell: null));
+            }
+
+            var projectedWidth = Math.Max(0, maxX - minX + 1);
+            var projectedHeight = Math.Max(0, maxY - minY + 1);
+            return BuildModel(session, planeId, plane, topologyVisibility, cellsByDisplayCoord.Values, diagnostics, projectedWidth, projectedHeight);
         }
 
-        var cells = cellsByDisplayCoord.Values
+        return BuildModel(session, planeId, plane, topologyVisibility, cellsByDisplayCoord.Values, diagnostics, null, null);
+    }
+
+    private static PlayGridViewModel BuildModel(
+        PlayableScenarioSession session,
+        PlaneId planeId,
+        Plane plane,
+        TopologyVisibilityProjection? topologyVisibility,
+        IEnumerable<PlayCellVisual> cellVisuals,
+        IReadOnlyList<PlayGridDiagnostic> diagnostics,
+        int? projectedWidth,
+        int? projectedHeight)
+    {
+        var cells = cellVisuals
             .OrderBy(cell => cell.Y)
             .ThenBy(cell => cell.X)
             .ToList();
-        var width = cells.Count == 0 ? plane.Width : Math.Max(plane.Width, cells.Max(cell => cell.X) + 1);
-        var height = cells.Count == 0 ? plane.Height : Math.Max(plane.Height, cells.Max(cell => cell.Y) + 1);
+        var width = Math.Max(projectedWidth ?? 0, cells.Count == 0 ? plane.Width : Math.Max(plane.Width, cells.Max(cell => cell.X) + 1));
+        var height = Math.Max(projectedHeight ?? 0, cells.Count == 0 ? plane.Height : Math.Max(plane.Height, cells.Max(cell => cell.Y) + 1));
 
         var controlledCoord = session.World.Entities.ContainsKey(session.PlayerEntityId)
             && session.World.GetEntityLocation(session.PlayerEntityId).PlaneId == planeId

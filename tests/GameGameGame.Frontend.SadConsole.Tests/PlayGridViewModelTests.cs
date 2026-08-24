@@ -86,7 +86,7 @@ public sealed class PlayGridViewModelTests
     }
 
     [Fact]
-    public void PlayGridViewModelMarksCellsOutsideTopologyPovAsDimmedContext()
+    public void PlayGridViewModelHidesCellsOutsideTopologyPovByDefault()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();
         var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
@@ -95,6 +95,22 @@ public sealed class PlayGridViewModelTests
         var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 0, contextDepth: 10);
 
         var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+
+        var playerCell = grid.CellAt(4, 3);
+        Assert.True(playerCell.IsInPointOfView);
+        Assert.Null(grid.TryCellAt(0, 0));
+    }
+
+    [Fact]
+    public void PlayGridViewModelCanShowCellsOutsideTopologyPovAsDimmedDebugContext()
+    {
+        var catalog = TestRepository.BuildDebugRoomCatalog();
+        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
+        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
+        var tileset = TilesetProfileLoader.LoadCandii();
+        var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 0, contextDepth: 10);
+
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection, showOutsidePointOfViewContext: true);
 
         var playerCell = grid.CellAt(4, 3);
         var contextCell = grid.CellAt(0, 0);
@@ -198,7 +214,7 @@ public sealed class PlayGridViewModelTests
     }
 
     [Fact]
-    public void PlayGridViewModelDimsTopologyContextCellsOutsidePovRange()
+    public void PlayGridViewModelDimsTopologyContextCellsOutsidePovRangeWhenDebugContextVisible()
     {
         var path = Path.Combine(
             TestRepository.Root(),
@@ -211,7 +227,7 @@ public sealed class PlayGridViewModelTests
         var tileset = TilesetProfileLoader.LoadCandii();
         var projection = new TopologyVisibilityProjectionService().Project(session.World, session.PlayerEntityId, maxDepth: 0, contextDepth: 2);
 
-        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection);
+        var grid = PlayGridViewModel.FromSession(session, tileset, topologyVisibility: projection, showOutsidePointOfViewContext: true);
 
         var origin = grid.CellAt(1, 1);
         var context = grid.CellAt(2, 1);
@@ -319,7 +335,7 @@ public sealed class PlayGridViewModelTests
             [],
             []);
         var projection = new TopologyVisibilityProjection(actorId, actorCell.Cell, 0, [actorCell], [], [actorCell, bagCell], []);
-        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), topologyVisibility: projection);
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), topologyVisibility: projection, showOutsidePointOfViewContext: true);
 
         var displayAdjacent = grid.TryCellAt(0, 0);
         var resolvedPreview = PlayModeConsole.ResolveMovementPreviewCell(world, actorId, Direction.West, grid);

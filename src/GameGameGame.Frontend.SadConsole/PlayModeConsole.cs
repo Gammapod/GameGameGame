@@ -25,6 +25,7 @@ internal sealed class PlayModeConsole : Console
     private readonly PlayMovementAnimationPresenter _animationPresenter;
     private readonly Action _returnToBrowser;
     private PlayGridViewModel _grid;
+    private bool _showOutsidePointOfViewDebug;
     private string _message = "Numpad/arrows/WASD: aim  Space/Enter: move  Esc: return";
 
     public PlayModeConsole(
@@ -60,11 +61,22 @@ internal sealed class PlayModeConsole : Console
             TopologyVisibilityProjectionService.DefaultPlayPovDepth,
             TopologyVisibilityProjectionService.DefaultPlayContextDepth);
 
-        return PlayGridViewModel.FromSession(_session, _tilesetProfile, preferredPlaneId, topologyVisibility);
+        return PlayGridViewModel.FromSession(
+            _session,
+            _tilesetProfile,
+            preferredPlaneId,
+            topologyVisibility,
+            showOutsidePointOfViewContext: _showOutsidePointOfViewDebug);
     }
 
     public override bool ProcessKeyboard(Keyboard keyboard)
     {
+        if (keyboard.IsKeyReleased(Keys.F8))
+        {
+            ToggleOutsidePointOfViewDebug();
+            return true;
+        }
+
         if (_selectionStack.TopKind == PlaySelectionFrameKind.CellSelection)
         {
             HandleActionWorkflowKeyboard(keyboard);
@@ -795,6 +807,21 @@ internal sealed class PlayModeConsole : Console
                 SetGlyph(x, y, _tilesetProfile.Blank, Color.White, Color.Black);
             }
         }
+    }
+
+    private void ToggleOutsidePointOfViewDebug()
+    {
+        _showOutsidePointOfViewDebug = !_showOutsidePointOfViewDebug;
+        using (_performance.Measure(PlayPerformanceCounterKind.GridRebuild))
+        {
+            _grid = BuildGrid();
+        }
+
+        _message = _showOutsidePointOfViewDebug
+            ? "Outside-POV debug context visible (dim). F8 hides it."
+            : "Outside-POV cells hidden. F8 shows dim debug context.";
+        _gridPresenter.Invalidate();
+        Redraw();
     }
 
     private string CurrentPlaceLabel()

@@ -376,3 +376,11 @@ Each decision should include:
 - **Implementation anchors:** `PlayActionWorkflowController.TryBeginPushDirection()/ConfirmPush()`, `PlayActionSessionController.SubmitPush(...)`, `PlayActionHighlightResolver`, and `src/GameGameGame.Content/Canonical/Creatures/DebugPlayer.yaml`.
 - **Implications:** Do not silently mutate actor Facing/Target to make Push rows appear. If a future bump-push UX is desired, design it separately over an explicit Core/shared capability rather than synthesizing target-first Push from `PushFacing`.
 - **Status:** Active / initial functional Push workflow.
+
+### FED-045: Outside-POV topology context is hidden unless debug-toggled
+
+- **Decision:** New Play mode does not draw topology context cells outside the controlled actor's current point of view by default. `F8` toggles a debug presentation that shows those outside-POV context cells dimly.
+- **Reasoning:** The dim context was useful for debugging topology projection, but normal Play presentation should not show cells outside the actor POV as if they are player-facing visible space.
+- **Implementation anchors:** `PlayGridViewModel.FromSession(..., showOutsidePointOfViewContext)`, `PlayModeConsole.ToggleOutsidePointOfViewDebug()`, and `PlayGridViewModelTests` coverage for hidden-default and dim-debug context.
+- **Implications:** The dim outside-POV treatment remains debug-only and must not invent visibility, memory, line-of-sight, or audibility semantics. Future sensing/memory UX should get its own visual-language rule over shared facts.
+- **Status:** Active.
