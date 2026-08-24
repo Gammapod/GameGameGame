@@ -3,8 +3,6 @@ entityTemplates:
     name: Chest
     inventoryWidth: 3
     inventoryHeight: 3
-    weight: 100
-    carryingCapacity: 100
     bulk: 100
     aperture: 5
 

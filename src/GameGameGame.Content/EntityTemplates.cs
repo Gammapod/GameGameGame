@@ -112,6 +112,7 @@ public static class BuiltInPresentationCatalog
         [new PresentationId("item.crystal")] = new(new PresentationId("item.crystal"), "Crystal", "c", ["item"]),
         [new PresentationId("item.box")] = new(new PresentationId("item.box"), "Box", "x", ["item"]),
         [new PresentationId("item.potion")] = new(new PresentationId("item.potion"), "Potion", "!", ["item"]),
+        [new PresentationId("object.pushBlock")] = new(new PresentationId("object.pushBlock"), "Block", "[", ["object"]),
         [new PresentationId("actor.player")] = new(new PresentationId("actor.player"), "Player", "@", ["actor"]),
         [new PresentationId("face.smile")] = new(new PresentationId("face.smile"), "Smile Face", ":", ["face"]),
         [new PresentationId("face.happy")] = new(new PresentationId("face.happy"), "Happy Face", ":", ["face"]),

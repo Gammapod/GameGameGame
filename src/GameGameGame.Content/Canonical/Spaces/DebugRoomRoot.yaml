@@ -3,8 +3,6 @@ entityTemplates:
     name: Debug Scenario Root
     inventoryWidth: 5
     inventoryHeight: 7
-    weight: 1000
-    carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
     carriedEntities:
@@ -57,8 +55,6 @@ entityTemplates:
     name: Debug Start Room
     inventoryWidth: 9
     inventoryHeight: 7
-    weight: 1000
-    carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
     carriedEntities:
@@ -113,8 +109,6 @@ entityTemplates:
     name: Debug Hallway North-South 1x5
     inventoryWidth: 1
     inventoryHeight: 5
-    weight: 1000
-    carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
     material: metal
@@ -123,8 +117,6 @@ entityTemplates:
     name: Debug Hallway East-West 5x1
     inventoryWidth: 5
     inventoryHeight: 1
-    weight: 1000
-    carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
     material: wood
@@ -133,85 +125,26 @@ entityTemplates:
     name: Debug Node Room 3x3
     inventoryWidth: 3
     inventoryHeight: 3
-    weight: 1000
-    carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
     material: metal
 
 presentations:
   debugRoomRoot:
-    presentationId: space.debug-room
-    paletteId: space.debug-room.default
     glyph: '#'
     color: Gray
   debugStartRoom:
-    presentationId: space.debug-start-room
-    paletteId: space.debug-room.default
     glyph: '.'
     color: Gray
   debugHallwayNorthSouth1x5:
-    presentationId: space.debug-hallway-north-south-1x5
-    paletteId: space.debug-room.default
     glyph: '|'
     color: Gray
   debugHallwayEastWest5x1:
-    presentationId: space.debug-hallway-east-west-5x1
-    paletteId: space.debug-room.default
     glyph: '-'
     color: Gray
   debugNodeRoom3x3:
-    presentationId: space.debug-node-room-3x3
-    paletteId: space.debug-room.default
     glyph: 'o'
     color: Gray
-
-presentationCatalog:
-  space.debug-room:
-    name: Debug Scenario Root
-    fallbackText: '#'
-    tags:
-    - space
-    - scenario-root
-    - debug
-  space.debug-start-room:
-    name: Debug Start Room
-    fallbackText: '.'
-    tags:
-    - space
-    - room
-    - debug
-  space.debug-hallway-north-south-1x5:
-    name: Debug Hallway North-South 1x5
-    fallbackText: '|'
-    tags:
-    - space
-    - room
-    - hallway
-    - debug
-  space.debug-hallway-east-west-5x1:
-    name: Debug Hallway East-West 5x1
-    fallbackText: '-'
-    tags:
-    - space
-    - room
-    - hallway
-    - debug
-  space.debug-node-room-3x3:
-    name: Debug Node Room 3x3
-    fallbackText: 'o'
-    tags:
-    - space
-    - room
-    - node
-    - debug
-
-palettes:
-  space.debug-room.default:
-    name: Debug Room Default
-    roles:
-      floor: Gray
-      wall: Gray
 
 actionPlans: {}
 

@@ -3,8 +3,6 @@ entityTemplates:
     name: Scrap
     inventoryWidth: 0
     inventoryHeight: 0
-    weight: 1
-    carryingCapacity: 0
     bulk: 1
     aperture: 0
 

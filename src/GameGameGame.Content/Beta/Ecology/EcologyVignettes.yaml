@@ -344,6 +344,103 @@ entityTemplates:
         label: thief
         targetTemplateId: goblinThief
         range: 0
+  spiderPodExperimentRoom:
+    name: Spider Pod Scrap Trial
+    inventoryWidth: 16
+    inventoryHeight: 9
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: spiderPodA
+      templateId: spiderPod
+      coord:
+        x: 8
+        y: 4
+  spiderExperimentPlayer:
+    name: Spider Experimenter
+    inventoryWidth: 5
+    inventoryHeight: 2
+    weight: 1
+    carryingCapacity: 10
+    bulk: 1
+    aperture: 10
+    defaultActionPlanId: spiderExperimenterPlan
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: playerScrap01
+      templateId: spiderScrap
+      coord: { x: 0, y: 0 }
+    - entityId: playerScrap02
+      templateId: spiderScrap
+      coord: { x: 1, y: 0 }
+    - entityId: playerScrap03
+      templateId: spiderScrap
+      coord: { x: 2, y: 0 }
+    - entityId: playerScrap04
+      templateId: spiderScrap
+      coord: { x: 3, y: 0 }
+    - entityId: playerScrap05
+      templateId: spiderScrap
+      coord: { x: 4, y: 0 }
+    - entityId: playerScrap06
+      templateId: spiderScrap
+      coord: { x: 0, y: 1 }
+    - entityId: playerScrap07
+      templateId: spiderScrap
+      coord: { x: 1, y: 1 }
+    - entityId: playerScrap08
+      templateId: spiderScrap
+      coord: { x: 2, y: 1 }
+    - entityId: playerScrap09
+      templateId: spiderScrap
+      coord: { x: 3, y: 1 }
+    - entityId: playerScrap10
+      templateId: spiderScrap
+      coord: { x: 4, y: 1 }
+  spiderPod:
+    name: Spider Pod
+    inventoryWidth: 3
+    inventoryHeight: 2
+    weight: 100
+    carryingCapacity: 10
+    bulk: 100
+    aperture: 10
+    defaultActionPlanId: spiderPodCreatesCircuitSpider
+  circuitSpider:
+    name: Circuit Spider
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 1
+    aperture: 1
+    defaultActionPlanId: circuitSpiderGatherGiveOrbit
+    actionStateDefaults:
+      facing: West
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: scrap
+        targetTemplateId: spiderScrap
+        targetCapabilities:
+        - PickupTarget
+        range: 0
+      - slot: 2
+        label: pod
+        targetTemplateId: spiderPod
+        range: 0
+  spiderScrap:
+    name: Scrap
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
 presentations:
   ecologyObserver:
     glyph: '@'
@@ -399,6 +496,21 @@ presentations:
   hiredBruiser:
     glyph: B
     color: Gray
+  spiderPodExperimentRoom:
+    glyph: '#'
+    color: Gray
+  spiderExperimentPlayer:
+    glyph: '@'
+    color: Yellow
+  spiderPod:
+    glyph: P
+    color: DarkGreen
+  circuitSpider:
+    glyph: s
+    color: Cyan
+  spiderScrap:
+    glyph: '%'
+    color: Earth
 actionPlans:
   glowcapFungusProducesSpores:
     id: glowcapFungusProducesSpores
@@ -586,6 +698,53 @@ actionPlans:
         directionMode: Forward
         transferDirection: TargetToActor
     steps: []
+  spiderPodCreatesCircuitSpider:
+    id: spiderPodCreatesCircuitSpider
+    behavior:
+      steps:
+      - kind: CreateEntity
+        targetSelf: false
+        templateId: circuitSpider
+        createPlacement: AdjacentOpen
+        costs:
+        - templateId: spiderScrap
+          quantity: 3
+  circuitSpiderGatherGiveOrbit:
+    id: circuitSpiderGatherGiveOrbit
+    behavior:
+      steps:
+      - kind: GiveTarget
+        targetLabel: pod
+        targetSelf: false
+      - kind: PickupTarget
+        targetLabel: scrap
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: scrap
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: TargetPathMove
+        targetLabel: pod
+        targetSelf: false
+        pathMode: Orbit
+        desiredDistance: 1
+        orbitDirection: Clockwise
+  spiderExperimenterPlan:
+    id: spiderExperimenterPlan
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: PickupTarget
+        targetSelf: false
+      - kind: DropFacing
+        targetSelf: false
+      - kind: Transfer
+        targetSelf: false
+        directionMode: Forward
+        transferDirection: TargetToActor
+    steps: []
 scenarios:
   ecology-glowcap-grubarium:
     name: Ecology Glowcap Grubarium
@@ -596,3 +755,11 @@ scenarios:
   ecology-goblin-coin-table:
     name: Ecology Goblin Coin Table
     scenarioRootEntityTemplateId: goblinCoinTableRoom
+  ecology-spider-pod-scrap-trial:
+    name: Ecology Spider Pod Scrap Trial
+    scenarioRootEntityTemplateId: spiderPodExperimentRoom
+    playerEntityTemplateId: spiderExperimentPlayer
+    playerEntityId: spiderExperimentPlayer
+    playerStart:
+      x: 1
+      y: 4

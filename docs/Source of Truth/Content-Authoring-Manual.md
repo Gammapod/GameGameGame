@@ -58,7 +58,7 @@ Minimum read path for content work:
 
 Default workflow:
 
-1. Author normal content definitions: entity templates, presentations, inventories, action plans, and persisted scenarios.
+1. Author normal content definitions: entity templates, template presentations, inventories, action plans, and persisted scenarios.
 2. Prefer canonical ordered behavior chains for new behavior.
 3. Use currently authorable Action Steps from this manual.
 4. Prefer direct `ggg_content_*` tools backed by `AgentContentEditorApi` when available: open/create a session, inspect existing content, make semantic edits, validate, review the snapshot diff, and save deliberately.
@@ -88,7 +88,7 @@ Keep the normal safe save loop: validate, canonical-validate, review `ggg_conten
 - Use canonical behavior chains for new normal action plans.
 - Do not create new content that depends on arbitrary action-plan variables, `SetVariable`, or legacy low-level check/effect authoring.
 - Legacy low-level plans may remain loadable/editable for compatibility, but they are not the preferred model for new content.
-- Scenarios should compose normal templates, presentations, inventories, action plans, and player insertion data. Do not invent scenario-only scripting.
+- Scenarios should compose normal templates, template presentations, inventories, action plans, and player insertion data. Do not invent scenario-only scripting.
 - If the engine can do something but this manual does not list it as authorable, classify or log the missing content workflow instead of relying on implementation details.
 
 ## Current authoring surface
@@ -97,7 +97,7 @@ Keep the normal safe save loop: validate, canonical-validate, review `ggg_conten
 |---|---|
 | Documents | Create, open, save, reload, validate, preview content documents, and request combined scenario review reports. Content-editing agents may use session-aware `ggg_content_*` tools from `GameGameGame.Content.Tools` for direct AgentContentEditorApi-backed open/create/snapshot/validate/save workflows. |
 | Entity templates | Create, edit, duplicate, delete, and reorder templates. |
-| Presentations | Assign/edit presentation data used by authored templates. |
+| Template presentations | Assign/edit the minimal per-template `presentations` map used by authored templates. Prefer `glyph` + `color` only for canon-promoted content unless a built-in semantic `presentationId`/`paletteId` is already useful. Avoid authoring document-local `presentationCatalog`/`palettes` in canonical files; they are an advanced semantic catalog extension, not required for ordinary human-readable canonical content. |
 | Inventory / containment | Inventory dimensions, bulk, aperture, carried entity layout, nullable inventory-boundary policies, experimental topology policies, and first-slice merged inventory layer joins. |
 | Actor state | Initial actor `Facing` through `actionStateDefaults.facing`; target-selection rules through preferred `targeting` profiles or legacy `targetingRules`. |
 | Action-plan assignment | Assign or clear an entity template's default action plan. |
@@ -118,7 +118,7 @@ For maintainer-facing layer coverage, support tiers, and parity details, use `do
 Author entity templates as reusable normal content. Current safe operations include:
 
 - create, edit, duplicate, delete, and reorder templates;
-- assign presentation data;
+- assign minimal template presentation data;
 - assign presentation-only material metadata (`metal`, `wood`, `stone`, or undefined);
 - assign or clear a default action plan;
 - configure inventory dimensions, bulk, and aperture;
@@ -129,6 +129,8 @@ Author entity templates as reusable normal content. Current safe operations incl
 Prefer reusable templates over scenario-specific one-off definitions. Scenarios should reference templates rather than encoding special behavior outside normal content structures.
 
 Template `material` is presentation-only in the current MVP. Valid explicit YAML values are `metal`, `wood`, and `stone`; omit or clear `material` to leave it undefined. SadConsole uses an entity's material when rendering that entity's inventory cells: undefined uses `gridDotted` as a debug/fallback backdrop, `metal` uses `gridMetal`, `stone` uses `gridCave`, and `wood` uses `gridWood`. Material does not affect inventory rules, action legality, targeting, bulk, aperture, or any other mechanics.
+
+Canonical template YAML should use `bulk` and `aperture` for containment mechanics. `weight` and `carryingCapacity` are legacy compatibility aliases and must not be authored in canon-promoted content. For presentation, canonical files should normally keep only the template-keyed `presentations` map with `glyph` and `color`; add semantic `presentationId`/`paletteId` only when reusing built-in catalog entries, and avoid document-local `presentationCatalog`/`palettes` unless a selected presentation-catalog slice explicitly requires them.
 
 ## Inventory and containment authoring
 
@@ -351,7 +353,7 @@ Use this naming convention for new scenarios: `<section>-<feature-or-action>-<pu
 Preferred scenario workflow:
 
 1. Define the vignette goal in terms of observable content behavior.
-2. Create or reuse entity templates, presentations, inventories, and action plans.
+2. Create or reuse entity templates, template presentations, inventories, and action plans.
 3. Assign default action plans and initial `Facing` as needed.
 4. Mark controlled placed entity instances with `controller: Player` when the controlled actor should be explicit. Use legacy player template/entity/start only for compatibility scenarios that still insert a player into the root plane.
    - For new exploratory or exhibit-style scenarios, include an explicit placed player/observer entity with a basic action loadout unless the scenario is intentionally playerless. The current standard loadout is a reusable player/observer template with `controller: Player`, initial `Facing`, and a default action plan ordered as `Move` Forward, `PickupTarget`, `DropFacing`, then `Transfer` `TargetToActor` Forward. This keeps scenarios manually inspectable and provides a consistent baseline for player interaction while AI actors demonstrate the authored behavior.
@@ -373,7 +375,7 @@ Ecology vignettes should be understood as spatial, individual-based systems. Tra
 ### Currently modellable ecology knobs
 
 1. **Reproduction requiring multiple food units.**
-   - Author by giving the reproducing entity enough inventory/carrying capacity and adding multiple resource costs to its `CreateEntity` or lifecycle action.
+   - Author by giving the reproducing entity enough inventory space/bulk budget and adding multiple resource costs to its `CreateEntity` or lifecycle action.
    - Example: the cave test changed grub reproduction from `1 glowcapSpore -> 1 glowcapGrub` to `2 glowcapSpore -> 1 glowcapGrub` by increasing grub capacity to 2 and setting the reproduction cost quantity to 2.
    - Finding: this is a strong population-control knob. It slowed grub growth and made foraging more visible, but with two bats the grubs tended toward extinction and with one bat they could still overrun. Food cost controls rate; it does not by itself solve indefinite parent survival.
 
