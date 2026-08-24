@@ -119,6 +119,7 @@ Author entity templates as reusable normal content. Current safe operations incl
 
 - create, edit, duplicate, delete, and reorder templates;
 - assign presentation data;
+- assign presentation-only material metadata (`metal`, `wood`, `stone`, or undefined);
 - assign or clear a default action plan;
 - configure inventory dimensions, bulk, and aperture;
 - place, remove, move, replace, and overwrite carried entities in authored inventory layouts through supported editor/API workflows;
@@ -126,6 +127,8 @@ Author entity templates as reusable normal content. Current safe operations incl
 - configure target-selection rules for target-consuming Action Steps.
 
 Prefer reusable templates over scenario-specific one-off definitions. Scenarios should reference templates rather than encoding special behavior outside normal content structures.
+
+Template `material` is presentation-only in the current MVP. Valid explicit YAML values are `metal`, `wood`, and `stone`; omit or clear `material` to leave it undefined. SadConsole uses an entity's material when rendering that entity's inventory cells: undefined uses `gridDotted` as a debug/fallback backdrop, `metal` uses `gridMetal`, `stone` uses `gridCave`, and `wood` uses `gridWood`. Material does not affect inventory rules, action legality, targeting, bulk, aperture, or any other mechanics.
 
 ## Inventory and containment authoring
 
@@ -256,8 +259,8 @@ If canon-promoted content appears to need a forbidden step, first try to express
 | `ExitFacing` | `Facing` | actor/container/world placement | Exits the current containing entity toward `Facing`, respecting source `exitPolicy` and aperture. | Usually authored on actors that may already be contained. |
 | `Push` | `Target`; `directionMode` | target position | Forces an adjacent selected target to move one adjacent step in target-relative `directionMode` when the target bulk fits actor aperture and the destination is legal/open. The actor does not move. | Use instead of `PushFacing` for new player-facing push semantics. |
 | `DestroyTarget` | `Target` | world/entity state | Recursively destroys the current target and its inventory descendants; current behavior rejects self-destruction. | Canonical lifecycle/state alteration for autonomous actors; player-facing workflow polish remains follow-up. Direct destroy can be opaque for ecology; prefer material pickup-plus-cost conversion when modeling consumption. |
-| `CreateEntity` | `templateId`; `createPlacement`; `directionMode` when placement is `Facing` | world/entity state | Creates a runtime entity from an authored template. Default placement is first open adjacent cell; `createPlacement: Facing` uses resolved `directionMode`. New entities receive template name, inventory dimensions, bulk, aperture, policies, topology policy, default action plan, initial facing, runtime template identity for content/presentation lookup, and inventory plane when applicable. | Canonical lifecycle/spawning for autonomous actors; player-facing workflow polish remains follow-up. Template-backed spawning/reproduction. See lifecycle and ecology examples. |
-| `PolymorphTarget` | `Target` or `targetSelf`; `templateId` | target entity data/default plan | Changes the selected entity to another authored template while preserving runtime entity ID, current location, current inventory contents, and existing facing. It applies the new template name/bulk/aperture/policies/topology policy/default action plan/template identity. | Canonical lifecycle/state alteration for autonomous actors; player-facing workflow polish remains follow-up. Lifecycle phases such as egg -> caterpillar -> cocoon -> butterfly in `CreateDestroyPolymorphShowcase.yaml`. |
+| `CreateEntity` | `templateId`; `createPlacement`; `directionMode` when placement is `Facing` | world/entity state | Creates a runtime entity from an authored template. Default placement is first open adjacent cell; `createPlacement: Facing` uses resolved `directionMode`. New entities receive template name, inventory dimensions, bulk, aperture, policies, topology policy, presentation-only material, default action plan, initial facing, runtime template identity for content/presentation lookup, and inventory plane when applicable. | Canonical lifecycle/spawning for autonomous actors; player-facing workflow polish remains follow-up. Template-backed spawning/reproduction. See lifecycle and ecology examples. |
+| `PolymorphTarget` | `Target` or `targetSelf`; `templateId` | target entity data/default plan | Changes the selected entity to another authored template while preserving runtime entity ID, current location, current inventory contents, and existing facing. It applies the new template name/bulk/aperture/policies/topology policy/material/default action plan/template identity. | Canonical lifecycle/state alteration for autonomous actors; player-facing workflow polish remains follow-up. Lifecycle phases such as egg -> caterpillar -> cocoon -> butterfly in `CreateDestroyPolymorphShowcase.yaml`. |
 
 ### Prototype-compatible steps for experiments and existing Beta/Delta content
 

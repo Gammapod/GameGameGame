@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GameGameGame.Core;
 
 namespace GameGameGame.Frontend.SadConsole;
 
@@ -25,6 +26,9 @@ internal sealed record TilesetProfile(
 
 internal sealed record TilesetRoles(
     int GridDotted,
+    int GridCave,
+    int GridWood,
+    int GridMetal,
     int FacingDiag,
     int FacingNS,
     int FacingWE,
@@ -40,6 +44,14 @@ internal sealed record TilesetRoles(
     TileBorderGlyphSet PanelBorder)
 {
     public int DefaultBackdrop => GridDotted;
+
+    public int BackdropForMaterial(EntityMaterial? material) => material?.Value switch
+    {
+        "metal" => GridMetal,
+        "stone" => GridCave,
+        "wood" => GridWood,
+        _ => DefaultBackdrop
+    };
 
     public (int Glyph, global::SadConsole.Mirror Mirror) FacingGlyph(GameGameGame.Core.Direction direction) => direction switch
     {

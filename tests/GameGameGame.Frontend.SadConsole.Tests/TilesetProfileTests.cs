@@ -15,12 +15,19 @@ public sealed class TilesetProfileTests
     }
 
     [Fact]
-    public void CandiiTilesetUsesGridDottedAsDefaultBackdrop()
+    public void CandiiTilesetUsesGridDottedAsUndefinedMaterialFallbackBackdrop()
     {
         var profile = TilesetProfileLoader.LoadCandii();
 
         Assert.Equal(223, profile.Roles.GridDotted);
+        Assert.Equal(226, profile.Roles.GridCave);
+        Assert.Equal(228, profile.Roles.GridWood);
+        Assert.Equal(229, profile.Roles.GridMetal);
         Assert.Equal(223, profile.Roles.DefaultBackdrop);
+        Assert.Equal(profile.Roles.GridDotted, profile.Roles.BackdropForMaterial(null));
+        Assert.Equal(profile.Roles.GridMetal, profile.Roles.BackdropForMaterial(new GameGameGame.Core.EntityMaterial("metal")));
+        Assert.Equal(profile.Roles.GridCave, profile.Roles.BackdropForMaterial(new GameGameGame.Core.EntityMaterial("stone")));
+        Assert.Equal(profile.Roles.GridWood, profile.Roles.BackdropForMaterial(new GameGameGame.Core.EntityMaterial("wood")));
     }
 
     [Fact]

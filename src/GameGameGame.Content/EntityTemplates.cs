@@ -32,7 +32,8 @@ public sealed record EntityTemplate(
     IReadOnlyList<EntityTargetingRule>? TargetingRules = null,
     EntityEnterPolicy? EnterPolicy = null,
     EntityExitPolicy? ExitPolicy = null,
-    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None)
+    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None,
+    EntityMaterial? Material = null)
 {
     public EntityEnterPolicy EffectiveEnterPolicy => EnterPolicy ?? EntityEnterPolicy.FirstUnoccupiedRowMajor;
 

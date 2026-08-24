@@ -263,6 +263,24 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiAuthorsAndClearsTemplateMaterial()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var id = api.CreateEntityTemplate("Wooden Chest").Value;
+
+        api.UpdateEntityTemplate(id, new AgentEntityTemplateUpdate(Material: new EntityMaterial("wood")));
+        var authored = api.Session.Editor.GetEntityPreset(id).Template;
+
+        Assert.Equal(new EntityMaterial("wood"), authored.Material);
+        Assert.Contains("material: wood", api.Session.GetYamlPreview());
+
+        api.UpdateEntityTemplate(id, new AgentEntityTemplateUpdate(ClearMaterial: true));
+
+        Assert.Null(api.Session.Editor.GetEntityPreset(id).Template.Material);
+        Assert.DoesNotContain("material:", api.Session.GetYamlPreview());
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsMergedInventoryLayerPlacements()
     {
         var api = AgentContentEditorApi.CreateNew();

@@ -117,6 +117,7 @@ entityTemplates:
     carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
+    material: metal
 
   debugHallwayEastWest5x1:
     name: Debug Hallway East-West 5x1
@@ -126,6 +127,7 @@ entityTemplates:
     carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
+    material: wood
 
   debugNodeRoom3x3:
     name: Debug Node Room 3x3
@@ -135,6 +137,7 @@ entityTemplates:
     carryingCapacity: 1000
     bulk: 1000
     aperture: 1000
+    material: metal
 
 presentations:
   debugRoomRoot:

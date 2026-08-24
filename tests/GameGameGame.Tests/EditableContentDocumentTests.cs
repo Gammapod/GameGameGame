@@ -18,6 +18,7 @@ public sealed class EditableContentDocumentTests
                 inventoryHeight: 0
                 weight: 3
                 carryingCapacity: 3
+                material: stone
             presentations:
               rock:
                 glyph: '*'
@@ -41,6 +42,8 @@ public sealed class EditableContentDocumentTests
 
         Assert.True(reloaded.Validate().IsValid);
         Assert.Equal("Rock", reloaded.EntityTemplates[new EntityTemplateId("rock")].Name);
+        Assert.Equal(new EntityMaterial("stone"), reloaded.EntityTemplates[new EntityTemplateId("rock")].Material);
+        Assert.Contains("material: stone", saved);
         Assert.Equal('*', reloaded.Presentations[new EntityTemplateId("rock")].Glyph);
         Assert.Equal(PlanEffectKind.Wait, reloaded.ActionPlanDescriptors[new ActionPlanTemplateId("wait")].Steps.Single().OnSuccess!.Kind);
     }

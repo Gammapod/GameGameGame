@@ -30,6 +30,7 @@ public sealed class FrontendEditorServiceTests
 
             var room = Assert.Single(snapshot.EntityTemplates, template => template.TemplateId == "editorRoom");
             Assert.Equal("Editor Room", room.Name);
+            Assert.Equal(new EntityMaterial("stone"), room.Material);
             Assert.Equal('#', room.Glyph);
             Assert.Equal(PresentationColor.Gray, room.Color);
             Assert.Equal(2, room.CarriedEntities.Count);
@@ -1373,7 +1374,7 @@ public sealed class FrontendEditorServiceTests
     }
 
     [Fact]
-    public void UpdateTemplateMetadataEditsInventoryDimensionsBulkAndAperture()
+    public void UpdateTemplateMetadataEditsInventoryDimensionsBulkApertureAndMaterial()
     {
         var path = WriteTempContentFile(EditorFixtureYaml());
 
@@ -1383,7 +1384,7 @@ public sealed class FrontendEditorServiceTests
 
             var result = service.UpdateTemplateMetadata(
                 "wall",
-                new FrontendEditorTemplateMetadataUpdate(InventoryWidth: 2, InventoryHeight: 3, Bulk: 4, Aperture: 5));
+                new FrontendEditorTemplateMetadataUpdate(InventoryWidth: 2, InventoryHeight: 3, Bulk: 4, Aperture: 5, Material: new EntityMaterial("wood")));
 
             Assert.True(result.IsSuccess, result.StatusMessage);
             Assert.True(result.Snapshot.IsDirty);
@@ -1393,6 +1394,7 @@ public sealed class FrontendEditorServiceTests
             Assert.Equal(3, wall.InventoryHeight);
             Assert.Equal(4, wall.Bulk);
             Assert.Equal(5, wall.Aperture);
+            Assert.Equal(new EntityMaterial("wood"), wall.Material);
         }
         finally
         {
@@ -1899,6 +1901,7 @@ public sealed class FrontendEditorServiceTests
             inventoryHeight: 2
             weight: 100
             carryingCapacity: 100
+            material: stone
             carriedEntities:
             - entityId: northWall
               templateId: wall

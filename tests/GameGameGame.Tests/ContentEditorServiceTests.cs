@@ -58,13 +58,15 @@ public sealed class ContentEditorServiceTests
             editor.GetEntityPreset(id).Template with
             {
                 Name = "Heavy Rock",
-                Bulk = 5
+                Bulk = 5,
+                Material = new EntityMaterial("stone")
             },
             new EntityPresentation('R', PresentationColor.Gray));
         var registry = EditableContentDocument.LoadYaml(editor.Document.SaveYaml()).ToRegistry();
 
         Assert.Equal("Heavy Rock", registry.EntityTemplates[id].Name);
         Assert.Equal(5, registry.EntityTemplates[id].Bulk);
+        Assert.Equal(new EntityMaterial("stone"), registry.EntityTemplates[id].Material);
         Assert.Equal('R', registry.Presentations[id].Glyph);
         Assert.Equal(PresentationColor.Gray, registry.Presentations[id].Color);
     }

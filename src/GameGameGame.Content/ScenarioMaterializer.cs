@@ -450,7 +450,8 @@ public static class ScenarioMaterializer
                 template.ActionStateDefaults?.Facing,
                 template.EnterPolicy,
                 template.ExitPolicy,
-                template.TopologyPolicy);
+                template.TopologyPolicy,
+                template.Material);
         }
     }
 

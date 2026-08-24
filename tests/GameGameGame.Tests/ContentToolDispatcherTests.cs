@@ -360,11 +360,13 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
-    public void ContentToolDispatcherAcceptsStringIdsFromToolJson()
+    public void ContentToolDispatcherAcceptsStringIdsAndMaterialFromToolJson()
     {
         var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
         var sessionId = Assert.IsType<ContentToolSessionOpened>(
             dispatcher.Invoke(ContentToolNames.CreateNew, new ContentToolCreateNewRequest()).Data).SessionId;
+        var templateId = Assert.IsType<ContentToolCreatedEntityTemplate>(
+            dispatcher.Invoke(ContentToolNames.CreateEntityTemplate, new ContentToolCreateEntityTemplateRequest(sessionId, "Chest")).Data).EntityTemplateId;
 
         var planId = Assert.IsType<ContentToolCreatedActionPlan>(
             dispatcher.Invoke(ContentToolNames.CreateActionPlan, new ContentToolCreateActionPlanRequest(sessionId, "Walk")).Data).ActionPlanTemplateId;
@@ -376,7 +378,16 @@ public sealed class ContentToolDispatcherTests
         }));
 
         var result = dispatcher.Invoke(ContentToolNames.SetActionPlanBehavior, args);
+        var updateArgs = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(new
+        {
+            sessionId,
+            entityTemplateId = templateId.Value,
+            update = new { material = "wood" }
+        }));
+        var update = dispatcher.Invoke(ContentToolNames.UpdateEntityTemplate, updateArgs);
 
         Assert.True(result.Ok, result.Error?.Message);
+        Assert.True(update.Ok, update.Error?.Message);
+        Assert.Contains("material: wood", dispatcher.Invoke(ContentToolNames.Snapshot, new ContentToolSessionRequest(sessionId)).Data!.ToString());
     }
 }

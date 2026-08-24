@@ -21,6 +21,14 @@ internal static class EntityTemplateValidator
                     entityTemplateId: templateId));
             }
 
+            if (template.Material is { } material && !EntityMaterial.IsSupported(material.Value))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidEntityMaterial,
+                    $"Entity template {templateId} ({template.Name}) has unsupported material {material.Value}. Valid materials are metal, wood, and stone; omit the field for undefined/debug fallback.",
+                    entityTemplateId: templateId));
+            }
+
             ValidateActionPlanTemplateReference(diagnostics, actionPlanTemplates, templateId, template, template.DefaultActionPlanId, nameof(template.DefaultActionPlanId));
             ValidateTargetingRules(diagnostics, entityTemplates, actionPlanTemplates, templateId, template);
 

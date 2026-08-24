@@ -276,7 +276,9 @@ public sealed record FrontendEditorTemplateMetadataUpdate(
     int InventoryWidth,
     int InventoryHeight,
     int Bulk,
-    int Aperture);
+    int Aperture,
+    EntityMaterial? Material = null,
+    bool ClearMaterial = false);
 
 public sealed record FrontendEditorTargetingRuleUpdate(
     int Slot,
@@ -365,6 +367,7 @@ public sealed record FrontendEditorEntityTemplateSummary(
     int InventoryHeight,
     int Bulk,
     int Aperture,
+    EntityMaterial? Material,
     string? DefaultActionPlanId,
     FrontendEditorActionStateDefaultsSummary ActionStateDefaults,
     IReadOnlyList<FrontendEditorTargetingRuleSummary> TargetingRules,

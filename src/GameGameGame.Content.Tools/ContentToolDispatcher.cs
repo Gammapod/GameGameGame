@@ -162,15 +162,17 @@ public sealed class ContentToolDispatcher(ContentToolSessionRegistry sessions)
                 new("inventoryHeight", "integer", false, "Authored inventory height; 0 means no usable inventory."),
                 new("bulk", "integer", false, "Bulk for inventory/aperture rules."),
                 new("aperture", "integer", false, "Aperture for inventory transitions."),
+                new("material", "string|null", false, "Presentation-only material for inventory backdrop presentation. Valid explicit values are metal, wood, stone; omitted/cleared is undefined and uses gridDotted debug/fallback presentation.", ["metal", "wood", "stone"], NullableClears: true),
                 new("enterPolicy", "string|null", false, "Authored enter-placement policy.", Enum.GetNames<EntityEnterPolicy>(), NullableClears: true),
                 new("exitPolicy", "string|null", false, "Authored exit-source policy.", Enum.GetNames<EntityExitPolicy>(), NullableClears: true),
                 new("topologyPolicy", "string", false, "Directed inventory-boundary topology policy.", Enum.GetNames<EntityTopologyPolicy>()),
                 new("clearEnterPolicy", "boolean", false, "Set true to clear enterPolicy."),
                 new("clearExitPolicy", "boolean", false, "Set true to clear exitPolicy."),
+                new("clearMaterial", "boolean", false, "Set true to clear authored material."),
                 new("glyph", "one-character string", false, "Legacy/editor glyph."),
                 new("color", "string", false, "Presentation color.", Enum.GetNames<PresentationColor>())
             ],
-            ["{ \"name\": \"Player\", \"inventoryWidth\": 0, \"inventoryHeight\": 0, \"bulk\": 1, \"aperture\": 5, \"glyph\": \"@\", \"color\": \"Yellow\" }"]),
+            ["{ \"name\": \"Player\", \"inventoryWidth\": 0, \"inventoryHeight\": 0, \"bulk\": 1, \"aperture\": 5, \"material\": \"wood\", \"glyph\": \"@\", \"color\": \"Yellow\" }"]),
         "scenario" => new(concept, "Persisted scenario object for ggg_content_upsert_scenario.",
             [
                 new("scenarioId", "string", true, "Stable scenario ID."),

@@ -66,6 +66,7 @@ public enum ContentDiagnosticCode
     UnknownPaletteId,
     MissingCarriedEntityTemplateReference,
     InvalidMergedInventoryLayer,
+    InvalidEntityMaterial,
     DuplicateSymbolDeclaration,
     AmbiguousSymbolReference
 }

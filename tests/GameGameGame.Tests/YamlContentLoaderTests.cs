@@ -124,6 +124,50 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderLoadsTemplateMaterialAndValidationRejectsUnknownMaterial()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              chest:
+                name: Chest
+                inventoryWidth: 2
+                inventoryHeight: 1
+                bulk: 3
+                aperture: 3
+                material: wood
+              ore:
+                name: Ore
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                material: metal
+              mystery:
+                name: Mystery
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+                material: glass
+            presentations:
+              chest: { glyph: C, color: Earth }
+              ore: { glyph: o, color: Gray }
+              mystery: { glyph: '?', color: Gray }
+            actionPlans: {}
+            """);
+
+        var result = registry.Validate();
+
+        Assert.Equal(new EntityMaterial("wood"), registry.GetEntityTemplate(new EntityTemplateId("chest")).Material);
+        Assert.Equal(new EntityMaterial("metal"), registry.GetEntityTemplate(new EntityTemplateId("ore")).Material);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == ContentDiagnosticCode.InvalidEntityMaterial &&
+            diagnostic.EntityTemplateId == new EntityTemplateId("mystery") &&
+            diagnostic.Message.Contains("glass", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void YamlContentLoaderLoadsMergedInventoryLayerPlacements()
     {
         var registry = YamlContentLoader.LoadRegistry(

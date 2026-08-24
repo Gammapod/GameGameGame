@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace GameGameGame.Core;
 
 public readonly record struct EntityId(string Value)
@@ -93,6 +96,30 @@ public enum EntityTopologyPolicy
     ConnectsInwardAndOutward
 }
 
+[JsonConverter(typeof(EntityMaterialJsonConverter))]
+public readonly record struct EntityMaterial(string Value)
+{
+    public override string ToString() => Value;
+
+    public static bool IsSupported(string value) => value is "metal" or "wood" or "stone";
+}
+
+public sealed class EntityMaterialJsonConverter : JsonConverter<EntityMaterial>
+{
+    public override EntityMaterial Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+        {
+            throw new JsonException("Entity material must be a string.");
+        }
+
+        return new EntityMaterial(reader.GetString() ?? string.Empty);
+    }
+
+    public override void Write(Utf8JsonWriter writer, EntityMaterial value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+}
+
 public sealed record RuntimeEntityTemplate(
     string TemplateId,
     string Name,
@@ -104,7 +131,8 @@ public sealed record RuntimeEntityTemplate(
     Direction? InitialFacing = null,
     EntityEnterPolicy? EnterPolicy = null,
     EntityExitPolicy? ExitPolicy = null,
-    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None);
+    EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None,
+    EntityMaterial? Material = null);
 
 public static class DirectionMath
 {
@@ -155,7 +183,8 @@ public sealed record Entity(
     EntityEnterPolicy? EnterPolicy = null,
     EntityExitPolicy? ExitPolicy = null,
     EntityTopologyPolicy TopologyPolicy = EntityTopologyPolicy.None,
-    string? TemplateId = null)
+    string? TemplateId = null,
+    EntityMaterial? Material = null)
 {
     public bool HasUsableInventory => InventoryWidth > 0 && InventoryHeight > 0;
 

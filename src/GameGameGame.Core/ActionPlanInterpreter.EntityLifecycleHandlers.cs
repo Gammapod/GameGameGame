@@ -82,7 +82,8 @@ public sealed partial class ActionPlanInterpreter
             EnterPolicy = template.EnterPolicy,
             ExitPolicy = template.ExitPolicy,
             TopologyPolicy = template.TopologyPolicy,
-            TemplateId = template.TemplateId
+            TemplateId = template.TemplateId,
+            Material = template.Material
         };
         ApplyTemplateActionDefaults(world, target.Value, template, preserveExistingFacing: true);
         trace.Status = TraceStatus.Success;
@@ -166,7 +167,8 @@ public sealed partial class ActionPlanInterpreter
             template.EnterPolicy,
             template.ExitPolicy,
             template.TopologyPolicy,
-            template.TemplateId));
+            template.TemplateId,
+            template.Material));
         world.Occupancy.Add(nodeId, entityId);
         ApplyTemplateActionDefaults(world, entityId, template, preserveExistingFacing: false);
 

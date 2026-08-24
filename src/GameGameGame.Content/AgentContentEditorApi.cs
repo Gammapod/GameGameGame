@@ -113,7 +113,8 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
                 Aperture = update.Aperture ?? preset.Template.Aperture,
                 EnterPolicy = update.ClearEnterPolicy ? null : update.EnterPolicy ?? preset.Template.EnterPolicy,
                 ExitPolicy = update.ClearExitPolicy ? null : update.ExitPolicy ?? preset.Template.ExitPolicy,
-                TopologyPolicy = update.TopologyPolicy ?? preset.Template.TopologyPolicy
+                TopologyPolicy = update.TopologyPolicy ?? preset.Template.TopologyPolicy,
+                Material = update.ClearMaterial ? null : update.Material ?? preset.Template.Material
             };
             var presentation = preset.Presentation with
             {
@@ -416,8 +417,10 @@ public sealed record AgentEntityTemplateUpdate(
     EntityEnterPolicy? EnterPolicy = null,
     EntityExitPolicy? ExitPolicy = null,
     EntityTopologyPolicy? TopologyPolicy = null,
+    EntityMaterial? Material = null,
     bool ClearEnterPolicy = false,
     bool ClearExitPolicy = false,
+    bool ClearMaterial = false,
     PresentationId? PresentationId = null,
     PaletteId? PaletteId = null,
     char? Glyph = null,

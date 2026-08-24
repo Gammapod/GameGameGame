@@ -171,7 +171,8 @@ internal sealed class FrontendEntityTemplateMutationService(
                 InventoryWidth = update.InventoryWidth,
                 InventoryHeight = update.InventoryHeight,
                 Bulk = update.Bulk,
-                Aperture = update.Aperture
+                Aperture = update.Aperture,
+                Material = update.ClearMaterial ? null : update.Material ?? current.Template.Material
             };
 
             session.Editor.UpdateEntityPreset(id, template, current.Presentation);

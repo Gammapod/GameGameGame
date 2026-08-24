@@ -103,11 +103,16 @@ public static class YamlContentLoader
                 TargetingRules: MaterializeTargetingRules(template.TargetingRules),
                 EnterPolicy: template.EnterPolicy,
                 ExitPolicy: template.ExitPolicy,
-                TopologyPolicy: template.TopologyPolicy ?? EntityTopologyPolicy.None);
+                TopologyPolicy: template.TopologyPolicy ?? EntityTopologyPolicy.None,
+                Material: MaterializeMaterial(template.Material));
         }
 
         return result;
     }
+
+    private static EntityMaterial? MaterializeMaterial(string? material) => string.IsNullOrWhiteSpace(material)
+        ? null
+        : new EntityMaterial(material.Trim());
 
     private static IReadOnlyList<EntityTargetingRule>? MaterializeTargetingRules(List<EntityTargetingRuleDto>? rules)
     {
@@ -431,6 +436,8 @@ public static class YamlContentLoader
         public EntityExitPolicy? ExitPolicy { get; set; }
 
         public EntityTopologyPolicy? TopologyPolicy { get; set; }
+
+        public string? Material { get; set; }
 
         public string? DefaultActionPlanId { get; set; }
 

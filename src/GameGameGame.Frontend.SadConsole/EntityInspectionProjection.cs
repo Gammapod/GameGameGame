@@ -38,6 +38,9 @@ internal static class InspectionInventoryProjector
             return [];
         }
 
+        var backdropGlyph = session.World.Entities.TryGetValue(entityId, out var owner)
+            ? tilesetProfile.Roles.BackdropForMaterial(owner.Material)
+            : tilesetProfile.Roles.DefaultBackdrop;
         var cells = new List<EntityInspectionPortraitCell>(plane.Width * plane.Height);
         for (var y = 0; y < plane.Height; y++)
         for (var x = 0; x < plane.Width; x++)
@@ -51,7 +54,7 @@ internal static class InspectionInventoryProjector
             cells.Add(new EntityInspectionPortraitCell(
                 x,
                 y,
-                tilesetProfile.Roles.DefaultBackdrop,
+                backdropGlyph,
                 Color.DimGray,
                 Color.Black,
                 glyph,

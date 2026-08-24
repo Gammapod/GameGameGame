@@ -30,6 +30,48 @@ public sealed class PlayGridViewModelTests
     }
 
     [Fact]
+    public void PlayGridAndInspectionInventoryUseContainerMaterialBackdrop()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              room:
+                name: Stone Room
+                inventoryWidth: 3
+                inventoryHeight: 2
+                bulk: 100
+                aperture: 100
+                material: stone
+              player:
+                name: Player
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 5
+            presentations:
+              room: { glyph: '#', color: Gray }
+              player: { glyph: '@', color: Yellow }
+            actionPlans: {}
+            scenarios:
+              material-room:
+                name: Material Room
+                scenarioRootEntityTemplateId: room
+                playerEntityTemplateId: player
+                playerEntityId: player
+                playerStart: { x: 1, y: 1 }
+            """);
+        var session = PlayableScenarioLauncher.CreateFromDocument(document, "material-room");
+        var tileset = TilesetProfileLoader.LoadCandii();
+
+        var grid = PlayGridViewModel.FromSession(session, tileset);
+        var inspectionCells = InspectionInventoryProjector.Project(session, session.ActiveContainerEntityId, tileset);
+
+        Assert.All(grid.Cells, cell => Assert.Equal(tileset.Roles.GridCave, cell.BackdropGlyph));
+        Assert.NotEmpty(inspectionCells);
+        Assert.All(inspectionCells, cell => Assert.Equal(tileset.Roles.GridCave, cell.BackdropGlyph));
+    }
+
+    [Fact]
     public void TryCellAtUsesCoordinatesWithoutLinearSearchSemantics()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();

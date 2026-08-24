@@ -110,6 +110,7 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                     model.Template.InventoryHeight,
                     model.Template.Bulk,
                     model.Template.Aperture,
+                    model.Template.Material,
                     model.Template.DefaultActionPlanId?.Value,
                     new FrontendEditorActionStateDefaultsSummary(
                         model.Template.ActionStateDefaults?.Facing,

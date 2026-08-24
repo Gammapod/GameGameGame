@@ -215,7 +215,7 @@ internal sealed record PlayGridViewModel(
         return new PlayCellVisual(
             displayCoord.X,
             displayCoord.Y,
-            tilesetProfile.Roles.DefaultBackdrop,
+            ResolveBackdropGlyph(session, tilesetProfile, sourceCoord.PlaneId),
             backdropForeground,
             Color.Black,
             entityGlyph,
@@ -228,6 +228,14 @@ internal sealed record PlayGridViewModel(
             visibleCell?.NodeId,
             visibleCell?.LayoutCoord,
             sourceCoord);
+    }
+
+    private static int ResolveBackdropGlyph(PlayableScenarioSession session, TilesetProfile tilesetProfile, PlaneId planeId)
+    {
+        return InventoryPlaneOwnership.TryFindOwner(session.World, planeId, out var ownerId)
+            && session.World.Entities.TryGetValue(ownerId, out var owner)
+            ? tilesetProfile.Roles.BackdropForMaterial(owner.Material)
+            : tilesetProfile.Roles.DefaultBackdrop;
     }
 
     private static PlaneId ResolveRenderedPlane(PlayableScenarioSession session)
