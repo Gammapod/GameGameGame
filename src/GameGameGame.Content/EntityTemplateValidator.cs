@@ -179,12 +179,14 @@ internal static class EntityTemplateValidator
     private static bool TargetReferenceMatchesRule(ActionPlanBehaviorStepDescriptor step, EntityTargetingRule rule)
     {
         if (!string.IsNullOrWhiteSpace(rule.Label)
-            && string.Equals(step.TargetLabel, rule.Label, StringComparison.Ordinal))
+            && (string.Equals(step.TargetLabel, rule.Label, StringComparison.Ordinal)
+                || string.Equals(step.CounterpartyTargetLabel, rule.Label, StringComparison.Ordinal)))
         {
             return true;
         }
 
-        return (step.TargetSlot ?? 1) == rule.Slot && string.IsNullOrWhiteSpace(step.TargetLabel);
+        return ((step.TargetSlot ?? 1) == rule.Slot && string.IsNullOrWhiteSpace(step.TargetLabel))
+            || (step.CounterpartyTargetSlot == rule.Slot && string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel));
     }
 
     private static void ValidateCarriedEntityLayout(

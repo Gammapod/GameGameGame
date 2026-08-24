@@ -77,6 +77,7 @@ public static class ActionStepAttemptProjection
             or "Primitive TargetPathMove"
             or "Primitive GiveTarget"
             or "Primitive TakeTarget"
+            or "Primitive Transfer"
             or "Primitive EnterTarget"
             or "Primitive ExitFacing";
 

@@ -62,4 +62,19 @@ public sealed class ActionStepAttemptProjectionTests
 
         Assert.Equal("Wait", attempt.StepKind);
     }
+
+    [Fact]
+    public void ProjectIncludesCanonicalTransferResultDetails()
+    {
+        var trace = new TraceNode("Plan test", TraceStatus.Success);
+        var transfer = new TraceNode("Action Step Transfer", TraceStatus.Failure, FailureReason.TargetMissing, "missing target label carriedScrap");
+        transfer.Add(TraceNode.Failure("Primitive Transfer", FailureReason.TargetMissing, "missing target label carriedScrap"));
+        trace.Add(transfer);
+
+        var attempt = Assert.Single(ActionStepAttemptProjection.Project(trace));
+
+        Assert.Equal("Transfer", attempt.StepKind);
+        Assert.Equal(FailureReason.TargetMissing, attempt.FailureReason);
+        Assert.Equal(["missing target label carriedScrap"], attempt.Results);
+    }
 }

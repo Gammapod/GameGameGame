@@ -27,9 +27,9 @@ public sealed class EcologyVignetteBaselineMetricsTests
 
     public static IEnumerable<object[]> BaselineCases()
     {
-        yield return ["ecology-glowcap-grubarium", 10, Counts(("Ecology Observer", 1), ("Glowcap Fungus", 3), ("Glowcap Spore", 15), ("Cave Grub", 3), ("Duskwing Bat", 1)), 60];
-        yield return ["ecology-glowcap-grubarium", 25, Counts(("Ecology Observer", 1), ("Glowcap Fungus", 3), ("Glowcap Spore", 15), ("Cave Grub", 3), ("Duskwing Bat", 1)), 180];
-        yield return ["ecology-glowcap-grubarium", 50, Counts(("Ecology Observer", 1), ("Glowcap Fungus", 3), ("Glowcap Spore", 15), ("Cave Grub", 3), ("Duskwing Bat", 1)), 380];
+        yield return ["ecology-glowcap-grubarium", 10, Counts(("Ecology Observer", 1), ("Glowcap Fungus", 3), ("Glowcap Spore", 18), ("Cave Grub", 2), ("Duskwing Bat", 1)), 41];
+        yield return ["ecology-glowcap-grubarium", 25, Counts(("Ecology Observer", 1), ("Glowcap Fungus", 3), ("Glowcap Spore", 21), ("Duskwing Bat", 1)), 112];
+        yield return ["ecology-glowcap-grubarium", 50, Counts(("Ecology Observer", 1), ("Glowcap Fungus", 3), ("Glowcap Spore", 21), ("Duskwing Bat", 1)), 237];
 
         yield return ["ecology-mana-crystal-automata", 10, Counts(("Ecology Observer", 1), ("Mana Crystal", 2), ("Mana Spark", 14), ("Tiny Construct", 2), ("Mana Leech", 2)), 35];
         yield return ["ecology-mana-crystal-automata", 25, Counts(("Ecology Observer", 1), ("Mana Crystal", 2), ("Mana Spark", 14), ("Tiny Construct", 2), ("Mana Leech", 2)), 125];

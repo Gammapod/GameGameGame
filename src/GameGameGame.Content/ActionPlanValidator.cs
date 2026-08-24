@@ -126,6 +126,16 @@ internal static class ActionPlanValidator
                     stepIndex: index));
             }
 
+            if (step.CounterpartyTargetSlot is <= 0)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepTargetSlot,
+                    $"Action plan {descriptor.Id} action step {step.Kind} counterpartyTargetSlot must be greater than zero; found {step.CounterpartyTargetSlot}.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+
             var targetReferenceCount = (step.TargetSlot is not null ? 1 : 0)
                 + (!string.IsNullOrWhiteSpace(step.TargetLabel) ? 1 : 0)
                 + (step.TargetSelf ? 1 : 0);
@@ -139,11 +149,43 @@ internal static class ActionPlanValidator
                     stepIndex: index));
             }
 
+            var counterpartyTargetReferenceCount = (step.CounterpartyTargetSlot is not null ? 1 : 0)
+                + (!string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel) ? 1 : 0);
+            if (counterpartyTargetReferenceCount > 1)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepTargetReference,
+                    $"Action plan {descriptor.Id} action step {step.Kind} must use only one of counterpartyTargetLabel or counterpartyTargetSlot.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+
+            if (step.Kind != ActionPlanBehaviorStepKind.Transfer && counterpartyTargetReferenceCount > 0)
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepTargetReference,
+                    $"Action plan {descriptor.Id} action step {step.Kind} counterparty target references are only valid on Transfer steps.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+
             if (step.TargetLabel is { } label && string.IsNullOrWhiteSpace(label))
             {
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionStepTargetReference,
                     $"Action plan {descriptor.Id} action step {step.Kind} targetLabel must not be blank.",
+                    actionPlanTemplateId: actionPlanTemplateId,
+                    actionPlanId: descriptor.Id,
+                    stepIndex: index));
+            }
+
+            if (step.CounterpartyTargetLabel is { } counterpartyLabel && string.IsNullOrWhiteSpace(counterpartyLabel))
+            {
+                AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                    ContentDiagnosticCode.InvalidActionStepTargetReference,
+                    $"Action plan {descriptor.Id} action step {step.Kind} counterpartyTargetLabel must not be blank.",
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: descriptor.Id,
                     stepIndex: index));
@@ -175,11 +217,14 @@ internal static class ActionPlanValidator
                     stepIndex: index));
             }
 
-            if (step.Kind == ActionPlanBehaviorStepKind.Transfer && step.DirectionMode is null)
+            if (step.Kind == ActionPlanBehaviorStepKind.Transfer
+                && step.DirectionMode is null
+                && step.CounterpartyTargetSlot is null
+                && string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel))
             {
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidActionStepField,
-                    $"Action plan {descriptor.Id} action step {step.Kind} requires directionMode.",
+                    $"Action plan {descriptor.Id} action step {step.Kind} requires directionMode or counterparty target reference.",
                     actionPlanTemplateId: actionPlanTemplateId,
                     actionPlanId: descriptor.Id,
                     stepIndex: index));

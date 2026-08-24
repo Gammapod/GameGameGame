@@ -334,6 +334,10 @@ public sealed partial class EditableContentDocument
 
         public string? OrbitDirection { get; set; }
 
+        public int? CounterpartyTargetSlot { get; set; }
+
+        public string? CounterpartyTargetLabel { get; set; }
+
         public List<ActionStepCostDescriptorDto>? Costs { get; set; }
 
         public static ActionPlanBehaviorStepDescriptorDto From(ActionPlanBehaviorStepDescriptor descriptor) => new()
@@ -350,6 +354,8 @@ public sealed partial class EditableContentDocument
             PathMode = descriptor.PathMode?.ToString(),
             DesiredDistance = descriptor.DesiredDistance,
             OrbitDirection = descriptor.OrbitDirection?.ToString(),
+            CounterpartyTargetSlot = descriptor.CounterpartyTargetSlot,
+            CounterpartyTargetLabel = descriptor.CounterpartyTargetLabel,
             Costs = descriptor.Costs.Count == 0 ? null : descriptor.Costs.Select(ActionStepCostDescriptorDto.From).ToList()
         };
 
@@ -366,7 +372,9 @@ public sealed partial class EditableContentDocument
                 CreatePlacement is { } placement ? Enum.Parse<CreateEntityPlacement>(placement, ignoreCase: true) : null,
                 PathMode is { } pathMode ? Enum.Parse<ActionPlanTargetPathMode>(pathMode, ignoreCase: true) : null,
                 DesiredDistance,
-                OrbitDirection is { } orbitDirection ? Enum.Parse<ActionPlanOrbitDirection>(orbitDirection, ignoreCase: true) : null)
+                OrbitDirection is { } orbitDirection ? Enum.Parse<ActionPlanOrbitDirection>(orbitDirection, ignoreCase: true) : null,
+                CounterpartyTargetSlot,
+                CounterpartyTargetLabel)
             {
                 Costs = (Costs ?? [])
                     .Select(cost => new ActionStepCostDescriptor(cost.TemplateId ?? string.Empty, cost.Quantity))

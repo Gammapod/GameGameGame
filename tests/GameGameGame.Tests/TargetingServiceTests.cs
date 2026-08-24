@@ -351,6 +351,53 @@ public sealed class TargetingServiceTests
     }
 
     [Fact]
+    public void RefreshTargetsRuleLocalityCanSearchOwnInventoryWithinActorRange()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 5
+                inventoryHeight: 5
+                bulk: 100
+                aperture: 100
+              goblin:
+                name: Goblin
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 2
+                aperture: 2
+                targeting:
+                  range: 0
+                  rules:
+                    - slot: 1
+                      label: carriedGold
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - OwnInventory
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateContainmentWorld();
+        var roomInventory = SpawnRoom(registry, world, "room", new GridCoord(0, 0));
+        var goblin = SpawnInPlane(registry, world, "goblin", "goblin", roomInventory, new GridCoord(1, 1));
+        var goblinInventory = world.GetInventoryPlaneId(goblin) ?? throw new InvalidOperationException("Goblin inventory missing.");
+        SpawnInPlane(registry, world, "gold", "carriedGold", goblinInventory, new GridCoord(0, 0));
+
+        TargetingService.RefreshTargets(world, registry, goblin);
+
+        Assert.Equal(new EntityId("carriedGold"), world.GetActionTarget(goblin, label: "carriedGold"));
+    }
+
+    [Fact]
     public void TargetingCandidatePreviewReportsRuleCandidatesWithoutMutatingTargets()
     {
         var registry = YamlContentLoader.LoadRegistry(

@@ -793,6 +793,10 @@ public sealed class FrontendEditorServiceTests
                     targetLabel: fears
                   - kind: GiveTarget
                     targetLabel: loves
+                  - kind: Transfer
+                    targetLabel: loves
+                    counterpartyTargetLabel: pod
+                    transferDirection: ActorToTarget
             """);
 
         try
@@ -801,17 +805,22 @@ public sealed class FrontendEditorServiceTests
 
             var actor = Assert.Single(service.GetSnapshot().EntityTemplates, template => template.TemplateId == "actor");
 
-            Assert.Equal(["loves", "fears"], actor.TargetingRequirements.Select(requirement => requirement.Label).ToArray());
+            Assert.Equal(["loves", "fears", "pod"], actor.TargetingRequirements.Select(requirement => requirement.Label).ToArray());
             var loves = actor.TargetingRequirements[0];
             Assert.True(loves.IsConfigured);
-            Assert.Equal([0, 2], loves.StepIndexes.ToArray());
-            Assert.Equal([ActionPlanBehaviorStepKind.SeekTarget, ActionPlanBehaviorStepKind.GiveTarget], loves.StepKinds.ToArray());
+            Assert.Equal([0, 2, 3], loves.StepIndexes.ToArray());
+            Assert.Equal([ActionPlanBehaviorStepKind.SeekTarget, ActionPlanBehaviorStepKind.GiveTarget, ActionPlanBehaviorStepKind.Transfer], loves.StepKinds.ToArray());
             Assert.NotNull(loves.Rule);
             Assert.Equal("friend", loves.Rule!.TargetTemplateId);
 
             var fears = actor.TargetingRequirements[1];
             Assert.False(fears.IsConfigured);
             Assert.Null(fears.Rule);
+
+            var pod = actor.TargetingRequirements[2];
+            Assert.False(pod.IsConfigured);
+            Assert.Equal([3], pod.StepIndexes.ToArray());
+            Assert.Equal([ActionPlanBehaviorStepKind.Transfer], pod.StepKinds.ToArray());
 
             var orphan = Assert.Single(actor.OrphanedTargetingRules);
             Assert.Equal("unused", orphan.Label);
@@ -821,7 +830,7 @@ public sealed class FrontendEditorServiceTests
             Assert.Empty(noPlan.OrphanedTargetingRules);
 
             var plan = Assert.Single(service.GetSnapshot().ActionPlans, plan => plan.ActionPlanId == "feelings");
-            Assert.Equal(["loves", "fears"], plan.TargetLabelRequirements.Select(requirement => requirement.Label).ToArray());
+            Assert.Equal(["loves", "fears", "pod"], plan.TargetLabelRequirements.Select(requirement => requirement.Label).ToArray());
         }
         finally
         {

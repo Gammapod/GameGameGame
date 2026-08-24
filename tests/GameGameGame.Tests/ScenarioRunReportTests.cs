@@ -186,7 +186,7 @@ public sealed class ScenarioRunReportTests
 
         Assert.Empty(report.ValidationDiagnostics);
         AssertTargetPathTurnContains(report, "Missing Target Actor", "missing target label target");
-        AssertTargetPathTurnContains(report, "Off Plane Actor", "missing Target slot");
+        AssertTargetPathTurnContains(report, "Off Plane Actor", "no reachable target-adjacent");
         AssertTargetPathTurnContains(report, "Unreachable Adjacency Actor", "no reachable target-adjacent");
         AssertTargetPathTurnContains(report, "No Flee Actor", "no valid distance-increasing flee step");
         AssertTargetPathTurnContains(report, "Blocked Orbit Actor", "orbit Clockwise step East blocked");

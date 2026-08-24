@@ -25,6 +25,8 @@ public static class ContentToolNames
     public const string RemoveActionPlanBehaviorStep = "ggg_content_remove_action_plan_behavior_step";
     public const string SetBehaviorStepTargetLabel = "ggg_content_set_behavior_step_target_label";
     public const string SetBehaviorStepTargetSlot = "ggg_content_set_behavior_step_target_slot";
+    public const string SetBehaviorStepCounterpartyTargetLabel = "ggg_content_set_behavior_step_counterparty_target_label";
+    public const string SetBehaviorStepCounterpartyTargetSlot = "ggg_content_set_behavior_step_counterparty_target_slot";
     public const string SetBehaviorStepPlanId = "ggg_content_set_behavior_step_plan_id";
     public const string SetBehaviorStepDirectionMode = "ggg_content_set_behavior_step_direction_mode";
     public const string SetBehaviorStepCosts = "ggg_content_set_behavior_step_costs";

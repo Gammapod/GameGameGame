@@ -173,6 +173,52 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
         onChanged?.Invoke();
     }
 
+    public void SetActionPlanBehaviorStepCounterpartyTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot)
+    {
+        if (targetSlot is <= 0)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} counterparty target slot must be greater than zero.");
+        }
+
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.Transfer && targetSlot is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Transfer steps support counterparty target references.");
+        }
+
+        step.CounterpartyTargetSlot = targetSlot;
+        if (targetSlot is not null)
+        {
+            step.CounterpartyTargetLabel = null;
+        }
+
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepCounterpartyTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel)
+    {
+        if (targetLabel is { } label && string.IsNullOrWhiteSpace(label))
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} counterparty target label must not be blank.");
+        }
+
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.Transfer && targetLabel is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Transfer steps support counterparty target references.");
+        }
+
+        step.CounterpartyTargetLabel = targetLabel;
+        if (targetLabel is not null)
+        {
+            step.CounterpartyTargetSlot = null;
+        }
+
+        onChanged?.Invoke();
+    }
+
     public void SetActionPlanBehaviorStepTargetSelf(ActionPlanTemplateId planId, int stepIndex, bool targetSelf)
     {
         var steps = GetActionPlanBehaviorSteps(planId);

@@ -229,6 +229,12 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
     public AgentApiResult SetActionPlanBehaviorStepTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel) =>
         Try("SetActionPlanBehaviorStepTargetLabelFailed", () => Session.Editor.SetActionPlanBehaviorStepTargetLabel(planId, stepIndex, targetLabel));
 
+    public AgentApiResult SetActionPlanBehaviorStepCounterpartyTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot) =>
+        Try("SetActionPlanBehaviorStepCounterpartyTargetSlotFailed", () => Session.Editor.SetActionPlanBehaviorStepCounterpartyTargetSlot(planId, stepIndex, targetSlot));
+
+    public AgentApiResult SetActionPlanBehaviorStepCounterpartyTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel) =>
+        Try("SetActionPlanBehaviorStepCounterpartyTargetLabelFailed", () => Session.Editor.SetActionPlanBehaviorStepCounterpartyTargetLabel(planId, stepIndex, targetLabel));
+
     public AgentApiResult SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId) =>
         Try("SetActionPlanBehaviorStepPlanIdFailed", () => Session.Editor.SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId));
 

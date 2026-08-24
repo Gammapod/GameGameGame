@@ -101,7 +101,7 @@ entityTemplates:
     inventoryHeight: 1
     weight: 1
     carryingCapacity: 1
-    bulk: 1
+    bulk: 2
     aperture: 1
     defaultActionPlanId: batRegulateGrubs
     actionStateDefaults:
@@ -358,13 +358,25 @@ entityTemplates:
       coord:
         x: 8
         y: 4
+    - entityId: spiderLooseScrap01
+      templateId: spiderScrap
+      coord: { x: 4, y: 4 }
+    - entityId: spiderLooseScrap02
+      templateId: spiderScrap
+      coord: { x: 5, y: 4 }
+    - entityId: spiderLooseScrap03
+      templateId: spiderScrap
+      coord: { x: 11, y: 4 }
+    - entityId: spiderLooseScrap04
+      templateId: spiderScrap
+      coord: { x: 12, y: 4 }
   spiderExperimentPlayer:
     name: Spider Experimenter
     inventoryWidth: 5
     inventoryHeight: 2
     weight: 1
     carryingCapacity: 10
-    bulk: 1
+    bulk: 2
     aperture: 10
     defaultActionPlanId: spiderExperimenterPlan
     actionStateDefaults:
@@ -409,13 +421,20 @@ entityTemplates:
     bulk: 100
     aperture: 10
     defaultActionPlanId: spiderPodCreatesCircuitSpider
+    carriedEntities:
+    - entityId: spiderPodSeedScrapA
+      templateId: spiderScrap
+      coord: { x: 0, y: 0 }
+    - entityId: spiderPodSeedScrapB
+      templateId: spiderScrap
+      coord: { x: 1, y: 0 }
   circuitSpider:
     name: Circuit Spider
     inventoryWidth: 1
     inventoryHeight: 1
     weight: 1
     carryingCapacity: 1
-    bulk: 1
+    bulk: 2
     aperture: 1
     defaultActionPlanId: circuitSpiderGatherGiveOrbit
     actionStateDefaults:
@@ -426,13 +445,30 @@ entityTemplates:
       - slot: 1
         label: scrap
         targetTemplateId: spiderScrap
-        targetCapabilities:
-        - PickupTarget
-        range: 0
+        locality:
+          origins:
+          - CurrentPlace
+          - OwnInventory
       - slot: 2
-        label: pod
+        label: carriedScrap
+        targetTemplateId: spiderScrap
+        locality:
+          origins:
+          - OwnInventory
+      - slot: 3
+        label: depositPod
         targetTemplateId: spiderPod
-        range: 0
+        targetCapabilities:
+        - GiveTarget
+        locality:
+          origins:
+          - CurrentPlace
+      - slot: 4
+        label: homePod
+        targetTemplateId: spiderPod
+        locality:
+          origins:
+          - CurrentPlace
   spiderScrap:
     name: Scrap
     inventoryWidth: 0
@@ -503,12 +539,14 @@ presentations:
     glyph: '@'
     color: Yellow
   spiderPod:
-    glyph: P
+    glyph: 'O'
     color: DarkGreen
   circuitSpider:
-    glyph: s
-    color: Cyan
+    presentationId: creature.spider
+    glyph: 's'
+    color: DarkGreen
   spiderScrap:
+    presentationId: item.coin
     glyph: '%'
     color: Earth
 actionPlans:
@@ -708,14 +746,20 @@ actionPlans:
         createPlacement: AdjacentOpen
         costs:
         - templateId: spiderScrap
-          quantity: 3
+          quantity: 2
   circuitSpiderGatherGiveOrbit:
     id: circuitSpiderGatherGiveOrbit
     behavior:
       steps:
-      - kind: GiveTarget
-        targetLabel: pod
+      - kind: Transfer
+        targetLabel: carriedScrap
+        counterpartyTargetLabel: depositPod
         targetSelf: false
+        transferDirection: ActorToTarget
+      - kind: TargetPathMove
+        targetLabel: depositPod
+        targetSelf: false
+        pathMode: SeekAdjacency
       - kind: PickupTarget
         targetLabel: scrap
         targetSelf: false
@@ -724,7 +768,7 @@ actionPlans:
         targetSelf: false
         pathMode: SeekAdjacency
       - kind: TargetPathMove
-        targetLabel: pod
+        targetLabel: homePod
         targetSelf: false
         pathMode: Orbit
         desiredDistance: 1

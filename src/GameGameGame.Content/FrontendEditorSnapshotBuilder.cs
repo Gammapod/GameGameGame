@@ -265,7 +265,9 @@ public sealed class FrontendEditorSnapshotBuilder(ContentEditorSession session)
                         FormatCostSummary(step.Costs),
                         step.PathMode,
                         step.DesiredDistance,
-                        step.OrbitDirection);
+                        step.OrbitDirection,
+                        step.CounterpartyTargetSlot,
+                        step.CounterpartyTargetLabel);
                 })
                 .ToList();
         }

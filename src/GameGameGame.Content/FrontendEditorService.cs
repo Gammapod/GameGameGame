@@ -471,7 +471,9 @@ public sealed record FrontendEditorActionPlanStepSummary(
     string? CostSummary = null,
     ActionPlanTargetPathMode? PathMode = null,
     int? DesiredDistance = null,
-    ActionPlanOrbitDirection? OrbitDirection = null)
+    ActionPlanOrbitDirection? OrbitDirection = null,
+    int? CounterpartyTargetSlot = null,
+    string? CounterpartyTargetLabel = null)
 {
     public IReadOnlyList<ActionStepCostDescriptor> Costs { get; } = Costs ?? [];
 }

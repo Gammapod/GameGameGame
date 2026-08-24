@@ -341,30 +341,6 @@ public sealed partial class ActionPlanInterpreter
             return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
         }
 
-        if (step.DirectionMode is not { } mode)
-        {
-            trace.Status = TraceStatus.Failure;
-            trace.Detail = "Transfer requires directionMode";
-            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
-        }
-
-        if (!TryResolveMoveDirection(mode, context, out var counterpartyDirection, out var directionReadTrace, out var directionFailureDetail))
-        {
-            if (directionReadTrace is not null)
-            {
-                trace.Add(directionReadTrace);
-            }
-
-            trace.Status = TraceStatus.Failure;
-            trace.Detail = directionFailureDetail;
-            return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
-        }
-
-        if (directionReadTrace is not null)
-        {
-            trace.Add(directionReadTrace);
-        }
-
         if (!context.TryRead<EntityPlanValue>(ActionPlanSlot.Target, out var target, out var targetReadTrace))
         {
             trace.Add(targetReadTrace);
@@ -374,7 +350,68 @@ public sealed partial class ActionPlanInterpreter
         }
 
         trace.Add(targetReadTrace);
-        var resolution = ((IActionIntent)new TransferAction(transferDirection, target.Value, counterpartyDirection))
+        Direction counterpartyDirection = default;
+        EntityId? counterpartyTarget = null;
+        if (!string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel))
+        {
+            var label = step.CounterpartyTargetLabel;
+            counterpartyTarget = world.GetActionTarget(actorId, label);
+            var counterpartyReadTrace = counterpartyTarget is { } value
+                ? TraceNode.Success("Read Target", $"Target[{label}]={value}")
+                : TraceNode.Failure("Read Target", FailureReason.TargetMissing, $"Target label '{label}' has no current target");
+            trace.Add(counterpartyReadTrace);
+            if (counterpartyTarget is null)
+            {
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.TargetMissing;
+                trace.Detail = counterpartyReadTrace.Detail;
+                return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+            }
+        }
+        else if (step.CounterpartyTargetSlot is { } counterpartyTargetSlot)
+        {
+            var slot = counterpartyTargetSlot <= 0 ? 1 : counterpartyTargetSlot;
+            counterpartyTarget = world.GetActionTarget(actorId, slot);
+            var counterpartyReadTrace = counterpartyTarget is { } value
+                ? TraceNode.Success("Read Target", $"Target[{slot}]={value}")
+                : TraceNode.Failure("Read Target", FailureReason.TargetMissing, $"Target slot {slot} has no current target");
+            trace.Add(counterpartyReadTrace);
+            if (counterpartyTarget is null)
+            {
+                trace.Status = TraceStatus.Failure;
+                trace.Reason = FailureReason.TargetMissing;
+                trace.Detail = counterpartyReadTrace.Detail;
+                return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+            }
+        }
+        else
+        {
+            if (step.DirectionMode is not { } mode)
+            {
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = "Transfer requires directionMode or counterparty target";
+                return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+            }
+
+            if (!TryResolveMoveDirection(mode, context, out counterpartyDirection, out var directionReadTrace, out var directionFailureDetail))
+            {
+                if (directionReadTrace is not null)
+                {
+                    trace.Add(directionReadTrace);
+                }
+
+                trace.Status = TraceStatus.Failure;
+                trace.Detail = directionFailureDetail;
+                return new PlanEffectResult(false, ConsumesTurn: false, ContinuePlan: false, trace);
+            }
+
+            if (directionReadTrace is not null)
+            {
+                trace.Add(directionReadTrace);
+            }
+        }
+
+        var resolution = ((IActionIntent)new TransferAction(transferDirection, target.Value, counterpartyDirection, counterpartyTarget))
             .Resolve(world, actorId, _movement);
         trace.Add(resolution.Trace);
         if (resolution.Succeeded)

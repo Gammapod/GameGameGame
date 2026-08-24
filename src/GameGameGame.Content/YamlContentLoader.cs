@@ -262,7 +262,9 @@ public static class YamlContentLoader
             step.CreatePlacement is null ? null : Enum.Parse<CreateEntityPlacement>(step.CreatePlacement, ignoreCase: true),
             step.PathMode is null ? null : Enum.Parse<ActionPlanTargetPathMode>(step.PathMode, ignoreCase: true),
             step.DesiredDistance,
-            step.OrbitDirection is null ? null : Enum.Parse<ActionPlanOrbitDirection>(step.OrbitDirection, ignoreCase: true))
+            step.OrbitDirection is null ? null : Enum.Parse<ActionPlanOrbitDirection>(step.OrbitDirection, ignoreCase: true),
+            step.CounterpartyTargetSlot,
+            step.CounterpartyTargetLabel)
         {
             Costs = (step.Costs ?? [])
                 .Select(cost => new ActionStepCostDescriptor(cost.TemplateId ?? string.Empty, cost.Quantity))
@@ -555,6 +557,10 @@ public static class YamlContentLoader
         public int? DesiredDistance { get; set; }
 
         public string? OrbitDirection { get; set; }
+
+        public int? CounterpartyTargetSlot { get; set; }
+
+        public string? CounterpartyTargetLabel { get; set; }
 
         public List<ActionStepCostDescriptorDto>? Costs { get; set; }
     }

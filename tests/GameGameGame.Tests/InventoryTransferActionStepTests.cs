@@ -371,6 +371,60 @@ public sealed class InventoryTransferActionStepTests
     }
 
     [Fact]
+    public void CanonicalTransferActorToTargetCanUseTargetedCounterpartyInsteadOfDirectionMode()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.SetActionTarget(TestWorld.PlayerId, "scrap", TestWorld.RockId);
+        world.SetActionTarget(TestWorld.PlayerId, "pod", TestWorld.SlimeId);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("transfer-targeted-counterparty"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Transfer,
+                    TargetLabel: "scrap",
+                    TransferDirection: TransferDirection.ActorToTarget,
+                    CounterpartyTargetLabel: "pod")
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.ConsumesTurn);
+        Assert.Equal(new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceDetailContains(result.Trace, "gave rock (Rock) to slime (Slime) slot (0,0)"));
+    }
+
+    [Fact]
+    public void CanonicalTransferTargetedCounterpartyFailsWhenNotAdjacent()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        var chestId = AddEntityWithInventory(world, "chest", "Chest", new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(4, 4)), inventoryWidth: 1, inventoryHeight: 1, carryingCapacity: 30);
+        world.SetActionTarget(TestWorld.PlayerId, "scrap", TestWorld.RockId);
+        world.SetActionTarget(TestWorld.PlayerId, "pod", chestId);
+        Assert.True(movement.TryPlace(world, TestWorld.RockId, new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0))));
+        var plan = new ActionPlanDefinition(
+            new ActionPlanId("transfer-targeted-counterparty-not-adjacent"),
+            [],
+            Behavior: new ActionPlanBehaviorDescriptor([
+                new ActionPlanBehaviorStepDescriptor(
+                    ActionPlanBehaviorStepKind.Transfer,
+                    TargetLabel: "scrap",
+                    TransferDirection: TransferDirection.ActorToTarget,
+                    CounterpartyTargetLabel: "pod")
+            ]));
+
+        var result = new ActionPlanInterpreter(movement).Execute(world, TestWorld.PlayerId, plan, new ActionPlanContext());
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(new PlaneCoord(TestWorld.PlayerInventoryPlaneId, new GridCoord(0, 0)), world.GetEntityLocation(TestWorld.RockId));
+        Assert.True(TraceHasReason(result.Trace, FailureReason.TargetNotAdjacent));
+    }
+
+    [Fact]
     public void CanonicalTransferTargetToActorReportsActorInventoryFullSeparatelyFromExitPolicyFailure()
     {
         var world = TestWorld.CreateWorld();

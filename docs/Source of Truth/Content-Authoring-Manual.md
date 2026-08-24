@@ -240,8 +240,8 @@ Content under `src/GameGameGame.Content/Canonical` and other canon-promoted fixt
 | Move | `Move` with explicit `directionMode` | `MoveFacing`, `Backstep`, retired target-relative helpers | Promoted canonical adjacent movement. |
 | Pickup | `TransformAdjacentToInventory` | `PickupTarget` | `PickupTarget` is compatibility naming for the same pickup semantics. |
 | Drop | `TransformInventoryToAdjacent` | `DropFacing` | `DropFacing` is compatibility naming for the same adjacent-drop semantics. |
-| Give | `Transfer` with `transferDirection: ActorToTarget` | `GiveTarget` | Canonical transfer selects a concrete moving entity and adjacent counterparty. |
-| Take | `Transfer` with `transferDirection: TargetToActor` | `TakeTarget` | Canonical transfer selects a concrete moving entity from the counterparty. |
+| Give | `Transfer` with `transferDirection: ActorToTarget` | `GiveTarget` | Canonical transfer selects a concrete moving entity and adjacent counterparty. Use `counterpartyTargetLabel`/`counterpartyTargetSlot` when an autonomous actor should deliver to a specific targeted entity instead of whichever entity is in `directionMode`. |
+| Take | `Transfer` with `transferDirection: TargetToActor` | `TakeTarget` | Canonical transfer selects a concrete moving entity from the counterparty. Use `counterpartyTargetLabel`/`counterpartyTargetSlot` when the source counterparty is a specific targeted entity. |
 | Enter | `EnterTarget` | none yet | Current promoted enter command has no renamed replacement yet. |
 | Exit | `ExitFacing` | none yet | Current promoted exit command has no renamed replacement yet. |
 | Push | `Push` with explicit `directionMode` | `PushFacing` | Canonical Push moves only the target. `PushFacing` is the older bump/facing shortcut. |
@@ -256,7 +256,7 @@ If canon-promoted content appears to need a forbidden step, first try to express
 | `Move` | `directionMode`; `Facing` for relative modes | position; post-action `Facing` becomes actual moved direction | Resolves an absolute or relative 8-way direction and moves one adjacent step when legal/open. Failed movement preserves position/Facing and does not write `Target`. | Use for ordinary movement and canon-promoted movement rooms. |
 | `TransformAdjacentToInventory` | `Target` | carried inventory state | Preferred pickup name. Moves the current adjacent target into actor inventory using row-major destination selection; falls through when target/inventory/space/aperture checks fail. | `PickupTarget` remains compatibility naming. |
 | `TransformInventoryToAdjacent` | `Facing` | carried/world placement | Preferred drop name. Moves the first carried entity into the adjacent facing destination; falls through when no carried entity or destination/policy/aperture checks fail. | `DropFacing` remains compatibility naming. |
-| `Transfer` | moving entity target label/slot; adjacent counterparty direction; `transferDirection` | actor/counterparty inventory state | Atomically transfers a selected concrete entity between actor and adjacent counterparty. `ActorToTarget` checks counterparty enter policy; `TargetToActor` checks counterparty/source exit policy. | Use for give/take/handoff. Does not yet support authoring an inventory-internal predicate such as “first potion in chest”; target the concrete moving entity where possible. |
+| `Transfer` | moving entity target label/slot; either adjacent counterparty direction or counterparty target label/slot; `transferDirection` | actor/counterparty inventory state | Atomically transfers a selected concrete entity between actor and adjacent counterparty. If `counterpartyTargetLabel`/`counterpartyTargetSlot` is present, that target is used as the adjacent counterparty; otherwise `directionMode` resolves the counterparty from `Facing`/relative direction. `ActorToTarget` checks counterparty enter policy; `TargetToActor` checks counterparty/source exit policy. | Use for give/take/handoff and autonomous delivery/stockpile loops. Does not yet support authoring an inventory-internal predicate such as “first potion in chest”; target the concrete moving entity where possible. |
 | `EnterTarget` | `Target` | actor/container inventory state | Enters an adjacent target inventory at the coordinate selected by target `enterPolicy`; falls through on missing/non-adjacent/non-enterable/full/aperture failure. | See topology examples under `src/GameGameGame.Content/Beta/Topology/`. |
 | `ExitFacing` | `Facing` | actor/container/world placement | Exits the current containing entity toward `Facing`, respecting source `exitPolicy` and aperture. | Usually authored on actors that may already be contained. |
 | `Push` | `Target`; `directionMode` | target position | Forces an adjacent selected target to move one adjacent step in target-relative `directionMode` when the target bulk fits actor aperture and the destination is legal/open. The actor does not move. | Use instead of `PushFacing` for new player-facing push semantics. |
@@ -321,12 +321,56 @@ Common chain patterns:
 | Make a selected target try a temporary behavior next turn | `ApplyPrePlan`, with `targetLabel` and `planId` referencing the one-turn pre-plan |
 | Temporarily replace or append selected target behavior next turn | `ApplyMainPlan` or `ApplyPostPlan`, with `targetLabel` and `planId` |
 | Drop carried entity forward, otherwise move | `TransformInventoryToAdjacent -> Move` |
-| Transfer a specific targeted item to or from an adjacent counterparty | `Transfer`, with `targetLabel`/`targetSlot`, `directionMode`, and `transferDirection` |
+| Transfer a specific targeted item to or from a facing counterparty | `Transfer`, with `targetLabel`/`targetSlot`, `directionMode`, and `transferDirection` |
+| Deliver a carried targeted item to a specific targeted counterparty | `Transfer` with moving-entity `targetLabel`/`targetSlot`, `counterpartyTargetLabel`/`counterpartyTargetSlot`, and `transferDirection: ActorToTarget`, usually preceded by `TargetPathMove` to seek adjacency to the counterparty |
 | Move into a targeted container, then later leave it | `Move -> EnterTarget`; contained actor can use `ExitFacing` |
 
 Targeting rules currently select by optional template ID, target-capability adjectives, Octagonal-distance range, and nearest deterministic tie-break. A rule may be noun-only (`thief loves gold`), adjective-only (`thief loves portables`), or noun-plus-adjective (`thief loves portable gold`). Supported target capabilities are the Action Steps that expose non-mutating target affordance checks: `TransformAdjacentToInventory`/`PickupTarget`, `EnterTarget`, `GiveTarget`, `TakeTarget`, `DestroyTarget`, and canonical `Push`; `PushFacing` remains compatibility-only for older bump-push content. Capability rules are validated against the template's default behavior chain: the referenced capability step should exist and consume the same target label/slot. Use stable labels such as `danger`, `home`, `food`, or `shelter` when one entity needs different content-defined target concepts; numeric slots are still stored for compatibility but should not be the primary reference in new action steps.
 
-`Transfer` currently selects a concrete moving entity through the actor's target label/slot state. It does not yet support authoring an item predicate such as "first potion in this inventory"; use targeting rules when a target can select the moving entity directly, or log a capability gap when inventory-internal item matching is needed. Legacy `GiveTarget` and `TakeTarget` use first-item deterministic selection only. None of the current peer-transfer steps support barter/trade permissions or transfer restrictions yet.
+`Transfer` selects a concrete moving entity through the actor's target label/slot state. The counterparty can be resolved either from `directionMode`/`Facing` for direct local interaction or from `counterpartyTargetLabel`/`counterpartyTargetSlot` for autonomous delivery to a specific entity such as a chest, stockpile, nest, altar, or machine. Counterparty-targeted Transfer still requires adjacency; use `TargetPathMove` with `pathMode: SeekAdjacency` before the Transfer when the actor may need to travel.
+
+Example autonomous delivery pattern:
+
+```yaml
+targeting:
+  range: 20
+  rules:
+  - slot: 1
+    label: scrap
+    targetTemplateId: spiderScrap
+    locality:
+      origins: [CurrentPlace]
+  - slot: 2
+    label: carriedScrap
+    targetTemplateId: spiderScrap
+    locality:
+      origins: [OwnInventory]
+  - slot: 3
+    label: depositPod
+    targetTemplateId: spiderPod
+    targetCapabilities: [GiveTarget]
+    locality:
+      origins: [CurrentPlace]
+
+behavior:
+  steps:
+  - kind: Transfer
+    targetLabel: carriedScrap
+    counterpartyTargetLabel: depositPod
+    transferDirection: ActorToTarget
+  - kind: TargetPathMove
+    targetLabel: depositPod
+    pathMode: SeekAdjacency
+  - kind: TransformAdjacentToInventory
+    targetLabel: scrap
+  - kind: TargetPathMove
+    targetLabel: scrap
+    pathMode: SeekAdjacency
+```
+
+For this pattern, use separate labels when the same template plays different roles. For example, `carriedScrap` should search `OwnInventory`, while `scrap` can search `CurrentPlace`; `depositPod` may include `targetCapabilities: [GiveTarget]` so it appears only when the actor has something it can give. If the actor also needs an idle/home target after depositing, author a separate target label such as `homePod` without the give-capability adjective so orbit/fallback behavior still has a pod target when the actor is empty-handed.
+
+Bulk/aperture rules apply to pickup, drop, transfer, enter, and exit. In particular, Pickup/Drop require the actor's `bulk` to exceed the actee's `aperture`; if a player or worker carries an item but cannot drop or pick it up, check the actor bulk and item aperture first. Transfer also respects source/destination inventory aperture and policies. `Transfer` does not yet support authoring an inventory-internal predicate such as "first potion in this inventory"; use targeting rules when a target can select the moving entity directly, or log a capability gap when inventory-internal item matching is needed. Legacy `GiveTarget` and `TakeTarget` use first-item deterministic selection only. None of the current peer-transfer steps support barter/trade permissions or transfer restrictions yet.
 
 ## Scenario authoring
 

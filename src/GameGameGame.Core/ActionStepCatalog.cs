@@ -168,7 +168,7 @@ public static class ActionStepCatalog
         new(
             ActionPlanBehaviorStepKind.Transfer,
             "Transfer",
-            "Canonical peer inventory transfer. Reads Target as the moving entity, resolves directionMode as the adjacent counterparty direction, and moves the selected entity ActorToTarget or TargetToActor according to transferDirection while respecting the other entity's inventory policy.",
+            "Canonical peer inventory transfer. Reads Target as the moving entity, resolves the counterparty from an optional counterparty target reference or directionMode, and moves the selected entity ActorToTarget or TargetToActor according to transferDirection while respecting the other entity's inventory policy.",
             RequiredState: [State(ActionPlanSlot.Target, PlanValueKind.Entity), State(ActionPlanSlot.Facing, PlanValueKind.Direction)],
             DefaultableState: [State(ActionPlanSlot.Target, PlanValueKind.Entity), State(ActionPlanSlot.Facing, PlanValueKind.Direction)]),
         new(

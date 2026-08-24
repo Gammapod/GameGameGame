@@ -333,7 +333,7 @@ public enum TransferDirection
     TargetToActor
 }
 
-public sealed record TransferAction(TransferDirection TransferDirection, EntityId MovingEntityId, Direction CounterpartyDirection) : IActionIntent
+public sealed record TransferAction(TransferDirection TransferDirection, EntityId MovingEntityId, Direction CounterpartyDirection, EntityId? CounterpartyEntityId = null) : IActionIntent
 {
     public ActionEvaluation Evaluate(WorldState world, EntityId actorId, MovementService movement)
     {
@@ -395,6 +395,29 @@ public sealed record TransferAction(TransferDirection TransferDirection, EntityI
     private bool TryResolveCounterparty(WorldState world, EntityId actorId, MovementService movement, TraceNode trace, out EntityId counterpartyId)
     {
         counterpartyId = default;
+        if (CounterpartyEntityId is { } targetedCounterpartyId)
+        {
+            if (!world.Entities.ContainsKey(targetedCounterpartyId))
+            {
+                ActionTrace.Fail(trace, FailureReason.TargetMissing, $"counterparty {targetedCounterpartyId} does not exist");
+                return false;
+            }
+
+            var adjacency = movement.EvaluateAdjacency(world, actorId, targetedCounterpartyId);
+            if (!adjacency.AreAdjacent)
+            {
+                var detail = adjacency.FailureDetail is { Length: > 0 }
+                    ? $"counterparty {targetedCounterpartyId} is not adjacent to actor {actorId}: {adjacency.FailureDetail}"
+                    : $"counterparty {targetedCounterpartyId} is not adjacent to actor {actorId}";
+                ActionTrace.Fail(trace, adjacency.FailureReason ?? FailureReason.TargetNotAdjacent, detail);
+                return false;
+            }
+
+            trace.Add(TraceNode.Success("Counterparty target is adjacent", ActionTrace.FormatAdjacencyFacts(adjacency)));
+            counterpartyId = targetedCounterpartyId;
+            return true;
+        }
+
         if (!movement.TryGetMovementEdge(world, actorId, CounterpartyDirection, out var edge))
         {
             ActionTrace.Fail(trace, FailureReason.TargetNotAdjacent, $"counterparty direction {CounterpartyDirection} is not adjacent");

@@ -78,7 +78,9 @@ public sealed class ActionPlanPreviewService(EditableContentDocument document)
                         step.PathMode,
                         step.DesiredDistance,
                         step.OrbitDirection,
-                        FormatTargetPathSummary(step));
+                        FormatTargetPathSummary(step),
+                        step.CounterpartyTargetSlot,
+                        step.CounterpartyTargetLabel);
                 })
                 .ToList();
         }

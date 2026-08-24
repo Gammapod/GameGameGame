@@ -178,6 +178,12 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanBehaviorStepTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetLabel(planId, stepIndex, targetLabel);
 
+    public void SetActionPlanBehaviorStepCounterpartyTargetSlot(ActionPlanTemplateId planId, int stepIndex, int? targetSlot)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepCounterpartyTargetSlot(planId, stepIndex, targetSlot);
+
+    public void SetActionPlanBehaviorStepCounterpartyTargetLabel(ActionPlanTemplateId planId, int stepIndex, string? targetLabel)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepCounterpartyTargetLabel(planId, stepIndex, targetLabel);
+
     public void SetActionPlanBehaviorStepTargetSelf(ActionPlanTemplateId planId, int stepIndex, bool targetSelf)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTargetSelf(planId, stepIndex, targetSelf);
 
@@ -462,7 +468,9 @@ public sealed record ActionPlanPreviewStep(
     ActionPlanTargetPathMode? PathMode = null,
     int? DesiredDistance = null,
     ActionPlanOrbitDirection? OrbitDirection = null,
-    string? TargetPathSummary = null)
+    string? TargetPathSummary = null,
+    int? CounterpartyTargetSlot = null,
+    string? CounterpartyTargetLabel = null)
 {
     public IReadOnlyList<ActionStepCostDescriptor> Costs { get; } = Costs ?? [];
 }

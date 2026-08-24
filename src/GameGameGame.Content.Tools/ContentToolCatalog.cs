@@ -30,6 +30,8 @@ public static class ContentToolCatalog
         ContentToolNames.RemoveActionPlanBehaviorStep,
         ContentToolNames.SetBehaviorStepTargetLabel,
         ContentToolNames.SetBehaviorStepTargetSlot,
+        ContentToolNames.SetBehaviorStepCounterpartyTargetLabel,
+        ContentToolNames.SetBehaviorStepCounterpartyTargetSlot,
         ContentToolNames.SetBehaviorStepPlanId,
         ContentToolNames.SetBehaviorStepDirectionMode,
         ContentToolNames.SetBehaviorStepCosts,
@@ -79,8 +81,10 @@ public static class ContentToolCatalog
         ContentToolNames.RemoveActionPlanBehaviorStep => "Remove a canonical behavior-chain Action Step.",
         ContentToolNames.SetBehaviorStepTargetLabel => "Set or clear a canonical Action Step target label.",
         ContentToolNames.SetBehaviorStepTargetSlot => "Set or clear a compatibility numeric Action Step target slot.",
+        ContentToolNames.SetBehaviorStepCounterpartyTargetLabel => "Set or clear a Transfer Action Step counterparty target label.",
+        ContentToolNames.SetBehaviorStepCounterpartyTargetSlot => "Set or clear a Transfer Action Step counterparty target slot.",
         ContentToolNames.SetBehaviorStepPlanId => "Set or clear a referenced Action Plan ID on an apply-plan Action Step.",
-        ContentToolNames.SetBehaviorStepDirectionMode => "Set or clear a canonical Move Action Step directionMode.",
+        ContentToolNames.SetBehaviorStepDirectionMode => "Set or clear a canonical Move/Transfer Action Step directionMode.",
         ContentToolNames.SetBehaviorStepCosts => "Set or clear optional behavior Action Step costs.",
         ContentToolNames.SetBehaviorStepTargetPathMode => "Set or clear a TargetPathMove pathMode.",
         ContentToolNames.SetBehaviorStepDesiredDistance => "Set or clear a TargetPathMove desiredDistance.",
@@ -176,6 +180,8 @@ public static class ContentToolCatalog
             case ContentToolNames.RemoveActionPlanBehaviorStep: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); break;
             case ContentToolNames.SetBehaviorStepTargetLabel: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("targetLabel", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepTargetSlot: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("targetSlot", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepCounterpartyTargetLabel: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("targetLabel", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepCounterpartyTargetSlot: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("targetSlot", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepDirectionMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("directionMode", isRequired: false, allowedValues: EnumNames<ActionPlanMoveDirectionMode>(), description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepCosts: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddArray("costs", itemSchema: CostSchema()); break;

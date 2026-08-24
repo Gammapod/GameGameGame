@@ -95,7 +95,7 @@ public sealed class TargetingLocalityCandidateService(EntityContainmentPathServi
                 case TargetingLocalityOrigin.OwnInventory:
                     if (world.GetRegisteredInventoryPlaneId(observerEntityId) is { } ownPlaneId)
                     {
-                        AddPlaneContents(world, result, observerEntityId, ownPlaneId, useOccupantLocation: true, observerLocation, origin, observerEntityId);
+                        AddPlaneContents(world, result, observerEntityId, ownPlaneId, useOccupantLocation: false, observerLocation, origin, observerEntityId);
                     }
                     break;
                 case TargetingLocalityOrigin.PeerInventories:

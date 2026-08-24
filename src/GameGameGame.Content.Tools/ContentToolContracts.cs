@@ -40,6 +40,8 @@ public sealed record ContentToolMoveActionPlanBehaviorStepRequest(string Session
 public sealed record ContentToolRemoveActionPlanBehaviorStepRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepTargetLabelRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, string? TargetLabel) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepTargetSlotRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, int? TargetSlot) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepCounterpartyTargetLabelRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, string? TargetLabel) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepCounterpartyTargetSlotRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, int? TargetSlot) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepPlanIdRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanId? PlanId) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepDirectionModeRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanMoveDirectionMode? DirectionMode) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepCostsRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, IReadOnlyList<ActionStepCostDescriptor> Costs) : IContentToolSessionRequest;

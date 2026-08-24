@@ -20,21 +20,8 @@ public static class ActionPlanTargetLabelRequirementProjection
         for (var index = 0; index < descriptor.Behavior.Steps.Count; index++)
         {
             var step = descriptor.Behavior.Steps[index];
-            if (string.IsNullOrWhiteSpace(step.TargetLabel))
-            {
-                continue;
-            }
-
-            var label = step.TargetLabel;
-            if (!byLabel.TryGetValue(label, out var existing))
-            {
-                existing = ([], []);
-                byLabel.Add(label, existing);
-                orderedLabels.Add(label);
-            }
-
-            existing.StepIndexes.Add(index);
-            existing.StepKinds.Add(step.Kind);
+            AddLabel(step.TargetLabel, index, step.Kind, orderedLabels, byLabel);
+            AddLabel(step.CounterpartyTargetLabel, index, step.Kind, orderedLabels, byLabel);
         }
 
         return orderedLabels
@@ -47,5 +34,28 @@ public static class ActionPlanTargetLabelRequirementProjection
                     requirement.StepKinds);
             })
             .ToList();
+    }
+
+    private static void AddLabel(
+        string? label,
+        int stepIndex,
+        ActionPlanBehaviorStepKind stepKind,
+        List<string> orderedLabels,
+        Dictionary<string, (List<int> StepIndexes, List<ActionPlanBehaviorStepKind> StepKinds)> byLabel)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return;
+        }
+
+            if (!byLabel.TryGetValue(label, out var existing))
+            {
+                existing = ([], []);
+                byLabel.Add(label, existing);
+                orderedLabels.Add(label);
+            }
+
+            existing.StepIndexes.Add(stepIndex);
+            existing.StepKinds.Add(stepKind);
     }
 }
