@@ -442,6 +442,13 @@ sections:
     status: active-delta
     tags: [delta, ecology, bazaar, exhibit, create, costs, transfer, targeting, orbit]
     source: User-requested ecology experiment
+  - contentPath: src\GameGameGame.Content\Beta\Ecology\EcologyVignettes.yaml
+    scenarioId: ecology-drone-bucket-scrap-trial
+    name: Ecology Drone Bucket Scrap Trial
+    description: Contained-agent logistics experiment where a carried Scrap Drone detects exterior scrap through its carrier, exits the carrier, collects scrap, re-enters, transfers scrap into a carried Scrap Bucket, and idles by orbiting the bucket.
+    status: active-delta
+    tags: [delta, ecology, exhibit, containment, transfer, targeting, locality, orbit]
+    source: User-requested contained drone logistics experiment
 - id: user
   name: User-Generated Scenarios
   description: Frontend-editor-authored scenarios should be registered here or in a user manifest rather than mixed with packaged Beta/Delta content.

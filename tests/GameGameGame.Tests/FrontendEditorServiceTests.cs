@@ -708,7 +708,7 @@ public sealed class FrontendEditorServiceTests
 
             var locality = service.SetTemplateTargetingDefaultLocality(
                 "wall",
-                [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories]);
+                [TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.ContainingEntityCurrentPlace]);
             Assert.True(locality.IsSuccess, locality.StatusMessage);
 
             var result = service.SetTemplateTargetingProfileRule(
@@ -717,11 +717,12 @@ public sealed class FrontendEditorServiceTests
 
             Assert.True(result.IsSuccess, result.StatusMessage);
             var wall = Assert.Single(result.Snapshot.EntityTemplates, template => template.TemplateId == "wall");
-            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], wall.TargetingProfile!.DefaultLocalityOrigins);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.ContainingEntityCurrentPlace], wall.TargetingProfile!.DefaultLocalityOrigins);
             var rule = Assert.Single(wall.TargetingRules);
             Assert.Null(rule.LocalityOrigins);
-            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.PeerInventories], rule.EffectiveLocalityOrigins);
+            Assert.Equal([TargetingLocalityOrigin.CurrentPlace, TargetingLocalityOrigin.ContainingEntityCurrentPlace], rule.EffectiveLocalityOrigins);
             Assert.Contains("defaultLocality:", result.Snapshot.YamlPreview);
+            Assert.Contains("ContainingEntityCurrentPlace", result.Snapshot.YamlPreview);
         }
         finally
         {

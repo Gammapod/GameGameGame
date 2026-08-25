@@ -35,7 +35,6 @@ public static class TargetingCandidatePreviewService
         var template = registry.GetEntityTemplate(actorTemplateId);
         var actorLocation = world.GetEntityLocation(actorId);
         var rules = GetRules(template);
-        var distances = Distances.GetOctagonalDistances(world, actorLocation, rules.Count == 0 ? 0 : rules.Max(rule => rule.Range));
         return new TargetingCandidatePreview(
             actorId,
             rules.Select(rule => new TargetingRuleCandidatePreview(
@@ -48,12 +47,18 @@ public static class TargetingCandidatePreviewService
                             candidate.EntityId,
                             candidate.Origin,
                             candidate.ReferenceEntityId,
-                            distances.TryGetValue(candidate.DistanceReferenceLocation, out var distance) ? distance : int.MaxValue))
+                            GetDistance(world, candidate.DistanceOriginLocation ?? actorLocation, candidate.DistanceReferenceLocation, rule.Range)))
                         .Where(candidate => candidate.Distance <= rule.Range)
                         .OrderBy(candidate => candidate.Distance)
                         .ThenBy(candidate => candidate.EntityId.Value, StringComparer.Ordinal)
                         .ToList()))
                 .ToList());
+    }
+
+    private static int GetDistance(WorldState world, PlaneCoord origin, PlaneCoord destination, int range)
+    {
+        var distances = Distances.GetOctagonalDistances(world, origin, range);
+        return distances.TryGetValue(destination, out var distance) ? distance : int.MaxValue;
     }
 
     private static IReadOnlyList<(EntityTargetingRule Rule, int Range, TargetingLocalityQuery Locality)> GetRules(EntityTemplate template)

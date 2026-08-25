@@ -477,6 +477,110 @@ entityTemplates:
     carryingCapacity: 0
     bulk: 1
     aperture: 1
+  droneBucketExperimentRoom:
+    name: Drone Bucket Scrap Trial
+    inventoryWidth: 16
+    inventoryHeight: 9
+    weight: 1000
+    carryingCapacity: 1000
+    bulk: 1000
+    aperture: 1000
+    carriedEntities:
+    - entityId: droneCarrierPlayer
+      templateId: droneCarrierPlayer
+      coord: { x: 8, y: 4 }
+      controller: Player
+    - entityId: droneLooseScrapA
+      templateId: droneScrap
+      coord: { x: 5, y: 4 }
+    - entityId: droneLooseScrapB
+      templateId: droneScrap
+      coord: { x: 11, y: 4 }
+  droneCarrierPlayer:
+    name: Drone Carrier
+    inventoryWidth: 5
+    inventoryHeight: 5
+    weight: 1
+    carryingCapacity: 20
+    bulk: 10
+    aperture: 10
+    topologyPolicy: ConnectsOutward
+    defaultActionPlanId: droneCarrierPlayerPlan
+    actionStateDefaults:
+      facing: East
+    carriedEntities:
+    - entityId: carriedDrone
+      templateId: scrapDrone
+      coord: { x: 0, y: 2 }
+    - entityId: carriedScrapBucket
+      templateId: scrapBucket
+      coord: { x: 2, y: 2 }
+  scrapDrone:
+    name: Scrap Drone
+    inventoryWidth: 1
+    inventoryHeight: 1
+    weight: 1
+    carryingCapacity: 1
+    bulk: 2
+    aperture: 1
+    defaultActionPlanId: scrapDroneCollectDepositOrbit
+    actionStateDefaults:
+      facing: West
+    targeting:
+      range: 20
+      rules:
+      - slot: 1
+        label: exteriorScrap
+        targetTemplateId: droneScrap
+        locality:
+          origins:
+          - CurrentPlace
+          - ContainingEntityCurrentPlace
+      - slot: 2
+        label: carriedScrap
+        targetTemplateId: droneScrap
+        locality:
+          origins:
+          - OwnInventory
+      - slot: 3
+        label: depositBucket
+        targetTemplateId: scrapBucket
+        targetCapabilities:
+        - GiveTarget
+        locality:
+          origins:
+          - CurrentPlace
+      - slot: 4
+        label: homeBucket
+        targetTemplateId: scrapBucket
+        locality:
+          origins:
+          - CurrentPlace
+      - slot: 5
+        label: carrier
+        targetTemplateId: droneCarrierPlayer
+        targetCapabilities:
+        - GiveTarget
+        locality:
+          origins:
+          - CurrentPlace
+          - ContainingEntityCurrentPlace
+  scrapBucket:
+    name: Scrap Bucket
+    inventoryWidth: 3
+    inventoryHeight: 3
+    weight: 1
+    carryingCapacity: 10
+    bulk: 3
+    aperture: 3
+  droneScrap:
+    name: Drone Scrap
+    inventoryWidth: 0
+    inventoryHeight: 0
+    weight: 1
+    carryingCapacity: 0
+    bulk: 1
+    aperture: 1
 presentations:
   ecologyObserver:
     glyph: '@'
@@ -539,6 +643,7 @@ presentations:
     glyph: '@'
     color: Yellow
   spiderPod:
+    presentationId: object.pushBlock
     glyph: 'O'
     color: DarkGreen
   circuitSpider:
@@ -549,6 +654,26 @@ presentations:
     presentationId: item.coin
     glyph: '%'
     color: Earth
+  droneBucketExperimentRoom:
+    presentationId: creature.spider
+    glyph: '#'
+    color: Gray
+  droneCarrierPlayer:
+    presentationId: actor.player
+    glyph: '@'
+    color: Yellow
+  scrapDrone:
+    presentationId: creature.spider
+    glyph: d
+    color: Cyan
+  scrapBucket:
+    presentationId: item.bag
+    glyph: U
+    color: Earth
+  droneScrap:
+    presentationId: item.coin
+    glyph: '%'
+    color: Gray
 actionPlans:
   glowcapFungusProducesSpores:
     id: glowcapFungusProducesSpores
@@ -741,7 +866,6 @@ actionPlans:
     behavior:
       steps:
       - kind: CreateEntity
-        targetSelf: false
         templateId: circuitSpider
         createPlacement: AdjacentOpen
         costs:
@@ -754,22 +878,17 @@ actionPlans:
       - kind: Transfer
         targetLabel: carriedScrap
         counterpartyTargetLabel: depositPod
-        targetSelf: false
         transferDirection: ActorToTarget
       - kind: TargetPathMove
         targetLabel: depositPod
-        targetSelf: false
         pathMode: SeekAdjacency
       - kind: PickupTarget
         targetLabel: scrap
-        targetSelf: false
       - kind: TargetPathMove
         targetLabel: scrap
-        targetSelf: false
         pathMode: SeekAdjacency
       - kind: TargetPathMove
         targetLabel: homePod
-        targetSelf: false
         pathMode: Orbit
         desiredDistance: 1
         orbitDirection: Clockwise
@@ -789,6 +908,55 @@ actionPlans:
         directionMode: Forward
         transferDirection: TargetToActor
     steps: []
+  droneCarrierPlayerPlan:
+    id: droneCarrierPlayerPlan
+    behavior:
+      steps:
+      - kind: Move
+        targetSelf: false
+        directionMode: Forward
+      - kind: PickupTarget
+        targetSelf: false
+      - kind: DropFacing
+        targetSelf: false
+      - kind: Transfer
+        targetSelf: false
+        directionMode: Forward
+        transferDirection: TargetToActor
+    steps: []
+  scrapDroneCollectDepositOrbit:
+    id: scrapDroneCollectDepositOrbit
+    behavior:
+      steps:
+      - kind: Transfer
+        targetLabel: carriedScrap
+        counterpartyTargetLabel: depositBucket
+        targetSelf: false
+        transferDirection: ActorToTarget
+      - kind: TargetPathMove
+        targetLabel: depositBucket
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: EnterTarget
+        targetLabel: carrier
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: carrier
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: PickupTarget
+        targetLabel: exteriorScrap
+        targetSelf: false
+      - kind: TargetPathMove
+        targetLabel: exteriorScrap
+        targetSelf: false
+        pathMode: SeekAdjacency
+      - kind: TargetPathMove
+        targetLabel: homeBucket
+        targetSelf: false
+        pathMode: Orbit
+        desiredDistance: 1
+        orbitDirection: Clockwise
 scenarios:
   ecology-glowcap-grubarium:
     name: Ecology Glowcap Grubarium
@@ -807,3 +975,6 @@ scenarios:
     playerStart:
       x: 1
       y: 4
+  ecology-drone-bucket-scrap-trial:
+    name: Ecology Drone Bucket Scrap Trial
+    scenarioRootEntityTemplateId: droneBucketExperimentRoom

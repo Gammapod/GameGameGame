@@ -48,7 +48,8 @@ public enum TargetingLocalityOrigin
 {
     CurrentPlace,
     OwnInventory,
-    PeerInventories
+    PeerInventories,
+    ContainingEntityCurrentPlace
 }
 
 public sealed record TargetingLocalityQuery(
@@ -61,7 +62,8 @@ public sealed record TargetingLocalityCandidate(
     EntityId EntityId,
     PlaneCoord DistanceReferenceLocation,
     TargetingLocalityOrigin Origin,
-    EntityId? ReferenceEntityId = null);
+    EntityId? ReferenceEntityId = null,
+    PlaneCoord? DistanceOriginLocation = null);
 
 public sealed class TargetingLocalityCandidateService(EntityContainmentPathService? containmentPaths = null)
 {
@@ -110,6 +112,13 @@ public sealed class TargetingLocalityCandidateService(EntityContainmentPathServi
                         }
                     }
                     break;
+                case TargetingLocalityOrigin.ContainingEntityCurrentPlace:
+                    if (MergedInventoryLayerResolver.TryFindLocalOwner(world, observerLocation, out var containingEntityId))
+                    {
+                        AddContainingEntityCurrentPlaceContents(world, result, containingEntityId, origin);
+                    }
+
+                    break;
             }
         }
 
@@ -135,6 +144,30 @@ public sealed class TargetingLocalityCandidateService(EntityContainmentPathServi
         {
             var distanceReferenceLocation = useOccupantLocation ? new PlaneCoord(planeId, occupant.Coord) : referenceLocation;
             result.TryAdd(occupant.EntityId, new TargetingLocalityCandidate(occupant.EntityId, distanceReferenceLocation, origin, referenceEntityId));
+        }
+    }
+
+    private static void AddContainingEntityCurrentPlaceContents(
+        WorldState world,
+        Dictionary<EntityId, TargetingLocalityCandidate> result,
+        EntityId containingEntityId,
+        TargetingLocalityOrigin origin)
+    {
+        if (!world.Entities.ContainsKey(containingEntityId))
+        {
+            return;
+        }
+
+        var containingLocation = world.GetEntityLocation(containingEntityId);
+        foreach (var occupant in OccupantsOnPlane(world, containingLocation.PlaneId))
+        {
+            var distanceReferenceLocation = new PlaneCoord(containingLocation.PlaneId, occupant.Coord);
+            result.TryAdd(occupant.EntityId, new TargetingLocalityCandidate(
+                occupant.EntityId,
+                distanceReferenceLocation,
+                origin,
+                containingEntityId,
+                containingLocation));
         }
     }
 

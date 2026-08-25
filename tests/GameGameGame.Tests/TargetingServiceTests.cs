@@ -398,6 +398,166 @@ public sealed class TargetingServiceTests
     }
 
     [Fact]
+    public void RefreshTargetsContainingEntityCurrentPlaceFindsCarrierAndExteriorPeers()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 5
+                inventoryHeight: 5
+                bulk: 100
+                aperture: 100
+              player:
+                name: Player
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 2
+                aperture: 2
+              drone:
+                name: Drone
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 1
+                targeting:
+                  range: 1
+                  rules:
+                    - slot: 1
+                      label: carrier
+                      targetTemplateId: player
+                      locality:
+                        origins:
+                          - ContainingEntityCurrentPlace
+                    - slot: 2
+                      label: exteriorScrap
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - ContainingEntityCurrentPlace
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateContainmentWorld();
+        var roomInventory = SpawnRoom(registry, world, "room", new GridCoord(0, 0));
+        var player = SpawnInPlane(registry, world, "player", "player", roomInventory, new GridCoord(1, 1));
+        var playerInventory = world.GetInventoryPlaneId(player) ?? throw new InvalidOperationException("Player inventory missing.");
+        var drone = SpawnInPlane(registry, world, "drone", "drone", playerInventory, new GridCoord(0, 0));
+        SpawnInPlane(registry, world, "gold", "nearbyGold", roomInventory, new GridCoord(2, 1));
+
+        TargetingService.RefreshTargets(world, registry, drone);
+
+        Assert.Equal(player, world.GetActionTarget(drone, label: "carrier"));
+        Assert.Equal(new EntityId("nearbyGold"), world.GetActionTarget(drone, label: "exteriorScrap"));
+    }
+
+    [Fact]
+    public void RefreshTargetsContainingEntityCurrentPlaceYieldsNoCandidatesWhenActorIsNotContained()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              drone:
+                name: Drone
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 1
+                targeting:
+                  range: 5
+                  rules:
+                    - slot: 1
+                      label: exteriorScrap
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - ContainingEntityCurrentPlace
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateTargetingWorld();
+        Spawn(registry, world, "drone", "drone", new GridCoord(1, 1));
+        Spawn(registry, world, "gold", "nearbyGold", new GridCoord(2, 1));
+        var drone = new EntityId("drone");
+
+        TargetingService.RefreshTargets(world, registry, drone);
+
+        Assert.Null(world.GetActionTarget(drone, label: "exteriorScrap"));
+    }
+
+    [Fact]
+    public void TargetingCandidatePreviewReportsContainingEntityCurrentPlaceDistanceFromContainerLocation()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 5
+                inventoryHeight: 5
+                bulk: 100
+                aperture: 100
+              player:
+                name: Player
+                inventoryWidth: 2
+                inventoryHeight: 2
+                bulk: 2
+                aperture: 2
+              drone:
+                name: Drone
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 1
+                targeting:
+                  range: 2
+                  rules:
+                    - slot: 1
+                      label: exteriorScrap
+                      targetTemplateId: gold
+                      locality:
+                        origins:
+                          - ContainingEntityCurrentPlace
+              gold:
+                name: Gold
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations: {}
+            actionPlans: {}
+            """);
+        var world = CreateContainmentWorld();
+        var roomInventory = SpawnRoom(registry, world, "room", new GridCoord(0, 0));
+        var player = SpawnInPlane(registry, world, "player", "player", roomInventory, new GridCoord(1, 1));
+        var playerInventory = world.GetInventoryPlaneId(player) ?? throw new InvalidOperationException("Player inventory missing.");
+        var drone = SpawnInPlane(registry, world, "drone", "drone", playerInventory, new GridCoord(0, 0));
+        SpawnInPlane(registry, world, "gold", "nearbyGold", roomInventory, new GridCoord(3, 1));
+
+        var preview = TargetingCandidatePreviewService.Preview(world, registry, drone);
+
+        var rule = Assert.Single(preview.Rules);
+        var candidate = Assert.Single(rule.Candidates);
+        Assert.Equal(new EntityId("nearbyGold"), candidate.EntityId);
+        Assert.Equal(TargetingLocalityOrigin.ContainingEntityCurrentPlace, candidate.Origin);
+        Assert.Equal(player, candidate.ReferenceEntityId);
+        Assert.Equal(2, candidate.Distance);
+    }
+
+    [Fact]
     public void TargetingCandidatePreviewReportsRuleCandidatesWithoutMutatingTargets()
     {
         var registry = YamlContentLoader.LoadRegistry(

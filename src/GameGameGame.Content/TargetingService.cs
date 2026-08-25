@@ -56,7 +56,6 @@ public static class TargetingService
         int range,
         TargetingLocalityQuery locality)
     {
-        var distances = Distances.GetOctagonalDistances(world, actorLocation, range);
         return LocalityCandidates.Query(world, actorId, locality)
             .Where(entry => MatchesTargetTemplate(world, registry, entry.EntityId, rule.TargetTemplateId))
             .Where(entry => MatchesTargetCapabilities(world, actorId, entry.EntityId, rule.TargetCapabilities))
@@ -64,7 +63,7 @@ public static class TargetingService
             {
                 entry.EntityId,
                 entry.DistanceReferenceLocation.Coord,
-                Distance = distances.TryGetValue(entry.DistanceReferenceLocation, out var distance) ? distance : int.MaxValue
+                Distance = GetDistance(world, entry.DistanceOriginLocation ?? actorLocation, entry.DistanceReferenceLocation, range)
             })
             .Where(entry => entry.Distance <= range)
             .OrderBy(entry => entry.Distance)
@@ -73,6 +72,12 @@ public static class TargetingService
             .ThenBy(entry => entry.EntityId.Value, StringComparer.Ordinal)
             .Select(entry => (EntityId?)entry.EntityId)
             .FirstOrDefault();
+    }
+
+    private static int GetDistance(WorldState world, PlaneCoord origin, PlaneCoord destination, int range)
+    {
+        var distances = Distances.GetOctagonalDistances(world, origin, range);
+        return distances.TryGetValue(destination, out var distance) ? distance : int.MaxValue;
     }
 
     private static IReadOnlyList<(EntityTargetingRule Rule, int Range, TargetingLocalityQuery Locality)> GetRules(EntityTemplate template)
