@@ -518,6 +518,79 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiRunsPersistedScenarioByIdWithHeadlessDebugOptions()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("Debug Scenario Room"));
+        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(InventoryWidth: 3, InventoryHeight: 2, Bulk: 100, Aperture: 100, Glyph: '#', Color: PresentationColor.Gray)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Debug Player"));
+        AssertSuccess(api.UpdateEntityTemplate(playerTemplateId, new AgentEntityTemplateUpdate(InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5, Glyph: '@', Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));
+        var planId = AssertSuccess(api.CreateActionPlan("Debug Player Move"));
+        AssertSuccess(api.SetActionPlanBehavior(planId, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(playerTemplateId, planId));
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "api-debug-run",
+            "API Debug Run",
+            roomId,
+            playerTemplateId,
+            new EntityId("debugPlayer"),
+            new GridCoord(0, 1))));
+
+        var report = AssertSuccess(api.RunScenarioById(
+            "api-debug-run",
+            turnCount: 1,
+            new AgentScenarioRunOptions(IgnorePlayerChoiceControl: true)));
+
+        var turn = Assert.Single(report.Turns);
+        Assert.Equal(new EntityId("debugPlayer"), turn.ActorId);
+        Assert.Contains(turn.TraceLines, line => line.Contains("MoveFacing", StringComparison.OrdinalIgnoreCase) || line.Contains("Move", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("Debug Player: scenarioRoot(1,1), facing East, target none", report.FinalStateLines);
+        Assert.Contains(report.RuntimeObservations, line => line.Contains("PlayerChoice control ignored", StringComparison.Ordinal));
+        Assert.Contains(report.DebugReportLines, line => line.Contains("Validation diagnostics", StringComparison.Ordinal));
+        Assert.Contains(report.DebugReportLines, line => line.Contains("Turn-by-turn traces", StringComparison.Ordinal));
+        Assert.Contains(report.DebugReportLines, line => line.Contains("Final state", StringComparison.Ordinal));
+        Assert.Empty(report.ValidationDiagnostics);
+        Assert.Empty(report.RuntimeFailures);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiCanFocusScenarioTraceReportByActorName()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var roomId = AssertSuccess(api.CreateEntityTemplate("Focus Scenario Room"));
+        AssertSuccess(api.UpdateEntityTemplate(roomId, new AgentEntityTemplateUpdate(InventoryWidth: 4, InventoryHeight: 2, Bulk: 100, Aperture: 100, Glyph: '#', Color: PresentationColor.Gray)));
+        var playerTemplateId = AssertSuccess(api.CreateEntityTemplate("Focus Player"));
+        AssertSuccess(api.UpdateEntityTemplate(playerTemplateId, new AgentEntityTemplateUpdate(InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5, Glyph: '@', Color: PresentationColor.Yellow)));
+        AssertSuccess(api.SetInitialFacing(playerTemplateId, Direction.East));
+        var npcTemplateId = AssertSuccess(api.CreateEntityTemplate("Focus NPC"));
+        AssertSuccess(api.UpdateEntityTemplate(npcTemplateId, new AgentEntityTemplateUpdate(InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 5, Glyph: 'n', Color: PresentationColor.Green)));
+        AssertSuccess(api.SetInitialFacing(npcTemplateId, Direction.West));
+        var movePlan = AssertSuccess(api.CreateActionPlan("Focus Move"));
+        AssertSuccess(api.SetActionPlanBehavior(movePlan, [ActionPlanBehaviorStepKind.MoveFacing]));
+        AssertSuccess(api.SetDefaultActionPlan(playerTemplateId, movePlan));
+        AssertSuccess(api.SetDefaultActionPlan(npcTemplateId, movePlan));
+        AssertSuccess(api.UpsertScenario(new AgentAlphaScenarioDefinition(
+            "api-focus-run",
+            "API Focus Run",
+            roomId,
+            playerTemplateId,
+            new EntityId("focusPlayer"),
+            new GridCoord(0, 1))));
+        api.Session.Editor.PlaceCarriedEntity(roomId, new EntityId("focusNpc"), npcTemplateId, new GridCoord(3, 1));
+
+        var report = AssertSuccess(api.RunScenarioById(
+            "api-focus-run",
+            turnCount: 1,
+            new AgentScenarioRunOptions(IgnorePlayerChoiceControl: true, TraceActorFilter: "NPC", IncludeAllTraces: false)));
+
+        var turn = Assert.Single(report.Turns);
+        Assert.Equal(new EntityId("focusNpc"), turn.ActorId);
+        Assert.DoesNotContain(report.Turns, item => item.ActorId == new EntityId("focusPlayer"));
+        Assert.Contains(report.DebugReportLines, line => line.Contains("Trace filter: NPC", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void AgentContentEditorApiRunsPersistedScenarioPlayerNarrativeLogById()
     {
         var api = AgentContentEditorApi.CreateNew();

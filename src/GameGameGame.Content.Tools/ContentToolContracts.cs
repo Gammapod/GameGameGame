@@ -51,7 +51,7 @@ public sealed record ContentToolSetBehaviorStepOrbitDirectionRequest(string Sess
 public sealed record ContentToolPreviewActionPlanRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, EntityTemplateId? EntityTemplateId = null) : IContentToolSessionRequest;
 public sealed record ContentToolScenarioRequest(string SessionId, string ScenarioId) : IContentToolSessionRequest;
 public sealed record ContentToolUpsertScenarioRequest(string SessionId, AgentAlphaScenarioDefinition Scenario) : IContentToolSessionRequest;
-public sealed record ContentToolRunScenarioByIdRequest(string SessionId, string ScenarioId, int TurnCount) : IContentToolSessionRequest;
+public sealed record ContentToolRunScenarioByIdRequest(string SessionId, string ScenarioId, int TurnCount, AgentScenarioRunOptions? Options = null) : IContentToolSessionRequest;
 public sealed record ContentToolRunScenarioPlayerLogByIdRequest(string SessionId, string ScenarioId, int TurnCount, EntityId? ObserverEntityId = null) : IContentToolSessionRequest;
 public sealed record ContentToolScenarioManifestRequest(string Path);
 public sealed record ContentToolScenarioManifestScanRequest(string FolderPath);

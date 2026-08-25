@@ -8,7 +8,16 @@ public sealed record ScenarioRunRequest(
 
 public sealed record PersistedScenarioRunRequest(
     string ScenarioId,
-    int TurnCount);
+    int TurnCount,
+    ScenarioRunOptions? Options = null)
+{
+    public ScenarioRunOptions Options { get; } = Options ?? new ScenarioRunOptions();
+}
+
+public sealed record ScenarioRunOptions(
+    bool IgnorePlayerChoiceControl = false,
+    string? TraceActorFilter = null,
+    bool IncludeAllTraces = true);
 
 public sealed record ScenarioActorSummary(
     EntityId EntityId,
@@ -91,7 +100,8 @@ public static class ScenarioRunService
             new ScenarioRunRequest(materialization.ScenarioRootEntityTemplateId, request.TurnCount),
             materialization,
             request.TurnCount,
-            "Workspace persisted scenario simulation");
+            "Workspace persisted scenario simulation",
+            request.Options);
     }
 
     internal static ScenarioRunHistoryResult RunPersistedWithHistory(EditableContentDocument document, PersistedScenarioRunRequest request)
@@ -107,22 +117,26 @@ public static class ScenarioRunService
             new ScenarioRunRequest(materialization.ScenarioRootEntityTemplateId, request.TurnCount),
             materialization,
             request.TurnCount,
-            "Persisted scenario simulation");
+            "Persisted scenario simulation",
+            request.Options);
     }
 
     private static ScenarioRunReport RunMaterialized(
         ScenarioRunRequest reportRequest,
         ScenarioMaterializationResult materialization,
         int turnCount,
-        string runMode) =>
-        RunMaterializedWithHistory(reportRequest, materialization, turnCount, runMode).Report;
+        string runMode,
+        ScenarioRunOptions? options = null) =>
+        RunMaterializedWithHistory(reportRequest, materialization, turnCount, runMode, options ?? new ScenarioRunOptions()).Report;
 
     private static ScenarioRunHistoryResult RunMaterializedWithHistory(
         ScenarioRunRequest reportRequest,
         ScenarioMaterializationResult materialization,
         int turnCount,
-        string runMode)
+        string runMode,
+        ScenarioRunOptions? options = null)
     {
+        options ??= new ScenarioRunOptions();
         var validationDiagnostics = materialization.ValidationDiagnostics.ToList();
         var world = materialization.World;
 
@@ -143,6 +157,21 @@ public static class ScenarioRunService
         }
 
         var scenarioPlaneId = materialization.ScenarioPlaneId ?? ScenarioPlaneId;
+        var runtimeObservations = new List<string>();
+        if (options.IgnorePlayerChoiceControl)
+        {
+            foreach (var entityId in world.Entities.Keys.Where(entityId => world.GetActionControlSource(entityId) == EntityControlSource.PlayerChoice).ToList())
+            {
+                world.SetActionControlSource(entityId, EntityControlSource.Automatic);
+                runtimeObservations.Add($"PlayerChoice control ignored for {entityId}; actor will run its authored/default plan in headless debug mode.");
+            }
+        }
+
+        if (!options.IncludeAllTraces && !string.IsNullOrWhiteSpace(options.TraceActorFilter))
+        {
+            runtimeObservations.Add($"Trace filter: {options.TraceActorFilter}; report turns include only matching actor IDs/names.");
+        }
+
         var actorOrder = ScenarioInitiativeOrderService.GetScenarioActorsInInitiativeOrder(world, materialization.ActionPlans, materialization.ScenarioRootEntityId, scenarioPlaneId);
         var setupLines = CreateSetupLines(materialization, scenarioPlaneId, actorOrder, runMode);
         if (validationDiagnostics.Count > 0 || materialization.RuntimeFailures.Count > 0)
@@ -155,13 +184,12 @@ public static class ScenarioRunService
                 [],
                 setupLines,
                 validationDiagnostics,
-                [],
+                runtimeObservations,
                 materialization.RuntimeFailures,
                 materialization.CapabilityGaps);
             return new ScenarioRunHistoryResult(report, materialization, History: null);
         }
 
-        var runtimeObservations = new List<string>();
         var runtimeFailures = new List<string>();
         var movement = new MovementService();
         var history = SimulationHistorySession.Start(world, ScenarioRootEntityId, scenarioPlaneId, ScenarioRootEntityId);
@@ -213,7 +241,7 @@ public static class ScenarioRunService
             scenarioPlaneId,
             world,
             actorOrder,
-            CreateTurnReports(history),
+            CreateTurnReports(history, options),
             setupLines,
             validationDiagnostics,
             runtimeObservations,
@@ -236,15 +264,22 @@ public static class ScenarioRunService
                 : null;
     }
 
-    private static IReadOnlyList<ScenarioTurnReport> CreateTurnReports(SimulationHistorySession history) =>
+    private static IReadOnlyList<ScenarioTurnReport> CreateTurnReports(SimulationHistorySession history, ScenarioRunOptions options) =>
         history.Intervals
-            .SelectMany(interval => interval.ActorLogs.Select(log => new ScenarioTurnReport(
+            .SelectMany(interval => interval.ActorLogs
+                .Where(log => options.IncludeAllTraces || MatchesActorFilter(log, options.TraceActorFilter))
+                .Select(log => new ScenarioTurnReport(
                 interval.ToFrameIndex,
                 log.Order + 1,
                 log.ActorId,
                 log.ActorName,
                 FormatScenarioTrace(log))))
             .ToList();
+
+    private static bool MatchesActorFilter(SimulationHistoryActorLog log, string? filter) =>
+        string.IsNullOrWhiteSpace(filter)
+        || log.ActorId.Value.Contains(filter, StringComparison.OrdinalIgnoreCase)
+        || log.ActorName.Contains(filter, StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<string> FormatScenarioTrace(SimulationHistoryActorLog log)
     {

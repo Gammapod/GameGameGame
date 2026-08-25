@@ -26,13 +26,13 @@ public sealed class AgentContentWorkspaceApi(IReadOnlyList<ContentWorkspaceDocum
                 compile.Diagnostics);
         });
 
-    public AgentApiResult<AgentScenarioRunReport> RunWorkspaceScenarioById(string scenarioId, int turnCount) =>
+    public AgentApiResult<AgentScenarioRunReport> RunWorkspaceScenarioById(string scenarioId, int turnCount, AgentScenarioRunOptions? options = null) =>
         Try("RunWorkspaceScenarioByIdFailed", () => ToAgentReport(ScenarioRunService.Run(
             Workspace,
-            new PersistedScenarioRunRequest(scenarioId, turnCount))));
+            new PersistedScenarioRunRequest(scenarioId, turnCount, ToScenarioRunOptions(options)))));
 
     private static AgentScenarioRunReport ToAgentReport(ScenarioRunReport report) =>
-        new(
+        new AgentScenarioRunReport(
             report.ScenarioRootEntityTemplateId,
             report.ScenarioRootEntityId,
             report.ScenarioPlaneId,
@@ -48,7 +48,47 @@ public sealed class AgentContentWorkspaceApi(IReadOnlyList<ContentWorkspaceDocum
             report.ValidationDiagnostics,
             report.RuntimeObservations,
             report.RuntimeFailures,
-            report.CapabilityGaps);
+            report.CapabilityGaps)
+        {
+            DebugReportLines = FormatDebugReport(report)
+        };
+
+    private static ScenarioRunOptions ToScenarioRunOptions(AgentScenarioRunOptions? options) =>
+        options is null
+            ? new ScenarioRunOptions()
+            : new ScenarioRunOptions(options.IgnorePlayerChoiceControl, options.TraceActorFilter, options.IncludeAllTraces);
+
+    private static IReadOnlyList<string> FormatDebugReport(ScenarioRunReport report)
+    {
+        var lines = new List<string>();
+        AddSection(lines, "Setup", report.SetupLines);
+        AddSection(lines, "Validation diagnostics", report.ValidationDiagnostics);
+        AddSection(lines, "Runtime observations", report.RuntimeObservations);
+        AddSection(lines, "Runtime failures", report.RuntimeFailures);
+        AddSection(lines, "Capability gaps", report.CapabilityGaps);
+        lines.Add("Turn-by-turn traces:");
+        if (report.Turns.Count == 0)
+        {
+            lines.Add("  (none)");
+        }
+        else
+        {
+            foreach (var turn in report.Turns)
+            {
+                lines.Add($"  Turn {turn.TurnNumber}, initiative {turn.InitiativeIndex}, {turn.ActorName} {turn.ActorId}:");
+                lines.AddRange(turn.TraceLines.Select(line => $"    {line}"));
+            }
+        }
+        AddSection(lines, "Final state", report.FinalStateLines);
+        AddSection(lines, "Nested inventory summary", report.InventorySummaryLines);
+        return lines;
+    }
+
+    private static void AddSection(List<string> lines, string heading, IReadOnlyList<string> sectionLines)
+    {
+        lines.Add($"{heading}:");
+        lines.AddRange(sectionLines.Count == 0 ? ["  (none)"] : sectionLines.Select(line => $"  {line}"));
+    }
 
     private static AgentApiResult<T> Try<T>(string code, Func<T> operation)
     {

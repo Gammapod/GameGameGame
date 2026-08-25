@@ -249,14 +249,24 @@ public sealed class ContentToolDispatcherTests
                 new EntityId("toolReviewPlayer"),
                 new GridCoord(0, 1)))).Ok);
 
-        var result = dispatcher.Invoke(ContentToolNames.PreviewAndRunScenarioById, new ContentToolRunScenarioByIdRequest(sessionId, "tool-review-run", 1));
+        var result = dispatcher.Invoke(
+            ContentToolNames.PreviewAndRunScenarioById,
+            new ContentToolRunScenarioByIdRequest(
+                sessionId,
+                "tool-review-run",
+                1,
+                new AgentScenarioRunOptions(IgnorePlayerChoiceControl: true)));
 
         Assert.True(result.Ok, result.Error?.Message);
         var data = Assert.IsType<AgentScenarioPreviewRunReport>(result.Data);
         Assert.Single(data.ActionPlanPreviews, item => item.PlanId == planId);
+        Assert.Single(data.RunReport.Turns, turn => turn.ActorId == new EntityId("toolReviewPlayer"));
+        Assert.Contains(data.RunReport.DebugReportLines, line => line.Contains("Turn-by-turn traces", StringComparison.Ordinal));
+        Assert.Contains(data.RunReport.RuntimeObservations, line => line.Contains("PlayerChoice control ignored", StringComparison.Ordinal));
         var serialized = JsonSerializer.Serialize(result, ContentToolJson.Options);
         Assert.DoesNotContain("yamlPreview", serialized, StringComparison.Ordinal);
         Assert.Contains("runReport", serialized, StringComparison.Ordinal);
+        Assert.Contains("debugReportLines", serialized, StringComparison.Ordinal);
     }
 
     [Fact]

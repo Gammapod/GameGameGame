@@ -95,9 +95,9 @@ public static class ContentToolCatalog
         ContentToolNames.GetScenario => "Get one persisted scenario definition summary.",
         ContentToolNames.UpsertScenario => "Create or update a persisted scenario definition.",
         ContentToolNames.MaterializeScenario => "Materialize a persisted scenario by ID and report diagnostics.",
-        ContentToolNames.RunScenarioById => "Run a persisted scenario by ID and report outcomes.",
+        ContentToolNames.RunScenarioById => "Run a persisted scenario by ID and return setup, validation/runtime diagnostics, turn traces, final state, inventory summary, and a printable debug report.",
         ContentToolNames.RunScenarioPlayerLogById => "Run a persisted scenario by ID and return compact player narrative projection message IDs/args without debug traces/final state/inventory summaries.",
-        ContentToolNames.PreviewAndRunScenarioById => "Return validation, previews, materialization, and scenario run report for one scenario.",
+        ContentToolNames.PreviewAndRunScenarioById => "Return validation, previews, materialization, and scenario run/debug report for one scenario.",
         ContentToolNames.OpenScenarioManifest => "Open a curated scenario manifest/catalog artifact with sections and entry metadata.",
         ContentToolNames.ScanScenarioManifestCandidates => "Scan a content folder for scenario candidates without making the scan authoritative.",
         ContentToolNames.ValidateScenarioManifest => "Validate a curated scenario manifest against content files and scanned unclassified candidates.",
@@ -190,7 +190,18 @@ public static class ContentToolCatalog
             case ContentToolNames.SetBehaviorStepOrbitDirection: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("orbitDirection", isRequired: false, allowedValues: EnumNames<ActionPlanOrbitDirection>(), description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.GetScenario or ContentToolNames.MaterializeScenario: AddString("scenarioId"); break;
             case ContentToolNames.UpsertScenario: AddObject("scenario", schema: ScenarioSchema()); break;
-            case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById: AddString("scenarioId"); AddInteger("turnCount"); if (name is ContentToolNames.RunScenarioPlayerLogById) AddString("observerEntityId", isRequired: false); break;
+            case ContentToolNames.RunScenarioById or ContentToolNames.PreviewAndRunScenarioById or ContentToolNames.RunScenarioPlayerLogById:
+                AddString("scenarioId");
+                AddInteger("turnCount");
+                if (name is ContentToolNames.RunScenarioPlayerLogById)
+                {
+                    AddString("observerEntityId", isRequired: false);
+                }
+                else
+                {
+                    AddObject("options", isRequired: false, schema: ScenarioRunOptionsSchema());
+                }
+                break;
             case ContentToolNames.ValidateScenarioManifest: AddString("folderPath"); break;
         }
 
@@ -275,5 +286,29 @@ public static class ContentToolCatalog
         },
         ["required"] = new JsonArray("scenarioId", "name", "scenarioRootEntityTemplateId"),
         ["additionalProperties"] = false
+    };
+
+    private static JsonObject ScenarioRunOptionsSchema() => new()
+    {
+        ["type"] = "object",
+        ["additionalProperties"] = false,
+        ["properties"] = new JsonObject
+        {
+            ["ignorePlayerChoiceControl"] = new JsonObject
+            {
+                ["type"] = "boolean",
+                ["description"] = "When true, PlayerChoice-controlled actors run their authored/default plans automatically for headless debugging."
+            },
+            ["traceActorFilter"] = new JsonObject
+            {
+                ["type"] = new JsonArray("string", "null"),
+                ["description"] = "Optional case-insensitive actor id/name substring used when includeAllTraces is false."
+            },
+            ["includeAllTraces"] = new JsonObject
+            {
+                ["type"] = "boolean",
+                ["description"] = "Default true. Set false with traceActorFilter to return only matching actor turn traces."
+            }
+        }
     };
 }

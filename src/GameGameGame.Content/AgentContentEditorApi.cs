@@ -70,10 +70,10 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             Session.Document,
             new ScenarioRunRequest(request.ScenarioRootEntityTemplateId, request.TurnCount))));
 
-    public AgentApiResult<AgentScenarioRunReport> RunScenarioById(string scenarioId, int turnCount) =>
+    public AgentApiResult<AgentScenarioRunReport> RunScenarioById(string scenarioId, int turnCount, AgentScenarioRunOptions? options = null) =>
         Try("RunScenarioByIdFailed", () => ToAgentReport(ScenarioRunService.Run(
             Session.Document,
-            new PersistedScenarioRunRequest(scenarioId, turnCount))));
+            new PersistedScenarioRunRequest(scenarioId, turnCount, ToScenarioRunOptions(options)))));
 
     public AgentApiResult<AgentScenarioPlayerLogReport> RunScenarioPlayerLogById(string scenarioId, int turnCount, EntityId? observerEntityId = null) =>
         Try("RunScenarioPlayerLogByIdFailed", () => ScenarioPlayerLogService.Run(
@@ -173,7 +173,7 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
     public AgentApiResult<ActionPlanPreview> PreviewActionPlan(ActionPlanTemplateId planId, EntityTemplateId? entityTemplateId = null) =>
         Try("PreviewActionPlanFailed", () => Session.Editor.PreviewActionPlan(planId, entityTemplateId));
 
-    public AgentApiResult<AgentScenarioPreviewRunReport> PreviewAndRunScenarioById(string scenarioId, int turnCount) =>
+    public AgentApiResult<AgentScenarioPreviewRunReport> PreviewAndRunScenarioById(string scenarioId, int turnCount, AgentScenarioRunOptions? options = null) =>
         Try("PreviewAndRunScenarioByIdFailed", () =>
         {
             var validation = Session.Editor.Validate();
@@ -191,7 +191,7 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
                 .ToList();
             var runReport = ToAgentReport(ScenarioRunService.Run(
                 Session.Document,
-                new PersistedScenarioRunRequest(scenarioId, turnCount)));
+                new PersistedScenarioRunRequest(scenarioId, turnCount, ToScenarioRunOptions(options))));
 
             return new AgentScenarioPreviewRunReport(
                 scenarioId,
@@ -348,7 +348,7 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             definition.PlayerControls);
 
     private static AgentScenarioRunReport ToAgentReport(ScenarioRunReport report) =>
-        new(
+        new AgentScenarioRunReport(
             report.ScenarioRootEntityTemplateId,
             report.ScenarioRootEntityId,
             report.ScenarioPlaneId,
@@ -364,7 +364,47 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
             report.ValidationDiagnostics,
             report.RuntimeObservations,
             report.RuntimeFailures,
-            report.CapabilityGaps);
+            report.CapabilityGaps)
+        {
+            DebugReportLines = FormatDebugReport(report)
+        };
+
+    private static ScenarioRunOptions ToScenarioRunOptions(AgentScenarioRunOptions? options) =>
+        options is null
+            ? new ScenarioRunOptions()
+            : new ScenarioRunOptions(options.IgnorePlayerChoiceControl, options.TraceActorFilter, options.IncludeAllTraces);
+
+    private static IReadOnlyList<string> FormatDebugReport(ScenarioRunReport report)
+    {
+        var lines = new List<string>();
+        AddSection(lines, "Setup", report.SetupLines);
+        AddSection(lines, "Validation diagnostics", report.ValidationDiagnostics);
+        AddSection(lines, "Runtime observations", report.RuntimeObservations);
+        AddSection(lines, "Runtime failures", report.RuntimeFailures);
+        AddSection(lines, "Capability gaps", report.CapabilityGaps);
+        lines.Add("Turn-by-turn traces:");
+        if (report.Turns.Count == 0)
+        {
+            lines.Add("  (none)");
+        }
+        else
+        {
+            foreach (var turn in report.Turns)
+            {
+                lines.Add($"  Turn {turn.TurnNumber}, initiative {turn.InitiativeIndex}, {turn.ActorName} {turn.ActorId}:");
+                lines.AddRange(turn.TraceLines.Select(line => $"    {line}"));
+            }
+        }
+        AddSection(lines, "Final state", report.FinalStateLines);
+        AddSection(lines, "Nested inventory summary", report.InventorySummaryLines);
+        return lines;
+    }
+
+    private static void AddSection(List<string> lines, string heading, IReadOnlyList<string> sectionLines)
+    {
+        lines.Add($"{heading}:");
+        lines.AddRange(sectionLines.Count == 0 ? ["  (none)"] : sectionLines.Select(line => $"  {line}"));
+    }
 
     private static AgentApiResult<T> Try<T>(string code, Func<T> operation)
     {
@@ -510,6 +550,11 @@ public sealed record AgentScenarioTurnReport(
     string ActorName,
     IReadOnlyList<string> TraceLines);
 
+public sealed record AgentScenarioRunOptions(
+    bool IgnorePlayerChoiceControl = false,
+    string? TraceActorFilter = null,
+    bool IncludeAllTraces = true);
+
 public sealed record AgentScenarioRunReport(
     EntityTemplateId ScenarioRootEntityTemplateId,
     EntityId ScenarioRootEntityId,
@@ -522,7 +567,10 @@ public sealed record AgentScenarioRunReport(
     IReadOnlyList<string> ValidationDiagnostics,
     IReadOnlyList<string> RuntimeObservations,
     IReadOnlyList<string> RuntimeFailures,
-    IReadOnlyList<string> CapabilityGaps);
+    IReadOnlyList<string> CapabilityGaps)
+{
+    public IReadOnlyList<string> DebugReportLines { get; init; } = [];
+}
 
 public sealed record AgentScenarioPreviewRunReport(
     string ScenarioId,

@@ -64,7 +64,7 @@ Default workflow:
 4. Prefer direct `ggg_content_*` tools backed by `AgentContentEditorApi` when available: open/create a session, inspect existing content, make semantic edits, validate, review the snapshot diff, and save deliberately.
 5. Validate after edits.
 6. Preview action plans when behavior changes.
-7. Materialize or run scenarios when behavior needs inspection; use SadConsole/manual play for visual inspection and treat the current PNG/GIF recorder as legacy fallback tooling.
+7. Materialize or run scenarios when behavior needs inspection; for headless debugging prefer `ggg_content_run_scenario_by_id` or `ggg_content_preview_and_run_scenario_by_id` with persisted scenario IDs and optional debug `options` before writing throwaway console apps. Use SadConsole/manual play for visual inspection and treat the current PNG/GIF recorder as legacy fallback tooling.
 8. Log a capability gap when desired content cannot be expressed cleanly with the authoring surface listed here.
 
 ## Agent tool discovery quick start
@@ -74,7 +74,7 @@ Fresh agent sessions should use the local `ggg-content` MCP server and its `ggg_
 Recommended first calls:
 
 1. `ggg_content_get_authoring_guide` for the start-here workflow, source-of-truth doc paths, current authoring surface, and safety rules.
-2. `ggg_content_list_workflows` for machine-readable recipes such as open/review, behavior-plan editing, scenario run review, manifest maintenance, and the safe save loop.
+2. `ggg_content_list_workflows` for machine-readable recipes such as open/review, behavior-plan editing, scenario run review, manifest maintenance, and the safe save loop. Scenario run tools return `debugReportLines` with setup, validation/runtime diagnostics, capability gaps, turn traces, final state, and nested inventory summaries; pass `options: { "ignorePlayerChoiceControl": true }` to let `PlayerChoice` actors run authored plans automatically for autonomous experiments, and optionally `traceActorFilter` plus `includeAllTraces: false` to focus traces by actor id/name.
 3. `ggg_content_describe_schema` when an input object is not obvious. Supported concepts include `entityTemplateUpdate`, `scenario`, `coord`, `behaviorStep`, and `cost`; the response lists fields, enum values, clear/null semantics, and examples.
 4. `ggg_content_list_examples` for useful content/example locations to inspect before authoring.
 5. `ggg_content_list_action_steps` after opening/creating a session when choosing behavior-chain Action Step kinds and supported authored fields.
