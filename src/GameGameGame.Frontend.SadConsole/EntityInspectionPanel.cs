@@ -19,6 +19,7 @@ internal sealed record EntityInspectionPanelLayout(
     public const double MaximumViewportWidthFraction = 0.40d;
     public const int MinimumHeight = 16;
     public const int MaximumHeight = 24;
+    public const int MinimumActionRegionHeight = 6;
 
     public static FrontendRect ResolveResponsiveBounds(FrontendRect available, int anchorRightPadding = 4, int anchorTopPadding = 0)
     {
@@ -39,7 +40,7 @@ internal sealed record EntityInspectionPanelLayout(
         var verticalSeparatorX = portrait.Right + 1;
         var status = new FrontendRect(verticalSeparatorX + 1, bounds.Y + 1, Math.Max(0, bounds.Right - verticalSeparatorX - 2), 6);
         var actionSeparatorY = portrait.Bottom + 1;
-        var inventorySeparatorY = showInventory ? actionSeparatorY + 5 : (int?)null;
+        var inventorySeparatorY = showInventory ? actionSeparatorY + MinimumActionRegionHeight + 1 : (int?)null;
         var actionsBottom = inventorySeparatorY is { } separatorY ? separatorY - 1 : bounds.Bottom - 1;
         var actions = new FrontendRect(bounds.X + 1, actionSeparatorY + 1, bounds.Width - 2, Math.Max(0, actionsBottom - actionSeparatorY));
         var inventory = inventorySeparatorY is { } inventoryY
@@ -51,6 +52,23 @@ internal sealed record EntityInspectionPanelLayout(
 }
 
 internal sealed record EntityInspectionActionRow(FrontendTextMessage Text, bool Selectable, FrontendTextMessage? FailureReason = null, PlayActionCandidate? Candidate = null);
+
+internal sealed record EntityInspectionPanelRenderOptions(bool ShowOverflowAffordances)
+{
+    public static EntityInspectionPanelRenderOptions Default { get; } = new(false);
+    public static EntityInspectionPanelRenderOptions OverflowAffordances { get; } = new(true);
+}
+
+internal sealed record EntityInspectionActionViewport(
+    int StartIndex,
+    int ActionCount,
+    int SelectedVisibleIndex,
+    int HiddenAbove,
+    int HiddenBelow)
+{
+    public bool HasItemsAbove => HiddenAbove > 0;
+    public bool HasItemsBelow => HiddenBelow > 0;
+}
 
 internal sealed record PlayTransferSelectionRow(EntityId MovingEntityId, string Verb, string EntityName, bool IsSelected);
 
@@ -142,25 +160,46 @@ internal static class EntityInspectionPanelRenderer
         TilesetProfile tilesetProfile,
         Color? backgroundOverride = null,
         int? selectedActionIndex = null,
-        bool actionMenuFocused = false)
+        bool actionMenuFocused = false,
+        EntityInspectionPanelRenderOptions? options = null)
     {
+        options ??= EntityInspectionPanelRenderOptions.Default;
         var background = backgroundOverride ?? Color.Black;
         PanelRenderer.DrawPanel(target, layout.Bounds, tilesetProfile.Roles.PanelBorder, Color.Gold, background);
         PrintClipped(target, layout.Bounds.X + 3, layout.Bounds.Y, layout.Bounds.Width - 6, model.EntityName, Color.White, background, tilesetProfile);
         DrawSeparators(target, layout, tilesetProfile.Roles.PanelBorder, Color.Gold, background);
         DrawReservedPlayspaceRegion(target, layout.PortraitRegion, tilesetProfile, background);
         var text = FrontendTextResolver.InspectionPrototype;
-        DrawStatus(target, layout.StatusRegion, model, tilesetProfile, background, text);
-        DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background, text, selectedActionIndex, actionMenuFocused);
+        DrawStatus(target, layout.StatusRegion, model, tilesetProfile, background, text, options);
+        DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background, text, selectedActionIndex, actionMenuFocused, options);
         if (layout.InventoryRegion is { } inventory)
         {
             DrawReservedInventoryRegion(target, inventory, tilesetProfile, background);
+            if (options.ShowOverflowAffordances && ResolveInventoryOverflow(inventory, model.InventoryCells) is { HiddenCells: > 0 } overflow)
+            {
+                DrawOverflowCount(target, inventory, overflow.HiddenCells, tilesetProfile, background, OverflowDirection.Down);
+            }
         }
     }
 
-    private static void DrawStatus(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text)
+    private static void DrawStatus(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text, EntityInspectionPanelRenderOptions options)
     {
         if (region.Width <= 0 || region.Height <= 0) return;
+        var lines = ResolveStatusLines(model, text, region.Width);
+
+        for (var i = 0; i < lines.Count && i < region.Height; i++)
+        {
+            PrintClipped(target, region.X, region.Y + i, region.Width, lines[i], Color.White, background, tilesetProfile);
+        }
+
+        if (options.ShowOverflowAffordances && lines.Count > region.Height)
+        {
+            SetGlyph(target, region.Right, region.Bottom, tilesetProfile.Roles.DownChevron, Color.Yellow, background);
+        }
+    }
+
+    internal static IReadOnlyList<string> ResolveStatusLines(EntityInspectionPanelModel model, FrontendTextResolver text, int width)
+    {
         var lines = new List<string>
         {
             text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatAperture, ("value", model.Aperture))),
@@ -169,13 +208,10 @@ internal static class EntityInspectionPanelRenderer
 
         if (!string.IsNullOrWhiteSpace(model.Description))
         {
-            lines.AddRange(WrapText(model.Description, region.Width));
+            lines.AddRange(WrapText(model.Description, width));
         }
 
-        for (var i = 0; i < lines.Count && i < region.Height; i++)
-        {
-            PrintClipped(target, region.X, region.Y + i, region.Width, lines[i], Color.White, background, tilesetProfile);
-        }
+        return lines;
     }
 
     private static void DrawSeparators(global::SadConsole.Console target, EntityInspectionPanelLayout layout, TileBorderGlyphSet border, Color foreground, Color background)
@@ -213,18 +249,79 @@ internal static class EntityInspectionPanelRenderer
 
     }
 
-    private static void DrawActions(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text, int? selectedActionIndex, bool actionMenuFocused)
+    private static void DrawActions(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text, int? selectedActionIndex, bool actionMenuFocused, EntityInspectionPanelRenderOptions options)
     {
         PrintClipped(target, region.X, region.Y, region.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionActionsHeader)), Color.Yellow, background, tilesetProfile);
-        for (var i = 0; i < model.Actions.Count && i + 1 < region.Height; i++)
+        var viewport = ResolveActionViewport(model.Actions.Count, region.Height, selectedActionIndex ?? 0, options.ShowOverflowAffordances);
+        var y = region.Y + 1;
+        if (viewport.HasItemsAbove)
         {
-            var action = model.Actions[i];
-            var selected = actionMenuFocused && selectedActionIndex == i;
+            DrawOverflowCount(target, new FrontendRect(region.X, y, region.Width, 1), viewport.HiddenAbove, tilesetProfile, background, OverflowDirection.Up);
+            y++;
+        }
+
+        for (var visibleIndex = 0; visibleIndex < viewport.ActionCount; visibleIndex++, y++)
+        {
+            var absoluteIndex = viewport.StartIndex + visibleIndex;
+            var action = model.Actions[absoluteIndex];
+            var selected = actionMenuFocused && selectedActionIndex == absoluteIndex;
             var prefix = selected ? "> " : action.Selectable ? "  " : "~ ";
             var suffix = action.Selectable ? string.Empty : " ~";
             var color = selected ? Color.LightCyan : action.Selectable ? Color.Cyan : Color.Gray;
-            PrintClipped(target, region.X, region.Y + i + 1, region.Width, prefix + text.Resolve(action.Text) + suffix, color, background, tilesetProfile);
+            PrintClipped(target, region.X, y, region.Width, prefix + text.Resolve(action.Text) + suffix, color, background, tilesetProfile);
         }
+
+        if (viewport.HasItemsBelow)
+        {
+            DrawOverflowCount(target, new FrontendRect(region.X, region.Bottom, region.Width, 1), viewport.HiddenBelow, tilesetProfile, background, OverflowDirection.Down);
+        }
+    }
+
+    internal static EntityInspectionActionViewport ResolveActionViewport(int actionCount, int regionHeight, int selectedIndex, bool showOverflowAffordances)
+    {
+        var contentRows = Math.Max(0, regionHeight - 1);
+        if (actionCount <= 0 || contentRows <= 0)
+        {
+            return new EntityInspectionActionViewport(0, 0, 0, 0, Math.Max(0, actionCount));
+        }
+
+        if (!showOverflowAffordances || actionCount <= contentRows)
+        {
+            var count = Math.Min(actionCount, contentRows);
+            return new EntityInspectionActionViewport(0, count, Math.Clamp(selectedIndex, 0, Math.Max(0, count - 1)), 0, Math.Max(0, actionCount - count));
+        }
+
+        var selected = Math.Clamp(selectedIndex, 0, actionCount - 1);
+        var actionRows = contentRows;
+        var start = 0;
+        var hasAbove = false;
+        var hasBelow = false;
+        for (var pass = 0; pass < 3; pass++)
+        {
+            start = Math.Clamp(selected - actionRows / 2, 0, Math.Max(0, actionCount - actionRows));
+            hasAbove = start > 0;
+            hasBelow = start + actionRows < actionCount;
+            actionRows = Math.Max(0, contentRows - (hasAbove ? 1 : 0) - (hasBelow ? 1 : 0));
+        }
+
+        start = Math.Clamp(selected - actionRows / 2, 0, Math.Max(0, actionCount - actionRows));
+        hasAbove = start > 0;
+        hasBelow = start + actionRows < actionCount;
+        actionRows = Math.Max(0, contentRows - (hasAbove ? 1 : 0) - (hasBelow ? 1 : 0));
+        start = Math.Clamp(selected - actionRows / 2, 0, Math.Max(0, actionCount - actionRows));
+
+        return new EntityInspectionActionViewport(
+            start,
+            Math.Min(actionRows, Math.Max(0, actionCount - start)),
+            selected - start,
+            start,
+            Math.Max(0, actionCount - start - actionRows));
+    }
+
+    internal static int ResolveHiddenActionAffordanceCount(int actionCount, int regionHeight)
+    {
+        var viewport = ResolveActionViewport(actionCount, regionHeight, selectedIndex: 0, showOverflowAffordances: true);
+        return viewport.HiddenAbove + viewport.HiddenBelow;
     }
 
     private static void DrawReservedInventoryRegion(global::SadConsole.Console target, FrontendRect region, TilesetProfile tilesetProfile, Color background)
@@ -232,6 +329,38 @@ internal static class EntityInspectionPanelRenderer
         for (var y = 0; y < region.Height; y++)
         for (var x = 0; x < region.Width; x++)
             SetGlyph(target, region.X + x, region.Y + y, tilesetProfile.Blank, Color.Black, background);
+    }
+
+    internal static (int VisibleCells, int HiddenCells) ResolveInventoryOverflow(FrontendRect inventoryRegion, IReadOnlyList<EntityInspectionPortraitCell> inventoryCells)
+    {
+        var visibleWidth = Math.Max(1, inventoryRegion.Width / 2);
+        var visibleHeight = Math.Max(1, inventoryRegion.Height / 2);
+        var visibleCells = inventoryCells.Count(cell => cell.X < visibleWidth && cell.Y < visibleHeight);
+        return (visibleCells, Math.Max(0, inventoryCells.Count - visibleCells));
+    }
+
+    private enum OverflowDirection
+    {
+        Up,
+        Down
+    }
+
+    private static void DrawOverflowCount(global::SadConsole.Console target, FrontendRect region, int hiddenCount, TilesetProfile tilesetProfile, Color background, OverflowDirection direction)
+    {
+        if (region.Width <= 0 || region.Height <= 0 || hiddenCount <= 0) return;
+        var label = $"+{hiddenCount}";
+        var width = Math.Min(region.Width, label.Length + 1);
+        var x = region.Right - width + 1;
+        if (direction == OverflowDirection.Up)
+        {
+            SetGlyph(target, x, region.Bottom, tilesetProfile.Roles.UpChevron, Color.Yellow, background);
+            PrintClipped(target, x + 1, region.Bottom, width - 1, label, Color.Yellow, background, tilesetProfile);
+        }
+        else
+        {
+            PrintClipped(target, x, region.Bottom, width - 1, label, Color.Yellow, background, tilesetProfile);
+            SetGlyph(target, region.Right, region.Bottom, tilesetProfile.Roles.DownChevron, Color.Yellow, background);
+        }
     }
 
     internal static IReadOnlyList<string> WrapText(string text, int width)

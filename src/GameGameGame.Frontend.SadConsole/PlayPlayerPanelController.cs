@@ -134,7 +134,7 @@ internal sealed class PlayPlayerPanelController(
             return;
         }
 
-        _overlay.Draw(model, selectedActionIndex: _selectedActionIndex, actionMenuFocused: IsFocused);
+        _overlay.Draw(model, selectedActionIndex: _selectedActionIndex, actionMenuFocused: IsFocused, EntityInspectionPanelRenderOptions.OverflowAffordances);
         _drawnBounds = bounds;
         _drawnFocused = IsFocused;
         _modelChanged = false;

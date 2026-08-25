@@ -25,6 +25,14 @@ public sealed class EntityInspectionPanelTests
     }
 
     [Fact]
+    public void EntityInspectionPanelReservesEnoughActionRowsForThreeActionsAndOverflowAffordances()
+    {
+        var layout = EntityInspectionPanelLayout.Resolve(new FrontendRect(2, 3, 32, 24), showInventory: true);
+
+        Assert.Equal(EntityInspectionPanelLayout.MinimumActionRegionHeight, layout.ActionsRegion.Height);
+    }
+
+    [Fact]
     public void MixedTilesetOverlayPositionsCandii16ChildConsoleOverReservedParentCells()
     {
         var display = SadConsoleDisplaySettings.FromSettings(FrontendSadConsoleSettings.Default);
@@ -120,5 +128,57 @@ public sealed class EntityInspectionPanelTests
 
         Assert.Equal((5, 3), visible);
         Assert.Contains(model.InventoryCells, cell => cell.X >= visible.Width || cell.Y >= visible.Height);
+    }
+
+    [Fact]
+    public void EntityInspectionStatusOverflowCanBeDetectedForAffordanceRendering()
+    {
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+        var layout = EntityInspectionPanelLayout.Resolve(new FrontendRect(2, 3, 32, 24), showInventory: true);
+
+        var lines = EntityInspectionPanelRenderer.ResolveStatusLines(model, FrontendTextResolver.InspectionPrototype, layout.StatusRegion.Width);
+
+        Assert.True(lines.Count > layout.StatusRegion.Height);
+    }
+
+    [Fact]
+    public void EntityInspectionActionOverflowCountsReservedAffordanceRow()
+    {
+        var hidden = EntityInspectionPanelRenderer.ResolveHiddenActionAffordanceCount(actionCount: 6, regionHeight: 4);
+
+        Assert.Equal(4, hidden);
+    }
+
+    [Fact]
+    public void EntityInspectionActionViewportKeepsMiddleSelectionVisibleWithAboveAndBelowIndicators()
+    {
+        var viewport = EntityInspectionPanelRenderer.ResolveActionViewport(actionCount: 6, regionHeight: 4, selectedIndex: 3, showOverflowAffordances: true);
+
+        Assert.True(viewport.HasItemsAbove);
+        Assert.True(viewport.HasItemsBelow);
+        Assert.InRange(3, viewport.StartIndex, viewport.StartIndex + viewport.ActionCount - 1);
+        Assert.Equal(3 - viewport.StartIndex, viewport.SelectedVisibleIndex);
+    }
+
+    [Fact]
+    public void EntityInspectionActionViewportShowsUpwardOverflowWhenSelectionIsNearEnd()
+    {
+        var viewport = EntityInspectionPanelRenderer.ResolveActionViewport(actionCount: 6, regionHeight: 4, selectedIndex: 5, showOverflowAffordances: true);
+
+        Assert.True(viewport.HasItemsAbove);
+        Assert.False(viewport.HasItemsBelow);
+        Assert.InRange(5, viewport.StartIndex, viewport.StartIndex + viewport.ActionCount - 1);
+    }
+
+    [Fact]
+    public void EntityInspectionInventoryOverflowCountsHiddenCells()
+    {
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+        var layout = EntityInspectionPanelLayout.Resolve(new FrontendRect(2, 3, 32, 24), showInventory: true);
+
+        var overflow = EntityInspectionPanelRenderer.ResolveInventoryOverflow(layout.InventoryRegion!, model.InventoryCells);
+
+        Assert.Equal(15, overflow.VisibleCells);
+        Assert.Equal(model.InventoryCells.Count - 15, overflow.HiddenCells);
     }
 }

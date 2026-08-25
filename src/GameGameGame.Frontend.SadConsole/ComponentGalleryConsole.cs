@@ -290,7 +290,7 @@ internal sealed class ComponentGalleryConsole : Console
         var bounds = EntityInspectionPanelLayout.ResolveResponsiveBounds(available);
         var layout = EntityInspectionPanelLayout.Resolve(bounds, showInventory: true);
         var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
-        EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile);
+        EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile, options: EntityInspectionPanelRenderOptions.OverflowAffordances);
         _inspectionOverlays ??= new EntityInspectionPlayspaceOverlayPresenter(this, _displaySettings, _tilesetProfile);
         _inspectionOverlays.Draw(layout, model);
     }

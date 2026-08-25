@@ -154,7 +154,7 @@ internal sealed class PlayInspectionController(
             return;
         }
 
-        _overlay.Draw(model, SelectedActionIndex, FocusMode == PlayFocusMode.InspectionActions);
+        _overlay.Draw(model, SelectedActionIndex, FocusMode == PlayFocusMode.InspectionActions, EntityInspectionPanelRenderOptions.OverflowAffordances);
         _drawnBounds = bounds;
         _drawnEmpty = model is null;
         _drawnEntityId = model is null ? null : entityId;
