@@ -13,6 +13,26 @@ internal sealed record EntityInspectionPanelLayout(
     int ActionSeparatorY,
     int? InventorySeparatorY)
 {
+    public const int MinimumWidth = 24;
+    public const int PreferredWidth = 32;
+    public const int MaximumWidth = 36;
+    public const double MaximumViewportWidthFraction = 0.40d;
+    public const int MinimumHeight = 16;
+    public const int MaximumHeight = 24;
+
+    public static FrontendRect ResolveResponsiveBounds(FrontendRect available, int anchorRightPadding = 4, int anchorTopPadding = 0)
+    {
+        var fractionalMaxWidth = Math.Max(MinimumWidth, (int)Math.Floor(available.Width * MaximumViewportWidthFraction));
+        var maxWidth = Math.Min(MaximumWidth, fractionalMaxWidth);
+        var width = Math.Min(maxWidth, Math.Max(MinimumWidth, Math.Min(PreferredWidth, available.Width - Math.Max(0, anchorRightPadding * 2))));
+        var height = Math.Min(MaximumHeight, Math.Max(MinimumHeight, available.Height - Math.Max(0, anchorTopPadding + 1)));
+        return new FrontendRect(
+            Math.Max(available.X, available.Right - width - Math.Max(0, anchorRightPadding)),
+            Math.Min(available.Bottom - height + 1, available.Y + Math.Max(0, anchorTopPadding)),
+            width,
+            height);
+    }
+
     public static EntityInspectionPanelLayout Resolve(FrontendRect bounds, bool showInventory)
     {
         var portrait = new FrontendRect(bounds.X + 1, bounds.Y + 1, 6, 6);
@@ -56,7 +76,8 @@ internal sealed record EntityInspectionPanelModel(
     bool HasInventory,
     IReadOnlyList<EntityInspectionPortraitCell> PortraitCells,
     IReadOnlyList<EntityInspectionPortraitCell> InventoryCells,
-    IReadOnlyList<EntityInspectionActionRow> Actions)
+    IReadOnlyList<EntityInspectionActionRow> Actions,
+    string Description = "")
 {
     public static EntityInspectionPanelModel GalleryExample() => new(
         "Debug Push Block",
@@ -82,7 +103,34 @@ internal sealed record EntityInspectionPanelModel(
                 FrontendTextMessage.Create(FrontendTextIds.InspectionActionUnavailable, ("action", "Pickup Debug Push Block"), ("reason", "non-portable")),
                 Selectable: false,
                 FrontendTextMessage.Create("inspection.failure.nonPortable"))
-        ]);
+        ],
+        "Compact example entity used as the baseline inspection panel gallery sample.");
+
+    public static EntityInspectionPanelModel ResponsiveStressGalleryExample()
+    {
+        var inventory = new List<EntityInspectionPortraitCell>();
+        for (var y = 0; y < 6; y++)
+        for (var x = 0; x < 8; x++)
+        {
+            inventory.Add(new EntityInspectionPortraitCell(x, y, 160, Color.DimGray, Color.Black, x % 3 == 0 ? 254 : null, x % 3 == 0 ? Color.LightGreen : null));
+        }
+
+        return GalleryExample() with
+        {
+            EntityName = "Overstuffed Actor Inventory Container With A Deliberately Long Name",
+            InventoryCells = inventory,
+            Actions =
+            [
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionPush, ("targetName", "the long-name crate")), Selectable: true),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionPickup, ("targetName", "small gear")), Selectable: true),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionDrop, ("targetName", "worn tool belt")), Selectable: true),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionEnter, ("targetName", "nested portable pocket realm")), Selectable: true),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionUnavailable, ("action", "Transfer all inventory into the nearby oversized destination"), ("reason", "destination cannot accept bulk")), Selectable: false),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionUnavailable, ("action", "Push"), ("reason", "blocked by current facing")), Selectable: false)
+            ],
+            Description = "This stress sample checks Batch 1 responsive rules: the panel is anchored, capped to a maximum width, long descriptive status text wraps inside the status region, the action list clips to its region, and the actor inventory grid is clipped to the visible reserved cells."
+        };
+    }
 }
 
 internal static class EntityInspectionPanelRenderer
@@ -102,12 +150,31 @@ internal static class EntityInspectionPanelRenderer
         DrawSeparators(target, layout, tilesetProfile.Roles.PanelBorder, Color.Gold, background);
         DrawReservedPlayspaceRegion(target, layout.PortraitRegion, tilesetProfile, background);
         var text = FrontendTextResolver.InspectionPrototype;
-        PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y, layout.StatusRegion.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatAperture, ("value", model.Aperture))), Color.White, background, tilesetProfile);
-        PrintClipped(target, layout.StatusRegion.X, layout.StatusRegion.Y + 1, layout.StatusRegion.Width, text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatBulk, ("value", model.Bulk))), Color.White, background, tilesetProfile);
+        DrawStatus(target, layout.StatusRegion, model, tilesetProfile, background, text);
         DrawActions(target, layout.ActionsRegion, model, tilesetProfile, background, text, selectedActionIndex, actionMenuFocused);
         if (layout.InventoryRegion is { } inventory)
         {
             DrawReservedInventoryRegion(target, inventory, tilesetProfile, background);
+        }
+    }
+
+    private static void DrawStatus(global::SadConsole.Console target, FrontendRect region, EntityInspectionPanelModel model, TilesetProfile tilesetProfile, Color background, FrontendTextResolver text)
+    {
+        if (region.Width <= 0 || region.Height <= 0) return;
+        var lines = new List<string>
+        {
+            text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatAperture, ("value", model.Aperture))),
+            text.Resolve(FrontendTextMessage.Create(FrontendTextIds.InspectionStatBulk, ("value", model.Bulk)))
+        };
+
+        if (!string.IsNullOrWhiteSpace(model.Description))
+        {
+            lines.AddRange(WrapText(model.Description, region.Width));
+        }
+
+        for (var i = 0; i < lines.Count && i < region.Height; i++)
+        {
+            PrintClipped(target, region.X, region.Y + i, region.Width, lines[i], Color.White, background, tilesetProfile);
         }
     }
 
@@ -167,12 +234,36 @@ internal static class EntityInspectionPanelRenderer
             SetGlyph(target, region.X + x, region.Y + y, tilesetProfile.Blank, Color.Black, background);
     }
 
+    internal static IReadOnlyList<string> WrapText(string text, int width)
+    {
+        if (width <= 0 || string.IsNullOrWhiteSpace(text)) return [];
+        var lines = new List<string>();
+        foreach (var paragraph in text.Split('\n'))
+        {
+            var remaining = paragraph.Trim();
+            while (remaining.Length > width)
+            {
+                var breakAt = remaining.LastIndexOf(' ', Math.Min(width, remaining.Length - 1));
+                if (breakAt <= 0) breakAt = width;
+                lines.Add(remaining[..breakAt].TrimEnd());
+                remaining = remaining[breakAt..].TrimStart();
+            }
+
+            if (remaining.Length > 0)
+            {
+                lines.Add(remaining);
+            }
+        }
+
+        return lines;
+    }
+
     private static void PrintClipped(global::SadConsole.Console target, int x, int y, int width, string text, Color foreground, Color background, TilesetProfile tilesetProfile)
     {
-        var clipped = text.Length <= width ? text : text[..Math.Max(0, width)];
-        for (var index = 0; index < clipped.Length; index++)
+        var glyphs = FrontendTextClipping.ToClippedGlyphs(text, width, tilesetProfile);
+        for (var index = 0; index < glyphs.Count; index++)
         {
-            SetGlyph(target, x + index, y, tilesetProfile.ResolveTextGlyph(clipped[index]), foreground, background);
+            SetGlyph(target, x + index, y, glyphs[index], foreground, background);
         }
     }
 

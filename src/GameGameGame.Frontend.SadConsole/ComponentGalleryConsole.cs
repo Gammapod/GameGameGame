@@ -279,18 +279,17 @@ internal sealed class ComponentGalleryConsole : Console
     private void DrawEntityInspectionPanelPreview(int y)
     {
         HideMoveSpriteOverlay();
-        var panelWidth = Math.Min(58, _bounds.Width - 8);
-        var panelHeight = Math.Min(24, Math.Max(0, _bounds.Bottom - y - 1));
-        if (panelWidth < 24 || panelHeight < 16)
+        var available = new FrontendRect(_bounds.X + 2, y, Math.Max(0, _bounds.Width - 4), Math.Max(0, _bounds.Bottom - y - 1));
+        if (available.Width < EntityInspectionPanelLayout.MinimumWidth || available.Height < EntityInspectionPanelLayout.MinimumHeight)
         {
             ClearInspectionOverlays();
             PrintClipped(_bounds.X + 2, y, _bounds.Width - 4, "Not enough space to show inspection panel example.", Color.Red);
             return;
         }
 
-        var bounds = new FrontendRect(_bounds.X + 4, y, panelWidth, panelHeight);
+        var bounds = EntityInspectionPanelLayout.ResolveResponsiveBounds(available);
         var layout = EntityInspectionPanelLayout.Resolve(bounds, showInventory: true);
-        var model = EntityInspectionPanelModel.GalleryExample();
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
         EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile);
         _inspectionOverlays ??= new EntityInspectionPlayspaceOverlayPresenter(this, _displaySettings, _tilesetProfile);
         _inspectionOverlays.Draw(layout, model);
@@ -432,9 +431,9 @@ internal sealed class ComponentGalleryConsole : Console
     private void PrintClipped(int x, int y, int width, string text, Color color)
     {
         if (width <= 0 || y < 0 || y >= Height) return;
-        var clipped = text.Length <= width ? text : text[..width];
-        for (var index = 0; index < clipped.Length && x + index < Width; index++)
-            SetGlyph(x + index, y, _tilesetProfile.ResolveTextGlyph(clipped[index]), color, Color.Black);
+        var glyphs = FrontendTextClipping.ToClippedGlyphs(text, width, _tilesetProfile);
+        for (var index = 0; index < glyphs.Count && x + index < Width; index++)
+            SetGlyph(x + index, y, glyphs[index], color, Color.Black);
     }
 
     private void SetGlyph(int x, int y, int glyph, Color foreground, Color background)

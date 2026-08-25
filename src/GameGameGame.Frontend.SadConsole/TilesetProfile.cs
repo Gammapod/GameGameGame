@@ -41,6 +41,9 @@ internal sealed record TilesetRoles(
     int ExitHighlight,
     int TransferHighlight,
     int NoActionHighlight,
+    int UpChevron,
+    int DownChevron,
+    int Ellipsis,
     TileBorderGlyphSet PanelBorder)
 {
     public int DefaultBackdrop => GridDotted;

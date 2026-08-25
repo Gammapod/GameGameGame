@@ -67,4 +67,58 @@ public sealed class EntityInspectionPanelTests
         Assert.Equal(9, model.PortraitCells.Count);
         Assert.Contains(model.PortraitCells, cell => cell.X == 1 && cell.Y == 1 && cell.EntityGlyph is not null);
     }
+
+    [Fact]
+    public void EntityInspectionResponsiveBoundsUsePreferredNarrowWidthAndStableRightAnchor()
+    {
+        var available = new FrontendRect(1, 10, 100, 40);
+
+        var bounds = EntityInspectionPanelLayout.ResolveResponsiveBounds(available, anchorRightPadding: 4);
+
+        Assert.Equal(EntityInspectionPanelLayout.PreferredWidth, bounds.Width);
+        Assert.Equal(available.Right - EntityInspectionPanelLayout.PreferredWidth - 4, bounds.X);
+        Assert.Equal(EntityInspectionPanelLayout.MaximumHeight, bounds.Height);
+    }
+
+    [Fact]
+    public void EntityInspectionResponsiveBoundsRespectViewportFractionCap()
+    {
+        var available = new FrontendRect(0, 0, 70, 30);
+
+        var bounds = EntityInspectionPanelLayout.ResolveResponsiveBounds(available, anchorRightPadding: 1);
+
+        Assert.Equal(28, bounds.Width);
+        Assert.True(bounds.Width <= Math.Floor(available.Width * EntityInspectionPanelLayout.MaximumViewportWidthFraction));
+    }
+
+    [Fact]
+    public void EntityInspectionTextWrapsWithinRegionWidth()
+    {
+        var lines = EntityInspectionPanelRenderer.WrapText("alpha beta gamma", width: 8);
+
+        Assert.Equal(["alpha", "beta", "gamma"], lines);
+        Assert.All(lines, line => Assert.True(line.Length <= 8));
+    }
+
+    [Fact]
+    public void EntityInspectionClippedTextUsesTilesetEllipsisGlyph()
+    {
+        var profile = TilesetProfileLoader.LoadCandii();
+
+        var glyphs = FrontendTextClipping.ToClippedGlyphs("abcdef", width: 4, profile);
+
+        Assert.Equal([(int)'a', (int)'b', (int)'c', profile.Roles.Ellipsis], glyphs);
+    }
+
+    [Fact]
+    public void EntityInspectionInventoryOverlayClipsToReservedVisibleCandii16Cells()
+    {
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+        var layout = EntityInspectionPanelLayout.Resolve(new FrontendRect(2, 3, 58, 24), showInventory: true);
+
+        var visible = EntityInspectionPlayspaceOverlayPresenter.ResolveVisibleInventoryChildSize(layout.InventoryRegion!, model.InventoryCells);
+
+        Assert.Equal((5, 3), visible);
+        Assert.Contains(model.InventoryCells, cell => cell.X >= visible.Width || cell.Y >= visible.Height);
+    }
 }

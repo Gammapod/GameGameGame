@@ -54,6 +54,9 @@
     "exitHighlight": 213,
     "transferHighlight": 212,
     "noActionHighlight": 211,
+    "upChevron": 30,
+    "downChevron": 31,
+    "ellipsis": 29,
     "panelBorder": {
       "topLeft": 180,
       "topRight": 153,

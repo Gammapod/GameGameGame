@@ -115,11 +115,10 @@ internal sealed class EntityInspectionPlayspaceOverlayPresenter(global::SadConso
 
         if (layout.InventoryRegion is { } inventoryRegion)
         {
-            var width = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.X) + 1);
-            var height = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.Y) + 1);
+            var (width, height) = ResolveVisibleInventoryChildSize(inventoryRegion, model.InventoryCells);
             _inventory = EnsureOverlay(_inventory, inventoryRegion, width, height);
             _inventory.RedrawBackdrop();
-            foreach (var cell in model.InventoryCells)
+            foreach (var cell in model.InventoryCells.Where(cell => cell.X < width && cell.Y < height))
             {
                 _inventory.DrawCell(cell);
             }
@@ -128,6 +127,15 @@ internal sealed class EntityInspectionPlayspaceOverlayPresenter(global::SadConso
         {
             RemoveInventory();
         }
+    }
+
+    internal static (int Width, int Height) ResolveVisibleInventoryChildSize(FrontendRect inventoryRegion, IReadOnlyList<EntityInspectionPortraitCell> inventoryCells)
+    {
+        var contentWidth = Math.Max(1, inventoryCells.Count == 0 ? 1 : inventoryCells.Max(cell => cell.X) + 1);
+        var contentHeight = Math.Max(1, inventoryCells.Count == 0 ? 1 : inventoryCells.Max(cell => cell.Y) + 1);
+        return (
+            Math.Max(1, Math.Min(contentWidth, inventoryRegion.Width / 2)),
+            Math.Max(1, Math.Min(contentHeight, inventoryRegion.Height / 2)));
     }
 
     public void Clear()

@@ -45,9 +45,22 @@ public sealed class PlayInspectionStateTests
         Assert.NotNull(layout.PlayerPanelBounds);
         Assert.Equal(drawable, layout.GridBounds);
         Assert.True(layout.InspectionBounds!.Right <= drawable.Right);
-        Assert.Equal(42, layout.InspectionBounds.Width);
+        Assert.Equal(EntityInspectionPanelLayout.PreferredWidth, layout.InspectionBounds.Width);
         Assert.Equal(drawable.X, layout.PlayerPanelBounds!.X);
+        Assert.Equal(layout.InspectionBounds.Width, layout.PlayerPanelBounds.Width);
         Assert.Equal(drawable.Bottom, layout.PlayerPanelBounds.Bottom);
+    }
+
+    [Fact]
+    public void PlayModeInspectionLayoutUsesViewportFractionCapForNarrowGameplayScreens()
+    {
+        var drawable = new FrontendRect(1, 1, 70, 30);
+
+        var layout = PlayModeInspectionLayout.Resolve(drawable);
+
+        Assert.NotNull(layout.InspectionBounds);
+        Assert.Equal(28, layout.InspectionBounds!.Width);
+        Assert.Equal(layout.InspectionBounds.Width, layout.PlayerPanelBounds!.Width);
     }
 
     [Fact]

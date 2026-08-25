@@ -47,6 +47,9 @@ public sealed class TilesetProfileTests
         Assert.Equal(213, profile.Roles.ExitHighlight);
         Assert.Equal(212, profile.Roles.TransferHighlight);
         Assert.Equal(211, profile.Roles.NoActionHighlight);
+        Assert.Equal(30, profile.Roles.UpChevron);
+        Assert.Equal(31, profile.Roles.DownChevron);
+        Assert.Equal(29, profile.Roles.Ellipsis);
         Assert.Equal((252, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.North));
         Assert.Equal((252, global::SadConsole.Mirror.Vertical), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.South));
         Assert.Equal((253, global::SadConsole.Mirror.None), profile.Roles.FacingGlyph(GameGameGame.Core.Direction.East));
