@@ -5,17 +5,19 @@ internal sealed record PlayModeInspectionLayout(FrontendRect GridBounds, Fronten
     public static PlayModeInspectionLayout Resolve(FrontendRect drawableBounds)
     {
         const int gap = 1;
-        const int playerPanelMaximumHeight = 18;
+        const int gameplayPanelMaximumHeight = 32;
 
         if (drawableBounds.Height < EntityInspectionPanelLayout.MinimumHeight || drawableBounds.Width < EntityInspectionPanelLayout.MinimumWidth)
         {
             return new PlayModeInspectionLayout(drawableBounds, null, null);
         }
 
-        var inspection = EntityInspectionPanelLayout.ResolveResponsiveBounds(
+        var inspectionBase = EntityInspectionPanelLayout.ResolveResponsiveBounds(
             new FrontendRect(drawableBounds.X, drawableBounds.Y + gap, drawableBounds.Width, Math.Max(0, drawableBounds.Height - gap)),
             anchorRightPadding: 0);
-        var playerPanelHeight = Math.Min(playerPanelMaximumHeight, drawableBounds.Height - 1);
+        var inspectionHeight = Math.Min(gameplayPanelMaximumHeight, drawableBounds.Height - 1);
+        var inspection = inspectionBase with { Height = inspectionHeight };
+        var playerPanelHeight = Math.Min(gameplayPanelMaximumHeight, drawableBounds.Height - 1);
         var playerPanel = new FrontendRect(
             drawableBounds.X,
             drawableBounds.Bottom - playerPanelHeight + 1,

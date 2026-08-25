@@ -138,6 +138,7 @@ internal sealed class ComponentGalleryConsole : Console
                 _moveQueuePlayback = new PlayAnimationQueuePlayback(StaticPlayRendererExamples.MoveQueueSteps(), StaticPlayRendererExamples.LayeredRoom(_tilesetProfile).Camera);
                 break;
             case ComponentGalleryResultKind.EntityInspectionPanelSelected:
+            case ComponentGalleryResultKind.EntityInspectionLargeInventoryPanelSelected:
                 HideSelectorOverlay();
                 HideMoveSpriteOverlay();
                 _moveQueuePlayback = null;
@@ -200,7 +201,7 @@ internal sealed class ComponentGalleryConsole : Console
             return;
         }
 
-        if (_model.SelectedExample?.Kind == ComponentGalleryExampleKind.EntityInspectionPanel)
+        if (_model.SelectedExample?.Kind is ComponentGalleryExampleKind.EntityInspectionPanel or ComponentGalleryExampleKind.EntityInspectionLargeInventoryPanel)
         {
             DrawEntityInspectionPanelPreview(y);
             return;
@@ -287,12 +288,27 @@ internal sealed class ComponentGalleryConsole : Console
             return;
         }
 
-        var bounds = EntityInspectionPanelLayout.ResolveResponsiveBounds(available);
-        var layout = EntityInspectionPanelLayout.Resolve(bounds, showInventory: true);
-        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+        var model = _model.SelectedExample?.Kind == ComponentGalleryExampleKind.EntityInspectionLargeInventoryPanel
+            ? EntityInspectionPanelModel.LargeInventoryGalleryExample()
+            : EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+        var bounds = _model.SelectedExample?.Kind == ComponentGalleryExampleKind.EntityInspectionLargeInventoryPanel
+            ? ResolveLargeInventoryPreviewBounds(available)
+            : EntityInspectionPanelLayout.ResolveResponsiveBounds(available);
+        var layout = EntityInspectionPanelLayout.ResolveAdaptive(bounds, model);
         EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile, options: EntityInspectionPanelRenderOptions.OverflowAffordances);
         _inspectionOverlays ??= new EntityInspectionPlayspaceOverlayPresenter(this, _displaySettings, _tilesetProfile);
         _inspectionOverlays.Draw(layout, model);
+    }
+
+    private static FrontendRect ResolveLargeInventoryPreviewBounds(FrontendRect available)
+    {
+        var normal = EntityInspectionPanelLayout.ResolveResponsiveBounds(available);
+        var desiredHeight = Math.Min(54, available.Height);
+        return new FrontendRect(
+            normal.X,
+            available.Y,
+            normal.Width,
+            desiredHeight);
     }
 
     private void ClearInspectionOverlays()

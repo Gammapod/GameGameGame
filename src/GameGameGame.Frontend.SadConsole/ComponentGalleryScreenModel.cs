@@ -15,7 +15,8 @@ internal enum ComponentGalleryExampleKind
     StaticPlayRenderer,
     MoveAnimation,
     MoveAnimationQueue,
-    EntityInspectionPanel
+    EntityInspectionPanel,
+    EntityInspectionLargeInventoryPanel
 }
 
 internal enum ComponentGalleryResultKind
@@ -27,7 +28,8 @@ internal enum ComponentGalleryResultKind
     StaticPlayRendererSelected,
     MoveAnimationSelected,
     MoveAnimationQueueSelected,
-    EntityInspectionPanelSelected
+    EntityInspectionPanelSelected,
+    EntityInspectionLargeInventoryPanelSelected
 }
 
 internal sealed record ComponentGalleryExample(
@@ -68,7 +70,8 @@ internal sealed class ComponentGalleryScreenModel
         new("static-play-renderer", "Static Play renderer", "Layered backdrop/entity/accent/status/highlight rendering through a camera.", ComponentGalleryExampleKind.StaticPlayRenderer),
         new("move-animation", "Move animation", "Simple adjacent-cell slide preview for an entity visual bundle.", ComponentGalleryExampleKind.MoveAnimation),
         new("move-animation-queue", "Move animation queue", "Sequential initiative-order slide playback with final redraw signal.", ComponentGalleryExampleKind.MoveAnimationQueue),
-        new("entity-inspection-panel", "Entity inspection panel", "Popup status/actions/inventory layout with mixed-scale playspace regions.", ComponentGalleryExampleKind.EntityInspectionPanel)
+        new("entity-inspection-panel", "Entity inspection panel", "Popup status/actions/inventory layout with mixed-scale playspace regions.", ComponentGalleryExampleKind.EntityInspectionPanel),
+        new("entity-inspection-large-inventory", "Entity inspection: large inventory", "Inspection panel stress case with 20x20 inventory content.", ComponentGalleryExampleKind.EntityInspectionLargeInventoryPanel)
     ];
 
     public ComponentGalleryResult Handle(ComponentGalleryCommand command)
@@ -171,6 +174,7 @@ internal sealed class ComponentGalleryScreenModel
             ComponentGalleryExampleKind.MoveAnimation => new ComponentGalleryResult(ComponentGalleryResultKind.MoveAnimationSelected, "Move animation example selected."),
             ComponentGalleryExampleKind.MoveAnimationQueue => new ComponentGalleryResult(ComponentGalleryResultKind.MoveAnimationQueueSelected, "Move animation queue example selected."),
             ComponentGalleryExampleKind.EntityInspectionPanel => new ComponentGalleryResult(ComponentGalleryResultKind.EntityInspectionPanelSelected, "Entity inspection panel example selected."),
+            ComponentGalleryExampleKind.EntityInspectionLargeInventoryPanel => new ComponentGalleryResult(ComponentGalleryResultKind.EntityInspectionLargeInventoryPanelSelected, "Large inventory inspection panel example selected."),
             _ => new ComponentGalleryResult(ComponentGalleryResultKind.Stay, "No gallery example is selected.")
         };
     }

@@ -21,6 +21,14 @@ internal sealed record MixedTilesetPlayspaceOverlayGeometry(
         parentCellRegion.Y * parentDisplaySettings.ScaledTileHeight);
 }
 
+internal sealed record EntityInspectionInventoryViewport(
+    int ChildWidth,
+    int ChildHeight,
+    int ContentWidth,
+    int ContentHeight,
+    bool HasHiddenRight,
+    bool HasHiddenBelow);
+
 internal sealed class Candii16PlayspaceOverlayConsole : global::SadConsole.Console
 {
     private readonly TilesetProfile _tilesetProfile;
@@ -61,6 +69,11 @@ internal sealed class Candii16PlayspaceOverlayConsole : global::SadConsole.Conso
             decorators.Add(new global::SadConsole.CellDecorator(highlight.Foreground, highlight.Glyph, highlight.Mirror));
             Surface[cell.X, cell.Y].Decorators = decorators;
         }
+    }
+
+    public void DrawOverflowGlyph(int x, int y, int glyph)
+    {
+        SetGlyph(x, y, glyph, Color.Yellow, Color.Black);
     }
 
     public void RedrawBackdrop()
@@ -115,12 +128,28 @@ internal sealed class EntityInspectionPlayspaceOverlayPresenter(global::SadConso
 
         if (layout.InventoryRegion is { } inventoryRegion)
         {
-            var (width, height) = ResolveVisibleInventoryChildSize(inventoryRegion, model.InventoryCells);
-            _inventory = EnsureOverlay(_inventory, inventoryRegion, width, height);
+            var viewport = ResolveInventoryViewport(inventoryRegion, model.InventoryCells);
+            _inventory = EnsureOverlay(_inventory, inventoryRegion, viewport.ChildWidth, viewport.ChildHeight);
             _inventory.RedrawBackdrop();
-            foreach (var cell in model.InventoryCells.Where(cell => cell.X < width && cell.Y < height))
+            foreach (var cell in model.InventoryCells.Where(cell => cell.X < viewport.ContentWidth && cell.Y < viewport.ContentHeight))
             {
                 _inventory.DrawCell(cell);
+            }
+
+            if (viewport.HasHiddenRight)
+            {
+                for (var y = 0; y < viewport.ContentHeight; y++)
+                {
+                    _inventory.DrawOverflowGlyph(viewport.ChildWidth - 1, y, tilesetProfile.ResolveTextGlyph('>'));
+                }
+            }
+
+            if (viewport.HasHiddenBelow)
+            {
+                for (var x = 0; x < viewport.ContentWidth; x++)
+                {
+                    _inventory.DrawOverflowGlyph(x, viewport.ChildHeight - 1, tilesetProfile.Roles.DownChevron);
+                }
             }
         }
         else
@@ -131,11 +160,21 @@ internal sealed class EntityInspectionPlayspaceOverlayPresenter(global::SadConso
 
     internal static (int Width, int Height) ResolveVisibleInventoryChildSize(FrontendRect inventoryRegion, IReadOnlyList<EntityInspectionPortraitCell> inventoryCells)
     {
+        var viewport = ResolveInventoryViewport(inventoryRegion, inventoryCells);
+        return (viewport.ContentWidth, viewport.ContentHeight);
+    }
+
+    internal static EntityInspectionInventoryViewport ResolveInventoryViewport(FrontendRect inventoryRegion, IReadOnlyList<EntityInspectionPortraitCell> inventoryCells)
+    {
         var contentWidth = Math.Max(1, inventoryCells.Count == 0 ? 1 : inventoryCells.Max(cell => cell.X) + 1);
         var contentHeight = Math.Max(1, inventoryCells.Count == 0 ? 1 : inventoryCells.Max(cell => cell.Y) + 1);
-        return (
-            Math.Max(1, Math.Min(contentWidth, inventoryRegion.Width / 2)),
-            Math.Max(1, Math.Min(contentHeight, inventoryRegion.Height / 2)));
+        var childWidth = Math.Max(1, Math.Min(contentWidth, inventoryRegion.Width / 2));
+        var childHeight = Math.Max(1, Math.Min(contentHeight, inventoryRegion.Height / 2));
+        var hasHiddenRight = contentWidth > childWidth;
+        var hasHiddenBelow = contentHeight > childHeight;
+        var visibleContentWidth = Math.Max(1, childWidth - (hasHiddenRight ? 1 : 0));
+        var visibleContentHeight = Math.Max(1, childHeight - (hasHiddenBelow ? 1 : 0));
+        return new EntityInspectionInventoryViewport(childWidth, childHeight, visibleContentWidth, visibleContentHeight, hasHiddenRight, hasHiddenBelow);
     }
 
     public void Clear()

@@ -36,7 +36,7 @@ internal sealed class EntityInspectionOverlayConsole : global::SadConsole.Consol
         }
         else
         {
-            var layout = EntityInspectionPanelLayout.Resolve(LocalBounds, model.HasInventory);
+            var layout = EntityInspectionPanelLayout.ResolveAdaptive(LocalBounds, model);
             EntityInspectionPanelRenderer.Draw(this, layout, model, _tilesetProfile, OverlayBackground, selectedActionIndex, actionMenuFocused, options);
             _playspaceOverlays.Draw(layout, model);
         }

@@ -46,8 +46,10 @@ public sealed class PlayInspectionStateTests
         Assert.Equal(drawable, layout.GridBounds);
         Assert.True(layout.InspectionBounds!.Right <= drawable.Right);
         Assert.Equal(EntityInspectionPanelLayout.PreferredWidth, layout.InspectionBounds.Width);
+        Assert.Equal(32, layout.InspectionBounds.Height);
         Assert.Equal(drawable.X, layout.PlayerPanelBounds!.X);
         Assert.Equal(layout.InspectionBounds.Width, layout.PlayerPanelBounds.Width);
+        Assert.Equal(32, layout.PlayerPanelBounds.Height);
         Assert.Equal(drawable.Bottom, layout.PlayerPanelBounds.Bottom);
     }
 
@@ -60,6 +62,7 @@ public sealed class PlayInspectionStateTests
 
         Assert.NotNull(layout.InspectionBounds);
         Assert.Equal(28, layout.InspectionBounds!.Width);
+        Assert.Equal(29, layout.InspectionBounds.Height);
         Assert.Equal(layout.InspectionBounds.Width, layout.PlayerPanelBounds!.Width);
     }
 

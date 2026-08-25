@@ -33,6 +33,41 @@ public sealed class EntityInspectionPanelTests
     }
 
     [Fact]
+    public void EntityInspectionAdaptiveLayoutExpandsActionRegionBeforeInventoryWhenSpaceAllows()
+    {
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+
+        var layout = EntityInspectionPanelLayout.ResolveAdaptive(new FrontendRect(2, 3, 32, 24), model);
+
+        Assert.Equal(7, layout.ActionsRegion.Height);
+        Assert.NotNull(layout.InventoryRegion);
+        Assert.Equal(7, layout.InventoryRegion!.Height);
+    }
+
+    [Fact]
+    public void EntityInspectionAdaptiveLayoutPreservesActionMinimumByShrinkingInventoryFirst()
+    {
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+
+        var layout = EntityInspectionPanelLayout.ResolveAdaptive(new FrontendRect(2, 3, 32, 18), model);
+
+        Assert.Equal(EntityInspectionPanelLayout.MinimumActionRegionHeight, layout.ActionsRegion.Height);
+        Assert.NotNull(layout.InventoryRegion);
+        Assert.Equal(EntityInspectionPanelLayout.MinimumInventoryRegionHeight, layout.InventoryRegion!.Height);
+    }
+
+    [Fact]
+    public void EntityInspectionAdaptiveLayoutCollapsesInventoryWhenActionMinimumCannotShareSpace()
+    {
+        var model = EntityInspectionPanelModel.ResponsiveStressGalleryExample();
+
+        var layout = EntityInspectionPanelLayout.ResolveAdaptive(new FrontendRect(2, 3, 32, 17), model);
+
+        Assert.True(layout.ActionsRegion.Height >= EntityInspectionPanelLayout.MinimumActionRegionHeight);
+        Assert.Null(layout.InventoryRegion);
+    }
+
+    [Fact]
     public void MixedTilesetOverlayPositionsCandii16ChildConsoleOverReservedParentCells()
     {
         var display = SadConsoleDisplaySettings.FromSettings(FrontendSadConsoleSettings.Default);
@@ -126,7 +161,7 @@ public sealed class EntityInspectionPanelTests
 
         var visible = EntityInspectionPlayspaceOverlayPresenter.ResolveVisibleInventoryChildSize(layout.InventoryRegion!, model.InventoryCells);
 
-        Assert.Equal((5, 3), visible);
+        Assert.Equal((4, 2), visible);
         Assert.Contains(model.InventoryCells, cell => cell.X >= visible.Width || cell.Y >= visible.Height);
     }
 
@@ -178,7 +213,52 @@ public sealed class EntityInspectionPanelTests
 
         var overflow = EntityInspectionPanelRenderer.ResolveInventoryOverflow(layout.InventoryRegion!, model.InventoryCells);
 
-        Assert.Equal(15, overflow.VisibleCells);
-        Assert.Equal(model.InventoryCells.Count - 15, overflow.HiddenCells);
+        Assert.Equal(8, overflow.VisibleCells);
+        Assert.Equal(model.InventoryCells.Count - 8, overflow.HiddenCells);
+        Assert.True(overflow.HasHiddenRight);
+        Assert.True(overflow.HasHiddenBelow);
+    }
+
+    [Fact]
+    public void EntityInspectionLargeInventoryGalleryModelProvidesTwentyByTwentyInventoryContent()
+    {
+        var model = EntityInspectionPanelModel.LargeInventoryGalleryExample();
+
+        Assert.Equal(400, model.InventoryCells.Count);
+        Assert.Equal(19, model.InventoryCells.Max(cell => cell.X));
+        Assert.Equal(19, model.InventoryCells.Max(cell => cell.Y));
+    }
+
+    [Fact]
+    public void EntityInspectionLargeInventoryGalleryLayoutUsesNarrowWidthAndInventoryHeightRatio()
+    {
+        var model = EntityInspectionPanelModel.LargeInventoryGalleryExample();
+
+        var layout = EntityInspectionPanelLayout.ResolveAdaptive(new FrontendRect(2, 3, 32, 54), model);
+        var visible = EntityInspectionPlayspaceOverlayPresenter.ResolveVisibleInventoryChildSize(layout.InventoryRegion!, model.InventoryCells);
+        var overflow = EntityInspectionPanelRenderer.ResolveInventoryOverflow(layout.InventoryRegion!, model.InventoryCells);
+
+        Assert.Equal(30, layout.InventoryRegion!.Width);
+        Assert.Equal(24, layout.InventoryRegion.Height);
+        Assert.Equal((14, 11), visible);
+        Assert.True(overflow.HasHiddenRight);
+        Assert.True(overflow.HasHiddenBelow);
+    }
+
+    [Fact]
+    public void EntityInspectionInventoryHeightFitsAllRowsWhenAllColumnsFitAvailableWidth()
+    {
+        var inventory = new List<EntityInspectionPortraitCell>();
+        for (var y = 0; y < 6; y++)
+        for (var x = 0; x < 5; x++)
+        {
+            inventory.Add(new EntityInspectionPortraitCell(x, y, 160, SadRogue.Primitives.Color.DimGray, SadRogue.Primitives.Color.Black));
+        }
+
+        var model = EntityInspectionPanelModel.GalleryExample() with { InventoryCells = inventory };
+
+        var height = EntityInspectionPanelLayout.ResolveDesiredInventoryRegionHeight(model, inventoryRegionWidth: 30);
+
+        Assert.Equal(12, height);
     }
 }

@@ -20,6 +20,10 @@ internal sealed record EntityInspectionPanelLayout(
     public const int MinimumHeight = 16;
     public const int MaximumHeight = 24;
     public const int MinimumActionRegionHeight = 6;
+    public const int MaximumActionRegionHeight = 8;
+    public const int MinimumInventoryRegionHeight = 2;
+    public const int MaximumInventoryRegionHeight = 6;
+    public const double InventoryHeightToWidthRatio = 0.75d;
 
     public static FrontendRect ResolveResponsiveBounds(FrontendRect available, int anchorRightPadding = 4, int anchorTopPadding = 0)
     {
@@ -48,6 +52,80 @@ internal sealed record EntityInspectionPanelLayout(
             : null;
 
         return new EntityInspectionPanelLayout(bounds, portrait, status, actions, inventory, verticalSeparatorX, actionSeparatorY, inventorySeparatorY);
+    }
+
+    public static EntityInspectionPanelLayout ResolveAdaptive(FrontendRect bounds, EntityInspectionPanelModel model)
+    {
+        var portrait = new FrontendRect(bounds.X + 1, bounds.Y + 1, 6, 6);
+        var verticalSeparatorX = portrait.Right + 1;
+        var status = new FrontendRect(verticalSeparatorX + 1, bounds.Y + 1, Math.Max(0, bounds.Right - verticalSeparatorX - 2), 6);
+        var actionSeparatorY = portrait.Bottom + 1;
+        var availableRows = Math.Max(0, bounds.Bottom - actionSeparatorY - 1);
+        var desiredActionHeight = ResolveDesiredActionRegionHeight(model.Actions.Count);
+
+        if (!model.HasInventory)
+        {
+            var actionsOnly = new FrontendRect(bounds.X + 1, actionSeparatorY + 1, bounds.Width - 2, Math.Min(availableRows, desiredActionHeight));
+            return new EntityInspectionPanelLayout(bounds, portrait, status, actionsOnly, null, verticalSeparatorX, actionSeparatorY, null);
+        }
+
+        var inventoryWidth = Math.Min(ResolveDesiredInventoryRegionWidth(model), bounds.Width - 2);
+        var desiredInventoryHeight = ResolveDesiredInventoryRegionHeight(model, inventoryWidth);
+        var actionHeight = Math.Min(desiredActionHeight, Math.Max(0, availableRows));
+        var remainingRows = availableRows - actionHeight - 1;
+        if (remainingRows < MinimumInventoryRegionHeight && availableRows >= MinimumActionRegionHeight + 1 + MinimumInventoryRegionHeight)
+        {
+            actionHeight = Math.Max(MinimumActionRegionHeight, availableRows - 1 - MinimumInventoryRegionHeight);
+            remainingRows = availableRows - actionHeight - 1;
+        }
+
+        if (remainingRows < MinimumInventoryRegionHeight)
+        {
+            var expandedActions = new FrontendRect(bounds.X + 1, actionSeparatorY + 1, bounds.Width - 2, Math.Max(0, availableRows));
+            return new EntityInspectionPanelLayout(bounds, portrait, status, expandedActions, null, verticalSeparatorX, actionSeparatorY, null);
+        }
+
+        var inventorySeparatorY = actionSeparatorY + actionHeight + 1;
+        var actions = new FrontendRect(bounds.X + 1, actionSeparatorY + 1, bounds.Width - 2, actionHeight);
+        var inventory = new FrontendRect(
+            bounds.X + 1,
+            inventorySeparatorY + 1,
+            inventoryWidth,
+            Math.Min(desiredInventoryHeight, remainingRows));
+        return new EntityInspectionPanelLayout(bounds, portrait, status, actions, inventory, verticalSeparatorX, actionSeparatorY, inventorySeparatorY);
+    }
+
+    internal static int ResolveDesiredActionRegionHeight(int actionCount)
+    {
+        var visibleActionPreference = Math.Min(Math.Max(0, actionCount), 5);
+        var overflowReserve = actionCount > visibleActionPreference ? 1 : 0;
+        return Math.Clamp(1 + visibleActionPreference + overflowReserve, MinimumActionRegionHeight, MaximumActionRegionHeight);
+    }
+
+    internal static int ResolveDesiredInventoryRegionWidth(EntityInspectionPanelModel model)
+    {
+        if (model.DesiredVisibleInventoryWidth is { } desiredWidth)
+        {
+            return Math.Max(2, desiredWidth * 2);
+        }
+
+        var contentWidth = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.X) + 1);
+        return Math.Max(2, contentWidth * 2);
+    }
+
+    internal static int ResolveDesiredInventoryRegionHeight(EntityInspectionPanelModel model, int inventoryRegionWidth)
+    {
+        var contentWidth = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.X) + 1);
+        var contentHeight = Math.Max(1, model.InventoryCells.Count == 0 ? 1 : model.InventoryCells.Max(cell => cell.Y) + 1);
+        var visibleWidth = Math.Max(1, inventoryRegionWidth / 2);
+        if (contentWidth <= visibleWidth)
+        {
+            return Math.Max(MinimumInventoryRegionHeight, contentHeight * 2);
+        }
+
+        var ratioHeight = Math.Max(1, (int)Math.Ceiling(visibleWidth * InventoryHeightToWidthRatio));
+        var visibleHeight = Math.Min(contentHeight, ratioHeight);
+        return Math.Max(MinimumInventoryRegionHeight, visibleHeight * 2);
     }
 }
 
@@ -95,7 +173,8 @@ internal sealed record EntityInspectionPanelModel(
     IReadOnlyList<EntityInspectionPortraitCell> PortraitCells,
     IReadOnlyList<EntityInspectionPortraitCell> InventoryCells,
     IReadOnlyList<EntityInspectionActionRow> Actions,
-    string Description = "")
+    string Description = "",
+    int? DesiredVisibleInventoryWidth = null)
 {
     public static EntityInspectionPanelModel GalleryExample() => new(
         "Debug Push Block",
@@ -149,6 +228,37 @@ internal sealed record EntityInspectionPanelModel(
             Description = "This stress sample checks Batch 1 responsive rules: the panel is anchored, capped to a maximum width, long descriptive status text wraps inside the status region, the action list clips to its region, and the actor inventory grid is clipped to the visible reserved cells."
         };
     }
+
+    public static EntityInspectionPanelModel LargeInventoryGalleryExample()
+    {
+        var inventory = new List<EntityInspectionPortraitCell>();
+        for (var y = 0; y < 20; y++)
+        for (var x = 0; x < 20; x++)
+        {
+            var hasEntity = (x + y) % 4 == 0;
+            inventory.Add(new EntityInspectionPortraitCell(
+                x,
+                y,
+                160,
+                Color.DimGray,
+                Color.Black,
+                hasEntity ? 128 + (x + y) % 10 : null,
+                hasEntity ? Color.LightGreen : null));
+        }
+
+        return ResponsiveStressGalleryExample() with
+        {
+            EntityName = "Twenty By Twenty Inventory Container",
+            InventoryCells = inventory,
+            Actions =
+            [
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionPickup, ("targetName", "visible item")), Selectable: true),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionDrop, ("targetName", "carried item")), Selectable: true),
+                new EntityInspectionActionRow(FrontendTextMessage.Create(FrontendTextIds.InspectionActionTransfer, ("targetName", "large inventory")), Selectable: true)
+            ],
+            Description = "Large inventory stress sample with 20x20 inventory content. Use this to judge whether the current capped panel leaves enough visual room."
+        };
+    }
 }
 
 internal static class EntityInspectionPanelRenderer
@@ -175,10 +285,6 @@ internal static class EntityInspectionPanelRenderer
         if (layout.InventoryRegion is { } inventory)
         {
             DrawReservedInventoryRegion(target, inventory, tilesetProfile, background);
-            if (options.ShowOverflowAffordances && ResolveInventoryOverflow(inventory, model.InventoryCells) is { HiddenCells: > 0 } overflow)
-            {
-                DrawOverflowCount(target, inventory, overflow.HiddenCells, tilesetProfile, background, OverflowDirection.Down);
-            }
         }
     }
 
@@ -331,12 +437,13 @@ internal static class EntityInspectionPanelRenderer
             SetGlyph(target, region.X + x, region.Y + y, tilesetProfile.Blank, Color.Black, background);
     }
 
-    internal static (int VisibleCells, int HiddenCells) ResolveInventoryOverflow(FrontendRect inventoryRegion, IReadOnlyList<EntityInspectionPortraitCell> inventoryCells)
+    internal static (int VisibleCells, int HiddenCells, bool HasHiddenRight, bool HasHiddenBelow) ResolveInventoryOverflow(FrontendRect inventoryRegion, IReadOnlyList<EntityInspectionPortraitCell> inventoryCells)
     {
-        var visibleWidth = Math.Max(1, inventoryRegion.Width / 2);
-        var visibleHeight = Math.Max(1, inventoryRegion.Height / 2);
-        var visibleCells = inventoryCells.Count(cell => cell.X < visibleWidth && cell.Y < visibleHeight);
-        return (visibleCells, Math.Max(0, inventoryCells.Count - visibleCells));
+        var viewport = EntityInspectionPlayspaceOverlayPresenter.ResolveInventoryViewport(inventoryRegion, inventoryCells);
+        var visibleCells = inventoryCells.Count(cell => cell.X < viewport.ContentWidth && cell.Y < viewport.ContentHeight);
+        var contentWidth = inventoryCells.Count == 0 ? 0 : inventoryCells.Max(cell => cell.X) + 1;
+        var contentHeight = inventoryCells.Count == 0 ? 0 : inventoryCells.Max(cell => cell.Y) + 1;
+        return (visibleCells, Math.Max(0, inventoryCells.Count - visibleCells), contentWidth > viewport.ChildWidth, contentHeight > viewport.ChildHeight);
     }
 
     private enum OverflowDirection
