@@ -527,7 +527,7 @@ entityTemplates:
     actionStateDefaults:
       facing: West
     targeting:
-      range: 20
+      range: 5
       rules:
       - slot: 1
         label: exteriorScrap

@@ -40,6 +40,27 @@ No active frontend-owned item queued after the completed topology/POV foundation
 
 ## Later
 
+### Inspection/inventory panel UX polish and refactor
+
+**User story:** As a player, overloaded inspection and actor inventory panels remain comfortable to read and navigate after the current legibility-focused panel pass.
+
+**Owners:** Frontend, consuming shared entity/action/inventory facts without adding frontend-owned simulation semantics.
+
+**Plan:**
+
+- Prototype compact/small-viewport fallback patterns in the component gallery before applying them to gameplay.
+- Consider one-panel-at-a-time, tabbed, or stacked presentation when both inspection and actor panels cannot fit comfortably.
+- Add explicit region focus if status text, action lists, and inventory grids need independent scrolling or panning.
+- Follow the scenario/manifest selection-list pattern for future mouse wheel targeting, hover, click selection, and scroll behavior.
+- Add inventory panning only when needed; when panning exists, add up/left overflow affordances in addition to the current right/down clipped-content indicators.
+- Revisit inventory cell scaling and region sizing rules if integer-scaled inventory cells become user-facing.
+
+**Done when:**
+
+- Compact/constrained panel behavior is gallery-tested and applied to gameplay only where current panel legibility requires it.
+- Region focus, scrolling, panning, and mouse affordances are reusable rather than bespoke per panel.
+- Frontend presentation remains bounded to layout, focus, clipping, scrolling, hit-testing, and rendering concerns.
+
 ### Topology/POV presentation polish
 
 **User story:** As a player, topology/POV spaces and seams are easier to understand visually after the functional shared topology foundation.
