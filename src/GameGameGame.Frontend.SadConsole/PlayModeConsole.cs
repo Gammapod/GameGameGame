@@ -349,8 +349,7 @@ internal sealed class PlayModeConsole : Console
             _grid = BuildGrid();
             _inspection.MarkWorldChanged();
             _playerPanel.MarkWorldChanged();
-            _movementPreview.Clear();
-            _selectionStack.ClearToAdjacentSelection();
+            PlayPostSubmitPresentationState.CloseActionPickersAfterWorldMutation(_selectionStack, _actionWorkflow, _movementPreview);
             _inspection.ReturnToGrid();
             _playerPanel.ReturnToGrid();
         }
@@ -583,8 +582,14 @@ internal sealed class PlayModeConsole : Console
 
         _inspection.MarkWorldChanged();
         _playerPanel.MarkWorldChanged();
-        _message = $"Moved {direction}.";
-        _movementPreview.Clear();
+        var closedOpenPicker = PlayPostSubmitPresentationState.CloseActionPickersAfterWorldMutation(_selectionStack, _actionWorkflow, _movementPreview);
+        if (closedOpenPicker)
+        {
+            _inspection.ReturnToGrid();
+            _playerPanel.ReturnToGrid();
+        }
+
+        _message = closedOpenPicker ? "Action choices refreshed after world change." : $"Moved {direction}.";
         var beforeDisplayCoord = beforeGrid.TryDisplayCoordForSource(result.BeforeSourceCoord);
         var afterDisplayCoord = BuildGrid().TryDisplayCoordForSource(result.AfterSourceCoord);
         if (beforeDisplayCoord is { } beforeDisplay
@@ -650,7 +655,7 @@ internal sealed class PlayModeConsole : Console
             _gridPresenter.Invalidate();
             DrawBorder();
             Print(2, 1, $"Play: {_session.Name} [{_session.ScenarioId}]", Color.White);
-            Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Player: {_actionSession.ControlledActorId} | {_message}", Color.Gray);
+            Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Actor: {_actionSession.ControlledActorId} | {_message}", Color.Gray);
             var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _actionSession.ControlledActorId } : null;
             var previewCoord = ResolveAdjacentSelectionCoord();
             var movementPreviewCoord = _selectionStack.IsAdjacentSelection

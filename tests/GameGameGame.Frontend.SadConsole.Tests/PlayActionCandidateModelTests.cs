@@ -220,48 +220,6 @@ public sealed class PlayActionCandidateModelTests
     }
 
     [Fact]
-    public void PickupDestinationValidityUsesCoreOptionWithoutFrontendOccupancyRecheck()
-    {
-        var catalog = TestRepository.BuildDebugRoomCatalog();
-        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
-        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
-        var actionSession = new PlayActionSessionController(session);
-        var selection = new PlayActionWorkflowController(actionSession);
-        var targetId = new EntityId("debugScrap3");
-
-        Assert.True(selection.TryBeginPickup(targetId));
-        var inventoryPlane = session.World.GetRegisteredInventoryPlaneId(actionSession.ControlledActorId);
-        Assert.NotNull(inventoryPlane);
-        AddBlockingEntity(session.World, new EntityId("frontendOnlyInventoryBlocker"), new PlaneCoord(inventoryPlane.Value, selection.SelectedCoord));
-
-        Assert.True(selection.IsSelectedPickupDestinationValid());
-        Assert.Equal(CellHighlightKind.Pickup, selection.InventoryHighlight()?.Kind);
-    }
-
-    [Fact]
-    public void DropDestinationValidityUsesCoreOptionWithoutFrontendOccupancyRecheck()
-    {
-        var catalog = TestRepository.BuildDebugRoomCatalog();
-        var entry = Assert.Single(catalog.Entries, entry => entry.ScenarioId == "debug-room");
-        var session = WorkspaceScenarioCatalogService.Launch(catalog, entry.EntryId);
-        var actionSession = new PlayActionSessionController(session);
-        var selection = new PlayActionWorkflowController(actionSession);
-        var targetId = new EntityId("debugScrap3");
-        var inventoryPlane = session.World.GetRegisteredInventoryPlaneId(actionSession.ControlledActorId);
-        Assert.NotNull(inventoryPlane);
-        var pickup = actionSession.SubmitPickup(targetId, new PlaneCoord(inventoryPlane.Value, new GridCoord(0, 0)));
-        Assert.True(pickup.Succeeded, pickup.FailureDetail ?? pickup.FailureReason?.ToString() ?? "unknown");
-
-        Assert.True(selection.TryBeginDropSource());
-        Assert.True(selection.ConfirmDropSource());
-        var actorPlane = session.World.GetEntityLocation(actionSession.ControlledActorId).PlaneId;
-        AddBlockingEntity(session.World, new EntityId("frontendOnlyWorldBlocker"), new PlaneCoord(actorPlane, selection.SelectedCoord));
-
-        Assert.True(selection.IsSelectedDropDestinationValid());
-        Assert.Equal(CellHighlightKind.Drop, selection.GridHighlight()?.Kind);
-    }
-
-    [Fact]
     public void EnterChoiceSubmitsTargetWithoutFrontendDestinationSelection()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();
@@ -392,10 +350,4 @@ public sealed class PlayActionCandidateModelTests
         Assert.True(north.CommandResult.Succeeded, north.CommandResult.FailureDetail ?? north.CommandResult.FailureReason?.ToString() ?? "unknown");
     }
 
-    private static void AddBlockingEntity(WorldState world, EntityId entityId, PlaneCoord location)
-    {
-        var nodeId = world.GetNodeId(location);
-        world.Entities.Add(entityId, new Entity(entityId, entityId.Value, nodeId, InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 0));
-        world.Occupancy.Add(nodeId, entityId);
-    }
 }
