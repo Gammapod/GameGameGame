@@ -98,6 +98,128 @@ public sealed class ContentRegistryValidationTests
     }
 
     [Fact]
+    public void PrototypeRegistryValidationReportsInvalidPreferredTargetingProfileRules()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with
+                {
+                    Targeting = new EntityTargetingProfile(
+                        3,
+                        Rules:
+                        [
+                            new EntityTargetingRule(0, new EntityTemplateId("missing"), Label: "bad"),
+                            new EntityTargetingRule(1, null, Label: "wants", TargetCapabilities: [ActionPlanBehaviorStepKind.PickupTarget])
+                        ])
+                });
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("slot"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingTargetTemplateReference && diagnostic.Message.Contains("missing"));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("PickupTarget") && diagnostic.Message.Contains("default action plan"));
+    }
+
+    [Fact]
+    public void PrototypeRegistryValidationReportsInvalidEmptyTargetingProfileRange()
+    {
+        var registry = PrototypeContent.CreateRegistry()
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with
+                {
+                    Targeting = new EntityTargetingProfile(-1, DefaultLocality: new TargetingLocalityQuery())
+                });
+
+        var result = registry.Validate();
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("targeting profile range"));
+    }
+
+    [Fact]
+    public void PreferredTargetingProfileRulesSatisfyTargetActionStateContract()
+    {
+        var planId = new ActionPlanTemplateId("profileTargetPlan");
+        var targetTemplateId = new EntityTemplateId("target");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                planId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("profileTargetPlan"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(
+                            ActionPlanBehaviorStepKind.TargetPathMove,
+                            TargetLabel: "danger",
+                            PathMode: ActionPlanTargetPathMode.SeekAdjacency)
+                    ])))
+            .WithEntityTemplate(
+                targetTemplateId,
+                PrototypeContent.CreateRockTemplate() with { Name = "Target" })
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with
+                {
+                    DefaultActionPlanId = planId,
+                    Targeting = new EntityTargetingProfile(
+                        4,
+                        Rules: [new EntityTargetingRule(1, targetTemplateId, Label: "danger")])
+                });
+
+        var result = registry.Validate();
+
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.MissingPlanSlot && diagnostic.ActionPlanSlot == ActionPlanSlot.Target);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule);
+    }
+
+    [Fact]
+    public void PreferredTargetingProfileCapabilityCanBeConsumedByCanonicalTransferCounterparty()
+    {
+        var planId = new ActionPlanTemplateId("giveToDeposit");
+        var itemTemplateId = new EntityTemplateId("item");
+        var depositTemplateId = new EntityTemplateId("deposit");
+        var registry = PrototypeContent.CreateRegistry()
+            .WithActionPlanDescriptor(
+                planId,
+                new ActionPlanDescriptor(
+                    new ActionPlanId("giveToDeposit"),
+                    [],
+                    Behavior: new ActionPlanBehaviorDescriptor([
+                        new ActionPlanBehaviorStepDescriptor(
+                            ActionPlanBehaviorStepKind.Transfer,
+                            TargetLabel: "item",
+                            CounterpartyTargetLabel: "deposit",
+                            TransferDirection: TransferDirection.ActorToTarget)
+                    ])))
+            .WithEntityTemplate(
+                itemTemplateId,
+                PrototypeContent.CreateRockTemplate() with { Name = "Item" })
+            .WithEntityTemplate(
+                depositTemplateId,
+                PrototypeContent.CreateRockTemplate() with { Name = "Deposit" })
+            .WithEntityTemplate(
+                PrototypeContent.RockTemplateId,
+                PrototypeContent.CreateRockTemplate() with
+                {
+                    DefaultActionPlanId = planId,
+                    Targeting = new EntityTargetingProfile(
+                        4,
+                        Rules:
+                        [
+                            new EntityTargetingRule(1, itemTemplateId, Label: "item"),
+                            new EntityTargetingRule(2, depositTemplateId, Label: "deposit", TargetCapabilities: [ActionPlanBehaviorStepKind.GiveTarget])
+                        ])
+                });
+
+        var result = registry.Validate();
+
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.InvalidTargetingRule && diagnostic.Message.Contains("GiveTarget"));
+    }
+
+    [Fact]
     public void PrototypeRegistryValidationReportsInvalidBehaviorTargetSlot()
     {
         var registry = PrototypeContent.CreateRegistry()

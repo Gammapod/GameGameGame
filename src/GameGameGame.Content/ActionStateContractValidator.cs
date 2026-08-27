@@ -37,7 +37,7 @@ internal static class ActionStateContractValidator
             slots[ActionPlanSlot.Target] = PlanValueKind.Entity;
         }
 
-        if (template.TargetingRules is { Count: > 0 })
+        if (template.Targeting is { Rules.Count: > 0 } || template.TargetingRules is { Count: > 0 })
         {
             slots[ActionPlanSlot.Target] = PlanValueKind.Entity;
         }

@@ -176,7 +176,7 @@ public sealed class ScenarioBrowserScreenModelTests
     }
 
     [Fact]
-    public void ScenarioBrowserEditOptionIsNonfunctionalPlaceholder()
+    public void ScenarioBrowserEditOptionCreatesEditRequestWithoutLaunchingOrOpeningEditorUi()
     {
         var model = new ScenarioBrowserScreenModel(CatalogWithEntries(1));
         model.Handle(ScenarioBrowserCommand.Select);
@@ -184,9 +184,12 @@ public sealed class ScenarioBrowserScreenModelTests
 
         var result = model.Handle(ScenarioBrowserCommand.Select);
 
-        Assert.Equal(ScenarioBrowserResultKind.Stay, result.Kind);
-        Assert.Contains("placeholder", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.True(model.ActionSelectorOpen);
+        Assert.Equal(ScenarioBrowserResultKind.EditRequested, result.Kind);
+        Assert.NotEqual(ScenarioBrowserResultKind.LaunchRequested, result.Kind);
+        Assert.Equal("scenario-00", result.Entry?.ScenarioId);
+        Assert.Contains("Editor route requested for Scenario 00", result.Message, StringComparison.Ordinal);
+        Assert.Contains("editor UI is not implemented yet", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(model.ActionSelectorOpen);
         Assert.Equal(ScenarioBrowserActionOption.Edit, model.SelectedActionOption);
     }
 

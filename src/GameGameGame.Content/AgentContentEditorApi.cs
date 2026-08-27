@@ -145,6 +145,12 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
     public AgentApiResult SetTargetingRule(EntityTemplateId entityTemplateId, EntityTargetingRule rule) =>
         Try("SetTargetingRuleFailed", () => Session.Editor.SetTargetingRule(entityTemplateId, rule));
 
+    public AgentApiResult SetTargetingProfileRule(EntityTemplateId entityTemplateId, int range, EntityTargetingRule rule) =>
+        Try("SetTargetingProfileRuleFailed", () => Session.Editor.SetTargetingProfileRule(entityTemplateId, range, rule));
+
+    public AgentApiResult SetTargetingDefaultLocality(EntityTemplateId entityTemplateId, TargetingLocalityQuery locality) =>
+        Try("SetTargetingDefaultLocalityFailed", () => Session.Editor.SetTargetingDefaultLocality(entityTemplateId, locality));
+
     public AgentApiResult RemoveTargetingRule(EntityTemplateId entityTemplateId, int slot) =>
         Try("RemoveTargetingRuleFailed", () => Session.Editor.RemoveTargetingRule(entityTemplateId, slot));
 
@@ -237,6 +243,15 @@ public sealed class AgentContentEditorApi(ContentEditorSession session, IAgentSc
 
     public AgentApiResult SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId) =>
         Try("SetActionPlanBehaviorStepPlanIdFailed", () => Session.Editor.SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId));
+
+    public AgentApiResult SetActionPlanBehaviorStepTemplateId(ActionPlanTemplateId planId, int stepIndex, EntityTemplateId? templateId) =>
+        Try("SetActionPlanBehaviorStepTemplateIdFailed", () => Session.Editor.SetActionPlanBehaviorStepTemplateId(planId, stepIndex, templateId));
+
+    public AgentApiResult SetActionPlanBehaviorStepCreatePlacement(ActionPlanTemplateId planId, int stepIndex, CreateEntityPlacement? createPlacement) =>
+        Try("SetActionPlanBehaviorStepCreatePlacementFailed", () => Session.Editor.SetActionPlanBehaviorStepCreatePlacement(planId, stepIndex, createPlacement));
+
+    public AgentApiResult SetActionPlanBehaviorStepTargetSelf(ActionPlanTemplateId planId, int stepIndex, bool targetSelf) =>
+        Try("SetActionPlanBehaviorStepTargetSelfFailed", () => Session.Editor.SetActionPlanBehaviorStepTargetSelf(planId, stepIndex, targetSelf));
 
     public AgentApiResult SetActionPlanBehaviorStepDirectionMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanMoveDirectionMode? directionMode) =>
         Try("SetActionPlanBehaviorStepDirectionModeFailed", () => Session.Editor.SetActionPlanBehaviorStepDirectionMode(planId, stepIndex, directionMode));

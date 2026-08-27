@@ -137,6 +137,63 @@ public sealed class AgentContentEditorApiTests
     }
 
     [Fact]
+    public void AgentContentEditorApiListsPreferredTargetingProfileRulesWhenPresent()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var mouseId = AssertSuccess(api.CreateEntityTemplate("Mouse"));
+        var catId = AssertSuccess(api.CreateEntityTemplate("Cat"));
+        api.Session.Editor.SetTargetingProfileRule(
+            mouseId,
+            range: 5,
+            new EntityTargetingRule(1, catId, Label: "danger"));
+
+        var rules = AssertSuccess(api.ListTargetingRules(mouseId));
+
+        var rule = Assert.Single(rules);
+        Assert.Equal(1, rule.Slot);
+        Assert.Equal("danger", rule.Label);
+        Assert.Equal(catId, rule.TargetTemplateId);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsPreferredTargetingProfileRules()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var mouseId = AssertSuccess(api.CreateEntityTemplate("Mouse"));
+        var catId = AssertSuccess(api.CreateEntityTemplate("Cat"));
+
+        AssertSuccess(api.SetTargetingProfileRule(
+            mouseId,
+            range: 5,
+            new EntityTargetingRule(1, catId, Label: "danger")));
+
+        var snapshot = api.GetDocumentSnapshot();
+        var rules = AssertSuccess(api.ListTargetingRules(mouseId));
+        var rule = Assert.Single(rules);
+        Assert.Equal("danger", rule.Label);
+        Assert.Contains("targeting:", snapshot.YamlPreview);
+        Assert.Contains("range: 5", snapshot.YamlPreview);
+        Assert.DoesNotContain("targetingRules:", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiRemovesPreferredTargetingProfileRulesWhenPresent()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var mouseId = AssertSuccess(api.CreateEntityTemplate("Mouse"));
+        var catId = AssertSuccess(api.CreateEntityTemplate("Cat"));
+        api.Session.Editor.SetTargetingProfileRule(
+            mouseId,
+            range: 5,
+            new EntityTargetingRule(1, catId, Label: "danger"));
+
+        AssertSuccess(api.RemoveTargetingRule(mouseId, 1));
+
+        Assert.Empty(AssertSuccess(api.ListTargetingRules(mouseId)));
+        Assert.DoesNotContain("rules:", api.GetDocumentSnapshot().YamlPreview);
+    }
+
+    [Fact]
     public void AgentContentEditorApiAuthorsCanonicalMoveDirectionMode()
     {
         var api = AgentContentEditorApi.CreateNew();
@@ -154,6 +211,56 @@ public sealed class AgentContentEditorApiTests
         Assert.True(snapshot.Validation.IsValid, string.Join(Environment.NewLine, snapshot.Validation.Errors));
         Assert.Contains("kind: Move", snapshot.YamlPreview);
         Assert.Contains("directionMode: BackLeft", snapshot.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsCanonicalPushDirectionMode()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var planId = AssertSuccess(api.CreateActionPlan("Canonical Push"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.Push));
+        AssertSuccess(api.SetActionPlanBehaviorStepDirectionMode(planId, stepIndex: 0, ActionPlanMoveDirectionMode.ForwardRight));
+
+        var step = Assert.Single(AssertSuccess(api.PreviewActionPlan(planId)).ActionSteps);
+        Assert.Equal(ActionPlanBehaviorStepKind.Push, step.Kind);
+        Assert.Equal(ActionPlanMoveDirectionMode.ForwardRight, step.DirectionMode);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsCreateEntityFacingOptions()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var mothId = AssertSuccess(api.CreateEntityTemplate("Moth"));
+        var planId = AssertSuccess(api.CreateActionPlan("Spawn Moth"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.CreateEntity));
+        AssertSuccess(api.SetActionPlanBehaviorStepTemplateId(planId, stepIndex: 0, mothId));
+        AssertSuccess(api.SetActionPlanBehaviorStepCreatePlacement(planId, stepIndex: 0, CreateEntityPlacement.Facing));
+        AssertSuccess(api.SetActionPlanBehaviorStepDirectionMode(planId, stepIndex: 0, ActionPlanMoveDirectionMode.Forward));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId));
+        Assert.Empty(preview.ValidationDiagnostics);
+        Assert.Contains("templateId: moth", preview.YamlPreview);
+        Assert.Contains("createPlacement: Facing", preview.YamlPreview);
+        Assert.Contains("directionMode: Forward", preview.YamlPreview);
+    }
+
+    [Fact]
+    public void AgentContentEditorApiAuthorsPolymorphTargetSelfTemplate()
+    {
+        var api = AgentContentEditorApi.CreateNew();
+        var butterflyId = AssertSuccess(api.CreateEntityTemplate("Butterfly"));
+        var planId = AssertSuccess(api.CreateActionPlan("Become Butterfly"));
+
+        AssertSuccess(api.AddActionPlanBehaviorStep(planId, ActionPlanBehaviorStepKind.PolymorphTarget));
+        AssertSuccess(api.SetActionPlanBehaviorStepTargetSelf(planId, stepIndex: 0, targetSelf: true));
+        AssertSuccess(api.SetActionPlanBehaviorStepTemplateId(planId, stepIndex: 0, butterflyId));
+
+        var preview = AssertSuccess(api.PreviewActionPlan(planId));
+        Assert.Empty(preview.ValidationDiagnostics);
+        Assert.Contains("targetSelf: true", preview.YamlPreview);
+        Assert.Contains("templateId: butterfly", preview.YamlPreview);
     }
 
     [Fact]

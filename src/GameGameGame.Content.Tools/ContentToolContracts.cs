@@ -43,6 +43,9 @@ public sealed record ContentToolSetBehaviorStepTargetSlotRequest(string SessionI
 public sealed record ContentToolSetBehaviorStepCounterpartyTargetLabelRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, string? TargetLabel) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepCounterpartyTargetSlotRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, int? TargetSlot) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepPlanIdRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanId? PlanId) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepTemplateIdRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, EntityTemplateId? TemplateId) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepCreatePlacementRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, CreateEntityPlacement? CreatePlacement) : IContentToolSessionRequest;
+public sealed record ContentToolSetBehaviorStepTargetSelfRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, bool TargetSelf) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepDirectionModeRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanMoveDirectionMode? DirectionMode) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepCostsRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, IReadOnlyList<ActionStepCostDescriptor> Costs) : IContentToolSessionRequest;
 public sealed record ContentToolSetBehaviorStepTargetPathModeRequest(string SessionId, ActionPlanTemplateId ActionPlanTemplateId, int StepIndex, ActionPlanTargetPathMode? PathMode) : IContentToolSessionRequest;

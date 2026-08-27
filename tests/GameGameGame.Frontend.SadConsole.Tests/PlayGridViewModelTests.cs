@@ -86,6 +86,55 @@ public sealed class PlayGridViewModelTests
     }
 
     [Fact]
+    public void PlayGridViewModelDefaultsControlledActorToLaunchPlayerForExistingCallers()
+    {
+        var playerId = new EntityId("launchPlayer");
+        var controlledId = new EntityId("otherActor");
+        var session = CreateTwoActorSession(playerId, controlledId);
+
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii());
+
+        Assert.Equal(playerId, grid.ControlledEntityId);
+        Assert.Equal(new GridCoord(0, 0), grid.ControlledEntityCoord);
+    }
+
+    [Fact]
+    public void PlayGridViewModelUsesSuppliedControlledActorForCoordIdentityAndStyling()
+    {
+        var playerId = new EntityId("launchPlayer");
+        var controlledId = new EntityId("otherActor");
+        var session = CreateTwoActorSession(playerId, controlledId);
+
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), controlledEntityId: controlledId);
+
+        Assert.Equal(controlledId, grid.ControlledEntityId);
+        Assert.Equal(new GridCoord(1, 0), grid.ControlledEntityCoord);
+        Assert.Equal(global::SadRogue.Primitives.Color.Yellow, grid.CellAt(1, 0).EntityForeground);
+        Assert.Equal(global::SadRogue.Primitives.Color.White, grid.CellAt(0, 0).EntityForeground);
+    }
+
+    [Fact]
+    public void PlayGridViewModelResolvesRenderedPlaneFromSuppliedControlledActor()
+    {
+        var playerPlane = new PlaneId("player-plane");
+        var controlledPlane = new PlaneId("controlled-plane");
+        var playerId = new EntityId("launchPlayer");
+        var controlledId = new EntityId("otherActor");
+        var world = new WorldState();
+        AddPlane(world, playerPlane, 1, 1);
+        AddPlane(world, controlledPlane, 2, 1);
+        AddEntity(world, playerId, "Player", new PlaneCoord(playerPlane, new GridCoord(0, 0)));
+        AddEntity(world, controlledId, "Actor", new PlaneCoord(controlledPlane, new GridCoord(1, 0)));
+        var session = CreateSession("retargeted-plane", world, playerId, activePlaneId: playerPlane, activeContainerEntityId: playerId);
+
+        var grid = PlayGridViewModel.FromSession(session, TilesetProfileLoader.LoadCandii(), controlledEntityId: controlledId);
+
+        Assert.Equal(controlledPlane, grid.PlaneId);
+        Assert.Equal(controlledId, grid.ControlledEntityId);
+        Assert.Equal(new GridCoord(1, 0), grid.ControlledEntityCoord);
+    }
+
+    [Fact]
     public void PlayGridViewModelHidesCellsOutsideTopologyPovByDefault()
     {
         var catalog = TestRepository.BuildDebugRoomCatalog();
@@ -479,6 +528,37 @@ public sealed class PlayGridViewModelTests
         world.Occupancy.Add(nodeId, entityId);
         world.Entities[entityId] = entity with { OccupiedNodeId = nodeId };
     }
+
+    private static PlayableScenarioSession CreateTwoActorSession(EntityId playerId, EntityId controlledId)
+    {
+        var planeId = new PlaneId("room");
+        var world = new WorldState();
+        AddPlane(world, planeId, 2, 1);
+        AddEntity(world, playerId, "Player", new PlaneCoord(planeId, new GridCoord(0, 0)));
+        AddEntity(world, controlledId, "Actor", new PlaneCoord(planeId, new GridCoord(1, 0)));
+
+        return CreateSession("retargeted", world, playerId, planeId, playerId);
+    }
+
+    private static PlayableScenarioSession CreateSession(
+        string scenarioId,
+        WorldState world,
+        EntityId playerId,
+        PlaneId activePlaneId,
+        EntityId activeContainerEntityId) =>
+        new(
+            scenarioId,
+            scenarioId,
+            world,
+            new PrototypeContentRegistry(new Dictionary<EntityTemplateId, EntityTemplate>(), new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>(), new Dictionary<EntityTemplateId, EntityPresentation>()),
+            new Dictionary<EntityId, IEntityActionPlan>(),
+            playerId,
+            activePlaneId,
+            activeContainerEntityId,
+            CanPlay: true,
+            [],
+            [],
+            []);
 
     private static void AssertNoLayoutCell(PlayGridViewModel grid, GridCoord layoutCoord) =>
         Assert.DoesNotContain(grid.Cells, cell => cell.LayoutCoord == new TopologyLayoutCoord(layoutCoord));

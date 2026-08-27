@@ -9,8 +9,7 @@ internal sealed class PlayMovementAnimationPresenter(
     Console owner,
     FrontendDisplayShell shell,
     TilesetProfile tilesetProfile,
-    PlayAnimationSettings settings,
-    EntityId entityId)
+    PlayAnimationSettings settings)
 {
     private PlayAnimationQueuePlayback? _playback;
     private PixelGlyphSpriteConsole? _sprite;
@@ -30,7 +29,7 @@ internal sealed class PlayMovementAnimationPresenter(
         return _playback.Completed;
     }
 
-    public void Start(PlayGridViewModel beforeGrid, GridCoord before, GridCoord after, CoreDirection direction)
+    public void Start(EntityId entityId, PlayGridViewModel beforeGrid, GridCoord before, GridCoord after, CoreDirection direction)
     {
         BaseGrid = beforeGrid;
         var cell = beforeGrid.TryCellAt(before.X, before.Y);

@@ -173,7 +173,7 @@ The editor can currently:
 - author `Wait`, `Move`, `Pickup`, `ReverseDirection`, `CallPlan`, `Teleport`, and `Drop` effects;
 - edit pickup inventory coordinates and call-plan references;
 - edit movement target/destination fields for `Teleport` and `Drop`;
-- validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, and legacy/arbitrary variable fields;
+- validate content and surface diagnostics for missing references, missing canonical slots, malformed movement descriptors, inventory layout issues, unknown YAML properties in canonical authoring validation, and legacy/arbitrary variable fields;
 - load and validate canonical ordered behavior-chain descriptors for stable Action Steps using Action Step catalog metadata, with legacy metadata-setting steps loadable for compatibility but hidden/rejected for new authoring;
 - author content through the first in-process `AgentContentEditorApi` facade over editor/content services;
 - create transitional primitive-backed `MoveFacing` action-plan descriptors with optional fallback references through editor services and the agent API;

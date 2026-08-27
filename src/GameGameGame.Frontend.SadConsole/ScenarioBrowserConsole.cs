@@ -203,6 +203,11 @@ internal sealed class ScenarioBrowserConsole : Console
             TryLaunch(entry);
         }
 
+        if (result.Kind == ScenarioBrowserResultKind.EditRequested)
+        {
+            HideToastOverlay();
+        }
+
         Redraw();
     }
 

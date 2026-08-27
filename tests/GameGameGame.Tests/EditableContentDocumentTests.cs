@@ -49,6 +49,79 @@ public sealed class EditableContentDocumentTests
     }
 
     [Fact]
+    public void EditableContentDocumentLoadYamlRemainsPermissiveForUnknownProperties()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidht: 99
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 3
+                aperture: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        var registry = document.ToRegistry();
+
+        Assert.Equal(0, registry.EntityTemplates[new EntityTemplateId("rock")].InventoryWidth);
+    }
+
+    [Fact]
+    public void CanonicalAuthoringValidationReportsUnknownYamlPropertiesWithSuggestionsAndCollectsAll()
+    {
+        var document = EditableContentDocument.LoadYaml(
+            """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidht: 2
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 1
+                targeting:
+                  range: 4
+                  rules:
+                  - slot: 1
+                    label: prey
+                    targetCapabilites: [DestroyTarget]
+                    targetCapabilities: [DestroyTarget]
+            presentations:
+              actor: { glyph: A, color: Cyan }
+            actionPlans:
+              hunt:
+                behavior:
+                  steps:
+                  - kind: TargetPathMove
+                    targetLable: prey
+                    targetLabel: prey
+                    pathMode: SeekAdjacency
+            scenarios:
+              typoStart:
+                name: Typo Start
+                scenarioRootEntityTemplateId: actor
+                playerStart: { x: 0, yy: 0 }
+            """);
+
+        var diagnostics = document.ValidateCanonicalAuthoring().Diagnostics
+            .Where(diagnostic => diagnostic.Code == ContentDiagnosticCode.UnknownYamlProperty)
+            .ToList();
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Message.Contains("entityTemplates.actor.inventoryWidht") && diagnostic.Message.Contains("inventoryWidth"));
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Message.Contains("entityTemplates.actor.targeting.rules[0].targetCapabilites") && diagnostic.Message.Contains("targetCapabilities"));
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Message.Contains("actionPlans.hunt.behavior.steps[0].targetLable") && diagnostic.Message.Contains("targetLabel"));
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Message.Contains("scenarios.typoStart.playerStart.yy") && diagnostic.Message.Contains("y"));
+        Assert.Equal(4, diagnostics.Count);
+    }
+
+    [Fact]
     public void EditableContentDocumentRoundTripsMergedInventoryLayers()
     {
         var document = EditableContentDocument.LoadYaml(

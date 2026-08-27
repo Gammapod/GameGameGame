@@ -68,7 +68,8 @@ public enum ContentDiagnosticCode
     InvalidMergedInventoryLayer,
     InvalidEntityMaterial,
     DuplicateSymbolDeclaration,
-    AmbiguousSymbolReference
+    AmbiguousSymbolReference,
+    UnknownYamlProperty
 }
 
 public sealed record ContentDiagnostic(

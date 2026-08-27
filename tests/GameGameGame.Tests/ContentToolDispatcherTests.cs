@@ -211,6 +211,46 @@ public sealed class ContentToolDispatcherTests
     }
 
     [Fact]
+    public void ContentToolDispatcherAuthorsCreateEntityAndPolymorphBehaviorFields()
+    {
+        var dispatcher = new ContentToolDispatcher(new ContentToolSessionRegistry());
+        var sessionId = Assert.IsType<ContentToolSessionOpened>(
+            dispatcher.Invoke(ContentToolNames.CreateNew, new ContentToolCreateNewRequest()).Data).SessionId;
+        var mothId = Assert.IsType<ContentToolCreatedEntityTemplate>(
+            dispatcher.Invoke(ContentToolNames.CreateEntityTemplate, new ContentToolCreateEntityTemplateRequest(sessionId, "Moth")).Data).EntityTemplateId;
+        var butterflyId = Assert.IsType<ContentToolCreatedEntityTemplate>(
+            dispatcher.Invoke(ContentToolNames.CreateEntityTemplate, new ContentToolCreateEntityTemplateRequest(sessionId, "Butterfly")).Data).EntityTemplateId;
+        var planId = Assert.IsType<ContentToolCreatedActionPlan>(
+            dispatcher.Invoke(ContentToolNames.CreateActionPlan, new ContentToolCreateActionPlanRequest(sessionId, "Lifecycle")).Data).ActionPlanTemplateId;
+
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetActionPlanBehavior, new ContentToolSetActionPlanBehaviorRequest(
+            sessionId,
+            planId,
+            [ActionPlanBehaviorStepKind.CreateEntity, ActionPlanBehaviorStepKind.PolymorphTarget])).Ok);
+
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepTemplateId, new ContentToolSetBehaviorStepTemplateIdRequest(sessionId, planId, 0, mothId)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepCreatePlacement, new ContentToolSetBehaviorStepCreatePlacementRequest(sessionId, planId, 0, CreateEntityPlacement.Facing)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepDirectionMode, new ContentToolSetBehaviorStepDirectionModeRequest(sessionId, planId, 0, ActionPlanMoveDirectionMode.Forward)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepTargetSelf, new ContentToolSetBehaviorStepTargetSelfRequest(sessionId, planId, 1, true)).Ok);
+        Assert.True(dispatcher.Invoke(ContentToolNames.SetBehaviorStepTemplateId, new ContentToolSetBehaviorStepTemplateIdRequest(sessionId, planId, 1, butterflyId)).Ok);
+
+        var preview = dispatcher.Invoke(ContentToolNames.PreviewActionPlan, new ContentToolPreviewActionPlanRequest(sessionId, planId));
+
+        Assert.True(preview.Ok, preview.Error?.Message);
+        Assert.Empty(Assert.IsType<ActionPlanPreview>(preview.Data).ValidationDiagnostics);
+        var snapshot = dispatcher.Invoke(ContentToolNames.Snapshot, new ContentToolSessionRequest(sessionId));
+        Assert.True(snapshot.Ok, snapshot.Error?.Message);
+        var yaml = Assert.IsType<AgentDocumentSnapshot>(snapshot.Data).YamlPreview;
+        Assert.Contains(ContentToolNames.SetBehaviorStepTemplateId, ContentToolCatalog.Names);
+        Assert.Contains(ContentToolNames.SetBehaviorStepCreatePlacement, ContentToolCatalog.Names);
+        Assert.Contains(ContentToolNames.SetBehaviorStepTargetSelf, ContentToolCatalog.Names);
+        Assert.Contains("templateId: moth", yaml);
+        Assert.Contains("createPlacement: Facing", yaml);
+        Assert.Contains("targetSelf: true", yaml);
+        Assert.Contains("templateId: butterfly", yaml);
+    }
+
+    [Fact]
     public void ContentToolDispatcherPreviewAndRunScenarioOmitsRepeatedYamlPreviews()
     {
         var sessions = new ContentToolSessionRegistry();

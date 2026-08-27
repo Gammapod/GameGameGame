@@ -260,24 +260,17 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
     public bool IsSelectedPickupDestinationValid()
     {
-        if (_pickupTargetId is not { } targetId || !TryResolvePlayerInventory(out var planeId, out _, out _))
-        {
-            return false;
-        }
-
-        var destination = new PlaneCoord(planeId, SelectedCoord);
-        return actionSession.World.GetOccupant(destination) is null
-            && PickupChoice()?.Destinations(targetId).Any(option => option.Destination == destination && option.CanExecute) == true;
+        return SelectedPickupDestinationOption() is not null;
     }
 
     public ControlledActorCommandResult? ConfirmPickup()
     {
-        if (_pickupTargetId is not { } targetId || !TryResolvePlayerInventory(out var planeId, out _, out _) || !IsSelectedPickupDestinationValid())
+        if (_pickupTargetId is not { } targetId || SelectedPickupDestinationOption() is not { } option)
         {
             return null;
         }
 
-        var result = actionSession.SubmitPickup(targetId, new PlaneCoord(planeId, SelectedCoord));
+        var result = actionSession.SubmitPickup(targetId, option.Destination);
         if (result.Succeeded)
         {
             Cancel();
@@ -307,13 +300,12 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
     public ControlledActorCommandResult? ConfirmDrop()
     {
-        if (_mode != PlayActionWorkflowKind.DropDestination || _dropSourceId is not { } sourceId || !IsSelectedDropDestinationValid())
+        if (_mode != PlayActionWorkflowKind.DropDestination || _dropSourceId is not { } sourceId || SelectedDropDestinationOption() is not { } option)
         {
             return null;
         }
 
-        var actorPlane = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).PlaneId;
-        var result = actionSession.SubmitDrop(sourceId, new PlaneCoord(actorPlane, SelectedCoord));
+        var result = actionSession.SubmitDrop(sourceId, option.Destination);
         if (result.Succeeded)
         {
             Cancel();
@@ -475,15 +467,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
 
     public bool IsSelectedDropDestinationValid()
     {
-        if (_mode != PlayActionWorkflowKind.DropDestination || _dropSourceId is not { } sourceId)
-        {
-            return false;
-        }
-
-        var actorPlane = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).PlaneId;
-        var destination = new PlaneCoord(actorPlane, SelectedCoord);
-        return actionSession.World.GetOccupant(destination) is null
-            && DropChoice()?.Destinations(sourceId).Any(option => option.Destination == destination && option.CanExecute) == true;
+        return SelectedDropDestinationOption() is not null;
     }
 
     public bool IsSelectedPushDirectionValid() =>
@@ -505,7 +489,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
         for (var x = 0; x < width; x++)
         {
             var coord = new GridCoord(x, y);
-            if (destinations.Contains(coord) && actionSession.World.GetOccupant(new PlaneCoord(planeId, coord)) is null)
+            if (destinations.Contains(coord))
             {
                 return coord;
             }
@@ -519,6 +503,29 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
     private ActionChoice? DropChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Drop);
     private ActionChoice? ExitChoice() => actionSession.CurrentActionChoiceRequest?.Choices.FirstOrDefault(choice => choice.Kind == ActionChoiceKind.Exit);
     private IEnumerable<ActionChoice> TransferChoices() => actionSession.CurrentActionChoiceRequest?.Choices.Where(choice => choice.Kind == ActionChoiceKind.Transfer) ?? [];
+
+    private ControlledActorDestinationAffordance? SelectedPickupDestinationOption()
+    {
+        if (_pickupTargetId is not { } targetId || !TryResolvePlayerInventory(out var planeId, out _, out _))
+        {
+            return null;
+        }
+
+        var destination = new PlaneCoord(planeId, SelectedCoord);
+        return PickupChoice()?.Destinations(targetId).FirstOrDefault(option => option.Destination == destination && option.CanExecute);
+    }
+
+    private ControlledActorDestinationAffordance? SelectedDropDestinationOption()
+    {
+        if (_mode != PlayActionWorkflowKind.DropDestination || _dropSourceId is not { } sourceId || !actionSession.World.Entities.ContainsKey(actionSession.ControlledActorId))
+        {
+            return null;
+        }
+
+        var actorPlane = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).PlaneId;
+        var destination = new PlaneCoord(actorPlane, SelectedCoord);
+        return DropChoice()?.Destinations(sourceId).FirstOrDefault(option => option.Destination == destination && option.CanExecute);
+    }
 
     private IReadOnlyList<ActionChoiceTransferItemOption> ValidTransferItems(EntityId counterpartyId) =>
         TransferChoices()
@@ -579,7 +586,7 @@ internal sealed class PlayActionWorkflowController(PlayActionSessionController a
         var actorPlane = actionSession.World.GetEntityLocation(actionSession.ControlledActorId).PlaneId;
         foreach (var option in DropChoice()?.Destinations(sourceId) ?? [])
         {
-            if (option.CanExecute && option.Destination.PlaneId == actorPlane && actionSession.World.GetOccupant(option.Destination) is null)
+            if (option.CanExecute && option.Destination.PlaneId == actorPlane)
             {
                 yield return option.Destination.Coord;
             }

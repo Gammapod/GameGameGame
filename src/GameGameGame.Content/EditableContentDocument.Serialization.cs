@@ -6,6 +6,12 @@ namespace GameGameGame.Content;
 
 public sealed partial class EditableContentDocument
 {
+    private string? SourceYaml { get; set; }
+
+    internal void ClearSourceYaml() => SourceYaml = null;
+
+    internal void SetSourceYaml(string yaml) => SourceYaml = yaml;
+
     public static EditableContentDocument LoadYaml(string yaml)
     {
         var deserializer = new DeserializerBuilder()
@@ -13,7 +19,9 @@ public sealed partial class EditableContentDocument
             .IgnoreUnmatchedProperties()
             .Build();
 
-        return deserializer.Deserialize<EditableContentDocument>(yaml) ?? new EditableContentDocument();
+        var document = deserializer.Deserialize<EditableContentDocument>(yaml) ?? new EditableContentDocument();
+        document.SourceYaml = yaml;
+        return document;
     }
 
     public string SaveYaml()

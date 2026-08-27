@@ -81,6 +81,8 @@ Recommended first calls:
 
 Keep the normal safe save loop: validate, canonical-validate, review `ggg_content_snapshot` diff/dirty state, then call `ggg_content_save` or `ggg_content_save_as` deliberately. Discovery/list/preview tools are read-only; mutation tools should preserve the `{ ok, data, error, summary }` response envelope and session-based workflow.
 
+Canonical validation reports unknown YAML properties as authoring errors while normal loading remains permissive for compatibility. Treat diagnostics such as `inventoryWidht`, `targetCapabilites`, or `targetLable` as typos to fix rather than as extension fields; the diagnostic path points to the offending YAML location and may include a suggested field name. Canonical lifecycle steps can be authored through field-specific tools for `templateId`, `createPlacement`, `targetSelf`, and direction/path options rather than by hand-editing YAML.
+
 ## Authoring decision rules
 
 - Treat this manual as the content-facing authority for current authorability.

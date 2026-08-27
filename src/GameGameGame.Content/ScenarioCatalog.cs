@@ -56,6 +56,17 @@ public static class ScenarioCatalog
     {
         var catalog = LoadManifest(manifestPath);
         var diagnostics = catalog.Diagnostics.ToList();
+        if (File.Exists(manifestPath))
+        {
+            try
+            {
+                diagnostics.AddRange(StrictYamlPropertyValidator.ValidateManifest<ScenarioCatalogManifestDto>(File.ReadAllText(manifestPath), manifestPath));
+            }
+            catch (Exception ex)
+            {
+                diagnostics.Add($"{manifestPath}: {ex.Message}");
+            }
+        }
         var sections = catalog.Sections ?? [];
         var sectionByEntry = sections
             .SelectMany(section => section.Entries.Select(entry => (section.Id, Entry: entry)))

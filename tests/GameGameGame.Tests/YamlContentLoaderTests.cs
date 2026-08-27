@@ -57,6 +57,297 @@ public sealed class YamlContentLoaderTests
     }
 
     [Fact]
+    public void YamlContentLoaderRemainsPermissiveForUnknownProperties()
+    {
+        var registry = YamlContentLoader.LoadRegistry(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidht: 99
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 3
+                aperture: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        Assert.Equal(0, registry.GetEntityTemplate(new EntityTemplateId("rock")).InventoryWidth);
+    }
+
+    [Fact]
+    public void EditableDocumentAndYamlContentLoaderInterpretTargetingLocalityAliasIdentically()
+    {
+        const string yaml = """
+            entityTemplates:
+              hunter:
+                name: Hunter
+                inventoryWidth: 1
+                inventoryHeight: 1
+                bulk: 1
+                aperture: 1
+                targeting:
+                  range: 5
+                  locality:
+                    origins: [CurrentPlace, OwnInventory]
+                  rules:
+                  - slot: 1
+                    label: prey
+                    targetTemplateId: prey
+                    targetCapabilities: [DestroyTarget]
+                    range: 3
+              prey:
+                name: Prey
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 0
+            presentations:
+              hunter: { glyph: H, color: Cyan }
+              prey: { glyph: p, color: Gray }
+            actionPlans:
+              hunt:
+                behavior:
+                  steps:
+                  - kind: DestroyTarget
+                    targetLabel: prey
+            """;
+
+        var direct = YamlContentLoader.LoadRegistry(yaml);
+        var editable = EditableContentDocument.LoadYaml(yaml);
+        var fromEditable = editable.ToRegistry();
+
+        Assert.DoesNotContain(editable.ValidateCanonicalAuthoring().Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.UnknownYamlProperty);
+        Assert.Equal(
+            direct.GetEntityTemplate(new EntityTemplateId("hunter")).Targeting!.DefaultLocality!.Origins,
+            fromEditable.GetEntityTemplate(new EntityTemplateId("hunter")).Targeting!.DefaultLocality!.Origins);
+    }
+
+    [Fact]
+    public void EditableDocumentAndYamlContentLoaderInterpretActionPlanKeyFallbackIdentically()
+    {
+        const string yaml = """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+                defaultActionPlanId: wait
+            presentations:
+              actor: { glyph: A, color: Cyan }
+            actionPlans:
+              wait:
+                behavior:
+                  steps:
+                  - kind: Move
+                    directionMode: North
+                    costs:
+                    - templateId: actor
+                      quantity: 2
+            scenarios:
+              ignoredByRegistry:
+                id: ignoredByRegistry
+                name: Ignored By Registry
+                scenarioRootEntityTemplateId: actor
+            """;
+
+        var direct = YamlContentLoader.LoadRegistry(yaml);
+        var fromEditable = EditableContentDocument.LoadYaml(yaml).ToRegistry();
+
+        var directPlan = direct.GetActionPlanDescriptor(new ActionPlanTemplateId("wait"));
+        var editablePlan = fromEditable.GetActionPlanDescriptor(new ActionPlanTemplateId("wait"));
+        Assert.Equal(new ActionPlanId("wait"), directPlan.Id);
+        Assert.Equal(directPlan.Id, editablePlan.Id);
+        Assert.Equal(directPlan.Behavior!.Steps.Single().Costs.Single(), editablePlan.Behavior!.Steps.Single().Costs.Single());
+    }
+
+    [Fact]
+    public void EditableDocumentAndYamlContentLoaderInterpretBlankActionPlanIdFallbackIdentically()
+    {
+        const string yaml = """
+            entityTemplates:
+              actor:
+                name: Actor
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 1
+                aperture: 1
+                defaultActionPlanId: wait
+            presentations:
+              actor: { glyph: A, color: Cyan }
+            actionPlans:
+              wait:
+                id: ""
+                behavior:
+                  steps:
+                  - kind: Move
+                    directionMode: North
+            """;
+
+        var direct = YamlContentLoader.LoadRegistry(yaml).GetActionPlanDescriptor(new ActionPlanTemplateId("wait"));
+        var editable = EditableContentDocument.LoadYaml(yaml).ToRegistry().GetActionPlanDescriptor(new ActionPlanTemplateId("wait"));
+        var descriptor = EditableContentDocument.LoadYaml(yaml).ActionPlans["wait"].ToDescriptor("wait");
+
+        Assert.Equal(new ActionPlanId("wait"), direct.Id);
+        Assert.Equal(direct.Id, editable.Id);
+        Assert.Equal(direct.Id, descriptor.Id);
+    }
+
+    [Fact]
+    public void EditableDocumentAndYamlContentLoaderInterpretRepresentativeSchemaFixtureIdentically()
+    {
+        const string yaml = """
+            presentationCatalog:
+              creature.bat:
+                name: Bat
+                fallbackText: b
+                tags: [creature, flying]
+            palettes:
+              creature.bat.default:
+                name: Bat Default
+                roles:
+                  primary: Gray
+                  accent: Yellow
+            entityTemplates:
+              room:
+                name: Room
+                inventoryWidth: 3
+                inventoryHeight: 3
+                bulk: 100
+                aperture: 100
+                carriedEntities:
+                - entityId: hunterEntity
+                  templateId: hunter
+                  coord: { x: 1, y: 1 }
+                  controller: Player
+              hunter:
+                name: Hunter
+                inventoryWidth: 2
+                inventoryHeight: 1
+                weight: 9
+                carryingCapacity: 8
+                bulk: 3
+                aperture: 4
+                material: wood
+                defaultActionPlanId: hunt
+                actionStateDefaults:
+                  facing: East
+                targeting:
+                  range: 5
+                  defaultLocality:
+                    origins: [CurrentPlace]
+                  rules:
+                  - slot: 1
+                    label: prey
+                    targetTemplateId: prey
+                    targetCapabilities: [DestroyTarget]
+                    range: 3
+                    locality:
+                      origins: [CurrentPlace, PeerInventories]
+                targetingRules:
+                - slot: 2
+                  label: carried
+                  targetTemplateId: prey
+                  targetCapabilities: [PickupTarget]
+                  range: 2
+              prey:
+                name: Prey
+                inventoryWidth: 0
+                inventoryHeight: 0
+                weight: 1
+                carryingCapacity: 0
+            presentations:
+              room: { glyph: R, color: Gray }
+              hunter:
+                presentationId: creature.bat
+                paletteId: creature.bat.default
+                color: Cyan
+              prey: { glyph: p, color: Earth }
+            actionPlans:
+              hunt:
+                behavior:
+                  steps:
+                  - kind: TargetPathMove
+                    targetLabel: prey
+                    pathMode: MaintainDistance
+                    desiredDistance: 2
+                    costs:
+                    - templateId: prey
+                      quantity: 1
+                  - kind: Transfer
+                    targetLabel: carried
+                    counterpartyTargetLabel: prey
+                    directionMode: Forward
+                    transferDirection: ActorToTarget
+            mergedLayers:
+              shared:
+                spaces:
+                - owner: hunterEntity
+                  origin: { x: 0, y: 0 }
+                joins:
+                - from: { owner: hunterEntity, edge: East }
+                  to: { owner: hunterEntity, edge: West }
+                  align: Center
+            scenarios:
+              ignoredByRegistry:
+                id: ignoredByRegistry
+                name: Ignored By Registry
+                scenarioRootEntityTemplateId: room
+            """;
+
+        var direct = YamlContentLoader.LoadRegistry(yaml);
+        var editable = EditableContentDocument.LoadYaml(yaml).ToRegistry();
+
+        var directHunter = direct.GetEntityTemplate(new EntityTemplateId("hunter"));
+        var editableHunter = editable.GetEntityTemplate(new EntityTemplateId("hunter"));
+        Assert.Equal(directHunter.InventoryWidth, editableHunter.InventoryWidth);
+        Assert.Equal(directHunter.InventoryHeight, editableHunter.InventoryHeight);
+        Assert.Equal(directHunter.Bulk, editableHunter.Bulk);
+        Assert.Equal(directHunter.Aperture, editableHunter.Aperture);
+        Assert.Equal(directHunter.Material, editableHunter.Material);
+        Assert.Equal(directHunter.ActionStateDefaults, editableHunter.ActionStateDefaults);
+        Assert.Equal(directHunter.Targeting!.DefaultLocality!.Origins, editableHunter.Targeting!.DefaultLocality!.Origins);
+        Assert.Equal(directHunter.Targeting.Rules.Single().Locality!.Origins, editableHunter.Targeting.Rules.Single().Locality!.Origins);
+        Assert.Equal(directHunter.TargetingRules!.Single().TargetCapabilities, editableHunter.TargetingRules!.Single().TargetCapabilities);
+
+        Assert.Equal(direct.GetPresentation(new EntityTemplateId("hunter")), editable.GetPresentation(new EntityTemplateId("hunter")));
+        var directPresentationDefinition = direct.PresentationCatalog[new PresentationId("creature.bat")];
+        var editablePresentationDefinition = editable.PresentationCatalog[new PresentationId("creature.bat")];
+        Assert.Equal(directPresentationDefinition.Id, editablePresentationDefinition.Id);
+        Assert.Equal(directPresentationDefinition.Name, editablePresentationDefinition.Name);
+        Assert.Equal(directPresentationDefinition.FallbackText, editablePresentationDefinition.FallbackText);
+        Assert.Equal(directPresentationDefinition.Tags, editablePresentationDefinition.Tags);
+        var directPalette = direct.PaletteCatalog[new PaletteId("creature.bat.default")];
+        var editablePalette = editable.PaletteCatalog[new PaletteId("creature.bat.default")];
+        Assert.Equal(directPalette.Id, editablePalette.Id);
+        Assert.Equal(directPalette.Name, editablePalette.Name);
+        Assert.Equal(directPalette.Roles, editablePalette.Roles);
+
+        var directSteps = direct.GetActionPlanDescriptor(new ActionPlanTemplateId("hunt")).Behavior!.Steps;
+        var editableSteps = editable.GetActionPlanDescriptor(new ActionPlanTemplateId("hunt")).Behavior!.Steps;
+        Assert.Equal(directSteps[0].Kind, editableSteps[0].Kind);
+        Assert.Equal(directSteps[0].TargetLabel, editableSteps[0].TargetLabel);
+        Assert.Equal(directSteps[0].DirectionMode, editableSteps[0].DirectionMode);
+        Assert.Equal(directSteps[0].PathMode, editableSteps[0].PathMode);
+        Assert.Equal(directSteps[0].DesiredDistance, editableSteps[0].DesiredDistance);
+        Assert.Equal(directSteps[0].Costs.Single(), editableSteps[0].Costs.Single());
+        Assert.Equal(directSteps[1].TransferDirection, editableSteps[1].TransferDirection);
+        Assert.Equal(directSteps[1].CounterpartyTargetLabel, editableSteps[1].CounterpartyTargetLabel);
+
+        var directLayer = direct.MergedInventoryLayers[new MergedInventoryLayerId("shared")];
+        var editableLayer = editable.MergedInventoryLayers[new MergedInventoryLayerId("shared")];
+        Assert.Equal(directLayer.Id, editableLayer.Id);
+        Assert.Equal(directLayer.Spaces, editableLayer.Spaces);
+        Assert.Equal(directLayer.Joins, editableLayer.Joins);
+    }
+
+    [Fact]
     public void YamlContentLoaderCanLoadRegistryFromFile()
     {
         var path = Path.Combine(Path.GetTempPath(), $"game-content-{Guid.NewGuid():N}.yaml");

@@ -20,6 +20,7 @@ internal enum ScenarioBrowserResultKind
 {
     Stay,
     LaunchRequested,
+    EditRequested,
     ExitRequested
 }
 
@@ -30,6 +31,7 @@ internal sealed record ScenarioBrowserResult(
 {
     public static ScenarioBrowserResult Stay(string message) => new(ScenarioBrowserResultKind.Stay, message);
     public static ScenarioBrowserResult Launch(WorkspaceScenarioCatalogEntry entry) => new(ScenarioBrowserResultKind.LaunchRequested, $"Launch selected: {entry.Name}.", entry);
+    public static ScenarioBrowserResult Edit(WorkspaceScenarioCatalogEntry entry) => new(ScenarioBrowserResultKind.EditRequested, $"Editor route requested for {entry.Name}; editor UI is not implemented yet.", entry);
     public static ScenarioBrowserResult Exit() => new(ScenarioBrowserResultKind.ExitRequested, "Scenario browser cancelled; exiting.");
 }
 
@@ -154,7 +156,13 @@ internal sealed class ScenarioBrowserScreenModel
                     return ScenarioBrowserResult.Launch(entry);
                 }
 
-                return ScenarioBrowserResult.Stay("Edit mode placeholder selected; editor surface is not implemented yet.");
+                if (_selectedActionOption == ScenarioBrowserActionOption.Edit && SelectedEntry is { } editEntry)
+                {
+                    ActionSelectorOpen = false;
+                    return ScenarioBrowserResult.Edit(editEntry);
+                }
+
+                return ScenarioBrowserResult.Stay("Choose Play or Edit, Enter to activate, Esc to close.");
             case ScenarioBrowserCommand.Cancel:
                 ActionSelectorOpen = false;
                 _selectedActionOption = ScenarioBrowserActionOption.Play;

@@ -52,6 +52,7 @@ public sealed class ContentEditorSession
         {
             var yaml = Document.SaveYaml();
             File.WriteAllText(path, yaml);
+            Document.SetSourceYaml(yaml);
             FilePath = path;
             IsDirty = false;
             _savedYamlBaseline = yaml;
@@ -96,8 +97,10 @@ public sealed class ContentEditorSession
 
         try
         {
-            var reloaded = EditableContentDocument.LoadYaml(File.ReadAllText(FilePath));
+            var yaml = File.ReadAllText(FilePath);
+            var reloaded = EditableContentDocument.LoadYaml(yaml);
             ReplaceDocumentContents(reloaded);
+            Document.SetSourceYaml(yaml);
             _savedYamlBaseline = Document.SaveYaml();
             IsDirty = false;
 
@@ -109,7 +112,11 @@ public sealed class ContentEditorSession
         }
     }
 
-    private void MarkDirty() => IsDirty = true;
+    private void MarkDirty()
+    {
+        Document.ClearSourceYaml();
+        IsDirty = true;
+    }
 
     private void ReplaceDocumentContents(EditableContentDocument reloaded)
     {
@@ -130,6 +137,21 @@ public sealed class ContentEditorSession
         {
             Document.ActionPlans[id] = plan;
         }
+
+        Document.Scenarios.Clear();
+        foreach (var (id, scenario) in reloaded.Scenarios)
+        {
+            Document.Scenarios[id] = scenario;
+        }
+
+        Document.MergedLayers.Clear();
+        foreach (var (id, layer) in reloaded.MergedLayers)
+        {
+            Document.MergedLayers[id] = layer;
+        }
+
+        Document.PresentationCatalog = reloaded.PresentationCatalog;
+        Document.Palettes = reloaded.Palettes;
     }
 
     private static IReadOnlyList<string> SplitLines(string yaml) =>

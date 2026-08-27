@@ -196,9 +196,9 @@ Each decision should include:
 
 ### FED-022: Consumer Play mode starts as an isolated SadConsole mode
 
-- **Decision:** The first consumer-facing Play mode should start as a new isolated componentized mode inside `src/GameGameGame.SadConsole`, launched from a new `Play` scenario option. The existing debug Simulation/play path remains available but is relabeled `Debug`; `Edit` remains the editor route.
+- **Decision:** Historical MVP decision: the first consumer-facing Play mode started as a new isolated componentized mode inside the then-active SadConsole app, launched from a new `Play` scenario option. The existing debug Simulation/play path remained available but was relabeled `Debug`; `Edit` remained the editor route.
 - **Reasoning:** This creates a clean final-frontend growth path without duplicating SadConsole bootstrap, catalog/session wiring, component-gallery patterns, or shared-service consumption in a separate project too early. It also avoids extending the legacy debug play surface as the player-facing UX.
-- **Implications:** Historical context only. FED-026 and FED-040 supersede the project-location choice: active player-facing work now lives in `src/GameGameGame.Frontend.SadConsole` and the old project is reference-only.
+- **Implications:** Historical context only. FED-026 and FED-040 supersede the project-location choice: active player-facing work now lives in `src/GameGameGame.Frontend.SadConsole`; the old project has since been removed after salvage.
 - **Status:** Superseded for project location / historical MVP context from `docs/Archived/New-Play-Mode-MVP-Sprint-Plan.md`.
 
 ### FED-023: Canonical Push uses target-then-direction prompts in Consumer Play mode
@@ -232,7 +232,7 @@ Each decision should include:
 
 ### FED-026: New SadConsole frontend project supersedes old project for active player-facing work
 
-- **Decision:** New active frontend work starts in `src/GameGameGame.Frontend.SadConsole`, with tests in `tests/GameGameGame.Frontend.SadConsole.Tests`. The existing `src/GameGameGame.SadConsole` project remains reference-only until useful components, tests, patterns, glyph decisions, and display lessons have been mined, but the new project must not reference it.
+- **Decision:** New active frontend work starts in `src/GameGameGame.Frontend.SadConsole`, with tests in `tests/GameGameGame.Frontend.SadConsole.Tests`. The former legacy SadConsole project was kept reference-only during migration and later removed after useful components, tests, patterns, glyph decisions, and display lessons were mined or logged; the new project must not reference it.
 - **Reasoning:** The multi-document content/workspace refactor intentionally broke assumptions in the old frontend. Starting a clean project avoids preserving legacy Debug/Edit shell architecture while still allowing SadConsole research and component patterns to be cannibalized deliberately.
 - **Implications:** The first checkpoint is a workspace-backed scenario browser that shows `debug-room`; Play mode is rebuilt after that checkpoint. Debug mode is abandoned as a first-class route. Editor mode is deferred and should be reinvented around shared workspace/editor services. Reusable components promoted into the new frontend should receive readable gallery examples and focused tests once stable.
 - **Status:** Completed / archived. Historical spike sprint context lives in `docs/Archived/Frontend-SadConsole-Workspace-Browser-Sprint-Plan.md`.
@@ -335,14 +335,14 @@ Each decision should include:
 - **Decision:** `GameGameGame.Frontend.SadConsole` is treated as the release-oriented SadConsole app on Windows and uses the MonoGame WindowsDX backend. Its default player-facing window mode is overlay-safe borderless; F11 toggles between overlay-safe borderless and windowed until a full settings screen exists.
 - **Reasoning:** Windows Game Bar and common capture/overlay tools are more reliable with DirectX than DesktopGL/OpenGL. Exact-monitor borderless windows can still be promoted into fullscreen-like presentation paths where overlays receive input but are not visibly composited, so the default borderless mode intentionally avoids exact monitor dimensions.
 - **Implementation anchors:** `MonoGame.Framework.WindowsDX`, `FrontendWindowMode.OverlaySafeBorderlessWindowed`, `SadConsoleDisplayHost.ApplyWindowMode(...)`, and `ScenarioBrowserChromeState.ToggleWindowMode()`.
-- **Implications:** Keep the legacy/debug `GameGameGame.SadConsole` project separate and outside default build/package workflows. Future release settings UI should preserve a simple player choice between overlay-safe borderless and windowed unless a tested exclusive/fullscreen mode is explicitly added.
+- **Implications:** Future release settings UI should preserve a simple player choice between overlay-safe borderless and windowed unless a tested exclusive/fullscreen mode is explicitly added. The legacy/debug `GameGameGame.SadConsole` project has been removed and no longer participates in build/package workflows.
 - **Status:** Active / initial DirectX overlay-safe default implemented.
 
 ### FED-040: Frontend.SadConsole is the default build and package frontend
 
-- **Decision:** Default solution, CI, run, and feedback-package workflows target `GameGameGame.Frontend.SadConsole`; `GameGameGame.SadConsole` and its legacy tests are opt-in reference material only.
+- **Decision:** Default solution, CI, run, and feedback-package workflows target `GameGameGame.Frontend.SadConsole`; the former `GameGameGame.SadConsole` project and its legacy tests have been removed after migration/salvage.
 - **Reasoning:** The new frontend is now the maintained player/debug/browser surface. Keeping the legacy app in default workflows let old runtime, packaging, and test assumptions silently gate unrelated work and could publish the wrong executable.
-- **Implications:** Packaging instructions and release feedback builds should name `GameGameGame.Frontend.SadConsole.exe`. Legacy source can remain in the repository for deliberate mining, but normal contributors should not be sent there by README, solution, CI, or feedback-build defaults.
+- **Implications:** Packaging instructions and release feedback builds should name `GameGameGame.Frontend.SadConsole.exe`. Normal contributors should not be sent to removed legacy frontend paths by README, solution, CI, or feedback-build defaults. Useful ideas preserved for future frontend-board work after deletion: actor-POV multi-panel layout, geometry-first inventory hit testing, connector-line relationship visuals, frontend-owned screenshot/GIF capture, clamped hover tooltips, explicit editor submodes with confirm/cancel, and stronger tileset manifest validation.
 - **Status:** Active.
 
 ### FED-041: Drop starts from the player inventory action menu

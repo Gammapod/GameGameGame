@@ -14,9 +14,7 @@ permission:
     "src/GameGameGame.Core/*": allow
     "src/GameGameGame.Content/*": allow
     "src/GameGameGame.Content/**.yaml": deny
-    "src/GameGameGame.SadConsole/*": deny
     "tests/*": allow
-    "tests/GameGameGame.SadConsole.Tests/*": deny
     "tests/GameGameGame.Frontend.SadConsole.Tests/*": deny
   task:
     "frontend-owner": allow

@@ -136,6 +136,8 @@ public sealed partial class EditableContentDocument
     {
         public int Range { get; set; }
 
+        public TargetingLocalityDto? Locality { get; set; }
+
         public TargetingLocalityDto? DefaultLocality { get; set; }
 
         public List<EntityTargetingRuleDto>? Rules { get; set; }
@@ -245,7 +247,7 @@ public sealed partial class EditableContentDocument
 
         public ActionPlanDescriptor ToDescriptor(string fallbackId) =>
             new(
-                new ActionPlanId(Id ?? fallbackId),
+                new ActionPlanId(string.IsNullOrWhiteSpace(Id) ? fallbackId : Id),
                 (Steps ?? []).Select(step => step.ToDescriptor()).ToList(),
                 Primitive?.ToDescriptor(),
                 Behavior?.ToDescriptor());
@@ -253,6 +255,8 @@ public sealed partial class EditableContentDocument
 
     public sealed class ScenarioDefinitionDto
     {
+        public string? Id { get; set; }
+
         public string? Name { get; set; }
 
         public string? ScenarioRootEntityTemplateId { get; set; }

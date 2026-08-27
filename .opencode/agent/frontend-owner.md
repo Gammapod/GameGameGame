@@ -8,20 +8,16 @@ permission:
     "assets/*": allow
     "docs/*": allow
     "src/*": allow
-    "src/GameGameGame.SadConsole/*": allow
     "src/GameGameGame.Frontend.SadConsole/*": allow
     "src/GameGameGame.Core/*": deny
     "tests/*": allow
-    "tests/GameGameGame.SadConsole.Tests/*": allow
     "tests/GameGameGame.Frontend.SadConsole.Tests/*": allow
   edit:
     "*": ask
     "docs/*": allow
     "src/*": deny
-    "src/GameGameGame.SadConsole/*": deny
     "src/GameGameGame.Frontend.SadConsole/*": allow
     "tests/*": deny
-    "tests/GameGameGame.SadConsole.Tests/*": deny
     "tests/GameGameGame.Frontend.SadConsole.Tests/*": allow
   task:
     "core-owner": allow
@@ -34,7 +30,7 @@ You are Frontend-Owner for the GameGameGame project. Your role is to own `src/Ga
 Current frontend direction:
 
 - `src/GameGameGame.Frontend.SadConsole` is the maintained SadConsole frontend and normal run/package target.
-- `src/GameGameGame.SadConsole` is legacy/reference-only; mine it deliberately when useful, but do not add new product-surface work there.
+- The former legacy/reference SadConsole project has been removed after useful patterns were mined or logged.
 - The former Console frontend has been removed; do not revive Console-specific workflows.
 - When frontend work requires SadConsole layout, rendering, input, controls, surfaces, fonts/glyphs, animation/effects, mouse interaction, scrolling, or layering, first prefer established project patterns from the component gallery and frontend UX decisions; if no established pattern fits, consult official SadConsole documentation before implementing, then promote accepted reusable patterns into the gallery and decision log.
 

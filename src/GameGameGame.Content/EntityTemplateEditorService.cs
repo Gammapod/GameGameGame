@@ -139,7 +139,7 @@ internal sealed class EntityTemplateEditorService(EditableContentDocument docume
     public IReadOnlyList<EntityTargetingRule> ListTargetingRules(EntityTemplateId templateId)
     {
         var template = GetEntityPreset(templateId).Template;
-        return (template.TargetingRules ?? [])
+        return (template.Targeting is { } profile ? profile.Rules : template.TargetingRules ?? [])
             .OrderBy(rule => rule.Slot)
             .ToList();
     }
@@ -197,6 +197,26 @@ internal sealed class EntityTemplateEditorService(EditableContentDocument docume
     public void RemoveTargetingRule(EntityTemplateId templateId, int slot)
     {
         var template = GetTemplateDto(templateId);
+        if (template.Targeting is { } profile)
+        {
+            if (profile.Rules is null || profile.Rules.RemoveAll(rule => rule.Slot == slot) == 0)
+            {
+                throw new InvalidOperationException($"Entity template {templateId} targeting profile has no targeting rule slot {slot}.");
+            }
+
+            if (profile.Rules.Count == 0)
+            {
+                profile.Rules = null;
+                if (profile.DefaultLocality is null)
+                {
+                    template.Targeting = null;
+                }
+            }
+
+            onChanged?.Invoke();
+            return;
+        }
+
         if (template.TargetingRules is null || template.TargetingRules.RemoveAll(rule => rule.Slot == slot) == 0)
         {
             throw new InvalidOperationException($"Entity template {templateId} has no targeting rule slot {slot}.");

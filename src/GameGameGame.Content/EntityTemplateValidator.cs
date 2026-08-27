@@ -69,14 +69,23 @@ internal static class EntityTemplateValidator
         EntityTemplateId templateId,
         EntityTemplate template)
     {
-        if (template.TargetingRules is null || template.TargetingRules.Count == 0)
+        if (template.Targeting is { Range: < 0 } profile)
+        {
+            AddDiagnostic(diagnostics, ContentDiagnostic.Error(
+                ContentDiagnosticCode.InvalidTargetingRule,
+                $"Entity template {templateId} ({template.Name}) targeting profile range must be zero or greater; found {profile.Range}.",
+                entityTemplateId: templateId));
+        }
+
+        var effectiveRules = EffectiveTargetingRules(template).ToList();
+        if (effectiveRules.Count == 0)
         {
             return;
         }
 
         var slots = new HashSet<int>();
         var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var rule in template.TargetingRules)
+        foreach (var (rule, range) in effectiveRules)
         {
             if (rule.Slot <= 0)
             {
@@ -112,11 +121,11 @@ internal static class EntityTemplateValidator
                 }
             }
 
-            if (rule.Range < 0)
+            if (range < 0)
             {
                 AddDiagnostic(diagnostics, ContentDiagnostic.Error(
                     ContentDiagnosticCode.InvalidTargetingRule,
-                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} range must be zero or greater; found {rule.Range}.",
+                    $"Entity template {templateId} ({template.Name}) targeting rule slot {rule.Slot} range must be zero or greater; found {range}.",
                     entityTemplateId: templateId));
             }
 
@@ -158,6 +167,24 @@ internal static class EntityTemplateValidator
         }
     }
 
+    private static IEnumerable<(EntityTargetingRule Rule, int Range)> EffectiveTargetingRules(EntityTemplate template)
+    {
+        if (template.Targeting is { } profile)
+        {
+            foreach (var rule in profile.Rules)
+            {
+                yield return (rule, profile.Range);
+            }
+
+            yield break;
+        }
+
+        foreach (var rule in template.TargetingRules ?? [])
+        {
+            yield return (rule, rule.Range);
+        }
+    }
+
     private static bool TemplatePlanUsesTargetCapability(
         IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> actionPlanTemplates,
         EntityTemplate template,
@@ -171,22 +198,48 @@ internal static class EntityTemplateValidator
             return false;
         }
 
-        return steps.Any(step =>
-            step.Kind == capability
-            && TargetReferenceMatchesRule(step, rule));
+        return steps.Any(step => StepConsumesTargetCapability(step, rule, capability));
     }
 
-    private static bool TargetReferenceMatchesRule(ActionPlanBehaviorStepDescriptor step, EntityTargetingRule rule)
+    private static bool StepConsumesTargetCapability(
+        ActionPlanBehaviorStepDescriptor step,
+        EntityTargetingRule rule,
+        ActionPlanBehaviorStepKind capability)
     {
-        if (!string.IsNullOrWhiteSpace(rule.Label)
-            && (string.Equals(step.TargetLabel, rule.Label, StringComparison.Ordinal)
-                || string.Equals(step.CounterpartyTargetLabel, rule.Label, StringComparison.Ordinal)))
+        if (step.Kind == capability && PrimaryTargetReferenceMatchesRule(step, rule))
         {
             return true;
         }
 
-        return ((step.TargetSlot ?? 1) == rule.Slot && string.IsNullOrWhiteSpace(step.TargetLabel))
-            || (step.CounterpartyTargetSlot == rule.Slot && string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel));
+        return step.Kind == ActionPlanBehaviorStepKind.Transfer
+            && capability switch
+            {
+                ActionPlanBehaviorStepKind.GiveTarget => step.TransferDirection == TransferDirection.ActorToTarget && CounterpartyTargetReferenceMatchesRule(step, rule),
+                ActionPlanBehaviorStepKind.TakeTarget => step.TransferDirection == TransferDirection.TargetToActor && CounterpartyTargetReferenceMatchesRule(step, rule),
+                _ => false
+            };
+    }
+
+    private static bool PrimaryTargetReferenceMatchesRule(ActionPlanBehaviorStepDescriptor step, EntityTargetingRule rule)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.Label))
+        {
+            return string.Equals(step.TargetLabel, rule.Label, StringComparison.Ordinal)
+                || ((step.TargetSlot ?? 1) == rule.Slot && string.IsNullOrWhiteSpace(step.TargetLabel));
+        }
+
+        return (step.TargetSlot ?? 1) == rule.Slot && string.IsNullOrWhiteSpace(step.TargetLabel);
+    }
+
+    private static bool CounterpartyTargetReferenceMatchesRule(ActionPlanBehaviorStepDescriptor step, EntityTargetingRule rule)
+    {
+        if (!string.IsNullOrWhiteSpace(rule.Label))
+        {
+            return string.Equals(step.CounterpartyTargetLabel, rule.Label, StringComparison.Ordinal)
+                || (step.CounterpartyTargetSlot == rule.Slot && string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel));
+        }
+
+        return step.CounterpartyTargetSlot == rule.Slot && string.IsNullOrWhiteSpace(step.CounterpartyTargetLabel);
     }
 
     private static void ValidateCarriedEntityLayout(

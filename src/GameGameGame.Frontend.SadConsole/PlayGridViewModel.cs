@@ -68,11 +68,13 @@ internal sealed record PlayGridViewModel(
         TilesetProfile tilesetProfile,
         PlaneId? preferredPlaneId = null,
         TopologyVisibilityProjection? topologyVisibility = null,
-        bool showOutsidePointOfViewContext = false)
+        bool showOutsidePointOfViewContext = false,
+        EntityId? controlledEntityId = null)
     {
+        var resolvedControlledEntityId = controlledEntityId ?? session.PlayerEntityId;
         var planeId = preferredPlaneId is { } requestedPlaneId && session.World.Planes.ContainsKey(requestedPlaneId)
             ? requestedPlaneId
-            : ResolveRenderedPlane(session);
+            : ResolveRenderedPlane(session, resolvedControlledEntityId);
         var plane = session.World.Planes[planeId];
         var cellsByDisplayCoord = new Dictionary<(int X, int Y), PlayCellVisual>();
         var diagnostics = new List<PlayGridDiagnostic>();
@@ -89,6 +91,7 @@ internal sealed record PlayGridViewModel(
                     AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
                         session,
                         tilesetProfile,
+                        resolvedControlledEntityId,
                         coord,
                         displayCoord,
                         isInPointOfView: true,
@@ -126,6 +129,7 @@ internal sealed record PlayGridViewModel(
                 AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
                     session,
                     tilesetProfile,
+                    resolvedControlledEntityId,
                     contextCell.Cell.SourceCoord,
                     displayCoord,
                     isInPointOfView,
@@ -140,6 +144,7 @@ internal sealed record PlayGridViewModel(
                 AddCellVisual(cellsByDisplayCoord, diagnostics, BuildCellVisual(
                     session,
                     tilesetProfile,
+                    resolvedControlledEntityId,
                     topologyVisibility.Origin.SourceCoord,
                     originDisplayCoord,
                     isInPointOfView: true,
@@ -148,14 +153,15 @@ internal sealed record PlayGridViewModel(
 
             var projectedWidth = Math.Max(0, maxX - minX + 1);
             var projectedHeight = Math.Max(0, maxY - minY + 1);
-            return BuildModel(session, planeId, plane, topologyVisibility, cellsByDisplayCoord.Values, diagnostics, projectedWidth, projectedHeight);
+            return BuildModel(session, resolvedControlledEntityId, planeId, plane, topologyVisibility, cellsByDisplayCoord.Values, diagnostics, projectedWidth, projectedHeight);
         }
 
-        return BuildModel(session, planeId, plane, topologyVisibility, cellsByDisplayCoord.Values, diagnostics, null, null);
+        return BuildModel(session, resolvedControlledEntityId, planeId, plane, topologyVisibility, cellsByDisplayCoord.Values, diagnostics, null, null);
     }
 
     private static PlayGridViewModel BuildModel(
         PlayableScenarioSession session,
+        EntityId controlledEntityId,
         PlaneId planeId,
         Plane plane,
         TopologyVisibilityProjection? topologyVisibility,
@@ -171,9 +177,9 @@ internal sealed record PlayGridViewModel(
         var width = Math.Max(projectedWidth ?? 0, cells.Count == 0 ? plane.Width : Math.Max(plane.Width, cells.Max(cell => cell.X) + 1));
         var height = Math.Max(projectedHeight ?? 0, cells.Count == 0 ? plane.Height : Math.Max(plane.Height, cells.Max(cell => cell.Y) + 1));
 
-        var controlledCoord = session.World.Entities.ContainsKey(session.PlayerEntityId)
-            && session.World.GetEntityLocation(session.PlayerEntityId).PlaneId == planeId
-            ? session.World.GetEntityLocation(session.PlayerEntityId).Coord
+        var controlledCoord = session.World.Entities.ContainsKey(controlledEntityId)
+            && session.World.GetEntityLocation(controlledEntityId).PlaneId == planeId
+            ? session.World.GetEntityLocation(controlledEntityId).Coord
             : (GridCoord?)null;
         if (topologyVisibility is not null
             && cells.FirstOrDefault(cell => cell.SourceCoord == topologyVisibility.Origin.SourceCoord) is { } originCell)
@@ -190,7 +196,7 @@ internal sealed record PlayGridViewModel(
             width,
             height,
             cells,
-            session.PlayerEntityId,
+            controlledEntityId,
             controlledCoord,
             planeId,
             containerEntityId,
@@ -234,6 +240,7 @@ internal sealed record PlayGridViewModel(
     private static PlayCellVisual BuildCellVisual(
         PlayableScenarioSession session,
         TilesetProfile tilesetProfile,
+        EntityId controlledEntityId,
         PlaneCoord sourceCoord,
         GridCoord displayCoord,
         bool isInPointOfView,
@@ -247,7 +254,7 @@ internal sealed record PlayGridViewModel(
             ? tilesetProfile.Roles.FacingGlyph(direction)
             : ((int Glyph, SadMirror Mirror)?)null;
         var backdropForeground = isInPointOfView ? Color.Gray : Color.DimGray;
-        var entityForeground = occupant == session.PlayerEntityId
+        var entityForeground = occupant == controlledEntityId
             ? Color.Yellow
             : isInPointOfView ? Color.White : Color.DimGray;
 
@@ -277,14 +284,14 @@ internal sealed record PlayGridViewModel(
             : tilesetProfile.Roles.DefaultBackdrop;
     }
 
-    private static PlaneId ResolveRenderedPlane(PlayableScenarioSession session)
+    private static PlaneId ResolveRenderedPlane(PlayableScenarioSession session, EntityId controlledEntityId)
     {
-        if (session.World.Entities.ContainsKey(session.PlayerEntityId))
+        if (session.World.Entities.ContainsKey(controlledEntityId))
         {
-            var playerPlane = session.World.GetEntityLocation(session.PlayerEntityId).PlaneId;
-            if (session.World.Planes.ContainsKey(playerPlane))
+            var controlledPlane = session.World.GetEntityLocation(controlledEntityId).PlaneId;
+            if (session.World.Planes.ContainsKey(controlledPlane))
             {
-                return playerPlane;
+                return controlledPlane;
             }
         }
 

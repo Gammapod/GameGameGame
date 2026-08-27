@@ -25,7 +25,7 @@ public static class YamlContentLoader
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .Build();
-        var document = deserializer.Deserialize<ContentDocumentDto>(yaml) ?? new ContentDocumentDto();
+        var document = deserializer.Deserialize<EditableContentDocument>(yaml) ?? new EditableContentDocument();
 
         return new PrototypeContentRegistry(
             MaterializeEntityTemplates(document.EntityTemplates),
@@ -50,7 +50,7 @@ public static class YamlContentLoader
     }
 
     private static IReadOnlyDictionary<PresentationId, PresentationDefinition> MaterializePresentationCatalog(
-        Dictionary<string, PresentationDefinitionDto>? catalog)
+        Dictionary<string, EditableContentDocument.PresentationDefinitionDto>? catalog)
     {
         var result = new Dictionary<PresentationId, PresentationDefinition>(BuiltInPresentationCatalog.Presentations);
         foreach (var (id, definition) in catalog ?? [])
@@ -67,7 +67,7 @@ public static class YamlContentLoader
     }
 
     private static IReadOnlyDictionary<PaletteId, PaletteDefinition> MaterializePaletteCatalog(
-        Dictionary<string, PaletteDefinitionDto>? palettes)
+        Dictionary<string, EditableContentDocument.PaletteDefinitionDto>? palettes)
     {
         var result = new Dictionary<PaletteId, PaletteDefinition>(BuiltInPresentationCatalog.Palettes);
         foreach (var (id, definition) in palettes ?? [])
@@ -83,7 +83,7 @@ public static class YamlContentLoader
     }
 
     private static IReadOnlyDictionary<EntityTemplateId, EntityTemplate> MaterializeEntityTemplates(
-        Dictionary<string, EntityTemplateDto>? templates)
+        Dictionary<string, EditableContentDocument.EntityTemplateDto>? templates)
     {
         var result = new Dictionary<EntityTemplateId, EntityTemplate>();
 
@@ -114,7 +114,7 @@ public static class YamlContentLoader
         ? null
         : new EntityMaterial(material.Trim());
 
-    private static IReadOnlyList<EntityTargetingRule>? MaterializeTargetingRules(List<EntityTargetingRuleDto>? rules)
+    private static IReadOnlyList<EntityTargetingRule>? MaterializeTargetingRules(List<EditableContentDocument.EntityTargetingRuleDto>? rules)
     {
         if (rules is null || rules.Count == 0)
         {
@@ -133,7 +133,7 @@ public static class YamlContentLoader
             .ToList();
     }
 
-    private static EntityTargetingProfile? MaterializeTargetingProfile(EntityTargetingProfileDto? targeting)
+    private static EntityTargetingProfile? MaterializeTargetingProfile(EditableContentDocument.EntityTargetingProfileDto? targeting)
     {
         if (targeting is null)
         {
@@ -146,12 +146,12 @@ public static class YamlContentLoader
             MaterializeTargetingRules(targeting.Rules) ?? []);
     }
 
-    private static TargetingLocalityQuery? MaterializeLocality(TargetingLocalityDto? locality) =>
+    private static TargetingLocalityQuery? MaterializeLocality(EditableContentDocument.TargetingLocalityDto? locality) =>
         locality?.Origins is { Count: > 0 } origins
             ? new TargetingLocalityQuery(origins)
             : null;
 
-    private static IReadOnlyList<CarriedEntityTemplate>? MaterializeCarriedEntities(List<CarriedEntityTemplateDto>? carriedEntities)
+    private static IReadOnlyList<CarriedEntityTemplate>? MaterializeCarriedEntities(List<EditableContentDocument.CarriedEntityTemplateDto>? carriedEntities)
     {
         if (carriedEntities is null || carriedEntities.Count == 0)
         {
@@ -168,7 +168,7 @@ public static class YamlContentLoader
     }
 
     private static IReadOnlyDictionary<string, PlanValueDescriptor>? MaterializePlanVariables(
-        Dictionary<string, PlanValueDescriptorDto>? variables)
+        Dictionary<string, EditableContentDocument.PlanValueDescriptorDto>? variables)
     {
         if (variables is null || variables.Count == 0)
         {
@@ -178,7 +178,7 @@ public static class YamlContentLoader
         return variables.ToDictionary(entry => entry.Key, entry => MaterializePlanValue(entry.Value));
     }
 
-    private static ActorActionStateDefaults? MaterializeActionStateDefaults(ActorActionStateDefaultsDto? defaults)
+    private static ActorActionStateDefaults? MaterializeActionStateDefaults(EditableContentDocument.ActorActionStateDefaultsDto? defaults)
     {
         if (defaults is null)
         {
@@ -190,7 +190,7 @@ public static class YamlContentLoader
             string.IsNullOrWhiteSpace(defaults.Target) ? null : new EntityId(defaults.Target));
     }
 
-    private static PlanValueDescriptor MaterializePlanValue(PlanValueDescriptorDto dto) =>
+    private static PlanValueDescriptor MaterializePlanValue(EditableContentDocument.PlanValueDescriptorDto dto) =>
         dto.Kind switch
         {
             PlanValueKind.Direction => PlanValueDescriptor.Direction(dto.DirectionValue ?? throw Missing(nameof(dto.DirectionValue))),
@@ -201,7 +201,7 @@ public static class YamlContentLoader
         };
 
     private static IReadOnlyDictionary<EntityTemplateId, EntityPresentation> MaterializePresentations(
-        Dictionary<string, EntityPresentationDto>? presentations)
+        Dictionary<string, EditableContentDocument.EntityPresentationDto>? presentations)
     {
         var result = new Dictionary<EntityTemplateId, EntityPresentation>();
 
@@ -225,14 +225,14 @@ public static class YamlContentLoader
     }
 
     private static IReadOnlyDictionary<ActionPlanTemplateId, ActionPlanDescriptor> MaterializeActionPlans(
-        Dictionary<string, ActionPlanDescriptorDto>? actionPlans)
+        Dictionary<string, EditableContentDocument.ActionPlanDescriptorDto>? actionPlans)
     {
         var result = new Dictionary<ActionPlanTemplateId, ActionPlanDescriptor>();
 
         foreach (var (templateId, plan) in actionPlans ?? [])
         {
             result[new ActionPlanTemplateId(templateId)] = new ActionPlanDescriptor(
-                new ActionPlanId(Required(plan.Id, nameof(plan.Id))),
+                new ActionPlanId(string.IsNullOrWhiteSpace(plan.Id) ? templateId : plan.Id),
                 (plan.Steps ?? []).Select(MaterializeStep).ToList(),
                 plan.Primitive is null ? null : MaterializePrimitive(plan.Primitive),
                 plan.Behavior is null ? null : MaterializeBehavior(plan.Behavior));
@@ -241,15 +241,15 @@ public static class YamlContentLoader
         return result;
     }
 
-    private static ActionPlanPrimitiveDescriptor MaterializePrimitive(ActionPlanPrimitiveDescriptorDto primitive) =>
+    private static ActionPlanPrimitiveDescriptor MaterializePrimitive(EditableContentDocument.ActionPlanPrimitiveDescriptorDto primitive) =>
         new(
             primitive.Kind,
             primitive.FallbackPlanId is null ? null : new ActionPlanId(primitive.FallbackPlanId));
 
-    private static ActionPlanBehaviorDescriptor MaterializeBehavior(ActionPlanBehaviorDescriptorDto behavior) =>
+    private static ActionPlanBehaviorDescriptor MaterializeBehavior(EditableContentDocument.ActionPlanBehaviorDescriptorDto behavior) =>
         new((behavior.Steps ?? []).Select(MaterializeBehaviorStep).ToList());
 
-    private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(ActionPlanBehaviorStepDescriptorDto step) =>
+    private static ActionPlanBehaviorStepDescriptor MaterializeBehaviorStep(EditableContentDocument.ActionPlanBehaviorStepDescriptorDto step) =>
         new(
             step.Kind,
             step.TargetSlot,
@@ -271,14 +271,14 @@ public static class YamlContentLoader
                 .ToList()
         };
 
-    private static ActionPlanStepDescriptor MaterializeStep(ActionPlanStepDescriptorDto step) =>
+    private static ActionPlanStepDescriptor MaterializeStep(EditableContentDocument.ActionPlanStepDescriptorDto step) =>
         new(
             Required(step.Label, nameof(step.Label)),
             (step.Checks ?? []).Select(MaterializeCheck).ToList(),
             step.OnSuccess is null ? null : MaterializeEffect(step.OnSuccess),
             step.OnFailure is null ? null : MaterializeEffect(step.OnFailure));
 
-    private static PlanCheckDescriptor MaterializeCheck(PlanCheckDescriptorDto check) =>
+    private static PlanCheckDescriptor MaterializeCheck(EditableContentDocument.PlanCheckDescriptorDto check) =>
         check.Kind switch
         {
             PlanCheckKind.CanMove => check.DirectionVariable is null
@@ -297,7 +297,7 @@ public static class YamlContentLoader
             _ => throw new InvalidOperationException($"Unsupported plan check kind {check.Kind}.")
         };
 
-    private static PlanEffectDescriptor MaterializeEffect(PlanEffectDescriptorDto effect) =>
+    private static PlanEffectDescriptor MaterializeEffect(EditableContentDocument.PlanEffectDescriptorDto effect) =>
         effect.Kind switch
         {
             PlanEffectKind.Teleport => PlanEffectDescriptor.Teleport(
@@ -330,7 +330,7 @@ public static class YamlContentLoader
             _ => throw new InvalidOperationException($"Unsupported plan effect kind {effect.Kind}.")
         };
 
-    private static MovementTargetDescriptor MaterializeMovementTarget(MovementTargetDescriptorDto? target)
+    private static MovementTargetDescriptor MaterializeMovementTarget(EditableContentDocument.MovementTargetDescriptorDto? target)
     {
         if (target is null)
         {
@@ -347,7 +347,7 @@ public static class YamlContentLoader
         };
     }
 
-    private static MovementDestinationDescriptor MaterializeMovementDestination(MovementDestinationDescriptorDto? destination)
+    private static MovementDestinationDescriptor MaterializeMovementDestination(EditableContentDocument.MovementDestinationDescriptorDto? destination)
     {
         if (destination is null)
         {
@@ -369,311 +369,21 @@ public static class YamlContentLoader
         };
     }
 
-    private static PlaneCoord MaterializePlaneCoord(PlaneCoordDto? coord) =>
+    private static PlaneCoord MaterializePlaneCoord(EditableContentDocument.PlaneCoordDto? coord) =>
         coord is null
             ? throw Missing(nameof(coord))
             : new PlaneCoord(new PlaneId(Required(coord.PlaneId, nameof(coord.PlaneId))), MaterializeCoord(coord.Coord));
 
-    private static GridCoord MaterializeCoord(GridCoordDto? coord) =>
+    private static GridCoord MaterializeCoord(EditableContentDocument.GridCoordDto? coord) =>
         coord is null ? throw Missing(nameof(coord)) : new GridCoord(coord.X, coord.Y);
 
     private static string Required(string? value, string name) =>
         string.IsNullOrWhiteSpace(value) ? throw Missing(name) : value;
 
     private static char FallbackGlyph(string? presentationId) =>
-        string.IsNullOrWhiteSpace(presentationId) ? throw Missing(nameof(EntityPresentationDto.Glyph)) : '?';
+        string.IsNullOrWhiteSpace(presentationId) ? throw Missing(nameof(EditableContentDocument.EntityPresentationDto.Glyph)) : '?';
 
     private static InvalidOperationException Missing(string name) =>
         new($"YAML content field {name} is required.");
 
-    private sealed class ContentDocumentDto
-    {
-        public Dictionary<string, EntityTemplateDto>? EntityTemplates { get; set; }
-
-        public Dictionary<string, EntityPresentationDto>? Presentations { get; set; }
-
-        public Dictionary<string, PresentationDefinitionDto>? PresentationCatalog { get; set; }
-
-        public Dictionary<string, PaletteDefinitionDto>? Palettes { get; set; }
-
-        public Dictionary<string, ActionPlanDescriptorDto>? ActionPlans { get; set; }
-
-        public Dictionary<string, EditableContentDocument.MergedInventoryLayerDto>? MergedLayers { get; set; }
-    }
-
-    private sealed class PresentationDefinitionDto
-    {
-        public string? Name { get; set; }
-
-        public string? FallbackText { get; set; }
-
-        public List<string>? Tags { get; set; }
-    }
-
-    private sealed class PaletteDefinitionDto
-    {
-        public string? Name { get; set; }
-
-        public Dictionary<string, PresentationColor>? Roles { get; set; }
-    }
-
-    private sealed class EntityTemplateDto
-    {
-        public string? Name { get; set; }
-
-        public int InventoryWidth { get; set; }
-
-        public int InventoryHeight { get; set; }
-
-        public int Weight { get; set; }
-
-        public int CarryingCapacity { get; set; }
-
-        public int? Bulk { get; set; }
-
-        public int? Aperture { get; set; }
-
-        public EntityEnterPolicy? EnterPolicy { get; set; }
-
-        public EntityExitPolicy? ExitPolicy { get; set; }
-
-        public EntityTopologyPolicy? TopologyPolicy { get; set; }
-
-        public string? Material { get; set; }
-
-        public string? DefaultActionPlanId { get; set; }
-
-        public Dictionary<string, PlanValueDescriptorDto>? DefaultPlanVariables { get; set; }
-
-        public ActorActionStateDefaultsDto? ActionStateDefaults { get; set; }
-
-        public EntityTargetingProfileDto? Targeting { get; set; }
-
-        public List<EntityTargetingRuleDto>? TargetingRules { get; set; }
-
-        public List<CarriedEntityTemplateDto>? CarriedEntities { get; set; }
-    }
-
-    private sealed class EntityTargetingRuleDto
-    {
-        public int Slot { get; set; }
-
-        public string? Hint { get; set; }
-
-        public string? Label { get; set; }
-
-        public string? TargetTemplateId { get; set; }
-
-        public List<ActionPlanBehaviorStepKind>? TargetCapabilities { get; set; }
-
-        public int Range { get; set; }
-
-        public TargetingLocalityDto? Locality { get; set; }
-    }
-
-    private sealed class EntityTargetingProfileDto
-    {
-        public int Range { get; set; }
-
-        public TargetingLocalityDto? Locality { get; set; }
-
-        public TargetingLocalityDto? DefaultLocality { get; set; }
-
-        public List<EntityTargetingRuleDto>? Rules { get; set; }
-    }
-
-    private sealed class TargetingLocalityDto
-    {
-        public List<TargetingLocalityOrigin>? Origins { get; set; }
-    }
-
-    private sealed class ActorActionStateDefaultsDto
-    {
-        public Direction? Facing { get; set; }
-
-        public string? Target { get; set; }
-    }
-
-    private sealed class CarriedEntityTemplateDto
-    {
-        public string? EntityId { get; set; }
-
-        public string? TemplateId { get; set; }
-
-        public GridCoordDto? Coord { get; set; }
-
-        public EntityController? Controller { get; set; }
-    }
-
-    private sealed class EntityPresentationDto
-    {
-        public string? PresentationId { get; set; }
-
-        public string? PaletteId { get; set; }
-
-        public string? Glyph { get; set; }
-
-        public PresentationColor Color { get; set; }
-    }
-
-    private sealed class ActionPlanDescriptorDto
-    {
-        public string? Id { get; set; }
-
-        public ActionPlanPrimitiveDescriptorDto? Primitive { get; set; }
-
-        public ActionPlanBehaviorDescriptorDto? Behavior { get; set; }
-
-        public List<ActionPlanStepDescriptorDto>? Steps { get; set; }
-    }
-
-    private sealed class ActionPlanBehaviorDescriptorDto
-    {
-        public List<ActionPlanBehaviorStepDescriptorDto>? Steps { get; set; }
-    }
-
-    private sealed class ActionPlanBehaviorStepDescriptorDto
-    {
-        public ActionPlanBehaviorStepKind Kind { get; set; }
-
-        public int? TargetSlot { get; set; }
-
-        public string? TargetLabel { get; set; }
-
-        public bool TargetSelf { get; set; }
-
-        public string? PlanId { get; set; }
-
-        public string? DirectionMode { get; set; }
-
-        public string? TransferDirection { get; set; }
-
-        public string? TemplateId { get; set; }
-
-        public string? CreatePlacement { get; set; }
-
-        public string? PathMode { get; set; }
-
-        public int? DesiredDistance { get; set; }
-
-        public string? OrbitDirection { get; set; }
-
-        public int? CounterpartyTargetSlot { get; set; }
-
-        public string? CounterpartyTargetLabel { get; set; }
-
-        public List<ActionStepCostDescriptorDto>? Costs { get; set; }
-    }
-
-    private sealed class ActionStepCostDescriptorDto
-    {
-        public string? TemplateId { get; set; }
-
-        public int Quantity { get; set; }
-    }
-
-    private sealed class ActionPlanPrimitiveDescriptorDto
-    {
-        public ActionPlanPrimitiveKind Kind { get; set; }
-
-        public string? FallbackPlanId { get; set; }
-    }
-
-    private sealed class ActionPlanStepDescriptorDto
-    {
-        public string? Label { get; set; }
-
-        public List<PlanCheckDescriptorDto>? Checks { get; set; }
-
-        public PlanEffectDescriptorDto? OnSuccess { get; set; }
-
-        public PlanEffectDescriptorDto? OnFailure { get; set; }
-    }
-
-    private sealed class PlanCheckDescriptorDto
-    {
-        public PlanCheckKind Kind { get; set; }
-
-        public string? DirectionVariable { get; set; }
-
-        public string? TargetVariable { get; set; }
-
-        public GridCoordDto? InventoryCoord { get; set; }
-    }
-
-    private sealed class PlanEffectDescriptorDto
-    {
-        public PlanEffectKind Kind { get; set; }
-
-        public string? DirectionVariable { get; set; }
-
-        public string? TargetVariable { get; set; }
-
-        public GridCoordDto? InventoryCoord { get; set; }
-
-        public string? PlanId { get; set; }
-
-        public string? VariableName { get; set; }
-
-        public PlanValueDescriptorDto? Value { get; set; }
-
-        public MovementTargetDescriptorDto? MovementTarget { get; set; }
-
-        public MovementDestinationDescriptorDto? MovementDestination { get; set; }
-
-        public bool ConsumesTurn { get; set; }
-
-        public bool ContinuePlan { get; set; }
-    }
-
-    private sealed class PlanValueDescriptorDto
-    {
-        public PlanValueKind Kind { get; set; }
-
-        public Direction? DirectionValue { get; set; }
-
-        public string? EntityValue { get; set; }
-
-        public GridCoordDto? CoordValue { get; set; }
-
-        public int? IntValue { get; set; }
-    }
-
-    private sealed class MovementTargetDescriptorDto
-    {
-        public MovementTargetKind Kind { get; set; }
-
-        public string? EntityId { get; set; }
-
-        public GridCoordDto? InventoryCoord { get; set; }
-    }
-
-    private sealed class MovementDestinationDescriptorDto
-    {
-        public MovementDestinationKind Kind { get; set; }
-
-        public PlaneCoordDto? PlaneCoord { get; set; }
-
-        public string? OwnerId { get; set; }
-
-        public GridCoordDto? InventoryCoord { get; set; }
-
-        public string? AnchorEntityId { get; set; }
-
-        public Direction? Direction { get; set; }
-    }
-
-    private sealed class PlaneCoordDto
-    {
-        public string? PlaneId { get; set; }
-
-        public GridCoordDto? Coord { get; set; }
-    }
-
-    private sealed class GridCoordDto
-    {
-        public int X { get; set; }
-
-        public int Y { get; set; }
-    }
 }

@@ -33,6 +33,9 @@ public static class ContentToolCatalog
         ContentToolNames.SetBehaviorStepCounterpartyTargetLabel,
         ContentToolNames.SetBehaviorStepCounterpartyTargetSlot,
         ContentToolNames.SetBehaviorStepPlanId,
+        ContentToolNames.SetBehaviorStepTemplateId,
+        ContentToolNames.SetBehaviorStepCreatePlacement,
+        ContentToolNames.SetBehaviorStepTargetSelf,
         ContentToolNames.SetBehaviorStepDirectionMode,
         ContentToolNames.SetBehaviorStepCosts,
         ContentToolNames.SetBehaviorStepTargetPathMode,
@@ -84,7 +87,10 @@ public static class ContentToolCatalog
         ContentToolNames.SetBehaviorStepCounterpartyTargetLabel => "Set or clear a Transfer Action Step counterparty target label.",
         ContentToolNames.SetBehaviorStepCounterpartyTargetSlot => "Set or clear a Transfer Action Step counterparty target slot.",
         ContentToolNames.SetBehaviorStepPlanId => "Set or clear a referenced Action Plan ID on an apply-plan Action Step.",
-        ContentToolNames.SetBehaviorStepDirectionMode => "Set or clear a canonical Move/Transfer Action Step directionMode.",
+        ContentToolNames.SetBehaviorStepTemplateId => "Set or clear an entity template reference on CreateEntity or PolymorphTarget Action Steps.",
+        ContentToolNames.SetBehaviorStepCreatePlacement => "Set or clear a CreateEntity Action Step placement mode.",
+        ContentToolNames.SetBehaviorStepTargetSelf => "Set or clear whether an Action Step targets the acting entity itself.",
+        ContentToolNames.SetBehaviorStepDirectionMode => "Set or clear a canonical Move/Transfer/Push/CreateEntity Action Step directionMode.",
         ContentToolNames.SetBehaviorStepCosts => "Set or clear optional behavior Action Step costs.",
         ContentToolNames.SetBehaviorStepTargetPathMode => "Set or clear a TargetPathMove pathMode.",
         ContentToolNames.SetBehaviorStepDesiredDistance => "Set or clear a TargetPathMove desiredDistance.",
@@ -183,6 +189,9 @@ public static class ContentToolCatalog
             case ContentToolNames.SetBehaviorStepCounterpartyTargetLabel: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("targetLabel", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepCounterpartyTargetSlot: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddInteger("targetSlot", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepPlanId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("planId", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepTemplateId: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("templateId", isRequired: false, description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepCreatePlacement: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("createPlacement", isRequired: false, allowedValues: EnumNames<CreateEntityPlacement>(), description: "Omit or pass null to clear.", allowNull: true); break;
+            case ContentToolNames.SetBehaviorStepTargetSelf: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddObject("targetSelf", schema: new JsonObject { ["type"] = "boolean" }); break;
             case ContentToolNames.SetBehaviorStepDirectionMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("directionMode", isRequired: false, allowedValues: EnumNames<ActionPlanMoveDirectionMode>(), description: "Omit or pass null to clear.", allowNull: true); break;
             case ContentToolNames.SetBehaviorStepCosts: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddArray("costs", itemSchema: CostSchema()); break;
             case ContentToolNames.SetBehaviorStepTargetPathMode: AddString("actionPlanTemplateId"); AddInteger("stepIndex"); AddString("pathMode", isRequired: false, allowedValues: EnumNames<ActionPlanTargetPathMode>(), description: "Omit or pass null to clear.", allowNull: true); break;

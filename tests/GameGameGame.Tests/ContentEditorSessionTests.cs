@@ -87,6 +87,51 @@ public sealed class ContentEditorSessionTests
     }
 
     [Fact]
+    public void EditorMutationClearsStaleUnknownYamlPropertyDiagnosticsBeforeSave()
+    {
+        var path = WriteTempContentFile(
+            """
+            entityTemplates:
+              rock:
+                name: Rock
+                inventoryWidht: 99
+                inventoryWidth: 0
+                inventoryHeight: 0
+                bulk: 3
+                aperture: 3
+            presentations:
+              rock:
+                glyph: '*'
+                color: Earth
+            actionPlans: {}
+            """);
+
+        try
+        {
+            var session = ContentEditorSession.OpenFile(path).Session!;
+            Assert.Contains(session.Document.ValidateCanonicalAuthoring().Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.UnknownYamlProperty);
+
+            var id = new EntityTemplateId("rock");
+            session.Editor.UpdateEntityPreset(
+                id,
+                session.Editor.GetEntityPreset(id).Template with { Name = "Clean Rock" },
+                new EntityPresentation('*', PresentationColor.Earth));
+
+            Assert.DoesNotContain(session.Document.ValidateCanonicalAuthoring().Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.UnknownYamlProperty);
+            Assert.DoesNotContain("inventoryWidht", session.GetYamlPreview());
+
+            var saveResult = session.Save();
+
+            Assert.True(saveResult.IsSuccess, saveResult.ErrorMessage);
+            Assert.DoesNotContain(session.Document.ValidateCanonicalAuthoring().Diagnostics, diagnostic => diagnostic.Code == ContentDiagnosticCode.UnknownYamlProperty);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void SaveAsChangesFilePathWritesYamlAndClearsDirtyState()
     {
         var sourcePath = WriteTempContentFile(

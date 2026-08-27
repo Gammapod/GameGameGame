@@ -190,6 +190,12 @@ public sealed class ContentEditorService(EditableContentDocument document, Actio
     public void SetActionPlanBehaviorStepPlanId(ActionPlanTemplateId planId, int stepIndex, ActionPlanId? referencedPlanId)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepPlanId(planId, stepIndex, referencedPlanId);
 
+    public void SetActionPlanBehaviorStepTemplateId(ActionPlanTemplateId planId, int stepIndex, EntityTemplateId? templateId)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepTemplateId(planId, stepIndex, templateId);
+
+    public void SetActionPlanBehaviorStepCreatePlacement(ActionPlanTemplateId planId, int stepIndex, CreateEntityPlacement? createPlacement)
+        => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepCreatePlacement(planId, stepIndex, createPlacement);
+
     public void SetActionPlanBehaviorStepDirectionMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanMoveDirectionMode? directionMode)
         => new ActionPlanEditorService(Document, onChanged).SetActionPlanBehaviorStepDirectionMode(planId, stepIndex, directionMode);
 

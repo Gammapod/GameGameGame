@@ -167,7 +167,6 @@ The primary boundary is deliberate: `GameGameGame.Core` does not depend on SadCo
 | `src/GameGameGame.Content` | YAML loading, validation, editable documents, scenario materialization, and authoring services |
 | `src/GameGameGame.Content.Tools` | Local tooling over the shared content-editing APIs |
 | `src/GameGameGame.Frontend.SadConsole` | Maintained interactive play, debug, and content-browser frontend |
-| `src/GameGameGame.SadConsole` | Legacy/reference-only SadConsole frontend kept for explicit mining outside default workflows |
 | `src/GameGameGame.Headless` | UI-independent scenario recording and rendering support |
 | `src/GameGameGame.Documentation` | Documentation discovery and graph compilation |
 | `tests/*` | Engine, content, tooling, documentation, and frontend tests |
@@ -234,7 +233,6 @@ For content and frontend integration:
 
 - `src/GameGameGame.Content` — YAML documents, validation, and materialization
 - `src/GameGameGame.Frontend.SadConsole` — maintained presentation and interaction components
-- `src/GameGameGame.SadConsole` — legacy/reference-only SadConsole source for deliberate mining
 - `tests/GameGameGame.Tests` — behavioral examples and invariants
 - `docs/Source of Truth/invariants.md` — maintained behavior contracts and test traces
 - `docs/Source of Truth/vertical-slice-map.md` — cross-layer navigation

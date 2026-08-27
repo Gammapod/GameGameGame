@@ -245,13 +245,39 @@ internal sealed class ActionPlanEditorService(EditableContentDocument document, 
         onChanged?.Invoke();
     }
 
+    public void SetActionPlanBehaviorStepTemplateId(ActionPlanTemplateId planId, int stepIndex, EntityTemplateId? templateId)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind is not (ActionPlanBehaviorStepKind.CreateEntity or ActionPlanBehaviorStepKind.PolymorphTarget) && templateId is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only CreateEntity and PolymorphTarget steps support templateId.");
+        }
+
+        step.TemplateId = templateId?.Value;
+        onChanged?.Invoke();
+    }
+
+    public void SetActionPlanBehaviorStepCreatePlacement(ActionPlanTemplateId planId, int stepIndex, CreateEntityPlacement? createPlacement)
+    {
+        var steps = GetActionPlanBehaviorSteps(planId);
+        var step = steps[stepIndex];
+        if (step.Kind != ActionPlanBehaviorStepKind.CreateEntity && createPlacement is not null)
+        {
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only CreateEntity steps support createPlacement.");
+        }
+
+        step.CreatePlacement = createPlacement?.ToString();
+        onChanged?.Invoke();
+    }
+
     public void SetActionPlanBehaviorStepDirectionMode(ActionPlanTemplateId planId, int stepIndex, ActionPlanMoveDirectionMode? directionMode)
     {
         var steps = GetActionPlanBehaviorSteps(planId);
         var step = steps[stepIndex];
-        if (step.Kind is not (ActionPlanBehaviorStepKind.Move or ActionPlanBehaviorStepKind.Transfer) && directionMode is not null)
+        if (step.Kind is not (ActionPlanBehaviorStepKind.Move or ActionPlanBehaviorStepKind.Transfer or ActionPlanBehaviorStepKind.Push or ActionPlanBehaviorStepKind.CreateEntity) && directionMode is not null)
         {
-            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Move and Transfer steps support directionMode.");
+            throw new InvalidOperationException($"Action plan {planId} action step {stepIndex} is {step.Kind}; only Move, Transfer, Push, and CreateEntity steps support directionMode.");
         }
 
         step.DirectionMode = directionMode?.ToString();

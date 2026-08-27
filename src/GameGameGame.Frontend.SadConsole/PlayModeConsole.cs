@@ -45,7 +45,7 @@ internal sealed class PlayModeConsole : Console
         _inspection = new PlayInspectionController(this, session, _actionSession, displaySettings, tilesetProfile);
         _playerPanel = new PlayPlayerPanelController(this, session, _actionSession, displaySettings, tilesetProfile);
         _actionWorkflow = new PlayActionWorkflowController(_actionSession);
-        _animationPresenter = new PlayMovementAnimationPresenter(this, shell, tilesetProfile, PlayAnimationSettings.Default, session.PlayerEntityId);
+        _animationPresenter = new PlayMovementAnimationPresenter(this, shell, tilesetProfile, PlayAnimationSettings.Default);
         _grid = BuildGrid();
         UseKeyboard = true;
         IsFocused = true;
@@ -66,7 +66,8 @@ internal sealed class PlayModeConsole : Console
             _tilesetProfile,
             preferredPlaneId,
             topologyVisibility,
-            showOutsidePointOfViewContext: _showOutsidePointOfViewDebug);
+            showOutsidePointOfViewContext: _showOutsidePointOfViewDebug,
+            controlledEntityId: _actionSession.ControlledActorId);
     }
 
     public override bool ProcessKeyboard(Keyboard keyboard)
@@ -526,7 +527,7 @@ internal sealed class PlayModeConsole : Console
 
     private void ConfirmMovePreview()
     {
-        var direction = MovementPreviewConfirmation.ResolveDirection(_movementPreview, _session.World.GetActionFacing(_session.PlayerEntityId));
+        var direction = MovementPreviewConfirmation.ResolveDirection(_movementPreview, _session.World.GetActionFacing(_actionSession.ControlledActorId));
         if (direction is not { } confirmedDirection)
         {
             _message = "Choose a movement direction first; no facing direction is available.";
@@ -536,7 +537,7 @@ internal sealed class PlayModeConsole : Console
 
         if (ResolveMovementPreviewCell(_session.World, _actionSession.ControlledActorId, _movementPreview.Direction, _grid) is { } destinationCell
             && destinationCell.EntityId is { } entityId
-            && entityId != _session.PlayerEntityId)
+            && entityId != _actionSession.ControlledActorId)
         {
             var destination = new GridCoord(destinationCell.X, destinationCell.Y);
             _selectionStack.EnterActionSelection(destination);
@@ -591,7 +592,7 @@ internal sealed class PlayModeConsole : Console
             && IsAdjacentDisplayMove(beforeDisplay, afterDisplay)
             && beforeGrid.TryCellAt(beforeDisplay.X, beforeDisplay.Y)?.EntityId == _actionSession.ControlledActorId)
         {
-            _animationPresenter.Start(beforeGrid, beforeDisplay, afterDisplay, direction);
+            _animationPresenter.Start(_actionSession.ControlledActorId, beforeGrid, beforeDisplay, afterDisplay, direction);
             Redraw();
             return;
         }
@@ -633,7 +634,7 @@ internal sealed class PlayModeConsole : Console
             var layout = PlayModeInspectionLayout.Resolve(_shell.DrawableBounds);
             _animationPresenter.Draw(
                 PlayGridRenderer.ResolveGridBounds(layout.GridBounds, baseGrid),
-                _session.World.GetActionFacing(_session.PlayerEntityId) ?? CoreDirection.North);
+                _session.World.GetActionFacing(_actionSession.ControlledActorId) ?? CoreDirection.North);
         }
     }
 
@@ -650,7 +651,7 @@ internal sealed class PlayModeConsole : Console
             DrawBorder();
             Print(2, 1, $"Play: {_session.Name} [{_session.ScenarioId}]", Color.White);
             Print(2, 2, $"Current place: {CurrentPlaceLabel()} | Player: {_actionSession.ControlledActorId} | {_message}", Color.Gray);
-            var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _session.PlayerEntityId } : null;
+            var hidden = _animationPresenter.IsAnimating ? new HashSet<EntityId> { _actionSession.ControlledActorId } : null;
             var previewCoord = ResolveAdjacentSelectionCoord();
             var movementPreviewCoord = _selectionStack.IsAdjacentSelection
                 && ResolveMovementPreviewCell(_session.World, _actionSession.ControlledActorId, _movementPreview.Direction, _grid) is { } movementPreviewCell
@@ -677,7 +678,7 @@ internal sealed class PlayModeConsole : Console
             {
                 _animationPresenter.Draw(
                     PlayGridRenderer.ResolveGridBounds(layout.GridBounds, visibleGrid),
-                    _session.World.GetActionFacing(_session.PlayerEntityId) ?? CoreDirection.North);
+                    _session.World.GetActionFacing(_actionSession.ControlledActorId) ?? CoreDirection.North);
             }
             else
             {
@@ -748,7 +749,7 @@ internal sealed class PlayModeConsole : Console
             return null;
         }
 
-        var kind = _grid.TryCellAt(value.X, value.Y)?.EntityId is { } entityId && entityId != _session.PlayerEntityId
+        var kind = _grid.TryCellAt(value.X, value.Y)?.EntityId is { } entityId && entityId != _actionSession.ControlledActorId
             ? ResolveEntityTargetHighlightKind()
             : CellHighlightKind.MovePreview;
         return new PlayHighlightState(value, kind);

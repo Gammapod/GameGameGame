@@ -27,15 +27,28 @@ public sealed class DefaultFrontendWorkflowTests
     }
 
     [Fact]
-    public void ReadmeDocumentsNewFrontendAsNormalRunTargetAndLegacyAsReferenceOnly()
+    public void ReadmeDocumentsNewFrontendAsNormalRunTargetWithoutLegacyReferences()
     {
         var readme = File.ReadAllText(Path.Combine(RepositoryRoot(), "README.md"));
 
         Assert.Contains("src/GameGameGame.Frontend.SadConsole", readme, StringComparison.Ordinal);
         Assert.Contains("dotnet run --project src/GameGameGame.Frontend.SadConsole/GameGameGame.Frontend.SadConsole.csproj", readme, StringComparison.Ordinal);
-        Assert.Contains("src/GameGameGame.SadConsole", readme, StringComparison.Ordinal);
-        Assert.Contains("reference", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("src/GameGameGame.SadConsole", readme, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet run --project src/GameGameGame.SadConsole/GameGameGame.SadConsole.csproj", readme, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SourceOfTruthDocsDoNotClaimCoverageFromRemovedLegacySadConsoleTests()
+    {
+        var sourceOfTruth = Path.Combine(RepositoryRoot(), "docs", "Source of Truth");
+        var documents = Directory.EnumerateFiles(sourceOfTruth, "*.md");
+        var combined = string.Join(Environment.NewLine, documents.Select(File.ReadAllText));
+
+        Assert.DoesNotContain("SadConsoleEditorContextTests", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("SadConsoleScenarioSelectionScreenTests", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("SadConsoleUiComponentLibraryTests", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("SadConsoleComponentGalleryTests", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("tests/GameGameGame.SadConsole.Tests", combined, StringComparison.Ordinal);
     }
 
     private static string RepositoryRoot([CallerFilePath] string sourcePath = "")

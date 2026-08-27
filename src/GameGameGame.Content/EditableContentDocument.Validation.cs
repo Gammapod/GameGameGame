@@ -6,7 +6,9 @@ public sealed partial class EditableContentDocument
 {
     public ContentValidationResult ValidateCanonicalAuthoring()
     {
-        var diagnostics = new List<ContentDiagnostic>();
+        var diagnostics = SourceYaml is null
+            ? new List<ContentDiagnostic>()
+            : StrictYamlPropertyValidator.ValidateContentDocument(SourceYaml).ToList();
 
         foreach (var (templateId, template) in EntityTemplates)
         {

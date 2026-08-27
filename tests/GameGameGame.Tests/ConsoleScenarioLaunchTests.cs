@@ -140,6 +140,65 @@ public sealed class ConsoleScenarioLaunchTests
     }
 
     [Fact]
+    public void ScenarioCatalogValidationReportsUnknownManifestProperties()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var contentPath = Path.Combine(directory, "Scenario.yaml");
+            var manifestPath = Path.Combine(directory, ScenarioCatalog.ManifestFileName);
+            File.WriteAllText(contentPath, CreateConsoleDocument("known-scenario", "Known Scenario", new GridCoord(0, 0)).SaveYaml());
+            File.WriteAllText(manifestPath, """
+                sections:
+                - id: canonical
+                  name: Canonical
+                  descriptoin: Typo on section description.
+                  entries:
+                  - contentpath: Scenario.yaml
+                    contentPath: Scenario.yaml
+                    scenarioID: known-scenario
+                    scenarioId: known-scenario
+                    name: Known Scenario
+                    description: Known good entry with typo siblings.
+                    tag: [canonical]
+                    tags: [canonical]
+                """);
+
+            var validation = ScenarioCatalog.ValidateManifest(manifestPath, directory);
+
+            Assert.False(validation.IsValid);
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("sections[0].descriptoin") && diagnostic.Contains("description"));
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("sections[0].entries[0].contentpath") && diagnostic.Contains("contentPath"));
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("sections[0].entries[0].scenarioID") && diagnostic.Contains("scenarioId"));
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains("sections[0].entries[0].tag") && diagnostic.Contains("tags"));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ScenarioCatalogValidationReturnsDiagnosticsForMalformedManifestYaml()
+    {
+        var directory = CreateTemporaryDirectory();
+        try
+        {
+            var manifestPath = Path.Combine(directory, ScenarioCatalog.ManifestFileName);
+            File.WriteAllText(manifestPath, "sections: [this is not valid yaml");
+
+            var validation = ScenarioCatalog.ValidateManifest(manifestPath, directory);
+
+            Assert.False(validation.IsValid);
+            Assert.Contains(validation.Diagnostics, diagnostic => diagnostic.Contains(manifestPath));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ScenarioCatalogValidationReportsCuratedManifestIssuesAndUnclassifiedCandidates()
     {
         var directory = CreateTemporaryDirectory();

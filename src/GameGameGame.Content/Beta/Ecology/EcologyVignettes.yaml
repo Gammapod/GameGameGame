@@ -560,7 +560,7 @@ entityTemplates:
         label: carrier
         targetTemplateId: droneCarrierPlayer
         targetCapabilities:
-        - GiveTarget
+        - EnterTarget
         locality:
           origins:
           - CurrentPlace
