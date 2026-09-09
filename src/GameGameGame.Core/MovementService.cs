@@ -51,6 +51,14 @@ public sealed class MovementService
 
         trace.Add(TraceNode.Info("Resolved destination", resolvedDestination.ToString()));
 
+        if (world.StagingPlaneIds.Contains(resolvedDestination.PlaneId))
+        {
+            trace.Status = TraceStatus.Failure;
+            trace.Reason = FailureReason.NonGameplayLocation;
+            trace.Detail = $"destination {resolvedDestination} is in staging plane {resolvedDestination.PlaneId}, which is not a gameplay location";
+            return new RelocationEvaluation(false, resolvedDestination, trace, destinationNodeId, movementEdge?.Kind);
+        }
+
         if (!CanPlace(world, resolvedDestination))
         {
             trace.Status = TraceStatus.Failure;
@@ -211,6 +219,7 @@ public sealed class MovementService
     {
         return TryGetMovementEdge(world, entityId, direction, out var edge)
             && !edge.IsBlocked
+            && !world.StagingPlaneIds.Contains(edge.Destination.PlaneId)
             && CanPlace(world, edge.DestinationNodeId);
     }
 
@@ -268,6 +277,11 @@ public sealed class MovementService
 
     public bool TryMove(WorldState world, EntityId entityId, TopologyNodeId destinationNodeId)
     {
+        if (world.Nodes.TryGetValue(new NodeId(destinationNodeId.Value), out var node) && world.StagingPlaneIds.Contains(node.PlaneId))
+        {
+            return false;
+        }
+
         if (!CanPlace(world, destinationNodeId))
         {
             return false;
@@ -346,6 +360,7 @@ public sealed class MovementService
     public bool CanOccupyForPath(WorldState world, EntityId movingEntityId, PlaneCoord destination)
     {
         return world.Planes.TryGetValue(destination.PlaneId, out var plane)
+            && !world.StagingPlaneIds.Contains(destination.PlaneId)
             && plane.Contains(destination.Coord)
             && world.TryGetNodeId(destination, out var nodeId)
             && (!world.Occupancy.TryGetValue(nodeId, out var occupant) || occupant == movingEntityId);

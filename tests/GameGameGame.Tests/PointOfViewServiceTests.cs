@@ -75,6 +75,24 @@ public sealed class PointOfViewServiceTests
     }
 
     [Fact]
+    public void PointOfViewStopsCurrentPlaceAtStagingPlaneBoundary()
+    {
+        var world = TestWorld.CreateWorld();
+        var movement = new MovementService();
+        world.StagingPlaneIds.Add(TestWorld.WorldPlaneId);
+        Assert.True(movement.TryPlace(world, TestWorld.PlayerId, new PlaneCoord(TestWorld.SlimeInventoryPlaneId, new GridCoord(0, 0))));
+        var service = new PointOfViewService();
+
+        var result = service.Describe(world, TestWorld.PlayerId);
+
+        Assert.Equal(EntityContainmentPathStatus.Complete, result.Breadcrumb.Status);
+        Assert.Equal([TestWorld.SlimeId, TestWorld.PlayerId], result.Breadcrumb.Segments.Select(segment => segment.EntityId).ToArray());
+        Assert.NotNull(result.CurrentPlace);
+        Assert.Equal(TestWorld.SlimeId, result.CurrentPlace.EntityId);
+        Assert.DoesNotContain(result.Breadcrumb.Segments, segment => segment.EntityId == TestWorld.RockId);
+    }
+
+    [Fact]
     public void PointOfViewPreservesBreadcrumbTruncationFromQueryOptions()
     {
         var world = TestWorld.CreateWorld();

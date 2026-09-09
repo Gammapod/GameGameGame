@@ -311,6 +311,76 @@ public sealed class ScenarioToolingServiceTests
     }
 
     [Fact]
+    public void PersistedScenarioMaterializationMarksRootInventoryAsStagingAndMigratesLegacyPlayerStartIntoTopLevelRoom()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Structural Root");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Structural Root", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var roomId = editor.CreateEntityPreset("Top Room");
+        editor.UpdateEntityPreset(
+            roomId,
+            new EntityTemplate("Top Room", InventoryWidth: 3, InventoryHeight: 3, Bulk: 100, Aperture: 100),
+            new EntityPresentation('R', PresentationColor.Cyan));
+        var playerTemplateId = editor.CreateEntityPreset("Migrated Player");
+        editor.UpdateEntityPreset(
+            playerTemplateId,
+            new EntityTemplate("Migrated Player", InventoryWidth: 0, InventoryHeight: 0, Bulk: 1, Aperture: 1),
+            new EntityPresentation('@', PresentationColor.Yellow));
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("topRoom"), roomId, new GridCoord(0, 0));
+        editor.UpsertScenario(new ScenarioDefinition(
+            "structural-root",
+            "Structural Root Scenario",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(0, 0)));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "structural-root");
+
+        Assert.Contains(materialization.ScenarioPlaneId!.Value, materialization.World.StagingPlaneIds);
+        Assert.Equal(new PlaneCoord(new PlaneId("topRoom"), new GridCoord(0, 0)), materialization.PlayerLocation);
+        Assert.Contains(materialization.SetupLines, line => line.Contains("legacy playerStart scenarioRoot(0,0) resolved into top-level place topRoom", StringComparison.Ordinal));
+        Assert.Empty(materialization.ValidationDiagnostics);
+    }
+
+    [Fact]
+    public void PersistedScenarioMaterializationKeepsCompatibilityForLegacyPlayerStartInEmptyStagingRootCell()
+    {
+        var document = new EditableContentDocument();
+        var editor = new ContentEditorService(document);
+        var scenarioRootId = editor.CreateEntityPreset("Structural Root");
+        editor.UpdateEntityPreset(
+            scenarioRootId,
+            new EntityTemplate("Structural Root", InventoryWidth: 2, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('#', PresentationColor.Gray));
+        var roomId = editor.CreateEntityPreset("Other Top Room");
+        editor.UpdateEntityPreset(
+            roomId,
+            new EntityTemplate("Other Top Room", InventoryWidth: 1, InventoryHeight: 1, Bulk: 100, Aperture: 100),
+            new EntityPresentation('R', PresentationColor.Cyan));
+        editor.PlaceCarriedEntity(scenarioRootId, new EntityId("otherRoom"), roomId, new GridCoord(1, 0));
+        var playerTemplateId = editor.CreateEntityPreset("Migrated Player");
+        editor.UpsertScenario(new ScenarioDefinition(
+            "empty-root-start",
+            "Empty Root Start",
+            scenarioRootId,
+            playerTemplateId,
+            new EntityId("legacyPlayer"),
+            new GridCoord(0, 0)));
+
+        var materialization = ScenarioMaterializer.Materialize(document, "empty-root-start");
+
+        Assert.DoesNotContain(materialization.ScenarioPlaneId!.Value, materialization.World.StagingPlaneIds);
+        Assert.Contains(materialization.SetupLines, line => line.Contains("Compatibility warning: legacy playerStart scenarioRoot(0,0) is in an empty scenario-root cell", StringComparison.Ordinal));
+        Assert.Equal(new PlaneCoord(ScenarioMaterializer.DefaultScenarioPlaneId, new GridCoord(0, 0)), materialization.PlayerLocation);
+        Assert.Empty(materialization.ValidationDiagnostics);
+    }
+
+    [Fact]
     public void ScenarioRunServiceStopsAtPlayerChoiceActorsAndReportsPromptObservation()
     {
         var document = new EditableContentDocument();

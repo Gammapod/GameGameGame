@@ -90,4 +90,34 @@ public sealed class CoreRelocationTests
         Assert.False(evaluation.CanRelocate);
         Assert.Equal(FailureReason.ActorHasNoInventory, evaluation.Trace.Reason);
     }
+
+    [Fact]
+    public void StagingPlanesRejectOrdinaryRelocationButAllowDebugTeleportPlacement()
+    {
+        var world = TestWorld.CreateWorld();
+        world.StagingPlaneIds.Add(TestWorld.WorldPlaneId);
+        var movement = new MovementService();
+        var destination = new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(0, 0));
+
+        var evaluation = movement.EvaluateRelocation(world, TestWorld.RockId, MovementDestination.Plane(destination));
+        var moved = movement.TryRelocate(world, TestWorld.RockId, MovementDestination.Plane(destination));
+        var teleported = movement.TryPlace(world, TestWorld.RockId, destination);
+
+        Assert.False(evaluation.CanRelocate);
+        Assert.Equal(FailureReason.NonGameplayLocation, evaluation.Trace.Reason);
+        Assert.False(moved);
+        Assert.True(teleported);
+        Assert.Equal(destination, world.GetEntityLocation(TestWorld.RockId));
+    }
+
+    [Fact]
+    public void WorldStateClonePreservesStagingPlanes()
+    {
+        var world = TestWorld.CreateWorld();
+        world.StagingPlaneIds.Add(TestWorld.WorldPlaneId);
+
+        var clone = world.Clone();
+
+        Assert.Contains(TestWorld.WorldPlaneId, clone.StagingPlaneIds);
+    }
 }

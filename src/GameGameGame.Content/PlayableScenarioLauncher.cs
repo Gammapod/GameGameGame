@@ -60,7 +60,7 @@ public static class PlayableScenarioLauncher
 
     public static PlayableScenarioSession CreateFromMaterialization(ScenarioMaterializationResult result)
     {
-        var activePlaneId = result.ScenarioPlaneId ?? ScenarioMaterializer.DefaultScenarioPlaneId;
+        var scenarioPlaneId = result.ScenarioPlaneId ?? ScenarioMaterializer.DefaultScenarioPlaneId;
         var firstControlledEntityId = result.PlayerControls.Values
             .SelectMany(entityIds => entityIds)
             .Select(entityId => (EntityId?)entityId)
@@ -69,6 +69,12 @@ public static class PlayableScenarioLauncher
             && result.World.Entities.ContainsKey(scenarioPlayerId)
             ? scenarioPlayerId
             : (EntityId?)null;
+        var playerLocation = materializedScenarioPlayerId is { } concretePlayerId && result.World.Entities.ContainsKey(concretePlayerId)
+            ? result.World.GetEntityLocation(concretePlayerId)
+            : (PlaneCoord?)null;
+        var activePlaneId = playerLocation is { } location && result.World.StagingPlaneIds.Contains(scenarioPlaneId)
+            ? location.PlaneId
+            : scenarioPlaneId;
         var fallbackFocusEntityId = FindFirstEntityOnPlane(result.World, activePlaneId) ?? result.ScenarioRootEntityId;
         var playerEntityId = materializedScenarioPlayerId ?? firstControlledEntityId ?? fallbackFocusEntityId;
 
@@ -76,7 +82,7 @@ public static class PlayableScenarioLauncher
             result.World,
             result.ActionPlans,
             result.ScenarioRootEntityId,
-            activePlaneId);
+            scenarioPlaneId);
 
         return new PlayableScenarioSession(
             result.ScenarioId,

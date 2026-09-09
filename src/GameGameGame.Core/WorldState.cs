@@ -24,6 +24,8 @@ public sealed class WorldState
 
     public List<SourceCellLink> SourceCellLinks { get; } = [];
 
+    public HashSet<PlaneId> StagingPlaneIds { get; } = [];
+
     public Dictionary<EntityId, EntityActionState> ActionStates { get; } = [];
 
     public Dictionary<string, RuntimeEntityTemplate> RuntimeEntityTemplates { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -82,6 +84,12 @@ public sealed class WorldState
 
         SourceCellLinks.Clear();
         SourceCellLinks.AddRange(source.SourceCellLinks);
+
+        StagingPlaneIds.Clear();
+        foreach (var planeId in source.StagingPlaneIds)
+        {
+            StagingPlaneIds.Add(planeId);
+        }
 
         ActionStates.Clear();
         foreach (var (entityId, state) in source.ActionStates)

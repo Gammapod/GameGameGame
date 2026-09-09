@@ -43,7 +43,7 @@ public sealed record EntityContainmentSharedPath(
     IReadOnlyList<EntityContainmentPathCycle> Cycles,
     IReadOnlyList<string> Diagnostics);
 
-public sealed class EntityContainmentPathService
+public sealed class EntityContainmentPathService(bool stopAtStagingPlaneBoundary = true)
 {
     public EntityContainmentSharedPath GetSharedRootPath(WorldState world, EntityId firstEntityId, EntityId secondEntityId, int? maxDepth = null)
     {
@@ -177,6 +177,11 @@ public sealed class EntityContainmentPathService
             }
 
             segmentsLeafToRoot.Add(segment);
+
+            if (stopAtStagingPlaneBoundary && segment.ContainingPlaneId is { } containingPlaneId && world.StagingPlaneIds.Contains(containingPlaneId))
+            {
+                break;
+            }
 
             if (segment.ContainerEntityId is not { } containerEntityId)
             {

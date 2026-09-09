@@ -98,7 +98,8 @@ public sealed partial class EditableContentDocument
                         entityTemplateId: new EntityTemplateId(scenario.ScenarioRootEntityTemplateId),
                         coord: start));
                 }
-                else if ((root.CarriedEntities ?? []).FirstOrDefault(carried => carried.Coord?.X == start.X && carried.Coord.Y == start.Y) is { } occupant)
+                else if ((root.CarriedEntities ?? []).FirstOrDefault(carried => carried.Coord?.X == start.X && carried.Coord.Y == start.Y) is { } occupant
+                    && !IsUsableTopLevelPlace(occupant))
                 {
                     diagnostics.Add(ContentDiagnostic.Error(
                         ContentDiagnosticCode.InvalidScenarioDefinition,
@@ -122,6 +123,12 @@ public sealed partial class EditableContentDocument
             AddPlayerControlDiagnostics(diagnostics, scenarioId, scenario, root);
         }
     }
+
+    private bool IsUsableTopLevelPlace(CarriedEntityTemplateDto occupant) =>
+        !string.IsNullOrWhiteSpace(occupant.TemplateId)
+        && EntityTemplates.TryGetValue(occupant.TemplateId, out var template)
+        && template.InventoryWidth > 0
+        && template.InventoryHeight > 0;
 
     private void AddPlayerControlDiagnostics(List<ContentDiagnostic> diagnostics, string scenarioId, ScenarioDefinitionDto scenario, EntityTemplateDto root)
     {

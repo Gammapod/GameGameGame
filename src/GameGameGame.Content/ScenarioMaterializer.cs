@@ -235,6 +235,11 @@ public static class ScenarioMaterializer
             return CreateResult(scenarioPlaneId, playerLocation: null);
         }
 
+        if (allowPlayerlessPlay && ContainsTopLevelPlace(world, activeScenarioPlaneId))
+        {
+            world.StagingPlaneIds.Add(activeScenarioPlaneId);
+        }
+
         PlaneCoord? insertedPlayerLocation = null;
         var authoredPlayerControllerEntityIds = CollectAuthoredPlayerControllerEntityIds(registry, scenarioRootEntityTemplateId).ToList();
         if (authoredPlayerControllerEntityIds.Count == 0
@@ -255,7 +260,37 @@ public static class ScenarioMaterializer
                 return CreateResult(activeScenarioPlaneId, playerLocation: null);
             }
 
-            if (world.GetOccupant(requestedPlayerLocation) is { } occupant)
+            var spawnLocation = requestedPlayerLocation;
+            if (world.StagingPlaneIds.Contains(activeScenarioPlaneId))
+            {
+                if (world.GetOccupant(requestedPlayerLocation) is not { } topLevelPlaceId)
+                {
+                    world.StagingPlaneIds.Remove(activeScenarioPlaneId);
+                    setupLines.Add($"Compatibility warning: legacy playerStart {requestedPlayerLocation} is in an empty scenario-root cell, so this persisted scenario keeps the root plane as a gameplay location; prefer an authored controller: Player instance inside a top-level place.");
+                }
+                else if (!world.Entities.TryGetValue(topLevelPlaceId, out var topLevelPlace) ||
+                    world.GetRegisteredInventoryPlaneId(topLevelPlaceId) is not { } topLevelInventoryPlaneId ||
+                    !topLevelPlace.HasUsableInventory)
+                {
+                    validationDiagnostics.Add($"playerStart {requestedPlayerLocation} targets {topLevelPlaceId}, which is not a usable top-level place for structural scenario root migration.");
+                    return CreateResult(activeScenarioPlaneId, playerLocation: null);
+                }
+                else
+                {
+                    var destination = new InventoryBoundaryPolicyService()
+                        .OrderedEnterPolicyDestinations(world, topLevelPlaceId)
+                        .FirstOrDefault(candidate => world.GetOccupant(candidate) is null);
+                    if (destination == default || destination.PlaneId != topLevelInventoryPlaneId)
+                    {
+                        validationDiagnostics.Add($"playerStart {requestedPlayerLocation} targets top-level place {topLevelPlaceId}, but no open inventory coordinate can accept the legacy player.");
+                        return CreateResult(activeScenarioPlaneId, playerLocation: null);
+                    }
+
+                    spawnLocation = destination;
+                    setupLines.Add($"Migration warning: legacy playerStart {requestedPlayerLocation} resolved into top-level place {topLevelPlaceId} at {spawnLocation}; prefer an authored controller: Player instance.");
+                }
+            }
+            else if (world.GetOccupant(requestedPlayerLocation) is { } occupant)
             {
                 validationDiagnostics.Add($"player start {requestedPlayerLocation} is occupied by {occupant}.");
                 return CreateResult(activeScenarioPlaneId, playerLocation: null);
@@ -266,9 +301,9 @@ public static class ScenarioMaterializer
                 var playerSpawn = registry.SpawnEntity(
                     world,
                     concretePlayerTemplateId,
-                    new EntitySpawnOptions(concretePlayerEntityId, requestedPlayerLocation));
+                    new EntitySpawnOptions(concretePlayerEntityId, spawnLocation));
                 AddActionPlans(actionPlans, playerSpawn.ActionPlans);
-                insertedPlayerLocation = requestedPlayerLocation;
+                insertedPlayerLocation = spawnLocation;
             }
             catch (Exception ex)
             {
@@ -426,6 +461,15 @@ public static class ScenarioMaterializer
             }
             : new Dictionary<string, IReadOnlyList<EntityId>>(StringComparer.Ordinal);
     }
+
+    private static bool ContainsTopLevelPlace(WorldState world, PlaneId scenarioPlaneId) =>
+        world.Occupancy.Any(entry =>
+            world.Nodes.TryGetValue(entry.Key, out var node)
+            && node.PlaneId == scenarioPlaneId
+            && world.Entities.TryGetValue(entry.Value, out var entity)
+            && entity.HasUsableInventory
+            && world.GetDefaultActionPlanId(entry.Value) is null
+            && world.GetRegisteredInventoryPlaneId(entry.Value) is not null);
 
     private static void AddActionPlans(Dictionary<EntityId, IEntityActionPlan> actionPlans, IReadOnlyDictionary<EntityId, IEntityActionPlan> additions)
     {

@@ -118,6 +118,23 @@ public sealed class ControlledActorAffordanceServiceTests
     }
 
     [Fact]
+    public void ControlledActorAffordanceExitDirectionsBlockStagingPlaneDestinations()
+    {
+        var world = TestWorld.CreateWorld();
+        world.StagingPlaneIds.Add(TestWorld.WorldPlaneId);
+        var movement = new MovementService();
+        Assert.True(new EnterAction(TestWorld.SlimeId).ExecuteForTest(world, TestWorld.PlayerId, movement));
+        var query = new ControlledActorAffordanceService(movement);
+
+        var affordances = query.Query(world, TestWorld.PlayerId);
+
+        var southExit = Assert.Single(affordances.ExitDirections, candidate => candidate.Direction == Direction.South);
+        Assert.False(southExit.CanExecute);
+        Assert.Equal(FailureReason.NonGameplayLocation, southExit.FailureReason);
+        Assert.Equal(new PlaneCoord(TestWorld.WorldPlaneId, new GridCoord(1, 2)), southExit.Destination);
+    }
+
+    [Fact]
     public void ControlledActorAffordanceMovementReportsEntityTopologyOutwardDestination()
     {
         var world = TestWorld.CreateWorld();

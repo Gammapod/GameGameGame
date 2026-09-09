@@ -63,6 +63,7 @@ public sealed class AlphaScenarioFixtureTests
         Assert.Equal(ScenarioMaterializer.DefaultScenarioPlaneId, materialization.ScenarioPlaneId);
         Assert.Equal(ScenarioMaterializer.DefaultScenarioRootEntityId, materialization.ScenarioRootEntityId);
         Assert.Equal(ScenarioMaterializer.DefaultScenarioPlaneId, materialization.World.GetInventoryPlaneId(materialization.ScenarioRootEntityId));
+        Assert.DoesNotContain(ScenarioMaterializer.DefaultScenarioPlaneId, materialization.World.StagingPlaneIds);
         Assert.Contains("Scenario: root-only (Root Only)", materialization.SetupLines);
     }
 }

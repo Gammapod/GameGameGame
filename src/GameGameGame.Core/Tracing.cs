@@ -27,7 +27,8 @@ public enum FailureReason
     TargetHasNoInventory,
     TargetInventoryUnusable,
     InventoryPolicyBlocked,
-    MissingCost
+    MissingCost,
+    NonGameplayLocation
 }
 
 public enum ActionSuccessCriterionKind

@@ -10,7 +10,7 @@ public static class ScenarioInitiativeOrderService
         EntityId scenarioRootEntityId,
         PlaneId scenarioPlaneId)
     {
-        var containmentPaths = new EntityContainmentPathService();
+        var containmentPaths = new EntityContainmentPathService(stopAtStagingPlaneBoundary: false);
 
         return actionPlans.Keys
             .Where(world.Entities.ContainsKey)
